@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "31E86AD8-8B9A-40AD-B3A4-6E3D8D715B67"
+   type = "0"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "FD494F39-9740-4624-99BF-8731C2CE6159"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "164"
+            endingLineNumber = "164"
+            landmarkName = "-rightMouseMoved:"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "FD494F39-9740-4624-99BF-8731C2CE6159 - eff591512e9c6e1c"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController rightMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "162"
+                  endingLineNumber = "162"
+                  offsetFromSymbolStart = "79">
+               </Location>
+               <Location
+                  uuid = "FD494F39-9740-4624-99BF-8731C2CE6159 - eff591512e9c6e7d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController rightMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "163"
+                  endingLineNumber = "163"
+                  offsetFromSymbolStart = "79">
+               </Location>
+               <Location
+                  uuid = "FD494F39-9740-4624-99BF-8731C2CE6159 - eff591512e9c6fbb"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController rightMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "165"
+                  endingLineNumber = "165"
+                  offsetFromSymbolStart = "79">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "688AB8CD-E125-4180-872F-537AE0580DDE"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "171"
+            endingLineNumber = "171"
+            landmarkName = "-otherMouseMoved:"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "688AB8CD-E125-4180-872F-537AE0580DDE - 4ef4db56948f238b"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController otherMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "169"
+                  endingLineNumber = "169"
+                  offsetFromSymbolStart = "79">
+               </Location>
+               <Location
+                  uuid = "688AB8CD-E125-4180-872F-537AE0580DDE - 4ef4db56948f23e8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController otherMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "170"
+                  endingLineNumber = "170"
+                  offsetFromSymbolStart = "79">
+               </Location>
+               <Location
+                  uuid = "688AB8CD-E125-4180-872F-537AE0580DDE - 4ef4db56948f242e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController otherMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "172"
+                  endingLineNumber = "172"
+                  offsetFromSymbolStart = "79">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

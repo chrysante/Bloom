@@ -1,0 +1,450 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2ADBEEB8C4FFE3EA7525C4F8 /* libSandbox.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 68EEEDE0DD4932D25B2CBC20 /* libSandbox.dylib */; };
+		4152EECC51381AFE3DABA50C /* libBloom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B8EE8B41D7884A6149F96F4 /* libBloom.dylib */; };
+		51F1AA79BF19B8EBC0ACA8B9 /* SandboxApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8616A481D3799AB349989AC1 /* SandboxApp.cpp */; };
+		CF09806F653292612698EEAF /* MainMenu.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 688C9D771B82A7296CA503B7 /* MainMenu.storyboard */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2A65FA34155220265D37E874 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3DA5E945D033B337390C5785 /* ../Bloom/Bloom.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 7D7010819482ABB3849EA6C1;
+			remoteInfo = libBloom.dylib;
+		};
+		4820A0919EAE0B0377271ED1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E8AA12FE1AA35DB09482993E /* Sandbox.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 8F7714F17A633AE3C2490331;
+			remoteInfo = libSandbox.dylib;
+		};
+		9A5B132AF0E87D9CC961916A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E8AA12FE1AA35DB09482993E /* Sandbox.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 4C4792B7726DC269D974B8F7;
+			remoteInfo = libSandbox.dylib;
+		};
+		D82B879BC317AD8D0AFD75DB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3DA5E945D033B337390C5785 /* ../Bloom/Bloom.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = E5AF4BFBDF154D6DD2B0AA3B;
+			remoteInfo = libBloom.dylib;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		2912E2216D26B35360F83861 /* info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = info.plist; path = resource/platform/macOS/info.plist; sourceTree = "<group>"; };
+		3DA5E945D033B337390C5785 /* libBloom.dylib */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "Bloom.xcodeproj"; path = ../Bloom/Bloom.xcodeproj; sourceTree = SOURCE_ROOT; };
+		60177A07A8B6B839CBE27047 /* Sandbox.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text; name = Sandbox.entitlements; path = resource/platform/macOS/Sandbox.entitlements; sourceTree = "<group>"; };
+		688C9D771B82A7296CA503B7 /* MainMenu.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = MainMenu.storyboard; path = resource/platform/macOS/MainMenu.storyboard; sourceTree = "<group>"; };
+		8616A481D3799AB349989AC1 /* SandboxApp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SandboxApp.cpp; path = src/SandboxApp.cpp; sourceTree = "<group>"; };
+		CACD4B88C4334CFAB7CEA9C8 /* SandboxApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = SandboxApp.app; path = SandboxApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E8AA12FE1AA35DB09482993E /* libSandbox.dylib */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "Sandbox.xcodeproj"; path = Sandbox.xcodeproj; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4A56BCF8BBE1D56A6AE2FB38 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4152EECC51381AFE3DABA50C /* libBloom.dylib in Frameworks */,
+				2ADBEEB8C4FFE3EA7525C4F8 /* libSandbox.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		10C52B64117828568559F9A4 /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXGroup section */
+		32DF32F01ED03EA27107D930 /* SandboxApp */ = {
+			isa = PBXGroup;
+			children = (
+				FF65AD9802D67FCA844323D8 /* resource */,
+				5775D4184366DFCA959E7A58 /* src */,
+				A6C936B49B3FADE6EA134CF4 /* Products */,
+				9D968EAA920D05DCE0E0A4EA /* Projects */,
+			);
+			name = SandboxApp;
+			sourceTree = "<group>";
+		};
+		5775D4184366DFCA959E7A58 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				8616A481D3799AB349989AC1 /* SandboxApp.cpp */,
+			);
+			name = src;
+			sourceTree = "<group>";
+		};
+		9D968EAA920D05DCE0E0A4EA /* Projects */ = {
+			isa = PBXGroup;
+			children = (
+				3DA5E945D033B337390C5785 /* Bloom.xcodeproj */,
+				E8AA12FE1AA35DB09482993E /* Sandbox.xcodeproj */,
+			);
+			name = Projects;
+			sourceTree = "<group>";
+		};
+		A00248D9C1CDF60BFE831F19 /* macOS */ = {
+			isa = PBXGroup;
+			children = (
+				688C9D771B82A7296CA503B7 /* MainMenu.storyboard */,
+				60177A07A8B6B839CBE27047 /* Sandbox.entitlements */,
+				2912E2216D26B35360F83861 /* info.plist */,
+			);
+			name = macOS;
+			sourceTree = "<group>";
+		};
+		A6C936B49B3FADE6EA134CF4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CACD4B88C4334CFAB7CEA9C8 /* SandboxApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B9E5DFB10256C3E346F595F1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				68EEEDE0DD4932D25B2CBC20 /* libSandbox.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DD4B0D7B03713D2D6A7833BB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7B8EE8B41D7884A6149F96F4 /* libBloom.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FECF06E9555C715B2DD58529 /* platform */ = {
+			isa = PBXGroup;
+			children = (
+				A00248D9C1CDF60BFE831F19 /* macOS */,
+			);
+			name = platform;
+			sourceTree = "<group>";
+		};
+		FF65AD9802D67FCA844323D8 /* resource */ = {
+			isa = PBXGroup;
+			children = (
+				FECF06E9555C715B2DD58529 /* platform */,
+			);
+			name = resource;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		55D5D26E6CE86DA05D0468AE /* SandboxApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38920557AA1D1DC9591E4397 /* Build configuration list for PBXNativeTarget "SandboxApp" */;
+			buildPhases = (
+				BA3E3D982BC9560ADACA7BD8 /* Resources */,
+				23EB56EF95766F614477952F /* Sources */,
+				4A56BCF8BBE1D56A6AE2FB38 /* Frameworks */,
+				10C52B64117828568559F9A4 /* Embed Libraries */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CB034A84F1297A36583070C4 /* PBXTargetDependency */,
+				A79E1CBAF00F00EC34ADD2FA /* PBXTargetDependency */,
+			);
+			name = SandboxApp;
+			productInstallPath = "$(HOME)/Applications";
+			productName = SandboxApp;
+			productReference = CACD4B88C4334CFAB7CEA9C8 /* SandboxApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08FB7793FE84155DC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 1DEB928908733DD80010E9CD /* Build configuration list for PBXProject "SandboxApp" */;
+			compatibilityVersion = "Xcode 3.2";
+			hasScannedForEncodings = 1;
+			mainGroup = 32DF32F01ED03EA27107D930 /* SandboxApp */;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = DD4B0D7B03713D2D6A7833BB /* Products */;
+					ProjectRef = 3DA5E945D033B337390C5785 /* Bloom.xcodeproj */;
+				},
+				{
+					ProductGroup = B9E5DFB10256C3E346F595F1 /* Products */;
+					ProjectRef = E8AA12FE1AA35DB09482993E /* Sandbox.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				55D5D26E6CE86DA05D0468AE /* SandboxApp.app */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		68EEEDE0DD4932D25B2CBC20 /* libSandbox.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = libSandbox.dylib;
+			remoteRef = 4820A0919EAE0B0377271ED1 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		7B8EE8B41D7884A6149F96F4 /* libBloom.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = libBloom.dylib;
+			remoteRef = D82B879BC317AD8D0AFD75DB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BA3E3D982BC9560ADACA7BD8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF09806F653292612698EEAF /* MainMenu.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		23EB56EF95766F614477952F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				51F1AA79BF19B8EBC0ACA8B9 /* SandboxApp.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A79E1CBAF00F00EC34ADD2FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = libSandbox.dylib;
+			targetProxy = 9A5B132AF0E87D9CC961916A /* PBXContainerItemProxy */;
+		};
+		CB034A84F1297A36583070C4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = libBloom.dylib;
+			targetProxy = 2A65FA34155220265D37E874 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		425C8AD7734082C98658B917 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CONFIGURATION_BUILD_DIR = ../Build/Bin/Release;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_DYNAMIC_NO_PIC = NO;
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
+				INSTALL_PATH = "\"$(HOME)/Applications\"";
+				MACOSX_DEPLOYMENT_TARGET = 12.2;
+				PRODUCT_NAME = SandboxApp;
+			};
+			name = Release;
+		};
+		6321525B5C8753CD5022B09B /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
+				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/.",
+				);
+				OBJROOT = ../Build/Obj/Development/Development/SandboxApp;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				SYMROOT = ../Build/Bin/Development;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					../Bloom/include,
+					../Bloom/src,
+					"$(inherited)",
+				);
+			};
+			name = Development;
+		};
+		6F1CF17F9DC34571F7049FBF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
+				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
+				COPY_PHASE_STRIP = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/.",
+				);
+				OBJROOT = ../Build/Obj/Debug/Debug/SandboxApp;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				SYMROOT = ../Build/Bin/Debug;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					../Bloom/include,
+					../Bloom/src,
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		9E87277910123FEBBF1365B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
+				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/.",
+				);
+				OBJROOT = ../Build/Obj/Release/Release/SandboxApp;
+				ONLY_ACTIVE_ARCH = NO;
+				SYMROOT = ../Build/Bin/Release;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					../Bloom/include,
+					../Bloom/src,
+					"$(inherited)",
+				);
+			};
+			name = Release;
+		};
+		BFD1D49D1B13280FEE6D72DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CONFIGURATION_BUILD_DIR = ../Build/Bin/Debug;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_DYNAMIC_NO_PIC = NO;
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
+				INSTALL_PATH = "\"$(HOME)/Applications\"";
+				MACOSX_DEPLOYMENT_TARGET = 12.2;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				PRODUCT_NAME = SandboxApp;
+			};
+			name = Debug;
+		};
+		FD9687B96EB928AB247FD5F9 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CONFIGURATION_BUILD_DIR = ../Build/Bin/Development;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_DYNAMIC_NO_PIC = NO;
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
+				INSTALL_PATH = "\"$(HOME)/Applications\"";
+				MACOSX_DEPLOYMENT_TARGET = 12.2;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				PRODUCT_NAME = SandboxApp;
+			};
+			name = Development;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DEB928908733DD80010E9CD /* Build configuration list for PBXProject "SandboxApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6F1CF17F9DC34571F7049FBF /* Debug */,
+				6321525B5C8753CD5022B09B /* Development */,
+				9E87277910123FEBBF1365B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		38920557AA1D1DC9591E4397 /* Build configuration list for PBXNativeTarget "SandboxApp.app" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BFD1D49D1B13280FEE6D72DD /* Debug */,
+				FD9687B96EB928AB247FD5F9 /* Development */,
+				425C8AD7734082C98658B917 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+};
+rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+}

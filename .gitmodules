@@ -1,0 +1,6 @@
+[submodule "Utility"]
+	path = vendor/Utility
+	url = https://github.com/chrysante/Utility
+[submodule "Vendor/entt"]
+	path = Vendor/entt
+	url = https://github.com/skypjack/entt

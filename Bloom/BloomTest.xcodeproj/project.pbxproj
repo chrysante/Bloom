@@ -1,0 +1,364 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2925FCBF6D74A231AF9BDAFF /* Scene.t.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 645F19C7862AC6F9C2DFF007 /* Scene.t.cpp */; };
+		4152EECC51381AFE3DABA50C /* libBloom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B8EE8B41D7884A6149F96F4 /* libBloom.dylib */; };
+		B68AC1CC0D182C3EE591400C /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E21F5234E590246666FCC874 /* main.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2A65FA34155220265D37E874 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47EBA2120B5763C449FB0852 /* Bloom.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 7D7010819482ABB3849EA6C1;
+			remoteInfo = libBloom.dylib;
+		};
+		D82B879BC317AD8D0AFD75DB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 47EBA2120B5763C449FB0852 /* Bloom.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = E5AF4BFBDF154D6DD2B0AA3B;
+			remoteInfo = libBloom.dylib;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		47EBA2120B5763C449FB0852 /* libBloom.dylib */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "Bloom.xcodeproj"; path = Bloom.xcodeproj; sourceTree = SOURCE_ROOT; };
+		5D25AD2260967F54E2032362 /* BloomTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = BloomTest; path = BloomTest; sourceTree = BUILT_PRODUCTS_DIR; };
+		645F19C7862AC6F9C2DFF007 /* Scene.t.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Scene.t.cpp; path = Tests/Scene/Scene.t.cpp; sourceTree = "<group>"; };
+		E21F5234E590246666FCC874 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = Tests/main.cpp; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D09A619273E5EAC48EB6B7D2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4152EECC51381AFE3DABA50C /* libBloom.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		36845E7EDAD6FC30ED0F44BE /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXGroup section */
+		36501939B99576ABE2DCF779 /* BloomTest */ = {
+			isa = PBXGroup;
+			children = (
+				52A15F64A2B4F416253325A4 /* Scene */,
+				E21F5234E590246666FCC874 /* main.cpp */,
+				A6C936B49B3FADE6EA134CF4 /* Products */,
+				9D968EAA920D05DCE0E0A4EA /* Projects */,
+			);
+			name = BloomTest;
+			sourceTree = "<group>";
+		};
+		52A15F64A2B4F416253325A4 /* Scene */ = {
+			isa = PBXGroup;
+			children = (
+				645F19C7862AC6F9C2DFF007 /* Scene.t.cpp */,
+			);
+			name = Scene;
+			sourceTree = "<group>";
+		};
+		9D968EAA920D05DCE0E0A4EA /* Projects */ = {
+			isa = PBXGroup;
+			children = (
+				47EBA2120B5763C449FB0852 /* Bloom.xcodeproj */,
+			);
+			name = Projects;
+			sourceTree = "<group>";
+		};
+		A6C936B49B3FADE6EA134CF4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5D25AD2260967F54E2032362 /* BloomTest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DD4B0D7B03713D2D6A7833BB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7B8EE8B41D7884A6149F96F4 /* libBloom.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		337B68C86221BCBABB631708 /* BloomTest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BED5A9F1622133237CF20031 /* Build configuration list for PBXNativeTarget "BloomTest" */;
+			buildPhases = (
+				4081E232E3CD6B64FE9E3872 /* Resources */,
+				AA2EFB894D7A84BB684B51C9 /* Sources */,
+				D09A619273E5EAC48EB6B7D2 /* Frameworks */,
+				36845E7EDAD6FC30ED0F44BE /* Embed Libraries */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CB034A84F1297A36583070C4 /* PBXTargetDependency */,
+			);
+			name = BloomTest;
+			productInstallPath = "$(HOME)/bin";
+			productName = BloomTest;
+			productReference = 5D25AD2260967F54E2032362 /* BloomTest */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08FB7793FE84155DC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 1DEB928908733DD80010E9CD /* Build configuration list for PBXProject "BloomTest" */;
+			compatibilityVersion = "Xcode 3.2";
+			hasScannedForEncodings = 1;
+			mainGroup = 36501939B99576ABE2DCF779 /* BloomTest */;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = DD4B0D7B03713D2D6A7833BB /* Products */;
+					ProjectRef = 47EBA2120B5763C449FB0852 /* Bloom.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				337B68C86221BCBABB631708 /* BloomTest */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		7B8EE8B41D7884A6149F96F4 /* libBloom.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = libBloom.dylib;
+			remoteRef = D82B879BC317AD8D0AFD75DB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4081E232E3CD6B64FE9E3872 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA2EFB894D7A84BB684B51C9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2925FCBF6D74A231AF9BDAFF /* Scene.t.cpp in Sources */,
+				B68AC1CC0D182C3EE591400C /* main.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CB034A84F1297A36583070C4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = libBloom.dylib;
+			targetProxy = 2A65FA34155220265D37E874 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		137CAED3D6E87085158C1513 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CONFIGURATION_BUILD_DIR = ../Build/Bin/Development;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_DYNAMIC_NO_PIC = NO;
+				INSTALL_PATH = /usr/local/bin;
+				MACOSX_DEPLOYMENT_TARGET = 12.2;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				PRODUCT_NAME = BloomTest;
+			};
+			name = Development;
+		};
+		3741EE223AB2C054BC1F6462 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
+				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/.",
+				);
+				OBJROOT = ../Build/Obj/Release/Release/BloomTest;
+				ONLY_ACTIVE_ARCH = NO;
+				SYMROOT = ../Build/Bin/Release;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					"$(inherited)",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					src,
+				);
+			};
+			name = Release;
+		};
+		63D73037AC481469F0E6E677 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CONFIGURATION_BUILD_DIR = ../Build/Bin/Debug;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_DYNAMIC_NO_PIC = NO;
+				INSTALL_PATH = /usr/local/bin;
+				MACOSX_DEPLOYMENT_TARGET = 12.2;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				PRODUCT_NAME = BloomTest;
+			};
+			name = Debug;
+		};
+		D3C14584EAD3E0B6DAEFDBC4 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
+				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/.",
+				);
+				OBJROOT = ../Build/Obj/Development/Development/BloomTest;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				SYMROOT = ../Build/Bin/Development;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					"$(inherited)",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					src,
+				);
+			};
+			name = Development;
+		};
+		F5F3F9E89A46979AAC7EE028 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
+				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
+				COPY_PHASE_STRIP = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/.",
+				);
+				OBJROOT = ../Build/Obj/Debug/Debug/BloomTest;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				SYMROOT = ../Build/Bin/Debug;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					"$(inherited)",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					src,
+				);
+			};
+			name = Debug;
+		};
+		FD2734F12561EDA30CFD7B31 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CONFIGURATION_BUILD_DIR = ../Build/Bin/Release;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_DYNAMIC_NO_PIC = NO;
+				INSTALL_PATH = /usr/local/bin;
+				MACOSX_DEPLOYMENT_TARGET = 12.2;
+				PRODUCT_NAME = BloomTest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DEB928908733DD80010E9CD /* Build configuration list for PBXProject "BloomTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F5F3F9E89A46979AAC7EE028 /* Debug */,
+				D3C14584EAD3E0B6DAEFDBC4 /* Development */,
+				3741EE223AB2C054BC1F6462 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BED5A9F1622133237CF20031 /* Build configuration list for PBXNativeTarget "BloomTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				63D73037AC481469F0E6E677 /* Debug */,
+				137CAED3D6E87085158C1513 /* Development */,
+				FD2734F12561EDA30CFD7B31 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+};
+rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+}

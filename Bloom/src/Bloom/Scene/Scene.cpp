@@ -4,19 +4,20 @@
 
 namespace bloom {
 	
-	EntityID Scene::createEntity(std::string_view name, EntityID parent) {
+	EntityID Scene::createEntity(std::string_view name) {
 		EntityID const entity = EntityID(_registry.create());
 		addComponent(entity, TransformComponent{});
+		addComponent(entity, TransformMatrixComponent{});
 		addComponent(entity, TagComponent{ std::string(name) });
-		addComponent(entity, ParentComponent{ parent });
+		addComponent(entity, HierachyComponent{});
 
-		if (parent) {
-			if (!hasComponent<ChildrenComponent>(parent)) {
-				addComponent(parent, ChildrenComponent{});
-			}
-			auto& children = getComponent<ChildrenComponent>(parent);
-			children.entities.push_back(entity);
-		}
+//		if (parent) {
+//			if (!hasComponent<ChildrenComponent>(parent)) {
+//				addComponent(parent, ChildrenComponent{});
+//			}
+//			auto& children = getComponent<ChildrenComponent>(parent);
+//			children.entities.push_back(entity);
+//		}
 		
 		return entity;
 	}

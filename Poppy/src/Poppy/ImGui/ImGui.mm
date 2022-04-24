@@ -81,7 +81,6 @@ namespace poppy {
 		}
 		this->_defaultFont = getFont(FontWeight::regular, FontStyle::roman);
 		
-		
 		ImGui_ImplOSX_Init(viewController.view);
 		
 		auto presentKeyEventHandler = viewController.keyEventResponder.keyEventHandler;
@@ -214,9 +213,19 @@ namespace poppy {
 		float const fontSize = 16;
 		float const dpiScale = 2;
 		
+//		char16_t const glyphs[] =
+//			u" !\"#$%&'()*+,-./0123456789:;<=>?"
+//			u"@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+//			u"`abcdefghijklmnopqrstuvwxyz{|}~"
+//			u"äöüÄÖÜ" // and so on
+//			u"ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘꞯʀꜱᴛᴜᴠᴡʏᴢ"
+		;
+		
 		auto fontPath = utl::format("Font/SFPro-{}-{}.ttf", toString(weight), toString(style));
 		auto result = io.Fonts->AddFontFromFileTTF(bloom::pathForResource(fontPath).string().data(),
-												   fontSize * dpiScale);
+												   fontSize * dpiScale
+//												   , nullptr, (ImWchar const*)glyphs
+												   );
 		bloomAssert(result);
 		
 		io.Fonts->Build();

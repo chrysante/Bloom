@@ -24,6 +24,7 @@ namespace bloom {
 	public:
 		virtual ~RenderContext() = default;
 		
+		virtual BufferHandle createBuffer(void const* data, std::size_t size, StorageMode) = 0;
 		virtual BufferHandle createVertexBuffer(void const* data, std::size_t size) = 0;
 		virtual BufferHandle createIndexBuffer(std::span<std::uint16_t>) = 0;
 		virtual BufferHandle createIndexBuffer(std::span<std::uint32_t>) = 0;
@@ -32,7 +33,8 @@ namespace bloom {
 		virtual DepthStencilHandle createDepthStencilState(CompareFunction) = 0;
 		
 		virtual TextureHandle createRenderTarget(std::size_t width, std::size_t height, PixelFormat, StorageMode) = 0;
-//		virtual Texture createTexture(std::size_t width, std::size_t height, std::size_t depth) = 0;
+		virtual TextureHandle createTexture(mtl::usize3 size, PixelFormat, TextureUsage, StorageMode) = 0;
+//		virtual TextureHandle populateTexture(TextureView, void const* data) = 0;
 		
 		virtual void fillBuffer(BufferView, void const* data, std::size_t size, std::size_t offset = 0) = 0;
 		
@@ -43,6 +45,7 @@ namespace bloom {
 		virtual void setClearDepth(float) = 0;
 		
 		virtual void beginRenderPass() = 0;
+		
 		virtual void setPipelineState(RenderPipelineView) = 0;
 		virtual void setDepthStencilState(DepthStencilView) = 0;
 		
@@ -55,6 +58,7 @@ namespace bloom {
 		virtual void setFragmentSampler(SamplerView, int index) = 0;
 		
 		virtual void setTriangleFillMode(TriangleFillMode) = 0;
+		virtual void setTriangleCullMode(TriangleCullMode) = 0;
 		
 		virtual void drawIndexed(BufferView indices, IndexType) = 0;
 		

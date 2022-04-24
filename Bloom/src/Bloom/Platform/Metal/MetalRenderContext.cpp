@@ -9,6 +9,17 @@ namespace bloom {
 		object->release();
 	}
 	
+	static MTL::ResourceOptions toMTLResourceOptions(StorageMode mode) {
+		switch (mode) {
+			case StorageMode::Shared:
+				return MTL::ResourceStorageModeShared;
+			case StorageMode::Managed:
+				return MTL::ResourceStorageModeManaged;
+			case StorageMode::Private:
+				return MTL::ResourceStorageModePrivate;
+		}
+	}
+	
 	MetalRenderContext::MetalRenderContext(MTL::Device* device, void* viewController):
 		_device(device),
 		_viewController(viewController),
@@ -17,20 +28,39 @@ namespace bloom {
 		
 	}
 	
+	BufferHandle MetalRenderContext::createBuffer(void const* data,
+												  std::size_t size,
+												  StorageMode storageMode)
+	{
+		if (data) {
+			return BufferHandle(_device->newBuffer(data,
+												   size,
+												   toMTLResourceOptions(storageMode)),
+								MTLDeleter,
+								size);
+		}
+		else {
+			return BufferHandle(_device->newBuffer(size,
+												   toMTLResourceOptions(storageMode)),
+								MTLDeleter,
+								size);
+		}
+	}
+	
 	BufferHandle MetalRenderContext::createVertexBuffer(void const* data, std::size_t size) {
-		return createBuffer(data, size, MTL::ResourceStorageModeShared);
+		return createBuffer(data, size, StorageMode::Shared);
 	}
 	
 	BufferHandle MetalRenderContext::createIndexBuffer(std::span<std::uint16_t> indices) {
-		return createBuffer(indices.data(), indices.size() * 2, MTL::ResourceStorageModeShared);
+		return createBuffer(indices.data(), indices.size() * 2, StorageMode::Shared);
 	}
 	
 	BufferHandle MetalRenderContext::createIndexBuffer(std::span<std::uint32_t> indices) {
-		return createBuffer(indices.data(), indices.size() * 4, MTL::ResourceStorageModeShared);
+		return createBuffer(indices.data(), indices.size() * 4, StorageMode::Shared);
 	}
 	
 	BufferHandle MetalRenderContext::createUniformBuffer(void const* data, std::size_t size) {
-		return createBuffer(data, size, MTL::ResourceStorageModeManaged);
+		return createBuffer(data, size, StorageMode::Managed);
 	}
 	
 	DepthStencilHandle MetalRenderContext::createDepthStencilState(CompareFunction cmp) {
@@ -40,7 +70,38 @@ namespace bloom {
 		return DepthStencilHandle(_device->newDepthStencilState(dsDesc.get()), MTLDeleter);
 	}
 	
-	TextureHandle MetalRenderContext::createRenderTarget(std::size_t width, std::size_t height, PixelFormat format, StorageMode storageMode) {
+	TextureHandle MetalRenderContext::createTexture(mtl::usize3 size,
+													PixelFormat format,
+													TextureUsage usage,
+													StorageMode storageMode)
+	{
+		auto const type =
+			size.z > 1 ?
+			MTL::TextureType3D :
+			size.y > 1 ?
+			MTL::TextureType2D :
+			MTL::TextureType1D;
+		ARCPointer texDescriptor = MTL::TextureDescriptor::alloc()->init();
+		texDescriptor->setTextureType(type);
+		texDescriptor->setWidth(size.x);
+		texDescriptor->setHeight(size.y);
+		texDescriptor->setDepth(size.z);
+		texDescriptor->setPixelFormat((MTL::PixelFormat)format);
+		texDescriptor->setUsage((MTL::TextureUsage)usage);
+		
+		texDescriptor->setStorageMode((MTL::StorageMode)storageMode);
+		
+		return TextureHandle(device()->newTexture(texDescriptor.get()),
+							 MTLDeleter,
+							 size.x, size.y, size.z);
+	}
+	
+	TextureHandle MetalRenderContext::createRenderTarget(std::size_t width,
+														 std::size_t height,
+														 PixelFormat format,
+														 StorageMode storageMode)
+	{
+#warning Write in terms of createTexture()
 		ARCPointer texDescriptor = MTL::TextureDescriptor::alloc()->init();
 		texDescriptor->setTextureType(MTL::TextureType2D);
 		texDescriptor->setWidth(width);
@@ -52,16 +113,6 @@ namespace bloom {
 		
 		return TextureHandle(device()->newTexture(texDescriptor.get()), MTLDeleter,
 							 width, height, 1);
-		
-//		if ((1)) {
-//			texDescriptor->setStorageMode(MTL::StorageModePrivate);
-//			texDescriptor->setPixelFormat(MTL::PixelFormatDepth32Float);
-//			TextureHandle depth(device()->newTexture(texDescriptor.get()), MTLDeleter,
-//								width, height, 1);
-//			return RenderTarget(std::move(color), std::move(depth));
-//		}
-//		
-//		return RenderTarget(std::move(color));
 	}
 	
 	void MetalRenderContext::fillBuffer(BufferView view, void const* data, std::size_t size, std::size_t offset) {
@@ -109,7 +160,6 @@ namespace bloom {
 		if (currentRenderTargetDepth) {
 			_renderPassDesc->depthAttachment()->setTexture((MTL::Texture*)currentRenderTargetDepth.nativeHandle());
 		}
-		
 		_commandBuffer = _commandQueue->commandBuffer();
 		_commandEncoder = _commandBuffer->renderCommandEncoder(_renderPassDesc.get());
 	}
@@ -146,8 +196,12 @@ namespace bloom {
 		_commandEncoder->setFragmentSamplerState((MTL::SamplerState*)sampler.nativeHandle(), index);
 	}
 	
-	void MetalRenderContext::setTriangleFillMode(TriangleFillMode fillMode) {
-		_commandEncoder->setTriangleFillMode((MTL::TriangleFillMode)fillMode);
+	void MetalRenderContext::setTriangleFillMode(TriangleFillMode mode) {
+		_commandEncoder->setTriangleFillMode((MTL::TriangleFillMode)mode);
+	}
+	
+	void MetalRenderContext::setTriangleCullMode(TriangleCullMode mode) {
+		_commandEncoder->setCullMode((MTL::CullMode)mode);
 	}
 	
 	void MetalRenderContext::drawIndexed(BufferView indices, IndexType type) {
@@ -165,15 +219,6 @@ namespace bloom {
 		eraseRenderTargets();
 		
 		return RenderPassHandle([cmdbuf = _commandBuffer]{ cmdbuf->waitUntilCompleted(); });
-	}
-	
-	BufferHandle MetalRenderContext::createBuffer(void const* data, std::size_t size, unsigned mode) {
-		if (data) {
-			return BufferHandle(_device->newBuffer(data, size, mode), MTLDeleter, size);
-		}
-		else {
-			return BufferHandle(_device->newBuffer(size, mode), MTLDeleter, size);
-		}
 	}
 	
 	void MetalRenderContext::eraseRenderTargets() {

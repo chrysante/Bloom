@@ -1,47 +1,31 @@
 #pragma once
 
 #include "Panel.hpp"
+#include "BasicSceneInspector.hpp"
+#include "ViewportCameraActor.hpp"
+
+#include "Bloom/Application/Event.hpp"
 
 #include "Bloom/Scene/Scene.hpp"
 #include "Bloom/Scene/Components.hpp"
 
-#include "Bloom/Application/Input.hpp"
-#include "Bloom/Core/Time.hpp"
-
 #include "Bloom/Graphics/Renderer.hpp"
 #include "Bloom/Graphics/FrameBuffer.hpp"
-#include "Bloom/Graphics/Camera.hpp"
 
 #include <mtl/mtl.hpp>
 
 namespace poppy {
 	
-	class SelectionContext;
-	
-	struct ViewportCameraActor {
-		ViewportCameraActor() {
-			camera.setTransform(position, front());
-		}
-		void update(bloom::TimeStep, bloom::Input const&);
-		
-		void applyTransform();
-		
-		bloom::Camera camera;
-		float angleLR = mtl::constants<>::pi / 2;
-		float angleUD = mtl::constants<>::pi / 2;
-		float speed = 500;
-		mtl::float3 position = { 0, -5, 1 };
-		mtl::float3 front() const;
-		mtl::float3 up() const { return { 0, 0, 1 }; }
-	};
-	
 	enum class GizmoMode {
-		translate = 0, rotate, scale
+		translate = 0,
+		rotate    = 1,
+		scale     = 2
 	};
 	std::string_view toString(GizmoMode);
 	
 	enum class CoordinateSpace {
-		world = 0, local
+		world = 0,
+		local = 1
 	};
 	std::string_view toString(CoordinateSpace);
 	
@@ -50,9 +34,14 @@ namespace poppy {
 	};
 	std::string_view toString(Projection);
 	
-	class Viewport: public Panel {
+	class Viewport: public Panel, public BasicSceneInspector {
 	public:
-		Viewport(SelectionContext*, bloom::Scene*, bloom::Renderer*);
+		struct Parameters {
+			float fieldOfView = 60;
+		};
+		
+	public:
+		Viewport(bloom::Renderer*);
 		~Viewport();
 		
 		void onEvent(bloom::Event const& event) override;
@@ -61,29 +50,39 @@ namespace poppy {
 		void init() override;
 		void shutdown() override;
 		void display() override;
-		
-		void displayControls();
-		void displayGizmo(bloom::TransformComponent& transform);
-		
+	
+		void calculateTransforms();
 		void renderScene();
 		void updateRenderTarget(mtl::usize2 size);
+		
+		void displayControls();
+		
+		void displayGizmo(bloom::EntityID);
+		mtl::float4x4 getParentTransform(bloom::EntityID) const;
 		
 		void drawOverlays();
 		void drawLightOverlays();
 		
+		void drawPointLightIcon(mtl::float2 position, mtl::float3 color);
+		void drawSpotLightIcon(mtl::float2 position, mtl::float3 color);
+		void drawSpotlightVizWS(mtl::float3 position, mtl::quaternion_float orientation,
+								float radius, float angle, mtl::float3 color);
+		
 		bloom::EntityID readEntityID(mtl::float2 mousePositionInView);
 		
 		mtl::float3 worldSpaceToViewSpace(mtl::float3 position);
+		mtl::float3 worldSpaceToWindowSpace(mtl::float3 position);
+		
+		
 		
 	private:
-		SelectionContext* selection;
-		bloom::Scene* scene = nullptr;
 		bloom::Renderer* renderer = nullptr;
 		bloom::EditorFrameBuffer frameBuffer;
 		
+		Parameters params;
+		
 		ViewportCameraActor cameraActor;
 		Projection cameraProjection = Projection::perspective;
-		float fieldOfView = 90;
 		
 		bloom::DebugDrawMode drawMode = bloom::DebugDrawMode::lit;
 		

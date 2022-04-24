@@ -6,6 +6,8 @@
 #include <imgui/imgui_internal.h>
 
 #include "Bloom/Application/Event.hpp"
+#include "Poppy/Debug.hpp"
+#include <cstring>
 
 // Functions
 static ImGuiKey KeyCodeToImGuiKey(bloom::Key k) {
@@ -491,5 +493,36 @@ namespace poppy {
 		}
 		return result;
 	}
+	
+	std::array<char, 64> generateUniqueID(std::string_view name, int id, bool const prepentDoubleHash) {
+		std::array<char, 64> buffer{};
+		char* bufferPtr = buffer.data();
+		/* -0000000 */
+		std::size_t availSize = 56;
+		if (prepentDoubleHash) {
+			bufferPtr[0] = '#';
+			bufferPtr[1] = '#';
+			bufferPtr += 2;
+			availSize -= 2;
+		}
+		
+		std::size_t const nameSize = std::min(name.size(), availSize - 2 * !prepentDoubleHash);
+		
+		std::memcpy(bufferPtr, name.data(), nameSize);
+		bufferPtr += nameSize;
+		availSize -= nameSize;
+		if (!prepentDoubleHash) {
+			bufferPtr[0] = '#';
+			bufferPtr[1] = '#';
+			bufferPtr += 2;
+			availSize -= 2;
+		}
+		poppyAssert(availSize < 56, "Overflow has occured");
+		std::strncpy(bufferPtr, utl::format("-{}", id).data(), 8);
+		
+		return buffer;
+	}
+	
+	
 	
 }

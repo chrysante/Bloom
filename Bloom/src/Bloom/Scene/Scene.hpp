@@ -14,7 +14,7 @@ namespace bloom {
 	
 	class BLOOM_API Scene {
 	public:
-		EntityID createEntity(std::string_view name, EntityID parent = {});
+		EntityID createEntity(std::string_view name);
 		
 		template <typename Component>
 		void addComponent(EntityID entity, Component const& component) {
@@ -34,7 +34,7 @@ namespace bloom {
 		template <typename Component>
 		void removeComponent(EntityID entity) {
 			bloomExpect(hasComponent<Component>(entity), "Component not present");
-			_registry.remove<Component>(entity);
+			_registry.remove<Component>(entity.value());
 		}
 		
 		template <typename Component>

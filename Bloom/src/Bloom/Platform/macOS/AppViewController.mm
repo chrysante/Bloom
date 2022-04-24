@@ -84,7 +84,7 @@
 	[NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
 	{
 		keyEventHandler(event);
-		return nil;
+//		return nil;
 		return event;
 	}];
 	
@@ -99,6 +99,17 @@
 {
 	using bloom::internal::AppInternals;
 	AppInternals::tick(self.application);
+//	
+//	
+//	{
+//		NSWindow* window = self.view.window;
+//		
+//		NSRect frame = [window frame];
+//		frame.size = { 500, 500 };
+//		[window setFrame: frame display: YES animate: NO];
+//
+//	}
+	
 }
 
 -(void)mtkView:(MTKView*)view drawableSizeWillChange:(CGSize)size

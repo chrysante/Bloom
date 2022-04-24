@@ -21,6 +21,20 @@ namespace bloom {
 		fill = 0, lines = 1
 	};
 	
+	enum class TriangleCullMode {
+		none = 0,
+		front = 1,
+		back = 2
+	};
+	
+	enum class TextureUsage {
+		none = 0,
+		shaderRead = 1,
+		shaderWrite = 2,
+		renderTarget = 4,
+//		TextureUsagePixelFormatView = 16,
+	};
+	
 	enum class StorageMode {
 		Shared = 0,
 		Managed = 1,

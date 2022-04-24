@@ -13,7 +13,7 @@
 #include "FrameBuffer.hpp"
 #include "Camera.hpp"
 #include "Material.hpp"
-#include "StaticMesh.hpp"
+#include "StaticRenderMesh.hpp"
 #include "RenderContext.hpp"
 
 #include "Bloom/Platform/Metal/MetalRenderContext.hpp"
@@ -56,7 +56,7 @@ namespace bloom {
 		buildingScene = false;
 	}
 	
-	void Renderer::submit(StaticMesh* mesh, Material* material, EntityRenderData entityData, bool selected) {
+	void Renderer::submit(StaticRenderMesh* mesh, Material* material, EntityRenderData entityData, bool selected) {
 		bloomExpect(buildingScene, "Forgot to call beginScene?");
 		entityData.transform = mtl::transpose(entityData.transform);
 		objects.push_back({ entityData, selected, material, mesh });
@@ -180,6 +180,7 @@ namespace bloom {
 			if (object.material != currentMaterial) {
 				currentMaterial = object.material;
 				renderContext->setPipelineState(currentMaterial->mainPassEditor);
+				renderContext->setTriangleCullMode(currentMaterial->cullMode);
 				renderContext->setDepthStencilState(depthStencil);
 			}
 			renderContext->setVertexBuffer(object.mesh->vertexBuffer, 1);

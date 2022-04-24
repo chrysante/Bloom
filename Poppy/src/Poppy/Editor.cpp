@@ -2,21 +2,23 @@
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
-
 #include <mtl/mtl.hpp>
+#include <filesystem>
+#include <utl/stdio.hpp>
+#include <fstream>
+#include <sstream>
+
+#include "Bloom/Application/Resource.hpp"
+
+#include "Debug.hpp"
+#include "ExampleScene.hpp"
+#include "EditorAssetManager.hpp"
 
 #include "Panels/Viewport.hpp"
 #include "Panels/SceneInspector.hpp"
 #include "Panels/EntityInspector.hpp"
 #include "Panels/AssetBrowser.hpp"
-#include "ExampleScene.hpp"
 
-#include "Bloom/Application/Resource.hpp"
-#include <filesystem>
-
-#include <utl/stdio.hpp>
-#include <fstream>
-#include <sstream>
 
 using namespace mtl::short_types;
 
@@ -89,50 +91,69 @@ namespace {
 
 		ImGui::End();
 	}
+
+	std::string yamlSanitize(std::string s) {
+		std::replace(s.begin(), s.end(), '#', '*');
+		return std::move(s);
+	}
+	
+	std::string yamlSanitize(std::string_view s) {
+		return yamlSanitize(std::string(s));
+	}
 	
 }
 
 namespace poppy {
 	
-	Editor::Editor() {}
+	Editor::Editor() {
+	
+	}
 	
 	void Editor::init() {
 		initLibraryDir();
 		
-		appSettings.initFromFile(libDir / "poppy.ini");
-		
+		do {
+			auto const path = libraryDir() / "poppy.ini";
+			std::fstream settingsFile(path, std::ios::in);
+			if (!settingsFile) {
+				poppyLog(warning, "Failed to load Settings from {}", path);
+				break;
+			}
+			std::stringstream sstr;
+			sstr << settingsFile.rdbuf();
+			settings = YAML::Load(sstr.str());
+		} while (0);
+		resourceManager.setRenderContext(&renderContext());
 		imgui.init(&renderContext());
 		GImGui->Style.WindowRounding = 5;
 		GImGui->Style.FrameRounding = 5;
 		
-		
 		scene = utl::make_ref<bloom::Scene>();
 		buildExampleScene(*scene, renderContext());
 		
-		
-		
-		panels.push_back(Panel::create<Viewport>(this,
-												 &selection,
-												 scene.get(),
-												 &renderer()));
-		panels.push_back(Panel::create<Viewport>(this,
-												 &selection,
-												 scene.get(),
-												 &renderer()));
-		panels.push_back(Panel::create<SceneInspector>(this,
-													   scene.get(),
-													   &selection));
-		panels.push_back(Panel::create<EntityInspector>(this,
-														scene.get(),
-														&selection));
-//		panels.push_back(Panel::create<AssetBrowser>(this));
+		createPanel<Viewport>(&renderer());
+		createPanel<Viewport>(&renderer());
+		createPanel<SceneInspector>();
+		createPanel<EntityInspector>();
+		createPanel<AssetBrowser>();
 	}
 	
 	void Editor::shutdown() {
 		for (auto& panel: panels) {
 			panel->shutdown();
+			settings[yamlSanitize(panel->uniqueName())] = panel->settings;
 		}
-		appSettings.saveToDisk();
+		do {
+			auto const path = libraryDir() / "poppy.ini";
+			std::fstream settingsFile(path, std::ios::out);
+			if (!settingsFile) {
+				poppyLog(warning, "Failed to Open Settings File at {}", path);
+				break;
+			}
+			YAML::Emitter out;
+			out << settings;
+			settingsFile << out.c_str();
+		} while (0);
 	}
 	
 	void Editor::update(bloom::TimeStep) {
@@ -179,12 +200,30 @@ namespace poppy {
 		ImGui::EndMainMenuBar();
 	}
 	
+	template <typename T>
+	void Editor::createPanel(auto&&... args) {
+		auto panel = Panel::create<T>(this, UTL_FORWARD(args)...);
+		if (auto* const sc = dynamic_cast<BasicSceneInspector*>(panel.get())) {
+			sc->setScene(scene.get());
+			sc->setSelectionContext(&selection);
+			sc->setAssetManager(getAssetManager());
+		}
+		
+		panel->settings = settings[yamlSanitize(panel->uniqueName())];
+		panel->init();
+		panels.push_back(std::move(panel));
+	}
+	
 	void Editor::initLibraryDir() {
 		auto const systemLibDir = bloom::getLibraryDir();
 		libDir = systemLibDir / "Poppy";
 		if (!std::filesystem::exists(libDir)) {
 			std::filesystem::create_directory(libDir);
 		}
+	}
+	
+	std::unique_ptr<bloom::AssetManager> Editor::createAssetManager() {
+		return std::make_unique<EditorAssetManager>();
 	}
 	
 }

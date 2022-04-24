@@ -3,18 +3,29 @@
    version = "1.0">
    <ContextStates>
       <ContextState
-         contextName = "poppy::ImGuiContext::init(bloom::NativeViewController*, bloom::NativeDevice*):ImGui.mm">
-         <PersistentStrings>
-            <PersistentString
-               value = "_context-&gt;IO.IniFilename">
-            </PersistentString>
-         </PersistentStrings>
-      </ContextState>
-      <ContextState
          contextName = "bloom::pathForResource(std::__1::__fs::filesystem::path):Resource.mm">
          <PersistentStrings>
             <PersistentString
                value = "file.stem()">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ImGui::SaveIniSettingsToDisk(char const*):imgui.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "poppy::MeshImporter::importFBX(std::__1::__fs::filesystem::path):MeshImporter.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "indices[i]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "bloom::AssetManager::flushToDisk(bloom::AssetHandle, bloom::StaticMeshData const&amp;, std::__1::__fs::filesystem::path):AssetManager.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "header.c_str()">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -27,7 +38,12 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "ImGui::SaveIniSettingsToDisk(char const*):imgui.cpp">
+         contextName = "poppy::AssetBrowser::setCurrentDir(std::__1::__fs::filesystem::path):AssetBrowser.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "entry-&gt;path()-&gt;stem()">
+            </PersistentString>
+         </PersistentStrings>
       </ContextState>
       <ContextState
          contextName = "bloom::Scene::draw(bloom::RenderTarget&amp;, bloom::Renderer&amp;, mtl::matrix&lt;float, 4ul, 4ul, mtl::vector_options{}&gt;):Scene.cpp">
@@ -38,22 +54,72 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "poppy::AppSettingsMaster::saveToDisk():AppSettings.cpp">
+         contextName = "poppy::AppSettingsMaster::init():AppSettings.cpp">
       </ContextState>
       <ContextState
-         contextName = "poppy::AppSettings::init():AppSettings.cpp">
+         contextName = "bloom::AssetManager::readStaticMeshFromDisk(std::__1::__fs::filesystem::path):AssetManager.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "sizeof(Vertex3D)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "poppy::AssetBrowser::import(std::__1::__fs::filesystem::path):AssetBrowser.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "poppy::AssetBrowser::display():AssetBrowser.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "bloom::AssetManager::getName(bloom::AssetHandle) const:AssetManager.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "poppy::DirectoryView::displayItem(std::__1::basic_string_view&lt;char, std::__1::char_traits&lt;char&gt; &gt;, std::__1::optional&lt;bloom::AssetHandle&gt;):AssetBrowser.cpp">
       </ContextState>
       <ContextState
          contextName = "ImFontAtlas::AddFontFromFileTTF(char const*, float, ImFontConfig const*, unsigned short const*):imgui_draw.cpp">
       </ContextState>
       <ContextState
-         contextName = "poppy::AppSettingsMaster::init():AppSettings.cpp">
+         contextName = "poppy::DirectoryView::display():AssetBrowser.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "poppy::AppSettings::init():AppSettings.cpp">
       </ContextState>
       <ContextState
          contextName = "poppy::ImGuiContext::shutdown():ImGui.mm">
          <PersistentStrings>
             <PersistentString
                value = "_context-&gt;IO.IniFilename">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "bloom::AssetManager::handleFromFile(std::__1::__fs::filesystem::path):AssetManager.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "poppy::AppSettingsMaster::saveToDisk():AppSettings.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "void poppy::AppSettingsMaster::deserializeImpl&lt;double, robin_hood::detail::Table&lt;true, 80ul, std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, double, robin_hood::hash&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, void&gt;, std::__1::equal_to&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; &gt; &gt;, YAML::Node&gt;(robin_hood::detail::Table&lt;true, 80ul, std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, double, robin_hood::hash&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, void&gt;, std::__1::equal_to&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; &gt; &gt;&amp;, YAML::Node&amp;&amp;):AppSettings.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "node.IsEmpty()">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "poppy::ImGuiContext::init(bloom::NativeViewController*, bloom::NativeDevice*):ImGui.mm">
+         <PersistentStrings>
+            <PersistentString
+               value = "_context-&gt;IO.IniFilename">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "poppy::EditorAssetManager::import(std::__1::__fs::filesystem::path):EditorAssetManager.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "path.extension()">
             </PersistentString>
          </PersistentStrings>
       </ContextState>
@@ -69,10 +135,21 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "void poppy::AppSettingsMaster::deserializeImpl&lt;double, robin_hood::detail::Table&lt;true, 80ul, std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, double, robin_hood::hash&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, void&gt;, std::__1::equal_to&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; &gt; &gt;, YAML::Node&gt;(robin_hood::detail::Table&lt;true, 80ul, std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, double, robin_hood::hash&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, void&gt;, std::__1::equal_to&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; &gt; &gt;&amp;, YAML::Node&amp;&amp;):AppSettings.cpp">
+         contextName = "poppy::EditorAssetManager::import(std::__1::__fs::filesystem::path, std::__1::__fs::filesystem::path):EditorAssetManager.cpp">
          <PersistentStrings>
             <PersistentString
-               value = "node.IsEmpty()">
+               value = "dest.has_stem()">
+            </PersistentString>
+            <PersistentString
+               value = "dest.is_relative()">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "poppy::EditorAssetManager::findByDiskLocation(std::__1::__fs::filesystem::path const&amp;) const:EditorAssetManager.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "asset-&gt;diskLocation()">
             </PersistentString>
          </PersistentStrings>
       </ContextState>

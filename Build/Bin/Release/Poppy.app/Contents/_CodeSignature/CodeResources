@@ -8,9 +8,89 @@
 		<data>
 		3y++sUAKzaCQmjLBz2v0kvESHgc=
 		</data>
+		<key>Resources/Font/SFMono-Regular-Roman.ttf</key>
+		<data>
+		TJhuekDKKh5yvO3T4cWyRWzYEIw=
+		</data>
+		<key>Resources/Font/SFPro-Black-Italic.ttf</key>
+		<data>
+		44u30PCoNXgaEmn/lq7EvtKsd3w=
+		</data>
+		<key>Resources/Font/SFPro-Black-Roman.ttf</key>
+		<data>
+		4yY2QXhxUdQcC/IAnVwxo7DMLWI=
+		</data>
+		<key>Resources/Font/SFPro-Bold-Italic.ttf</key>
+		<data>
+		MbZscykjSEIlwfzccj8a4yUR5ys=
+		</data>
+		<key>Resources/Font/SFPro-Bold-Roman.ttf</key>
+		<data>
+		jGeoT840LPVO8B6bMLRvdQSK79M=
+		</data>
+		<key>Resources/Font/SFPro-Heavy-Italic.ttf</key>
+		<data>
+		ktC7aFp8JYU5BmRkjfdOhIuIWcw=
+		</data>
+		<key>Resources/Font/SFPro-Heavy-Roman.ttf</key>
+		<data>
+		8Joe5YltcFp4rycmYUMuE53rrJg=
+		</data>
+		<key>Resources/Font/SFPro-Light-Italic.ttf</key>
+		<data>
+		nx3uZFEGOOa5ycBamOtWnNFHLCA=
+		</data>
+		<key>Resources/Font/SFPro-Light-Roman.ttf</key>
+		<data>
+		UXr37r0Fza/gd5BEbWupb93+Cd4=
+		</data>
+		<key>Resources/Font/SFPro-Medium-Italic.ttf</key>
+		<data>
+		4lKmw69PE24COpXaQh/N24WBscs=
+		</data>
+		<key>Resources/Font/SFPro-Medium-Roman.ttf</key>
+		<data>
+		BjN429G4sLAyY9hnFKRVrhGvt0M=
+		</data>
+		<key>Resources/Font/SFPro-Regular-Italic.ttf</key>
+		<data>
+		cjRIg1R9kjHMfwklLjOeQYACjH0=
+		</data>
 		<key>Resources/Font/SFPro-Regular-Roman.ttf</key>
 		<data>
 		AOApwJqY/QFKehAT5+/jV7QNo1I=
+		</data>
+		<key>Resources/Font/SFPro-Semibold-Italic.ttf</key>
+		<data>
+		3T9vzgIsK2ClbVXDxv0YbcNwjvc=
+		</data>
+		<key>Resources/Font/SFPro-Semibold-Roman.ttf</key>
+		<data>
+		ndfI4KED/30HSwRicqh+SgVl5rI=
+		</data>
+		<key>Resources/Font/SFPro-Thin-Italic.ttf</key>
+		<data>
+		yQHnWsQTbNdmaY6ivd+EQ4273mU=
+		</data>
+		<key>Resources/Font/SFPro-Thin-Roman.ttf</key>
+		<data>
+		9H29KVLvEvVeTm9zRYYmmGKCMbI=
+		</data>
+		<key>Resources/Font/SFPro-Ultralight-Italic.ttf</key>
+		<data>
+		O6pN3ceyyX0X673g0o9DHCM284k=
+		</data>
+		<key>Resources/Font/SFPro-Ultralight-Roman.ttf</key>
+		<data>
+		9QiaRneaqo8m+cp3wK3FbayKGnk=
+		</data>
+		<key>Resources/Icons/.DS_Store</key>
+		<data>
+		3y++sUAKzaCQmjLBz2v0kvESHgc=
+		</data>
+		<key>Resources/Icons/Icons.tga</key>
+		<data>
+		1rxnAaiwSfqeFisDPPaZHHV2om4=
 		</data>
 		<key>Resources/MainMenu.storyboardc/Info.plist</key>
 		<data>
@@ -18,7 +98,11 @@
 		</data>
 		<key>Resources/MainMenu.storyboardc/MainMenu.nib</key>
 		<data>
-		wHnP2ZQkUCNu++5aavsXMDVLqXs=
+		PBUSQxL1ZA8masRUt7eHbRXZo78=
+		</data>
+		<key>Resources/default.metallib</key>
+		<data>
+		wv0cVSY5wXjAyESP87ktRx4OZZ0=
 		</data>
 		<key>Resources/platform/.DS_Store</key>
 		<data>
@@ -39,11 +123,144 @@
 	</dict>
 	<key>files2</key>
 	<dict>
+		<key>Resources/Font/SFMono-Regular-Roman.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			9ee5Hd7AaWLSyz/8VfR8Hkp0GGK9J3zg3q2hNtE4/ZE=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Black-Italic.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			HRYtFA07QDPcmIKsx4xevhrRHMrWB2fpWYuUmROApxg=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Black-Roman.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			P6yiqkR05Jp8RbLpL0itO1wuJSRgB/7snI+8HT5bMMY=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Bold-Italic.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			lFK1ZU5AsFpXPJIJa3PWsvKToAZ9bpBrPC+nLo+JWtQ=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Bold-Roman.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			q4TlLZlKljPTv8TK/tyKOCHhgr9cs0EH9VIJNLIAJaU=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Heavy-Italic.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			J5czG3K607YkubFxDbvHIygcdCxiDUgEgpOHGFHfXVc=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Heavy-Roman.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			BRr+etOtXdfjmWjrLLOrDWy2o6+q454wG9B0ZDzVQck=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Light-Italic.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			bssp313eHvnCQGJJLWgWXf/b0v/CU6tf/MV1hffqyMY=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Light-Roman.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			bQtOL8U/tk2/aHw7hPy2M7ZECUjloch2xfb7Cg+YOZA=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Medium-Italic.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			B40FgksjAU0j5VkJkRWcYNvgO2+ZvC3ouz4iLv2iqqM=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Medium-Roman.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			U/MtA0Ls/0O/nI0kE54D3qtrquijf7alWwrobc47t6M=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Regular-Italic.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			0Q1VaVAozI0AKooqIgfhohypugtZwgAV8t6ae7HM86k=
+			</data>
+		</dict>
 		<key>Resources/Font/SFPro-Regular-Roman.ttf</key>
 		<dict>
 			<key>hash2</key>
 			<data>
 			KHxuSqHVpIX2eCz/A5ravt7I8FECOKH8kApgqfx35XU=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Semibold-Italic.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			d/oFii4tUZ+hmF9gA/G48+QRW2jsi6QhT20BTyQ4Pcw=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Semibold-Roman.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			ssWL6XBAemaed3fQQZFhbJV4l+/tfMioe1XCKrsxVp4=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Thin-Italic.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			uuIF9YFXQM515TdDeHmmgj1TgB5ymlzGTGcvI6zMHrc=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Thin-Roman.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			cRobdX4o3CpLEwUj/OCAlCILWNNt0kVSBSmE+6pczNk=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Ultralight-Italic.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			UhSHaYow+E4J2ILftTRXg8wHbuy5V31bVWCxgFcSkM8=
+			</data>
+		</dict>
+		<key>Resources/Font/SFPro-Ultralight-Roman.ttf</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			p4Vbq779e9H0ggk+MMN6NwR0ubBDLx7lxJStqnO5d9c=
+			</data>
+		</dict>
+		<key>Resources/Icons/Icons.tga</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Gw0/uVf0OuY56mEd874Vt8Mcvfr9jmOpIHon53HjFPc=
 			</data>
 		</dict>
 		<key>Resources/MainMenu.storyboardc/Info.plist</key>
@@ -57,7 +274,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			m40jjRWgyBMeVf79jIfd+EZRCy/oyZSRTT4a8yH9ZpU=
+			CGDasDjz33PSqIGDSBbHluRkavGAix2sL/2sWM5coEs=
+			</data>
+		</dict>
+		<key>Resources/default.metallib</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			80BdhmCmihHpuH0+MXBQJwq4ZOHYtLWDf/KyJ+beDt4=
 			</data>
 		</dict>
 		<key>Resources/platform/macOS/Info.plist</key>

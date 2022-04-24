@@ -13,6 +13,7 @@ namespace bloom {
 	public:
 		MetalRenderContext(MTL::Device*, void* viewController);
 		
+		BufferHandle createBuffer(void const* data, std::size_t size, StorageMode) final;
 		BufferHandle createVertexBuffer(void const* data, std::size_t size) final;
 		BufferHandle createIndexBuffer(std::span<std::uint16_t>) final;
 		BufferHandle createIndexBuffer(std::span<std::uint32_t>) final;
@@ -20,7 +21,10 @@ namespace bloom {
 		
 		DepthStencilHandle createDepthStencilState(CompareFunction) final;
 		
-		TextureHandle createRenderTarget(std::size_t width, std::size_t height, PixelFormat, StorageMode) final;
+		TextureHandle createTexture(mtl::usize3 size, PixelFormat, TextureUsage, StorageMode) final;
+		TextureHandle createRenderTarget(std::size_t width, std::size_t height,
+										 PixelFormat, StorageMode) final;
+		
 		
 		void fillBuffer(BufferView, void const* data, std::size_t size, std::size_t offset) final;
 		
@@ -28,7 +32,7 @@ namespace bloom {
 		void setClearColor(std::size_t index, mtl::float4) final;
 		void setRenderTargetDepth(TextureView) final;
 		void setClearDepth(float) final;
-		
+
 		void beginRenderPass() final;
 		void setPipelineState(RenderPipelineView) final;
 		void setDepthStencilState(DepthStencilView) final;
@@ -42,6 +46,7 @@ namespace bloom {
 		void setFragmentSampler(SamplerView, int index) final;
 		
 		void setTriangleFillMode(TriangleFillMode) final;
+		void setTriangleCullMode(TriangleCullMode) final;
 		
 		void drawIndexed(BufferView indices, IndexType) final;
 		
@@ -52,8 +57,6 @@ namespace bloom {
 		void* viewController() { return _viewController; }
 		
 	private:
-		BufferHandle createBuffer(void const* data, std::size_t size, unsigned mode);
-		
 		void eraseRenderTargets();
 		
 	private:

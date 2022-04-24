@@ -10,13 +10,16 @@ includedirs {
 }
 
 sysincludedirs {
-    "../Vendor/imgui",  "../Vendor/Metal-cpp"
+    "../Vendor/imgui",  
+    "../Vendor/Metal-cpp",
+    "../Vendor/assimp/include"
 }
 
 files {
     "src/Poppy/**.h",
     "src/Poppy/**.hpp",
     "src/Poppy/**.cpp",
+    "src/Poppy/**.c", -- for stb_image compiler
     "src/Poppy/**.metal"
 }
 
@@ -55,7 +58,8 @@ links {
     "Utility",
     "ImGui",
     "OpenFBX",
-    "YAML"
+    "assimp",
+    "YAML",
 }
 
 filter "system:macosx"
@@ -68,3 +72,5 @@ filter "system:macosx"
       --  "UniformTypeIdentifiers.framework"
     }
 filter {}
+
+include "PoppyTest.lua"

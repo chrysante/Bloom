@@ -5,6 +5,8 @@
 #include "Event.hpp"
 #include "Input.hpp"
 
+#include "Bloom/Assets/AssetManager.hpp"
+
 #include <utl/memory.hpp>
 #include <utl/vector.hpp>
 
@@ -12,6 +14,7 @@ namespace bloom {
 	
 	class RenderContext;
 	class Renderer;
+	class AssetManager;
 	
 	namespace internal {
 		struct AppInternals;
@@ -28,6 +31,8 @@ namespace bloom {
 		
 		TimeStep getUpdateTime() const { return _updateTimer.getTimeStep(); }
 		TimeStep getRenderTime() const { return _renderTimer.getTimeStep(); }
+		
+		AssetManager* getAssetManager() { return _assetManager.get(); }
 		
 	private:
 		virtual void init() {}
@@ -49,9 +54,10 @@ namespace bloom {
 		void doTickMainThread();
 		
 		void handleEvent(Event const&, void* nativeEvent);
-//		bool handleKeyEvent(KeyEvent const& event, bool down);
 		
 		void flushEventBuffer();
+		
+		virtual utl::unique_ref<AssetManager> createAssetManager();
 		
 	private:
 		utl::unique_ref<RenderContext> _renderContext;
@@ -59,6 +65,7 @@ namespace bloom {
 		Input _input;
 		Timer _updateTimer, _renderTimer;
 		utl::vector<Event> _eventBuffer;
+		utl::unique_ref<AssetManager> _assetManager;
 	};
 
 }

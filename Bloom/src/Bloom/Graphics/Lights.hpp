@@ -2,15 +2,31 @@
 
 #include "ShaderBase.hpp"
 
+#ifdef BLOOM_CPP
+#include <string_view>
+#endif
+
 namespace bloom {
 	
 	enum struct LightType {
-		pointlight, spotlight, directional
+		pointlight = 0,
+		spotlight = 1,
+		directional = 2,
+		_count
+	};
+	
+#ifdef BLOOM_CPP
+	BLOOM_API std::string_view toString(LightType);
+#endif
+	
+	struct LightCommon {
+		metal::float3 color;
+		float intensity;
 	};
 	
 	struct PointLight {
-		metal::packed_float3 color;
-		float intensity;
+		LightCommon common;
+		float radius;
 	};
 	
 	struct RenderPointLight {
@@ -19,10 +35,10 @@ namespace bloom {
 	};
 	
 	struct SpotLight {
-		metal::packed_float3 color;
-		float intensity;
+		LightCommon common;
 		float innerCutoff;
 		float outerCutoff;
+		float radius;
 	};
 	
 	struct RenderSpotLight {

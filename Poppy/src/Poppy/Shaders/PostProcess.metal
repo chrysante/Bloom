@@ -30,12 +30,14 @@ fragment float4 postprocess(PPRasterOutput in                          [[ stage_
 							sampler          sampler2D                 [[ sampler(0) ]])
 {
 	
-	float3 color = colorIn.sample(sampler2D, in.screenCoords).rgb;
+	float3 const HDR = colorIn.sample(sampler2D, in.screenCoords).rgb;
 	
-	color = color / (color + 1.0);
-	color = pow(color, 1.0 / 2.2);
+	// reinhard tone mapping
+	float3 const toneMapped = HDR / (HDR + 1.0);
+	// gamma correction
+	float3 const corrected = pow(toneMapped, 1.0 / 2.2);
 	
-	return float4(color, 1);
+	return float4(corrected, 1);
 }
 
 static float edgeDetect(texture2d<float> selectionMap, sampler sampler2D, float2 uv, float lineWidth, float2 screenRes) {

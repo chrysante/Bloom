@@ -1,29 +1,26 @@
 #pragma once
 
 #include "Panel.hpp"
+#include "BasicSceneInspector.hpp"
 
-#include "Bloom/Scene/Scene.hpp"
+#include "Bloom/Scene/Entity.hpp"
 
 #include <utl/vector.hpp>
 #include <span>
 
 namespace poppy {
 	
-	class SelectionContext;
-	
-	class SceneInspector: public Panel {
+	class SceneInspector: public Panel, public BasicSceneInspector {
 	public:
-		SceneInspector(bloom::Scene*, SelectionContext*);
+		SceneInspector();
 		
 	private:
 		void display() override;
 		void displayHierachyLevel(std::span<bloom::EntityID const>);
-		
-		utl::small_vector<bloom::EntityID> gatherRootEntities();
+
 		
 	private:
-		bloom::Scene* scene;
-		SelectionContext* selection;
+		
 	};
 	
 	

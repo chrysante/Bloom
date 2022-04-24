@@ -9,16 +9,19 @@
 /* Begin PBXBuildFile section */
 		09F8AAECE915C51EC51F212C /* FrameBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E1E47F5474724946DD4AED94 /* FrameBuffer.cpp */; };
 		0DB613E5A043DDD7091C8225 /* Input.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 380114EDFB6CD69F3A107B2D /* Input.cpp */; };
+		1F54EDB8ED78416A748693F8 /* Lights.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 71C9CA60CD0B1DD2A06568A0 /* Lights.cpp */; };
 		3B0C87EDAF66CCDF2D4A562D /* Application.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6CCAAA757EF48727B2E570B5 /* Application.cpp */; };
+		3C9316246E8C60D6E86B9C64 /* Asset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A72302CC0FF9A9E9978AE6C /* Asset.cpp */; };
 		3F25E8500D493C0294578E90 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = B122DCD80C64304ADFBE7B18 /* main.mm */; };
 		42F3089C4295EBCE7CEA9EDC /* libUtility.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A311B8491968E7643A4A9C4 /* libUtility.a */; };
-		44541B4CDCA100FE0AE8018C /* StaticMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 99DE00B4DE2CA6262053DEF4 /* StaticMesh.cpp */; };
 		4B007C2E118E73A07F909A6E /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A0271576359DD4A8A43A2BB6 /* MetalKit.framework */; };
 		67CB77182B3738CA69DADD58 /* Time.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F3371540EC9D16B2E0387380 /* Time.cpp */; };
 		683E8F7E830AFE3086DB95BE /* Metal-cpp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B0E802261E1010981FA30066 /* Metal-cpp.cpp */; };
 		7D328508CA957B3A40B47B48 /* Debug.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32CD130AE18F722F5FEBF70 /* Debug.cpp */; };
 		872BBCBC250CBD6EFC8B02FC /* MetalMaterial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F57EA884B83F08F61573E6C4 /* MetalMaterial.cpp */; };
 		9723787F2D4C8A71EEB2E6BF /* StandaloneApplication.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 308222E7E3782C99349A8927 /* StandaloneApplication.cpp */; };
+		9A0ACDCC37EBCE7E0F6A140C /* StaticRenderMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 86AB4134496BA1A6A6A07F74 /* StaticRenderMesh.cpp */; };
+		A294922E167D09E038CAB86E /* StaticMeshAsset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BFE35A9686715208F47378D6 /* StaticMeshAsset.cpp */; };
 		AA67A526F306E35816329B66 /* AppViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 64D5984E55CD0640C1D0868E /* AppViewController.mm */; };
 		AB3783B64384696871CB69F6 /* Resource.mm in Sources */ = {isa = PBXBuildFile; fileRef = 75324CDEB980F250FBA82B1E /* Resource.mm */; };
 		B04AAD80C2748A32F66573C0 /* Material.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1597A3A80F59601A495861E8 /* Material.cpp */; };
@@ -30,71 +33,79 @@
 		CA30FF095CBEC8FBC5976D49 /* Event.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B509DBD178759D83B7194211 /* Event.cpp */; };
 		D08A9A7BCA4C56ED044B58BB /* Scene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7AEEEBC3C35FCFF507FEA203 /* Scene.cpp */; };
 		D438322B2B9DA51DDDABC06B /* Components.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 80864573B27F90252C5ECBB3 /* Components.cpp */; };
+		D489F1FAB3A70C2C8FB0683A /* AssetManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D34208A265CFD294CEA876E2 /* AssetManager.cpp */; };
 		D4D6C3601D76019240A1B9A0 /* KeyEventResponder.mm in Sources */ = {isa = PBXBuildFile; fileRef = E143B9E8D23B27DA3E3EA828 /* KeyEventResponder.mm */; };
 		D704CF48BC9BD67A7FE0E588 /* MetalRenderContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 73143350CD154A42945C4190 /* MetalRenderContext.cpp */; };
 		D9C2B3AABE09BBDC41F6E9EA /* Event.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6FFD8892A0E18084B3F9B6D2 /* Event.mm */; };
 		ED08C25EECABA5902700589E /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA5AE00631C052F8E3CE6E46 /* AppDelegate.mm */; };
+		F67D88FA8ECA6EACBD116F3A /* libYAML.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C779202E0C6377422ED7042 /* libYAML.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		22A13B0E48C76AC0AFCE614E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4CB87C00EEA217F2E5C92A40 /* ../Vendor/yaml-cpp/YAML.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 632FF08891D6447AEB179EC8;
+			remoteInfo = libYAML.a;
+		};
 		38D451368F61BBA867DACF76 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */;
+			containerPortal = 2C45FB132BE8DE45663D9153 /* ../Vendor/Utility/Utility.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = 921C292392CF261506B0F763;
 			remoteInfo = libUtility.a;
 		};
 		8B0EC3CFE19C2E41BA15420F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */;
+			containerPortal = 2C45FB132BE8DE45663D9153 /* ../Vendor/Utility/Utility.xcodeproj */;
 			proxyType = 1;
 			remoteGlobalIDString = 63A1E8A906900F5B95B5EEE9;
 			remoteInfo = libUtility.a;
 		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		0A3673170AE970097ECB4157 /* Embed Libraries */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-			);
-			name = "Embed Libraries";
-			runOnlyForDeploymentPostprocessing = 0;
+		D066C875F68CF8275D93EEB5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4CB87C00EEA217F2E5C92A40 /* ../Vendor/yaml-cpp/YAML.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 836B2CE286DBFF140848A322;
+			remoteInfo = libYAML.a;
 		};
-/* End PBXCopyFilesBuildPhase section */
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		014183FD333ACEAFAD1A0A3D /* Components.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Components.hpp; path = src/Bloom/Scene/Components.hpp; sourceTree = "<group>"; };
+		0A77ED5ECD384DD02A6D2B9E /* StaticRenderMesh.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = StaticRenderMesh.hpp; path = src/Bloom/Graphics/StaticRenderMesh.hpp; sourceTree = "<group>"; };
 		0BB5747A65B68B6C2CFD82BA /* MetalRenderContext.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = MetalRenderContext.hpp; path = src/Bloom/platform/Metal/MetalRenderContext.hpp; sourceTree = "<group>"; };
 		0E45E70C0245307E8730454C /* MaterialProperties.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = MaterialProperties.hpp; path = src/Bloom/Graphics/MaterialProperties.hpp; sourceTree = "<group>"; };
 		0EF28886D25E4A381101EEC6 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		101427F5A58AE72714273E35 /* SceneCamera.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SceneCamera.cpp; path = src/Bloom/Scene/SceneCamera.cpp; sourceTree = "<group>"; };
+		10F35688D7814DFA458374C8 /* AssetFileHeader.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = AssetFileHeader.hpp; path = src/Bloom/Assets/AssetFileHeader.hpp; sourceTree = "<group>"; };
 		129DC5227FC5D3948158C362 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = src/Bloom/platform/macOS/AppDelegate.h; sourceTree = "<group>"; };
 		12D2F95F24FCD61158EDBF9F /* Application.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Application.hpp; path = src/Bloom/Application/Application.hpp; sourceTree = "<group>"; };
 		15769A6A0975E3DC8E60F8AA /* AppViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AppViewController.h; path = src/Bloom/platform/macOS/AppViewController.h; sourceTree = "<group>"; };
 		1597A3A80F59601A495861E8 /* Material.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Material.cpp; path = src/Bloom/Graphics/Material.cpp; sourceTree = "<group>"; };
 		1F88DD9876EE508A28FC6BD8 /* ARCPointer.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = ARCPointer.hpp; path = src/Bloom/platform/Metal/ARCPointer.hpp; sourceTree = "<group>"; };
-		2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Utility.xcodeproj; path = ../Vendor/Utility/Utility.xcodeproj; sourceTree = SOURCE_ROOT; };
+		2C45FB132BE8DE45663D9153 /* libUtility.a */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "Utility.xcodeproj"; path = ../Vendor/Utility/Utility.xcodeproj; sourceTree = SOURCE_ROOT; };
 		308222E7E3782C99349A8927 /* StandaloneApplication.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = StandaloneApplication.cpp; path = src/Bloom/Application/StandaloneApplication.cpp; sourceTree = "<group>"; };
 		30C6F2FBF432B4AD32D6593B /* Event.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Event.hpp; path = src/Bloom/Application/Event.hpp; sourceTree = "<group>"; };
-		33B2851E78012A90BA28635E /* StaticMesh.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = StaticMesh.hpp; path = src/Bloom/Graphics/StaticMesh.hpp; sourceTree = "<group>"; };
 		380114EDFB6CD69F3A107B2D /* Input.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Input.cpp; path = src/Bloom/Application/Input.cpp; sourceTree = "<group>"; };
 		382520787C73C5EABE9AFEB8 /* ShaderBase.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = ShaderBase.hpp; path = src/Bloom/Graphics/ShaderBase.hpp; sourceTree = "<group>"; };
 		3FE5A7FC06739F6E7475C63C /* ResourceHandle.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = ResourceHandle.hpp; path = src/Bloom/Graphics/ResourceHandle.hpp; sourceTree = "<group>"; };
 		40E1368E03A1970060D674CE /* MetalMaterial.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = MetalMaterial.hpp; path = src/Bloom/platform/Metal/MetalMaterial.hpp; sourceTree = "<group>"; };
 		440C19A206CC7A14640157E2 /* EntityRenderData.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = EntityRenderData.hpp; path = src/Bloom/Graphics/EntityRenderData.hpp; sourceTree = "<group>"; };
+		4CB2D436A3403EA87BB95276 /* Asset.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Asset.hpp; path = src/Bloom/Assets/Asset.hpp; sourceTree = "<group>"; };
+		4CB87C00EEA217F2E5C92A40 /* libYAML.a */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "YAML.xcodeproj"; path = "../Vendor/yaml-cpp/YAML.xcodeproj"; sourceTree = SOURCE_ROOT; };
 		4CE6C4C2464CC63439E82302 /* Base.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Base.hpp; path = src/Bloom/Core/Base.hpp; sourceTree = "<group>"; };
-		54DB412328120F0000CAB82B /* Lights.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = Lights.hpp; path = src/Bloom/Graphics/Lights.hpp; sourceTree = "<group>"; };
 		588FA26C1B5002DE7884E0AC /* RenderPrimitives.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = RenderPrimitives.hpp; path = src/Bloom/Graphics/RenderPrimitives.hpp; sourceTree = "<group>"; };
 		64D5984E55CD0640C1D0868E /* AppViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objc; name = AppViewController.mm; path = src/Bloom/platform/macOS/AppViewController.mm; sourceTree = "<group>"; };
 		683DC91EBFA33C1071B1575E /* RenderContext.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = RenderContext.hpp; path = src/Bloom/Graphics/RenderContext.hpp; sourceTree = "<group>"; };
+		6A72302CC0FF9A9E9978AE6C /* Asset.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Asset.cpp; path = src/Bloom/Assets/Asset.cpp; sourceTree = "<group>"; };
 		6CCAAA757EF48727B2E570B5 /* Application.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Application.cpp; path = src/Bloom/Application/Application.cpp; sourceTree = "<group>"; };
 		6D0A2DE266CBEA54A0CAEC22 /* Renderer.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Renderer.hpp; path = src/Bloom/Graphics/Renderer.hpp; sourceTree = "<group>"; };
+		6D168D0CFFA456FE687CFB4C /* AssetManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = AssetManager.hpp; path = src/Bloom/Assets/AssetManager.hpp; sourceTree = "<group>"; };
 		6FFD8892A0E18084B3F9B6D2 /* Event.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objc; name = Event.mm; path = src/Bloom/platform/macOS/Event.mm; sourceTree = "<group>"; };
 		71897F9CCCCAD30EA0251DDC /* Camera.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Camera.cpp; path = src/Bloom/Graphics/Camera.cpp; sourceTree = "<group>"; };
+		71C9CA60CD0B1DD2A06568A0 /* Lights.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Lights.cpp; path = src/Bloom/Graphics/Lights.cpp; sourceTree = "<group>"; };
 		73143350CD154A42945C4190 /* MetalRenderContext.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = MetalRenderContext.cpp; path = src/Bloom/platform/Metal/MetalRenderContext.cpp; sourceTree = "<group>"; };
 		75324CDEB980F250FBA82B1E /* Resource.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objc; name = Resource.mm; path = src/Bloom/platform/macOS/Resource.mm; sourceTree = "<group>"; };
 		77C7A810D308FB82A6634650 /* Vertex.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Vertex.hpp; path = src/Bloom/Graphics/Vertex.hpp; sourceTree = "<group>"; };
@@ -103,31 +114,35 @@
 		7EA9976A780F98DC6BAAF5AA /* Time.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Time.hpp; path = src/Bloom/Core/Time.hpp; sourceTree = "<group>"; };
 		80864573B27F90252C5ECBB3 /* Components.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Components.cpp; path = src/Bloom/Scene/Components.cpp; sourceTree = "<group>"; };
 		825B406BAA95F91D923186AB /* Entity.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Entity.hpp; path = src/Bloom/Scene/Entity.hpp; sourceTree = "<group>"; };
+		86AB4134496BA1A6A6A07F74 /* StaticRenderMesh.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = StaticRenderMesh.cpp; path = src/Bloom/Graphics/StaticRenderMesh.cpp; sourceTree = "<group>"; };
 		893A8412D69D7A444CBC7A52 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		8BD13F1F2147FE518FE4555F /* SceneCamera.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = SceneCamera.hpp; path = src/Bloom/Scene/SceneCamera.hpp; sourceTree = "<group>"; };
 		9154BAD28B167744C5157912 /* Material.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Material.hpp; path = src/Bloom/Graphics/Material.hpp; sourceTree = "<group>"; };
-		99DE00B4DE2CA6262053DEF4 /* StaticMesh.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = StaticMesh.cpp; path = src/Bloom/Graphics/StaticMesh.cpp; sourceTree = "<group>"; };
 		99E3985E2C716250954A069E /* FrameBuffer.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = FrameBuffer.hpp; path = src/Bloom/Graphics/FrameBuffer.hpp; sourceTree = "<group>"; };
 		A0271576359DD4A8A43A2BB6 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		A0899FFA8B75C5ECD35B8E3A /* Debug.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Debug.hpp; path = src/Bloom/Core/Debug.hpp; sourceTree = "<group>"; };
 		A2BCACEEFDFE0060D1584B2E /* Event.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Event.h; path = src/Bloom/platform/macOS/Event.h; sourceTree = "<group>"; };
 		A6F49D673C6B5C99AB07B3A7 /* Resource.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Resource.hpp; path = src/Bloom/Application/Resource.hpp; sourceTree = "<group>"; };
+		AE81D8E0750FD052E311F720 /* StaticMeshAsset.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = StaticMeshAsset.hpp; path = src/Bloom/Assets/StaticMeshAsset.hpp; sourceTree = "<group>"; };
 		B0E802261E1010981FA30066 /* Metal-cpp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "Metal-cpp.cpp"; path = "src/Bloom/platform/macOS/Metal-cpp.cpp"; sourceTree = "<group>"; };
 		B122DCD80C64304ADFBE7B18 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objc; name = main.mm; path = src/Bloom/platform/macOS/main.mm; sourceTree = "<group>"; };
 		B3BE2C177729EDC9B5CD9257 /* Input.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Input.hpp; path = src/Bloom/Application/Input.hpp; sourceTree = "<group>"; };
 		B509DBD178759D83B7194211 /* Event.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Event.cpp; path = src/Bloom/Application/Event.cpp; sourceTree = "<group>"; };
 		B6702F7A79308FECD6656DBA /* RenderPassHandle.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = RenderPassHandle.hpp; path = src/Bloom/Graphics/RenderPassHandle.hpp; sourceTree = "<group>"; };
+		BFE35A9686715208F47378D6 /* StaticMeshAsset.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = StaticMeshAsset.cpp; path = src/Bloom/Assets/StaticMeshAsset.cpp; sourceTree = "<group>"; };
 		C32CD130AE18F722F5FEBF70 /* Debug.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Debug.cpp; path = src/Bloom/Core/Debug.cpp; sourceTree = "<group>"; };
 		C92364117C196DC3CD3BCA51 /* StandaloneApplication.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = StandaloneApplication.hpp; path = src/Bloom/Application/StandaloneApplication.hpp; sourceTree = "<group>"; };
 		D030FD8841539E7AF71A4BC8 /* RenderAPI.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = RenderAPI.hpp; path = src/Bloom/Graphics/RenderAPI.hpp; sourceTree = "<group>"; };
+		D34208A265CFD294CEA876E2 /* AssetManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AssetManager.cpp; path = src/Bloom/Assets/AssetManager.cpp; sourceTree = "<group>"; };
 		D921A34A0A059B3C1D1DD18A /* Reference.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Reference.hpp; path = src/Bloom/Core/Reference.hpp; sourceTree = "<group>"; };
 		DA5AE00631C052F8E3CE6E46 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objc; name = AppDelegate.mm; path = src/Bloom/platform/macOS/AppDelegate.mm; sourceTree = "<group>"; };
 		E143B9E8D23B27DA3E3EA828 /* KeyEventResponder.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objc; name = KeyEventResponder.mm; path = src/Bloom/platform/macOS/KeyEventResponder.mm; sourceTree = "<group>"; };
 		E1E47F5474724946DD4AED94 /* FrameBuffer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = FrameBuffer.cpp; path = src/Bloom/Graphics/FrameBuffer.cpp; sourceTree = "<group>"; };
-		E5AF4BFBDF154D6DD2B0AA3B /* libBloom.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libBloom.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5AF4BFBDF154D6DD2B0AA3B /* libBloom.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; name = libBloom.dylib; path = libBloom.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		E77F9B2D2FF07F5F748F516D /* Scene.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Scene.hpp; path = src/Bloom/Scene/Scene.hpp; sourceTree = "<group>"; };
 		F14D16B8EB0ED32A250DD4F8 /* Renderer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Renderer.cpp; path = src/Bloom/Graphics/Renderer.cpp; sourceTree = "<group>"; };
 		F26B79864DACCCF8210717C6 /* Camera.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Camera.hpp; path = src/Bloom/Graphics/Camera.hpp; sourceTree = "<group>"; };
+		F2ABC44A4DED17BC2147628A /* Lights.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Lights.hpp; path = src/Bloom/Graphics/Lights.hpp; sourceTree = "<group>"; };
 		F3371540EC9D16B2E0387380 /* Time.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Time.cpp; path = src/Bloom/Core/Time.cpp; sourceTree = "<group>"; };
 		F4F0F6E496DA92D68E01A524 /* SceneRenderData.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = SceneRenderData.hpp; path = src/Bloom/Graphics/SceneRenderData.hpp; sourceTree = "<group>"; };
 		F57EA884B83F08F61573E6C4 /* MetalMaterial.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = MetalMaterial.cpp; path = src/Bloom/platform/Metal/MetalMaterial.cpp; sourceTree = "<group>"; };
@@ -142,12 +157,40 @@
 				C39B3D3E56290730BF01AB7E /* Metal.framework in Frameworks */,
 				4B007C2E118E73A07F909A6E /* MetalKit.framework in Frameworks */,
 				42F3089C4295EBCE7CEA9EDC /* libUtility.a in Frameworks */,
+				F67D88FA8ECA6EACBD116F3A /* libYAML.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		0A3673170AE970097ECB4157 /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXGroup section */
+		1E02232EC14DAC60DC1E796E /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				6A72302CC0FF9A9E9978AE6C /* Asset.cpp */,
+				4CB2D436A3403EA87BB95276 /* Asset.hpp */,
+				10F35688D7814DFA458374C8 /* AssetFileHeader.hpp */,
+				D34208A265CFD294CEA876E2 /* AssetManager.cpp */,
+				6D168D0CFFA456FE687CFB4C /* AssetManager.hpp */,
+				BFE35A9686715208F47378D6 /* StaticMeshAsset.cpp */,
+				AE81D8E0750FD052E311F720 /* StaticMeshAsset.hpp */,
+			);
+			name = Assets;
+			sourceTree = "<group>";
+		};
 		2183102A24F3E25CA660866A /* Graphics */ = {
 			isa = PBXGroup;
 			children = (
@@ -156,6 +199,8 @@
 				440C19A206CC7A14640157E2 /* EntityRenderData.hpp */,
 				E1E47F5474724946DD4AED94 /* FrameBuffer.cpp */,
 				99E3985E2C716250954A069E /* FrameBuffer.hpp */,
+				71C9CA60CD0B1DD2A06568A0 /* Lights.cpp */,
+				F2ABC44A4DED17BC2147628A /* Lights.hpp */,
 				1597A3A80F59601A495861E8 /* Material.cpp */,
 				9154BAD28B167744C5157912 /* Material.hpp */,
 				0E45E70C0245307E8730454C /* MaterialProperties.hpp */,
@@ -168,10 +213,9 @@
 				3FE5A7FC06739F6E7475C63C /* ResourceHandle.hpp */,
 				F4F0F6E496DA92D68E01A524 /* SceneRenderData.hpp */,
 				382520787C73C5EABE9AFEB8 /* ShaderBase.hpp */,
-				99DE00B4DE2CA6262053DEF4 /* StaticMesh.cpp */,
-				33B2851E78012A90BA28635E /* StaticMesh.hpp */,
+				86AB4134496BA1A6A6A07F74 /* StaticRenderMesh.cpp */,
+				0A77ED5ECD384DD02A6D2B9E /* StaticRenderMesh.hpp */,
 				77C7A810D308FB82A6634650 /* Vertex.hpp */,
-				54DB412328120F0000CAB82B /* Lights.hpp */,
 			);
 			name = Graphics;
 			sourceTree = "<group>";
@@ -254,6 +298,7 @@
 			isa = PBXGroup;
 			children = (
 				2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */,
+				4CB87C00EEA217F2E5C92A40 /* YAML.xcodeproj */,
 			);
 			name = Projects;
 			sourceTree = "<group>";
@@ -296,6 +341,7 @@
 			isa = PBXGroup;
 			children = (
 				CA04CFF0F02AFFA25731F630 /* Application */,
+				1E02232EC14DAC60DC1E796E /* Assets */,
 				4C600ADAF8C2CB0CB74B411A /* Core */,
 				2183102A24F3E25CA660866A /* Graphics */,
 				52A15F64A2B4F416253325A4 /* Scene */,
@@ -305,6 +351,14 @@
 				9D968EAA920D05DCE0E0A4EA /* Projects */,
 			);
 			name = Bloom;
+			sourceTree = "<group>";
+		};
+		F4549B15EDBA9C87E155F955 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9C779202E0C6377422ED7042 /* libYAML.a */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -323,6 +377,7 @@
 			);
 			dependencies = (
 				789BCCBFC10CB0F105AB82FF /* PBXTargetDependency */,
+				E20CD81EDB72D990CF0E365E /* PBXTargetDependency */,
 			);
 			name = Bloom;
 			productName = Bloom;
@@ -334,16 +389,9 @@
 /* Begin PBXProject section */
 		08FB7793FE84155DC02AAC07 /* Project object */ = {
 			isa = PBXProject;
-			attributes = {
-			};
 			buildConfigurationList = 1DEB928908733DD80010E9CD /* Build configuration list for PBXProject "Bloom" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = en;
 			hasScannedForEncodings = 1;
-			knownRegions = (
-				en,
-				Base,
-			);
 			mainGroup = D2646BF96C80E06BB8BC2A39 /* Bloom */;
 			projectDirPath = "";
 			projectReferences = (
@@ -351,10 +399,14 @@
 					ProductGroup = 8AE38FB6D35473E817F345F6 /* Products */;
 					ProjectRef = 2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */;
 				},
+				{
+					ProductGroup = F4549B15EDBA9C87E155F955 /* Products */;
+					ProjectRef = 4CB87C00EEA217F2E5C92A40 /* YAML.xcodeproj */;
+				},
 			);
 			projectRoot = "";
 			targets = (
-				7D7010819482ABB3849EA6C1 /* Bloom */,
+				7D7010819482ABB3849EA6C1 /* libBloom.dylib */,
 			);
 		};
 /* End PBXProject section */
@@ -365,6 +417,13 @@
 			fileType = archive.ar;
 			path = libUtility.a;
 			remoteRef = 38D451368F61BBA867DACF76 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9C779202E0C6377422ED7042 /* libYAML.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libYAML.a;
+			remoteRef = D066C875F68CF8275D93EEB5 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -388,13 +447,17 @@
 				CA30FF095CBEC8FBC5976D49 /* Event.cpp in Sources */,
 				0DB613E5A043DDD7091C8225 /* Input.cpp in Sources */,
 				9723787F2D4C8A71EEB2E6BF /* StandaloneApplication.cpp in Sources */,
+				3C9316246E8C60D6E86B9C64 /* Asset.cpp in Sources */,
+				D489F1FAB3A70C2C8FB0683A /* AssetManager.cpp in Sources */,
+				A294922E167D09E038CAB86E /* StaticMeshAsset.cpp in Sources */,
 				7D328508CA957B3A40B47B48 /* Debug.cpp in Sources */,
 				67CB77182B3738CA69DADD58 /* Time.cpp in Sources */,
 				BA48B8B4886C0C660F7A5EF4 /* Camera.cpp in Sources */,
 				09F8AAECE915C51EC51F212C /* FrameBuffer.cpp in Sources */,
+				1F54EDB8ED78416A748693F8 /* Lights.cpp in Sources */,
 				B04AAD80C2748A32F66573C0 /* Material.cpp in Sources */,
 				C1E56990D40F464208002FD0 /* Renderer.cpp in Sources */,
-				44541B4CDCA100FE0AE8018C /* StaticMesh.cpp in Sources */,
+				9A0ACDCC37EBCE7E0F6A140C /* StaticRenderMesh.cpp in Sources */,
 				D438322B2B9DA51DDDABC06B /* Components.cpp in Sources */,
 				D08A9A7BCA4C56ED044B58BB /* Scene.cpp in Sources */,
 				C0258ECD86B3863FF4B5AD0D /* SceneCamera.cpp in Sources */,
@@ -418,7 +481,15 @@
 			name = libUtility.a;
 			targetProxy = 8B0EC3CFE19C2E41BA15420F /* PBXContainerItemProxy */;
 		};
+		E20CD81EDB72D990CF0E365E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = libYAML.a;
+			targetProxy = 22A13B0E48C76AC0AFCE614E /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		1353C04416C4927698313684 /* Development */ = {
@@ -426,19 +497,34 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
 				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
 				GCC_OPTIMIZATION_LEVEL = 3;
-				GCC_PREPROCESSOR_DEFINITIONS = NDEBUG;
-				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = (
+					YES,
+				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				OBJROOT = ../Build/Obj/Development/Development/Bloom;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
 				SYMROOT = ../Build/Bin/Development;
-				SYSTEM_HEADER_SEARCH_PATHS = "../Vendor ../Vendor/Utility ../Vendor/Metal-cpp $(inherited)";
-				USER_HEADER_SEARCH_PATHS = src;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					"../Vendor/Metal-cpp",
+					"$(inherited)",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					src,
+				);
 			};
 			name = Development;
 		};
@@ -447,19 +533,32 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
 				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
 				GCC_OPTIMIZATION_LEVEL = 3;
-				GCC_PREPROCESSOR_DEFINITIONS = NDEBUG;
-				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = (
+					YES,
+				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				OBJROOT = ../Build/Obj/Release/Release/Bloom;
 				ONLY_ACTIVE_ARCH = NO;
 				SYMROOT = ../Build/Bin/Release;
-				SYSTEM_HEADER_SEARCH_PATHS = "../Vendor ../Vendor/Utility ../Vendor/Metal-cpp $(inherited)";
-				USER_HEADER_SEARCH_PATHS = src;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					"../Vendor/Metal-cpp",
+					"$(inherited)",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					src,
+				);
 			};
 			name = Release;
 		};
@@ -467,12 +566,16 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = ../Build/Bin/Release;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				EXECUTABLE_PREFIX = lib;
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_SYMBOLS_PRIVATE_EXTERN = (
+					YES,
+				);
 				INSTALL_PATH = /usr/local/lib;
 				MACOSX_DEPLOYMENT_TARGET = 12.2;
 				PRODUCT_NAME = Bloom;
@@ -484,20 +587,33 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
 				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
 				COPY_PHASE_STRIP = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_SYMBOLS_PRIVATE_EXTERN = (
+					YES,
+				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				OBJROOT = ../Build/Obj/Debug/Debug/Bloom;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
 				SYMROOT = ../Build/Bin/Debug;
-				SYSTEM_HEADER_SEARCH_PATHS = "../Vendor ../Vendor/Utility ../Vendor/Metal-cpp $(inherited)";
-				USER_HEADER_SEARCH_PATHS = src;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					"../Vendor/Metal-cpp",
+					"$(inherited)",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					src,
+				);
 			};
 			name = Debug;
 		};
@@ -505,15 +621,21 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = ../Build/Bin/Development;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				EXECUTABLE_PREFIX = lib;
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_SYMBOLS_PRIVATE_EXTERN = (
+					YES,
+				);
 				INSTALL_PATH = /usr/local/lib;
 				MACOSX_DEPLOYMENT_TARGET = 12.2;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
 				PRODUCT_NAME = Bloom;
 			};
 			name = Development;
@@ -522,15 +644,21 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = ../Build/Bin/Debug;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				EXECUTABLE_PREFIX = lib;
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_SYMBOLS_PRIVATE_EXTERN = (
+					YES,
+				);
 				INSTALL_PATH = /usr/local/lib;
 				MACOSX_DEPLOYMENT_TARGET = 12.2;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
 				PRODUCT_NAME = Bloom;
 			};
 			name = Debug;
@@ -548,7 +676,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		D997C44A4B22DCBCFA24028A /* Build configuration list for PBXNativeTarget "Bloom" */ = {
+		D997C44A4B22DCBCFA24028A /* Build configuration list for PBXNativeTarget "libBloom.dylib" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F09A98104BDBEB821F363650 /* Debug */,
@@ -559,6 +687,6 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
-	};
-	rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+};
+rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
 }

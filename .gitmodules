@@ -4,3 +4,9 @@
 [submodule "Vendor/entt"]
 	path = Vendor/entt
 	url = https://github.com/skypjack/entt
+[submodule "Vendor/assimp"]
+	path = Vendor/assimp
+	url = https://github.com/assimp/assimp
+[submodule "Vendor/zlib"]
+	path = Vendor/zlib
+	url = https://github.com/madler/zlib

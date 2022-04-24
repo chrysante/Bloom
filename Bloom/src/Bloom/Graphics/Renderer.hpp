@@ -19,7 +19,7 @@ namespace bloom {
 	class EditorFrameBuffer;
 	class Camera;
 	class Material;
-	class StaticMesh;
+	class StaticRenderMesh;
 	class RenderContext;
 	class RenderPassHandle;
 	
@@ -34,7 +34,7 @@ namespace bloom {
 				 (EntityRenderData, entity),
 				 (bool, selected),
 				 (Material*, material),
-				 (StaticMesh*, mesh));
+				 (StaticRenderMesh*, mesh));
 	
 	class BLOOM_API Renderer {
 	public:
@@ -43,7 +43,7 @@ namespace bloom {
 		void beginScene(Camera const&);
 		void endScene();
 		
-		void submit(StaticMesh*, Material*, EntityRenderData, bool selected);
+		void submit(StaticRenderMesh*, Material*, EntityRenderData, bool selected);
 		
 		void submit(PointLight, mtl::float3 position);
 		void submit(SpotLight, mtl::float3 position, mtl::float3 direction);

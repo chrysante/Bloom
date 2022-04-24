@@ -166,16 +166,16 @@ namespace ImGuizmo
 	// translation is applied in world space
 	enum OPERATION
 	{
-		TRANSLATE,
-		ROTATE,
-		SCALE,
+		TRANSLATE = 0,
+		ROTATE    = 1,
+		SCALE     = 2,
 		BOUNDS,
 	};
 
 	enum MODE
 	{
-		LOCAL,
-		WORLD
+		LOCAL = 0,
+		WORLD = 1
 	};
 
 	IMGUI_API bool Manipulate(const float *view, const float *projection, OPERATION operation, MODE mode, float *matrix, float *deltaMatrix = NULL, float *snap = NULL, float *localBounds = NULL, float *boundsSnap = NULL);

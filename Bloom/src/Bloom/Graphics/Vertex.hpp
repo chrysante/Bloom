@@ -4,10 +4,12 @@
 namespace bloom {
 	
 	struct Vertex3D {
-		packed_float3 position;
-		packed_float3 normal;
-		packed_float4 color;
-		float2 textureCoordinates[8];
+		metal::packed_float3 position;
+		metal::packed_float3 normal;
+		metal::packed_float3 tangent;
+		metal::packed_float3 binormal;
+		metal::float4 color;
+		metal::float2 textureCoordinates[4];
 	};
 	
 }

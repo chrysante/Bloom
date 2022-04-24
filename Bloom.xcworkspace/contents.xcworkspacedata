@@ -11,10 +11,10 @@
 		location = "group:Vendor/imgui/ImGui.xcodeproj">
 	</FileRef>
 	<FileRef
-		location = "group:Vendor/OpenFBX/OpenFBX.xcodeproj">
+		location = "group:Poppy/Poppy.xcodeproj">
 	</FileRef>
 	<FileRef
-		location = "group:Poppy/Poppy.xcodeproj">
+		location = "group:Poppy/PoppyTest.xcodeproj">
 	</FileRef>
 	<FileRef
 		location = "group:Sandbox/Sandbox.xcodeproj">
@@ -27,5 +27,8 @@
 	</FileRef>
 	<FileRef
 		location = "group:Vendor/yaml-cpp/YAML.xcodeproj">
+	</FileRef>
+	<FileRef
+		location = "group:Vendor/assimp/assimp.xcodeproj">
 	</FileRef>
 </Workspace>

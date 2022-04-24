@@ -14,21 +14,27 @@
 		26C4E0C07E2A53B230386F00 /* ImGui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 50BC696882B5B41AFC94EFA8 /* ImGui.cpp */; };
 		2E6D1D7FC8C7067104FF6BBF /* MainPassEditor.metal in Resources */ = {isa = PBXBuildFile; fileRef = 50C4B027EEA5B0D9C623F667 /* MainPassEditor.metal */; };
 		2FF8A19ACDD9A24CA557E7DA /* AssetBrowser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E4A89422A768F494049DD262 /* AssetBrowser.cpp */; };
+		369B40B691E690E8801876F6 /* ViewportCameraActor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2C880C7E3E3F4C70B3AD3ABE /* ViewportCameraActor.cpp */; };
 		3CDF4CEECF6D16E03845BB2E /* Editor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EBFD3B16AF68FCC8EE0CA156 /* Editor.cpp */; };
 		4152EECC51381AFE3DABA50C /* libBloom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B8EE8B41D7884A6149F96F4 /* libBloom.dylib */; };
 		42F3089C4295EBCE7CEA9EDC /* libUtility.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A311B8491968E7643A4A9C4 /* libUtility.a */; };
+		43C488E09F0FD9128D41BF20 /* BasicSceneInspector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 740C1F0885C35EFAFB314D48 /* BasicSceneInspector.cpp */; };
 		4B007C2E118E73A07F909A6E /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A0271576359DD4A8A43A2BB6 /* MetalKit.framework */; };
-		54DB412628121B4300CAB82B /* EntityInspector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 54DB412428121B4300CAB82B /* EntityInspector.cpp */; };
 		557DACC734204839E9024B07 /* OutlinePass.metal in Resources */ = {isa = PBXBuildFile; fileRef = B9F545EFB9982921F3ECDC2F /* OutlinePass.metal */; };
+		65D62CA67260DF18ED45AAE6 /* ResourceManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AD6A1C4E8C8736806890928E /* ResourceManager.cpp */; };
 		7D00ECD4898B9F4604706B14 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6BEC0BCC5DBDAEEA1E536FC /* GameController.framework */; };
+		87A456E6298DF2D820B50526 /* stb_compiler.c in Sources */ = {isa = PBXBuildFile; fileRef = 4361C58E1185194098936BCE /* stb_compiler.c */; };
+		895DBA6ECDAC5FE00FD398AE /* Debug.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 40F5DF9662C18CC89F76B5D6 /* Debug.cpp */; };
 		8C1131D2A6DDA084AAAE3812 /* Viewport.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0AF618DA781E274C79B1171A /* Viewport.cpp */; };
 		8F43EE52D357BF84C7294492 /* Panel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B5D0D45A26F3754CDCBA229A /* Panel.cpp */; };
-		907B117E2A9F06B0DAC4E7BE /* libOpenFBX.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 71747D46E5CEC23863B24B86 /* libOpenFBX.dylib */; };
+		974642E0352743920CA58920 /* MeshImporter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6BF8B7082EB9177A8BEDF548 /* MeshImporter.cpp */; };
 		9D9C844E0AC492C00C57828E /* ImGui.mm in Sources */ = {isa = PBXBuildFile; fileRef = 005C06164DBEFC48C3DDFC56 /* ImGui.mm */; };
 		9E43489C5139524EA25BAEDC /* SceneInspector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B35AD404A75A1D762C453244 /* SceneInspector.cpp */; };
-		A89290046B52F076C887CE44 /* AppSettings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8710AECC6B57B6FEEF44E50C /* AppSettings.cpp */; };
+		A573299AEE1267CC113E1FDA /* EntityInspector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7FE59D2270DD0B14DCE08B62 /* EntityInspector.cpp */; };
 		AC31A774208BEC669E6F75B4 /* ExampleScene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 50FBB23C63258EEE9716787C /* ExampleScene.cpp */; };
+		AEC58E744CA68F262424D4B4 /* libassimp.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = B1B202DC7472634ED1A7411C /* libassimp.dylib */; };
 		B762408A248A4EFC261D3ECA /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 893A8412D69D7A444CBC7A52 /* AppKit.framework */; };
+		BAA944E6621EE0980AE3EB26 /* EditorAssetManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8FC777AE6E6A1320234C15EE /* EditorAssetManager.cpp */; };
 		C39B3D3E56290730BF01AB7E /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EF28886D25E4A381101EEC6 /* Metal.framework */; };
 		CF09806F653292612698EEAF /* MainMenu.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 688C9D771B82A7296CA503B7 /* MainMenu.storyboard */; };
 		F67D88FA8ECA6EACBD116F3A /* libYAML.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C779202E0C6377422ED7042 /* libYAML.a */; };
@@ -37,126 +43,124 @@
 /* Begin PBXContainerItemProxy section */
 		22A13B0E48C76AC0AFCE614E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 4CB87C00EEA217F2E5C92A40 /* YAML.xcodeproj */;
+			containerPortal = 4CB87C00EEA217F2E5C92A40 /* ../Vendor/yaml-cpp/YAML.xcodeproj */;
 			proxyType = 1;
 			remoteGlobalIDString = 632FF08891D6447AEB179EC8;
 			remoteInfo = libYAML.a;
 		};
 		2A65FA34155220265D37E874 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 3DA5E945D033B337390C5785 /* Bloom.xcodeproj */;
+			containerPortal = 3DA5E945D033B337390C5785 /* ../Bloom/Bloom.xcodeproj */;
 			proxyType = 1;
 			remoteGlobalIDString = 7D7010819482ABB3849EA6C1;
 			remoteInfo = libBloom.dylib;
 		};
 		38D451368F61BBA867DACF76 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */;
+			containerPortal = 2C45FB132BE8DE45663D9153 /* ../Vendor/Utility/Utility.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = 921C292392CF261506B0F763;
 			remoteInfo = libUtility.a;
 		};
-		437F718D9A0CDBFF7285EFCD /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = BAFD318DBAA014BFF4F4C7CD /* OpenFBX.xcodeproj */;
-			proxyType = 1;
-			remoteGlobalIDString = 99E9A2DAC00FD28C2716C91A;
-			remoteInfo = libOpenFBX.dylib;
-		};
 		588D649D43798A8F8B5F52DD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A29B128327696DA60BD9768 /* ImGui.xcodeproj */;
+			containerPortal = 9A29B128327696DA60BD9768 /* ../Vendor/imgui/ImGui.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = B27392EA23FEAB5CD2FFD12A;
 			remoteInfo = libImGui.a;
 		};
 		8B0EC3CFE19C2E41BA15420F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */;
+			containerPortal = 2C45FB132BE8DE45663D9153 /* ../Vendor/Utility/Utility.xcodeproj */;
 			proxyType = 1;
 			remoteGlobalIDString = 63A1E8A906900F5B95B5EEE9;
 			remoteInfo = libUtility.a;
 		};
+		A270522FEAE136612F80086F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 816E869E442EE710A163C4DE /* ../Vendor/assimp/assimp.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 7C84CCEFA2AAFCA109B1F32F;
+			remoteInfo = libassimp.dylib;
+		};
 		AAC7D73695B3FD28DD99C576 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A29B128327696DA60BD9768 /* ImGui.xcodeproj */;
+			containerPortal = 9A29B128327696DA60BD9768 /* ../Vendor/imgui/ImGui.xcodeproj */;
 			proxyType = 1;
 			remoteGlobalIDString = F03FB590F3B087C2751D2BD0;
 			remoteInfo = libImGui.a;
 		};
 		D066C875F68CF8275D93EEB5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 4CB87C00EEA217F2E5C92A40 /* YAML.xcodeproj */;
+			containerPortal = 4CB87C00EEA217F2E5C92A40 /* ../Vendor/yaml-cpp/YAML.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = 836B2CE286DBFF140848A322;
 			remoteInfo = libYAML.a;
 		};
 		D82B879BC317AD8D0AFD75DB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 3DA5E945D033B337390C5785 /* Bloom.xcodeproj */;
+			containerPortal = 3DA5E945D033B337390C5785 /* ../Bloom/Bloom.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = E5AF4BFBDF154D6DD2B0AA3B;
 			remoteInfo = libBloom.dylib;
 		};
-		F144FEF447D26966204B7D34 /* PBXContainerItemProxy */ = {
+		F4AAC4C83D1BA8FA81BA7B08 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = BAFD318DBAA014BFF4F4C7CD /* OpenFBX.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 915B29747C474F66C42D17B4;
-			remoteInfo = libOpenFBX.dylib;
+			containerPortal = 816E869E442EE710A163C4DE /* ../Vendor/assimp/assimp.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = F65F42F5EFC54467E360A135;
+			remoteInfo = libassimp.dylib;
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin PBXCopyFilesBuildPhase section */
-		411F3D8CE571DB3EF7AA23CC /* Embed Libraries */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-			);
-			name = "Embed Libraries";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
 		005C06164DBEFC48C3DDFC56 /* ImGui.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objc; name = ImGui.mm; path = src/Poppy/ImGui/ImGui.mm; sourceTree = "<group>"; };
+		07470DB2CA076E24273C4BF2 /* MeshImporter.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = MeshImporter.hpp; path = src/Poppy/Assets/MeshImporter.hpp; sourceTree = "<group>"; };
 		0AF618DA781E274C79B1171A /* Viewport.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Viewport.cpp; path = src/Poppy/Panels/Viewport.cpp; sourceTree = "<group>"; };
 		0EF28886D25E4A381101EEC6 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
-		228CF07606D3F8A88AC126B6 /* AppSettings.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = AppSettings.hpp; path = src/Poppy/AppSettings.hpp; sourceTree = "<group>"; };
+		1032A618EED5418AA3B74458 /* EditorAssetManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = EditorAssetManager.hpp; path = src/Poppy/Assets/EditorAssetManager.hpp; sourceTree = "<group>"; };
 		2912E2216D26B35360F83861 /* info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = info.plist; path = resource/platform/macOS/info.plist; sourceTree = "<group>"; };
 		2B507AD9C574700B759A5119 /* Poppy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text; name = Poppy.entitlements; path = resource/platform/macOS/Poppy.entitlements; sourceTree = "<group>"; };
-		2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Utility.xcodeproj; path = ../Vendor/Utility/Utility.xcodeproj; sourceTree = SOURCE_ROOT; };
-		3DA5E945D033B337390C5785 /* Bloom.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Bloom.xcodeproj; path = ../Bloom/Bloom.xcodeproj; sourceTree = SOURCE_ROOT; };
+		2C45FB132BE8DE45663D9153 /* libUtility.a */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "Utility.xcodeproj"; path = ../Vendor/Utility/Utility.xcodeproj; sourceTree = SOURCE_ROOT; };
+		2C880C7E3E3F4C70B3AD3ABE /* ViewportCameraActor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ViewportCameraActor.cpp; path = src/Poppy/Panels/ViewportCameraActor.cpp; sourceTree = "<group>"; };
+		3136C8781053E2AAEC5D3EB8 /* ResourceManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = ResourceManager.hpp; path = src/Poppy/ResourceManager.hpp; sourceTree = "<group>"; };
+		3DA5E945D033B337390C5785 /* libBloom.dylib */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "Bloom.xcodeproj"; path = ../Bloom/Bloom.xcodeproj; sourceTree = SOURCE_ROOT; };
 		3F9A308651C40D3885B4F6C6 /* ExampleScene.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = ExampleScene.hpp; path = src/Poppy/ExampleScene.hpp; sourceTree = "<group>"; };
-		4CB87C00EEA217F2E5C92A40 /* YAML.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = YAML.xcodeproj; path = "../Vendor/yaml-cpp/YAML.xcodeproj"; sourceTree = SOURCE_ROOT; };
+		40F5DF9662C18CC89F76B5D6 /* Debug.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Debug.cpp; path = src/Poppy/Debug.cpp; sourceTree = "<group>"; };
+		4361C58E1185194098936BCE /* stb_compiler.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = stb_compiler.c; path = src/Poppy/stb_compiler.c; sourceTree = "<group>"; };
+		4CB87C00EEA217F2E5C92A40 /* libYAML.a */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "YAML.xcodeproj"; path = "../Vendor/yaml-cpp/YAML.xcodeproj"; sourceTree = SOURCE_ROOT; };
 		50BC696882B5B41AFC94EFA8 /* ImGui.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ImGui.cpp; path = src/Poppy/ImGui/ImGui.cpp; sourceTree = "<group>"; };
 		50C4B027EEA5B0D9C623F667 /* MainPassEditor.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; name = MainPassEditor.metal; path = src/Poppy/Shaders/MainPassEditor.metal; sourceTree = "<group>"; };
 		50FBB23C63258EEE9716787C /* ExampleScene.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ExampleScene.cpp; path = src/Poppy/ExampleScene.cpp; sourceTree = "<group>"; };
-		54DB41222812022900CAB82B /* PBRShader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PBRShader.h; path = src/Poppy/Shaders/PBRShader.h; sourceTree = "<group>"; };
-		54DB412428121B4300CAB82B /* EntityInspector.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = EntityInspector.cpp; path = src/Poppy/Panels/EntityInspector.cpp; sourceTree = "<group>"; };
-		54DB412528121B4300CAB82B /* EntityInspector.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = EntityInspector.hpp; path = src/Poppy/Panels/EntityInspector.hpp; sourceTree = "<group>"; };
 		612060687BECCF1A7FBD66A8 /* SelectionContext.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = SelectionContext.hpp; path = src/Poppy/SelectionContext.hpp; sourceTree = "<group>"; };
 		688C9D771B82A7296CA503B7 /* MainMenu.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = MainMenu.storyboard; path = resource/platform/macOS/MainMenu.storyboard; sourceTree = "<group>"; };
+		6BF8B7082EB9177A8BEDF548 /* MeshImporter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = MeshImporter.cpp; path = src/Poppy/Assets/MeshImporter.cpp; sourceTree = "<group>"; };
 		6CB879A030243B526EC7DFE0 /* Editor.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Editor.hpp; path = src/Poppy/Editor.hpp; sourceTree = "<group>"; };
-		79F487B07D6559E2FED1FDF0 /* Poppy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Poppy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		740C1F0885C35EFAFB314D48 /* BasicSceneInspector.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = BasicSceneInspector.cpp; path = src/Poppy/Panels/BasicSceneInspector.cpp; sourceTree = "<group>"; };
+		79F487B07D6559E2FED1FDF0 /* Poppy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = Poppy.app; path = Poppy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7FE59D2270DD0B14DCE08B62 /* EntityInspector.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = EntityInspector.cpp; path = src/Poppy/Panels/EntityInspector.cpp; sourceTree = "<group>"; };
 		7FF6EACC42B74B3E9FEC290C /* AssetBrowser.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = AssetBrowser.hpp; path = src/Poppy/Panels/AssetBrowser.hpp; sourceTree = "<group>"; };
 		8024279E9AF096509EC12DDE /* SelectionContext.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SelectionContext.cpp; path = src/Poppy/SelectionContext.cpp; sourceTree = "<group>"; };
-		8710AECC6B57B6FEEF44E50C /* AppSettings.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AppSettings.cpp; path = src/Poppy/AppSettings.cpp; sourceTree = "<group>"; };
+		816E869E442EE710A163C4DE /* libassimp.dylib */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "assimp.xcodeproj"; path = ../Vendor/assimp/assimp.xcodeproj; sourceTree = SOURCE_ROOT; };
 		893A8412D69D7A444CBC7A52 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		8EC2C504FBEAD376FD7DC344 /* Viewport.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Viewport.hpp; path = src/Poppy/Panels/Viewport.hpp; sourceTree = "<group>"; };
+		8FC777AE6E6A1320234C15EE /* EditorAssetManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = EditorAssetManager.cpp; path = src/Poppy/Assets/EditorAssetManager.cpp; sourceTree = "<group>"; };
 		9354BC0B92F79F3DCD4C524B /* PostProcess.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; name = PostProcess.metal; path = src/Poppy/Shaders/PostProcess.metal; sourceTree = "<group>"; };
 		960E77EE8A0DC1600EF8D62E /* SceneInspector.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = SceneInspector.hpp; path = src/Poppy/Panels/SceneInspector.hpp; sourceTree = "<group>"; };
-		9A29B128327696DA60BD9768 /* ImGui.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = ImGui.xcodeproj; path = ../Vendor/imgui/ImGui.xcodeproj; sourceTree = SOURCE_ROOT; };
+		9A29B128327696DA60BD9768 /* libImGui.a */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "ImGui.xcodeproj"; path = ../Vendor/imgui/ImGui.xcodeproj; sourceTree = SOURCE_ROOT; };
+		9CA7C5AC8D9F339EF9A2B3EC /* EntityInspector.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = EntityInspector.hpp; path = src/Poppy/Panels/EntityInspector.hpp; sourceTree = "<group>"; };
+		9DF30F88AFAA4F7A25183DC8 /* ViewportCameraActor.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = ViewportCameraActor.hpp; path = src/Poppy/Panels/ViewportCameraActor.hpp; sourceTree = "<group>"; };
 		A0271576359DD4A8A43A2BB6 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		A46F52A41591F396CB58A0E4 /* Panel.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Panel.hpp; path = src/Poppy/Panels/Panel.hpp; sourceTree = "<group>"; };
 		A72399778640B3A9624A0FB7 /* PBRShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; name = PBRShader.metal; path = src/Poppy/Shaders/PBRShader.metal; sourceTree = "<group>"; };
+		AB8980418FD0887313BDB681 /* PBRShader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PBRShader.h; path = src/Poppy/Shaders/PBRShader.h; sourceTree = "<group>"; };
+		AD6A1C4E8C8736806890928E /* ResourceManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ResourceManager.cpp; path = src/Poppy/ResourceManager.cpp; sourceTree = "<group>"; };
 		B35AD404A75A1D762C453244 /* SceneInspector.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SceneInspector.cpp; path = src/Poppy/Panels/SceneInspector.cpp; sourceTree = "<group>"; };
 		B5D0D45A26F3754CDCBA229A /* Panel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Panel.cpp; path = src/Poppy/Panels/Panel.cpp; sourceTree = "<group>"; };
 		B9F545EFB9982921F3ECDC2F /* OutlinePass.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; name = OutlinePass.metal; path = src/Poppy/Shaders/OutlinePass.metal; sourceTree = "<group>"; };
-		BAFD318DBAA014BFF4F4C7CD /* OpenFBX.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = OpenFBX.xcodeproj; path = ../Vendor/OpenFBX/OpenFBX.xcodeproj; sourceTree = SOURCE_ROOT; };
+		C1D7D980E3A386B22058AFC0 /* Debug.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = Debug.hpp; path = src/Poppy/Debug.hpp; sourceTree = "<group>"; };
 		E4A89422A768F494049DD262 /* AssetBrowser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = AssetBrowser.cpp; path = src/Poppy/Panels/AssetBrowser.cpp; sourceTree = "<group>"; };
+		E5772212F72E62046C9C5052 /* BasicSceneInspector.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = BasicSceneInspector.hpp; path = src/Poppy/Panels/BasicSceneInspector.hpp; sourceTree = "<group>"; };
 		E6BEC0BCC5DBDAEEA1E536FC /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 		EBFD3B16AF68FCC8EE0CA156 /* Editor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Editor.cpp; path = src/Poppy/Editor.cpp; sourceTree = "<group>"; };
 		EC38AB121E31F5C498113152 /* ImGui.hpp */ = {isa = PBXFileReference; lastKnownFileType = text; name = ImGui.hpp; path = src/Poppy/ImGui/ImGui.hpp; sourceTree = "<group>"; };
@@ -174,12 +178,25 @@
 				4152EECC51381AFE3DABA50C /* libBloom.dylib in Frameworks */,
 				42F3089C4295EBCE7CEA9EDC /* libUtility.a in Frameworks */,
 				050EC92AE42BE35CC0353F6A /* libImGui.a in Frameworks */,
-				907B117E2A9F06B0DAC4E7BE /* libOpenFBX.dylib in Frameworks */,
+				AEC58E744CA68F262424D4B4 /* libassimp.dylib in Frameworks */,
 				F67D88FA8ECA6EACBD116F3A /* libYAML.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		411F3D8CE571DB3EF7AA23CC /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXGroup section */
 		1AF0023C32029D6E221E987C /* ImGui */ = {
@@ -203,17 +220,21 @@
 		44BC704FE90F0E01FB47568F /* Poppy */ = {
 			isa = PBXGroup;
 			children = (
-				8710AECC6B57B6FEEF44E50C /* AppSettings.cpp */,
-				228CF07606D3F8A88AC126B6 /* AppSettings.hpp */,
+				49F75C0C701D8BBED724824C /* Assets */,
+				40F5DF9662C18CC89F76B5D6 /* Debug.cpp */,
+				C1D7D980E3A386B22058AFC0 /* Debug.hpp */,
 				EBFD3B16AF68FCC8EE0CA156 /* Editor.cpp */,
 				6CB879A030243B526EC7DFE0 /* Editor.hpp */,
 				50FBB23C63258EEE9716787C /* ExampleScene.cpp */,
 				3F9A308651C40D3885B4F6C6 /* ExampleScene.hpp */,
 				1AF0023C32029D6E221E987C /* ImGui */,
 				91C7B6ECB7EDE69E1EF4DD2C /* Panels */,
+				AD6A1C4E8C8736806890928E /* ResourceManager.cpp */,
+				3136C8781053E2AAEC5D3EB8 /* ResourceManager.hpp */,
 				8024279E9AF096509EC12DDE /* SelectionContext.cpp */,
 				612060687BECCF1A7FBD66A8 /* SelectionContext.hpp */,
 				7C66ECBAC4D7D0EC0976A2FA /* Shaders */,
+				4361C58E1185194098936BCE /* stb_compiler.c */,
 			);
 			name = Poppy;
 			sourceTree = "<group>";
@@ -230,6 +251,17 @@
 			name = Poppy;
 			sourceTree = "<group>";
 		};
+		49F75C0C701D8BBED724824C /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				8FC777AE6E6A1320234C15EE /* EditorAssetManager.cpp */,
+				1032A618EED5418AA3B74458 /* EditorAssetManager.hpp */,
+				6BF8B7082EB9177A8BEDF548 /* MeshImporter.cpp */,
+				07470DB2CA076E24273C4BF2 /* MeshImporter.hpp */,
+			);
+			name = Assets;
+			sourceTree = "<group>";
+		};
 		5775D4184366DFCA959E7A58 /* src */ = {
 			isa = PBXGroup;
 			children = (
@@ -243,19 +275,11 @@
 			children = (
 				50C4B027EEA5B0D9C623F667 /* MainPassEditor.metal */,
 				B9F545EFB9982921F3ECDC2F /* OutlinePass.metal */,
+				AB8980418FD0887313BDB681 /* PBRShader.h */,
 				A72399778640B3A9624A0FB7 /* PBRShader.metal */,
 				9354BC0B92F79F3DCD4C524B /* PostProcess.metal */,
-				54DB41222812022900CAB82B /* PBRShader.h */,
 			);
 			name = Shaders;
-			sourceTree = "<group>";
-		};
-		80F67DB4C96761E60E0633F4 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				71747D46E5CEC23863B24B86 /* libOpenFBX.dylib */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 		8AE38FB6D35473E817F345F6 /* Products */ = {
@@ -266,19 +290,31 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		8E16D58F7902FB81C0E8C3CF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B1B202DC7472634ED1A7411C /* libassimp.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		91C7B6ECB7EDE69E1EF4DD2C /* Panels */ = {
 			isa = PBXGroup;
 			children = (
 				E4A89422A768F494049DD262 /* AssetBrowser.cpp */,
 				7FF6EACC42B74B3E9FEC290C /* AssetBrowser.hpp */,
+				740C1F0885C35EFAFB314D48 /* BasicSceneInspector.cpp */,
+				E5772212F72E62046C9C5052 /* BasicSceneInspector.hpp */,
+				7FE59D2270DD0B14DCE08B62 /* EntityInspector.cpp */,
+				9CA7C5AC8D9F339EF9A2B3EC /* EntityInspector.hpp */,
 				B5D0D45A26F3754CDCBA229A /* Panel.cpp */,
 				A46F52A41591F396CB58A0E4 /* Panel.hpp */,
 				B35AD404A75A1D762C453244 /* SceneInspector.cpp */,
 				960E77EE8A0DC1600EF8D62E /* SceneInspector.hpp */,
 				0AF618DA781E274C79B1171A /* Viewport.cpp */,
 				8EC2C504FBEAD376FD7DC344 /* Viewport.hpp */,
-				54DB412428121B4300CAB82B /* EntityInspector.cpp */,
-				54DB412528121B4300CAB82B /* EntityInspector.hpp */,
+				2C880C7E3E3F4C70B3AD3ABE /* ViewportCameraActor.cpp */,
+				9DF30F88AFAA4F7A25183DC8 /* ViewportCameraActor.hpp */,
 			);
 			name = Panels;
 			sourceTree = "<group>";
@@ -289,7 +325,7 @@
 				3DA5E945D033B337390C5785 /* Bloom.xcodeproj */,
 				2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */,
 				9A29B128327696DA60BD9768 /* ImGui.xcodeproj */,
-				BAFD318DBAA014BFF4F4C7CD /* OpenFBX.xcodeproj */,
+				816E869E442EE710A163C4DE /* assimp.xcodeproj */,
 				4CB87C00EEA217F2E5C92A40 /* YAML.xcodeproj */,
 			);
 			name = Projects;
@@ -375,7 +411,7 @@
 				CB034A84F1297A36583070C4 /* PBXTargetDependency */,
 				789BCCBFC10CB0F105AB82FF /* PBXTargetDependency */,
 				243C8F464A62BEF8B169B586 /* PBXTargetDependency */,
-				6EAEBABDB71F9EEFFBBE70FD /* PBXTargetDependency */,
+				7BCF129866BB388AAEA100D8 /* PBXTargetDependency */,
 				E20CD81EDB72D990CF0E365E /* PBXTargetDependency */,
 			);
 			name = Poppy;
@@ -389,16 +425,9 @@
 /* Begin PBXProject section */
 		08FB7793FE84155DC02AAC07 /* Project object */ = {
 			isa = PBXProject;
-			attributes = {
-			};
 			buildConfigurationList = 1DEB928908733DD80010E9CD /* Build configuration list for PBXProject "Poppy" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = en;
 			hasScannedForEncodings = 1;
-			knownRegions = (
-				en,
-				Base,
-			);
 			mainGroup = 4620A418E03D188A2C786258 /* Poppy */;
 			projectDirPath = "";
 			projectReferences = (
@@ -407,16 +436,16 @@
 					ProjectRef = 3DA5E945D033B337390C5785 /* Bloom.xcodeproj */;
 				},
 				{
+					ProductGroup = 8AE38FB6D35473E817F345F6 /* Products */;
+					ProjectRef = 2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */;
+				},
+				{
 					ProductGroup = 3684523D5CAA81EFC3B1787D /* Products */;
 					ProjectRef = 9A29B128327696DA60BD9768 /* ImGui.xcodeproj */;
 				},
 				{
-					ProductGroup = 80F67DB4C96761E60E0633F4 /* Products */;
-					ProjectRef = BAFD318DBAA014BFF4F4C7CD /* OpenFBX.xcodeproj */;
-				},
-				{
-					ProductGroup = 8AE38FB6D35473E817F345F6 /* Products */;
-					ProjectRef = 2C45FB132BE8DE45663D9153 /* Utility.xcodeproj */;
+					ProductGroup = 8E16D58F7902FB81C0E8C3CF /* Products */;
+					ProjectRef = 816E869E442EE710A163C4DE /* assimp.xcodeproj */;
 				},
 				{
 					ProductGroup = F4549B15EDBA9C87E155F955 /* Products */;
@@ -425,7 +454,7 @@
 			);
 			projectRoot = "";
 			targets = (
-				91722996C0187D881959D7D6 /* Poppy */,
+				91722996C0187D881959D7D6 /* Poppy.app */,
 			);
 		};
 /* End PBXProject section */
@@ -436,13 +465,6 @@
 			fileType = archive.ar;
 			path = libUtility.a;
 			remoteRef = 38D451368F61BBA867DACF76 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		71747D46E5CEC23863B24B86 /* libOpenFBX.dylib */ = {
-			isa = PBXReferenceProxy;
-			fileType = "compiled.mach-o.dylib";
-			path = libOpenFBX.dylib;
-			remoteRef = F144FEF447D26966204B7D34 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 		7B8EE8B41D7884A6149F96F4 /* libBloom.dylib */ = {
@@ -457,6 +479,13 @@
 			fileType = archive.ar;
 			path = libYAML.a;
 			remoteRef = D066C875F68CF8275D93EEB5 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		B1B202DC7472634ED1A7411C /* libassimp.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = libassimp.dylib;
+			remoteRef = A270522FEAE136612F80086F /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 		F19DEA32842BB424ED045872 /* libImGui.a */ = {
@@ -505,17 +534,23 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A89290046B52F076C887CE44 /* AppSettings.cpp in Sources */,
+				BAA944E6621EE0980AE3EB26 /* EditorAssetManager.cpp in Sources */,
+				974642E0352743920CA58920 /* MeshImporter.cpp in Sources */,
+				895DBA6ECDAC5FE00FD398AE /* Debug.cpp in Sources */,
 				3CDF4CEECF6D16E03845BB2E /* Editor.cpp in Sources */,
 				AC31A774208BEC669E6F75B4 /* ExampleScene.cpp in Sources */,
 				26C4E0C07E2A53B230386F00 /* ImGui.cpp in Sources */,
 				9D9C844E0AC492C00C57828E /* ImGui.mm in Sources */,
 				2FF8A19ACDD9A24CA557E7DA /* AssetBrowser.cpp in Sources */,
+				43C488E09F0FD9128D41BF20 /* BasicSceneInspector.cpp in Sources */,
+				A573299AEE1267CC113E1FDA /* EntityInspector.cpp in Sources */,
 				8F43EE52D357BF84C7294492 /* Panel.cpp in Sources */,
-				54DB412628121B4300CAB82B /* EntityInspector.cpp in Sources */,
 				9E43489C5139524EA25BAEDC /* SceneInspector.cpp in Sources */,
 				8C1131D2A6DDA084AAAE3812 /* Viewport.cpp in Sources */,
+				369B40B691E690E8801876F6 /* ViewportCameraActor.cpp in Sources */,
+				65D62CA67260DF18ED45AAE6 /* ResourceManager.cpp in Sources */,
 				18062BF6720742E8394E3A36 /* SelectionContext.cpp in Sources */,
+				87A456E6298DF2D820B50526 /* stb_compiler.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -527,15 +562,15 @@
 			name = libImGui.a;
 			targetProxy = AAC7D73695B3FD28DD99C576 /* PBXContainerItemProxy */;
 		};
-		6EAEBABDB71F9EEFFBBE70FD /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = libOpenFBX.dylib;
-			targetProxy = 437F718D9A0CDBFF7285EFCD /* PBXContainerItemProxy */;
-		};
 		789BCCBFC10CB0F105AB82FF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = libUtility.a;
 			targetProxy = 8B0EC3CFE19C2E41BA15420F /* PBXContainerItemProxy */;
+		};
+		7BCF129866BB388AAEA100D8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = libassimp.dylib;
+			targetProxy = F4AAC4C83D1BA8FA81BA7B08 /* PBXContainerItemProxy */;
 		};
 		CB034A84F1297A36583070C4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -549,20 +584,31 @@
 		};
 /* End PBXTargetDependency section */
 
+/* Begin PBXVariantGroup section */
+/* End PBXVariantGroup section */
+
 /* Begin XCBuildConfiguration section */
 		03E6B8C54C579CF790F66F05 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = ../Build/Bin/Debug;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_DYNAMIC_NO_PIC = NO;
-				INFOPLIST_FILE = "$(SRCROOT)/resource/Platform/macOS/info.plist";
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
 				INSTALL_PATH = "\"$(HOME)/Applications\"";
 				MACOSX_DEPLOYMENT_TARGET = 12.2;
-				MTL_HEADER_SEARCH_PATHS = "../Bloom/src/ ../Vendor/Utility";
-				ONLY_ACTIVE_ARCH = YES;
+				MTL_HEADER_SEARCH_PATHS = (
+					"../Bloom/src/ ../Vendor/Utility",
+				);
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
 				PRODUCT_NAME = Poppy;
 			};
 			name = Debug;
@@ -572,7 +618,9 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
 				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
 				COPY_PHASE_STRIP = NO;
@@ -581,14 +629,36 @@
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "$(SRCROOT)/resource/Platform/macOS/info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "@loader_path/.";
-				MTL_HEADER_SEARCH_PATHS = "../Bloom/src/ ../Vendor/Utility";
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/.",
+				);
+				MTL_HEADER_SEARCH_PATHS = (
+					"../Bloom/src/ ../Vendor/Utility",
+				);
 				OBJROOT = ../Build/Obj/Debug/Debug/Poppy;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				OTHER_LDFLAGS = (
+					"-lOpenFBX",
+				);
 				SYMROOT = ../Build/Bin/Debug;
-				SYSTEM_HEADER_SEARCH_PATHS = "../Vendor ../Vendor/Utility ../Vendor/imgui ../Vendor/Metal-cpp $(inherited)";
-				USER_HEADER_SEARCH_PATHS = "src ../Bloom/include ../Bloom/src";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					../Vendor/imgui,
+					"../Vendor/Metal-cpp",
+					../Vendor/assimp/include,
+					"$(inherited)",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					src,
+					../Bloom/include,
+					../Bloom/src,
+				);
 			};
 			name = Debug;
 		};
@@ -597,22 +667,48 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
 				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
 				GCC_OPTIMIZATION_LEVEL = 3;
-				GCC_PREPROCESSOR_DEFINITIONS = NDEBUG;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "$(SRCROOT)/resource/Platform/macOS/info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "@loader_path/.";
-				MTL_HEADER_SEARCH_PATHS = "../Bloom/src/ ../Vendor/Utility";
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/.",
+				);
+				MTL_HEADER_SEARCH_PATHS = (
+					"../Bloom/src/ ../Vendor/Utility",
+				);
 				OBJROOT = ../Build/Obj/Development/Development/Poppy;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
+				OTHER_LDFLAGS = (
+					"-lOpenFBX",
+				);
 				SYMROOT = ../Build/Bin/Development;
-				SYSTEM_HEADER_SEARCH_PATHS = "../Vendor ../Vendor/Utility ../Vendor/imgui ../Vendor/Metal-cpp $(inherited)";
-				USER_HEADER_SEARCH_PATHS = "src ../Bloom/include ../Bloom/src";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					../Vendor/imgui,
+					"../Vendor/Metal-cpp",
+					../Vendor/assimp/include,
+					"$(inherited)",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					src,
+					../Bloom/include,
+					../Bloom/src,
+				);
 			};
 			name = Development;
 		};
@@ -621,22 +717,46 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++2a";
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
 				CONFIGURATION_TEMP_DIR = "$(OBJROOT)";
 				GCC_OPTIMIZATION_LEVEL = 3;
-				GCC_PREPROCESSOR_DEFINITIONS = NDEBUG;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "$(SRCROOT)/resource/Platform/macOS/info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "@loader_path/.";
-				MTL_HEADER_SEARCH_PATHS = "../Bloom/src/ ../Vendor/Utility";
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/.",
+				);
+				MTL_HEADER_SEARCH_PATHS = (
+					"../Bloom/src/ ../Vendor/Utility",
+				);
 				OBJROOT = ../Build/Obj/Release/Release/Poppy;
 				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = (
+					"-lOpenFBX",
+				);
 				SYMROOT = ../Build/Bin/Release;
-				SYSTEM_HEADER_SEARCH_PATHS = "../Vendor ../Vendor/Utility ../Vendor/imgui ../Vendor/Metal-cpp $(inherited)";
-				USER_HEADER_SEARCH_PATHS = "src ../Bloom/include ../Bloom/src";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					../Vendor,
+					../Vendor/Utility,
+					../Vendor/imgui,
+					"../Vendor/Metal-cpp",
+					../Vendor/assimp/include,
+					"$(inherited)",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					src,
+					../Bloom/include,
+					../Bloom/src,
+				);
 			};
 			name = Release;
 		};
@@ -644,14 +764,20 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = ../Build/Bin/Release;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_DYNAMIC_NO_PIC = NO;
-				INFOPLIST_FILE = "$(SRCROOT)/resource/Platform/macOS/info.plist";
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
 				INSTALL_PATH = "\"$(HOME)/Applications\"";
 				MACOSX_DEPLOYMENT_TARGET = 12.2;
-				MTL_HEADER_SEARCH_PATHS = "../Bloom/src/ ../Vendor/Utility";
+				MTL_HEADER_SEARCH_PATHS = (
+					"../Bloom/src/ ../Vendor/Utility",
+				);
 				PRODUCT_NAME = Poppy;
 			};
 			name = Release;
@@ -660,15 +786,23 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = (
+					YES,
+				);
 				CONFIGURATION_BUILD_DIR = ../Build/Bin/Development;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_DYNAMIC_NO_PIC = NO;
-				INFOPLIST_FILE = "$(SRCROOT)/resource/Platform/macOS/info.plist";
+				INFOPLIST_FILE = (
+					"$(SRCROOT)/resource/Platform/macOS/info.plist",
+				);
 				INSTALL_PATH = "\"$(HOME)/Applications\"";
 				MACOSX_DEPLOYMENT_TARGET = 12.2;
-				MTL_HEADER_SEARCH_PATHS = "../Bloom/src/ ../Vendor/Utility";
-				ONLY_ACTIVE_ARCH = YES;
+				MTL_HEADER_SEARCH_PATHS = (
+					"../Bloom/src/ ../Vendor/Utility",
+				);
+				ONLY_ACTIVE_ARCH = (
+					YES,
+				);
 				PRODUCT_NAME = Poppy;
 			};
 			name = Development;
@@ -686,7 +820,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		33716D7FD6BCF6B1F18DC3BF /* Build configuration list for PBXNativeTarget "Poppy" */ = {
+		33716D7FD6BCF6B1F18DC3BF /* Build configuration list for PBXNativeTarget "Poppy.app" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				03E6B8C54C579CF790F66F05 /* Debug */,
@@ -697,6 +831,6 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
-	};
-	rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+};
+rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
 }

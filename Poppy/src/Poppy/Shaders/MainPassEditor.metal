@@ -119,7 +119,7 @@ static float3 PBRLighting(PBRData data,
 	float3 const kD = (1.0 - kS) * (1.0 - data.metallic);
 	
 	const float PI = 3.14159265359;
-	  
+	
 	float const NdotL = max(dot(N, L), 0.0);
 	return (kD * data.albedo / PI + specular) * radiance * NdotL;
 }
@@ -152,10 +152,10 @@ fragment FragmentData mainPassEditorFS(MainPassData in [[ stage_in ]],
 		float3 const L = normalize(lightPosition - worldPosition);
 		float3 const H = normalize(V + L);
 		
-		float const dist = length(lightPosition - worldPosition);
+		float const dist = max(length(lightPosition - worldPosition) - light.radius, 0.0001);
 		float const attenuation = 1.0 / (dist * dist);
 		
-		float3 const radiance = light.color * light.intensity * attenuation;
+		float3 const radiance = light.common.color * light.common.intensity * attenuation;
 		
 		lightAcc += PBRLighting(data, radiance, N, V, L, H);
 	}
@@ -178,10 +178,10 @@ fragment FragmentData mainPassEditorFS(MainPassData in [[ stage_in ]],
 		
 		float3 const H = normalize(V + L);
 		
-		float const dist = length(lightPosition - worldPosition);
+		float const dist = max(length(lightPosition - worldPosition) - light.radius, 0.0001);
 		float const attenuation = 1.0 / (dist * dist);
 		
-		float3 const radiance = intensity * light.color * light.intensity * attenuation;
+		float3 const radiance = intensity * light.common.color * light.common.intensity * attenuation;
 		
 		lightAcc += PBRLighting(data, radiance, N, V, L, H);
 	}

@@ -6,18 +6,24 @@
 #include "Bloom/Graphics/RenderContext.hpp"
 #include "Bloom/Graphics/Renderer.hpp"
 
+#include "Bloom/Assets/AssetManager.hpp"
+
 BLOOM_API BLOOM_WEAK bloom::Application* createBloomApplication() {
-	std::cerr << "createBloomApplication() needs to be overriden by client" << std::endl;
+	std::cerr << "createBloomApplication() must be overriden by client" << std::endl;
 	std::terminate();
 }
 
 namespace bloom {
 	
-	Application::~Application() = default;
+	Application::~Application() {
+		
+	}
 	
 	void Application::doInit() {
 		_renderer = utl::make_unique_ref<Renderer>();
 		_renderer->init(_renderContext.get());
+		_assetManager = createAssetManager();
+		_assetManager->setRenderContext(_renderContext.get());
 		// call to base
 		this->init();
 	}
@@ -59,6 +65,10 @@ namespace bloom {
 			this->onEvent(event);
 		}
 		_eventBuffer.clear();
+	}
+	
+	utl::unique_ref<AssetManager> Application::createAssetManager() {
+		return utl::make_unique_ref<AssetManager>();
 	}
 	
 	void internal::AppInternals::init(Application* app, utl::unique_ref<RenderContext> renderContext) {

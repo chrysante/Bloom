@@ -3,6 +3,8 @@
 #include "Poppy/ImGui/ImGui.hpp"
 #include "Poppy/SelectionContext.hpp"
 
+#include "Bloom/Scene/Scene.hpp"
+
 #include <utl/vector.hpp>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
@@ -13,16 +15,17 @@ using namespace mtl::short_types;
 
 namespace poppy {
 	
-	SceneInspector::SceneInspector(bloom::Scene* scene,
-								   SelectionContext* selection):
-		Panel("Scene Inspector"),
-		scene(scene),
-		selection(selection)
+	SceneInspector::SceneInspector():
+		Panel("Scene Inspector")
 	{
 		
 	}
 	
 	void SceneInspector::display() {
+		if (!scene()) {
+			return;
+		}
+		
 		using namespace bloom;
 		auto roots = gatherRootEntities();
 		
@@ -30,15 +33,16 @@ namespace poppy {
 	}
 	
 	void SceneInspector::displayHierachyLevel(std::span<bloom::EntityID const> entities) {
+		using namespace bloom;
 		for (auto e: entities) {
-			auto& tag = scene->getComponent<bloom::TagComponent>(e);
+			auto& tag = scene()->getComponent<bloom::TagComponent>(e);
 			
 			ImGuiTreeNodeFlags flags = 0;
 			flags |= ImGuiTreeNodeFlags_OpenOnArrow;
 			flags |= ImGuiTreeNodeFlags_OpenOnDoubleClick;
 			flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
 			
-			bool const selected = selection->isSelected(e);
+			bool const selected = selection()->isSelected(e);
 			
 			if (selected) {
 				flags |= ImGuiTreeNodeFlags_Selected;
@@ -48,29 +52,15 @@ namespace poppy {
 														flags, "%s", tag.name.data());
 			
 			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-				selection->select(e);
+				selection()->select(e);
 			}
 			
 			if (nodeExpanded) {
-				if (scene->hasComponent<bloom::ChildrenComponent>(e)) {
-					auto& children = scene->getComponent<bloom::ChildrenComponent>(e);
-					displayHierachyLevel(children.entities);
-				}
+				auto const children = gatherChildren(e);
+				displayHierachyLevel(children);
 				ImGui::TreePop();
 			}
 		}
 	}
-	
-	utl::small_vector<bloom::EntityID> SceneInspector::gatherRootEntities() {
-		utl::small_vector<bloom::EntityID> roots;
-		for (auto [entity, parent]: scene->view<bloom::ParentComponent>().each()) {
-			if (!parent.entity) {
-				roots.push_back(bloom::EntityID(entity));
-			}
-		}
-		return roots;
-	}
-	
-	
 	
 }

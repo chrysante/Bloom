@@ -21,6 +21,24 @@
 
 using namespace mtl::short_types;
 
+template<> struct YAML::convert<poppy::Viewport::Parameters> {
+	static Node encode(poppy::Viewport::Parameters const& p) {
+		Node node;
+		node["Field of View"] = p.fieldOfView;
+		return node;
+	}
+	
+	static bool decode(Node const& node, poppy::Viewport::Parameters& p) {
+		try {
+			p.fieldOfView = node["Field of View"].as<float>();
+			return true;
+		}
+		catch (InvalidNode const&) {
+			return false;
+		}
+	}
+};
+
 namespace poppy{
 	
 	std::string_view toString(GizmoMode mode) {
@@ -45,12 +63,8 @@ namespace poppy{
 		}[(std::size_t)proj];
 	}
 	
-	Viewport::Viewport(SelectionContext* selection,
-					   bloom::Scene* s,
-					   bloom::Renderer* r):
+	Viewport::Viewport(bloom::Renderer* r):
 		Panel("Viewport"),
-		selection(selection),
-		scene(s),
 		renderer(r)
 	{
 		padding = 0;
@@ -70,10 +84,10 @@ namespace poppy{
 			auto const locationInView = windowSpaceToViewSpace(e.locationInWindow);
 			auto const entity = readEntityID(locationInView);
 			if (entity) {
-				selection->select(entity);
+				selection()->select(entity);
 			}
 			else {
-				selection->clear();
+				selection()->clear();
 			}
 		});
 		
@@ -104,38 +118,22 @@ namespace poppy{
 	}
 	
 	void Viewport::init() {
-		auto& settings = getEditor().settings();
-		
-		/* camera position */ {
-			
-			cameraActor.position[0] = settings.getFloat(utl::format("{}-Camera-Position-X", uniqueName())).value_or(0);
-			cameraActor.position[1] = settings.getFloat(utl::format("{}-Camera-Position-Y", uniqueName())).value_or(-60);
-			cameraActor.position[2] = settings.getFloat(utl::format("{}-Camera-Position-Z", uniqueName())).value_or(60);
-		}
-		
-		/* camera angle */ {
-			cameraActor.angleLR = settings.getFloat(utl::format("{}-Camera-Angle-Theta", uniqueName())).value_or(mtl::constants<>::pi / 2);
-			cameraActor.angleUD = settings.getFloat(utl::format("{}-Camera-Angle-Phi",   uniqueName())).value_or(mtl::constants<>::pi / 2);
-		}
+		params = settings["Parameters"].as<Parameters>(Parameters{});
+		cameraActor = settings["Camera"].as<ViewportCameraActor>(ViewportCameraActor{});
 		cameraActor.applyTransform();
 	}
 	
 	void Viewport::shutdown() {
-		auto& settings = getEditor().settings();
-		
-		/* camera position */ {
-			settings.setFloat(utl::format("{}-Camera-Position-X", uniqueName()), cameraActor.position[0]);
-			settings.setFloat(utl::format("{}-Camera-Position-Y", uniqueName()), cameraActor.position[1]);
-			settings.setFloat(utl::format("{}-Camera-Position-Z", uniqueName()), cameraActor.position[2]);
-		}
-		
-		/* camera angle */ {
-			settings.setFloat(utl::format("{}-Camera-Angle-Theta", uniqueName()), cameraActor.angleLR);
-			settings.setFloat(utl::format("{}-Camera-Angle-Phi",   uniqueName()), cameraActor.angleUD);
-		}
+		settings["Parameters"] = params;
+		settings["Camera"] = cameraActor;
 	}
 	
 	void Viewport::display() {
+		if (!scene()) {
+			return;
+		}
+		
+		calculateTransforms();
 		renderScene();
 		ImGui::Image(frameBuffer.finalImageEditor().nativeHandle(), ImGui::GetWindowSize());
 		
@@ -152,11 +150,9 @@ namespace poppy{
 		
 		
 		
-		if (!selection->empty()) {
-			auto entity = selection->ids().front();
-			auto& transform = scene->getComponent<bloom::TransformComponent>(entity);
-			
-			displayGizmo(transform);
+		if (!selection()->empty()) {
+			auto entity = selection()->ids().front();
+			displayGizmo(entity);
 		}
 	}
 	
@@ -164,15 +160,19 @@ namespace poppy{
 		drawLightOverlays();
 	}
 	
+	static std::uint32_t toUCol32(mtl::float4 color) {
+		return ImGui::ColorConvertFloat4ToU32(color);
+	}
+	
 	static std::uint32_t toUCol32(mtl::float3 color) {
-		return ImGui::ColorConvertFloat4ToU32(mtl::float4{ color, 1 });
+		return toUCol32(mtl::float4{ color, 1 });
 	}
 	
 	void Viewport::drawLightOverlays() {
 		using namespace bloom;
-		auto* const drawList = ImGui::GetWindowDrawList();
-		auto view = scene->view<TransformComponent const, LightComponent const>();
-		view.each([&](TransformComponent const& transform, LightComponent const& light) {
+		
+		auto view = scene()->view<TransformComponent const, LightComponent const>();
+		view.each([&](auto const entity, TransformComponent const& transform, LightComponent const& light) {
 			auto const positionVS = worldSpaceToViewSpace(transform.position);
 			if (positionVS.z < 0 || positionVS.z > 1) {
 				return;
@@ -180,21 +180,20 @@ namespace poppy{
 			auto const positionInWindow = viewSpaceToWindowSpace(positionVS.xy);
 			switch (light.type()) {
 				case LightType::pointlight: {
-					auto const p = light.get<PointLight>();
-					drawList->AddCircle(positionInWindow, 20, toUCol32(p.color));
+					drawPointLightIcon(positionInWindow, light.get<PointLight>().common.color);
 					break;
 				}
 					
 				case LightType::spotlight: {
 					auto  const s = light.get<SpotLight>();
-					float const radius = 25;
-					float2 const v0 = float2(0, 1) * radius + positionInWindow;
-					float const angle1 = mtl::constants<>::pi * (0.5 + 2. / 3.);
-					float2 const v1 = float2(std::cos(angle1), std::sin(angle1)) * radius + positionInWindow;
-					float const angle2 = mtl::constants<>::pi * (0.5 + 4. / 3.);
-					float2 const v2 = float2(std::cos(angle2), std::sin(angle2)) * radius + positionInWindow;
+					drawSpotLightIcon(positionInWindow, s.common.color);
+					if (selection()->isSelected(entity)) {
+						drawSpotlightVizWS(transform.position,
+										   transform.orientation,
+										   s.radius, (s.innerCutoff + s.outerCutoff) / 2,
+										   (s.common.color + mtl::colors<float3>::white) / 2);
+					}
 					
-					drawList->AddTriangle(v0, v1, v2, toUCol32(s.color));
 					break;
 				}
 					
@@ -203,6 +202,84 @@ namespace poppy{
 			}
 		});
 		
+	}
+	
+	void Viewport::drawPointLightIcon(mtl::float2 position, mtl::float3 color) {
+		float const size = 20;
+		auto* const drawList = ImGui::GetWindowDrawList();
+		drawList->AddCircle(position, size, toUCol32({ 0, 0, 0, 0.5 }), 0, 4);
+		drawList->AddCircle(position, size, toUCol32(color), 0, 2);
+		
+	}
+	
+	void Viewport::drawSpotLightIcon(mtl::float2 position, mtl::float3 color) {
+		float const radius = 25;
+		float2 const v0 = float2(0, 1) * radius + position;
+		float const angle1 = mtl::constants<>::pi * (0.5 + 2. / 3.);
+		float2 const v1 = float2(std::cos(angle1), std::sin(angle1)) * radius + position;
+		float const angle2 = mtl::constants<>::pi * (0.5 + 4. / 3.);
+		float2 const v2 = float2(std::cos(angle2), std::sin(angle2)) * radius + position;
+
+		auto* const drawList = ImGui::GetWindowDrawList();
+		drawList->AddTriangle(v0, v1, v2, toUCol32(color));
+		
+	}
+	
+	
+	void Viewport::drawSpotlightVizWS(float3 position,
+									  quaternion_float orientation,
+									  float radius,
+									  float angle,
+									  float3 color)
+	{
+		auto* const drawList = ImGui::GetWindowDrawList();
+		int const segments = 32;
+		utl::small_vector<float3, 32> circlePoints1;
+		for (int i = 0; i < segments; ++i) {
+			float const tau = mtl::constants<>::pi * 2;
+			float const angle = i * tau / segments;
+			circlePoints1.push_back({ 0, cos(angle), sin(angle) });
+		}
+		float const theta = angle;
+		float const r1 = radius;
+		float const r2 = radius + 50;
+		float const rho1 = r1 * sin(theta);
+		float const rho2 = r2 * sin(theta);
+		float const sigma1 = r1 * cos(theta);
+		float const sigma2 = r2 * cos(theta);
+		
+		auto const transform = mtl::translation(position) * mtl::rotation(orientation);
+		
+		auto circlePoints2 = circlePoints1;
+		for (auto& p: circlePoints1) {
+			p.x = sigma1;
+			p.y *= rho1;
+			p.z *= rho1;
+			p = (transform * float4(p, 1)).xyz;
+		}
+		for (auto& p: circlePoints2) {
+			p.x = sigma2;
+			p.y *= rho2;
+			p.z *= rho2;
+			p = (transform * float4(p, 1)).xyz;
+		}
+		
+		utl::small_vector<float2, 32> pointsWindowSpace1;
+		std::transform(circlePoints1.begin(), circlePoints1.end(),
+					   std::back_inserter(pointsWindowSpace1),
+					   [this](float3 x) { return worldSpaceToWindowSpace(x).xy; });
+		utl::small_vector<float2, 32> pointsWindowSpace2;
+		std::transform(circlePoints2.begin(), circlePoints2.end(),
+					   std::back_inserter(pointsWindowSpace2),
+					   [this](float3 x) { return worldSpaceToWindowSpace(x).xy; });
+		
+		for (int i = 0; i < segments; i += 4) {
+			drawList->AddLine(pointsWindowSpace1[i], pointsWindowSpace2[i], toUCol32(color));
+		}
+		for (int i = 0; i < segments; ++i) {
+			drawList->AddLine(pointsWindowSpace1[i], pointsWindowSpace1[(i + 1) % segments], toUCol32(color));
+			drawList->AddLine(pointsWindowSpace2[i], pointsWindowSpace2[(i + 1) % segments], toUCol32(color));
+		}
 	}
 	
 	template <typename E>
@@ -259,7 +336,7 @@ namespace poppy{
 		if (ImGui::BeginCombo("##displayControlMenu", nullptr, ImGuiComboFlags_NoPreview)) {
 			ImGui::Button("Button");
 			ImGui::SetNextItemWidth(100);
-			ImGui::SliderFloat("Field of View", &fieldOfView, 30, 180);
+			ImGui::SliderFloat("Field of View", &params.fieldOfView, 30, 180);
 			ImGui::EndCombo();
 		}
 		ImGui::PopStyleVar();
@@ -274,7 +351,41 @@ namespace poppy{
 		inputControlCombo("##Projection", cameraProjection, 2);
 	}
 	
-	void Viewport::displayGizmo(bloom::TransformComponent& transform) {
+	static std::pair<bool, mtl::float4x4> manipulateGizmo(mtl::float4x4 view,
+														  mtl::float4x4 proj,
+														  GizmoMode operation,
+														  CoordinateSpace space,
+														  mtl::float4x4 transform)
+	{
+		view = mtl::transpose(view);
+		proj = mtl::transpose(proj);
+		transform = mtl::transpose(transform);
+		
+		if (ImGuizmo::Manipulate(view.data(), proj.data(),
+								 (ImGuizmo::OPERATION)operation,
+								 (ImGuizmo::MODE)(1 - (int)space),
+								 transform.data()))
+		{
+			return { true, mtl::transpose(transform) };
+		}
+		return { false, 0 };
+	}
+	
+	static std::tuple<mtl::float3, mtl::quaternion_float, mtl::float3> decomposeMatrix(mtl::float4x4 transform) {
+		mtl::float3 translation, rotation, scale;
+		transform = mtl::transpose(transform);
+		ImGuizmo::DecomposeMatrixToComponents(transform.data(),
+											  translation.data(),
+											  rotation.data(),
+											  scale.data());
+		return {
+			translation,
+			mtl::to_quaternion(rotation.x, rotation.y, rotation.z),
+			scale
+		};
+	}
+	
+	void Viewport::displayGizmo(bloom::EntityID entity) {
 		ImGuizmo::SetContext((ImGuizmo::Context*)imguizmoContext);
 		ImGuizmo::BeginFrame();
 		ImGuizmo::SetOrthographic(false);
@@ -283,44 +394,73 @@ namespace poppy{
 		float2 const size = ImGui::GetWindowSize();
 		ImGuizmo::SetRect(pos.x, pos.y, size.x, size.y);
 		
-		auto const view = mtl::transpose(cameraActor.camera.getView());
-		auto const proj = mtl::transpose(cameraActor.camera.getProjection());
-		auto matrix = mtl::transpose(transform.calculate());
+		auto const view = cameraActor.camera.getView();
+		auto const proj = cameraActor.camera.getProjection();
 		
-		auto const operation = [&]{
-			switch (gizmoMode) {
-				case GizmoMode::translate:
-					return ImGuizmo::OPERATION::TRANSLATE;
-				case GizmoMode::rotate:
-					return ImGuizmo::OPERATION::ROTATE;
-				case GizmoMode::scale:
-					return ImGuizmo::OPERATION::SCALE;
-			}
-		}();
+		using namespace bloom;
 		
-		auto const space = [&]{
-			switch (gizmoSpace) {
-				case CoordinateSpace::world:
-					return gizmoMode == GizmoMode::scale ?
-						ImGuizmo::MODE::LOCAL :
-						ImGuizmo::MODE::WORLD;
-					
-				case CoordinateSpace::local:
-					return ImGuizmo::MODE::LOCAL;
-			}
-		}();
+		bloom::TransformComponent& transformComponent = scene()->getComponent<TransformComponent>(entity);
+		auto const localTransform = transformComponent.calculate();
+		auto const parentTransform = getParentTransform(entity);
 		
-		if (ImGuizmo::Manipulate(view.data(), proj.data(), operation, space, matrix.data())) {
-			mtl::float3 translation, rotation, scale;
-			ImGuizmo::DecomposeMatrixToComponents(matrix.data(),
-												  translation.data(),
-												  rotation.data(),
-												  scale.data());
-			transform.position = translation;
-			transform.orientation = mtl::to_quaternion(rotation.x, rotation.y, rotation.z);
-			transform.scale = scale;
+		auto const entityWSTransform = parentTransform * localTransform;
+
+		if (auto [manipulated, newEntityWSTransform] = manipulateGizmo(view,
+																	   proj,
+																	   gizmoMode,
+																	   gizmoSpace,
+																	   entityWSTransform);
+			manipulated)
+		{
+			auto const newLocalTransform = mtl::inverse(parentTransform) * newEntityWSTransform;
+			
+			std::tie(transformComponent.position,
+					 transformComponent.orientation,
+					 transformComponent.scale) = decomposeMatrix(newLocalTransform);
 		}
 		gizmoHovered = ImGuizmo::IsOver();
+	}
+	
+	mtl::float4x4 Viewport::getParentTransform(bloom::EntityID entity) const {
+		using namespace bloom;
+		if (!scene()->hasComponent<HierachyComponent>(entity)) {
+			return 1;
+		}
+		mtl::float4x4 result = 1;
+		for (EntityID parent = entity;;) {
+			parent = scene()->getComponent<HierachyComponent>(parent).parent;
+			if (!parent) {
+				break;
+			}
+			auto const parentTransfom = scene()->getComponent<TransformComponent>(parent).calculate();
+			result = parentTransfom * result;
+		}
+		
+		return result;
+	}
+	
+	void Viewport::calculateTransforms() {
+		using namespace bloom;
+		auto view = scene()->view<TransformComponent const, TransformMatrixComponent>();
+		view.each([&](auto const id, TransformComponent const& transform, TransformMatrixComponent& transformMatrix) {
+			transformMatrix.matrix = transform.calculate();
+		});
+		
+		
+		std::stack<EntityID, utl::small_vector<EntityID>> stack(gatherRootEntities());
+		
+		while (!stack.empty()) {
+			auto const current = stack.top();
+			auto const& currentTransform = scene()->getComponent<TransformMatrixComponent>(current);
+			stack.pop();
+			
+			auto const children = gatherChildren(current);
+			for (auto const c: children) {
+				auto& childTransform = scene()->getComponent<TransformMatrixComponent>(c);
+				childTransform.matrix = currentTransform.matrix * childTransform.matrix;
+				stack.push(c);
+			}
+		}
 	}
 	
 	void Viewport::renderScene() {
@@ -329,7 +469,7 @@ namespace poppy{
 		
 		auto& camera = cameraActor.camera;
 		if (cameraProjection == Projection::perspective) {
-			camera.setProjection(mtl::to_radians(fieldOfView), frameBuffer.size());
+			camera.setProjection(mtl::to_radians(params.fieldOfView), frameBuffer.size());
 		}
 		else {
 			float const width = 1000; // ??
@@ -340,29 +480,36 @@ namespace poppy{
 									  0, 5000);
 		}
 		
-		
 		renderer->beginScene(camera);
+		
 		/* submit meshes */ {
-			auto view = scene->view<TransformComponent const, MeshRenderComponent const>();
-			view.each([&](auto id, TransformComponent const& transform, MeshRenderComponent const& meshRenderer) {
+			auto view = scene()->view<TransformMatrixComponent const, MeshRenderComponent const>();
+			view.each([&](auto const id, TransformMatrixComponent const& transform, MeshRenderComponent const& meshRenderer) {
+				if (!meshRenderer.mesh || !meshRenderer.material) {
+					return;
+				}
 				bloom::EntityRenderData entityData;
-				entityData.transform = transform.calculate();
+				entityData.transform = transform.matrix;
 				entityData.ID = utl::to_underlying(id);
 				renderer->submit(meshRenderer.mesh.get(),
 								 meshRenderer.material.get(),
 								 entityData,
-								 selection->isSelected(bloom::EntityID(id)));
+								 selection()->isSelected(bloom::EntityID(id)));
 			});
 		}
+		
 		/* submit lights */ {
-			auto view = scene->view<TransformComponent const, LightComponent const>();
-			view.each([&](auto id, TransformComponent const& transform, LightComponent const& light) {
+			auto view = scene()->view<TransformMatrixComponent const, LightComponent const>();
+			view.each([&](auto id, TransformMatrixComponent const& transform, LightComponent const& light) {
 				switch (light.type()) {
 					case LightType::pointlight:
-						renderer->submit(light.get<PointLight>(), transform.position);
+						renderer->submit(light.get<PointLight>(),
+										 transform.matrix.column(3).xyz);
 						break;
 					case LightType::spotlight:
-						renderer->submit(light.get<SpotLight>(), transform.position, mtl::rotate({ 1, 0, 0 }, transform.orientation));
+						renderer->submit(light.get<SpotLight>(),
+										 transform.matrix.column(3).xyz,
+										 mtl::normalize((transform.matrix * mtl::float4{ 1, 0, 0, 0 }).xyz));
 						break;
 					default:
 						break;
@@ -422,51 +569,11 @@ namespace poppy{
 		return { posVS, ndc.z };
 	}
 	
-	void ViewportCameraActor::update(bloom::TimeStep time, bloom::Input const& input) {
-		using namespace bloom;
-		
-		angleLR  = utl::mod(angleLR - input.mouseOffset().x / 180., mtl::constants<>::pi * 2);
-		angleUD  = std::clamp(angleUD + input.mouseOffset().y / 180.f, 0.01f, mtl::constants<float>::pi - 0.01f);
-		
-		float offset = speed * time.delta;
-		if (input.keyDown(bloom::Key::leftShift)) {
-			offset *= 3;
-		}
-		
-		if (input.keyDown(Key::A)) {
-			position -= mtl::cross(front(), up()) * offset;
-		}
-		if (input.keyDown(Key::D)) {
-			position += mtl::cross(front(), up()) * offset;
-		}
-		if (input.keyDown(Key::W)) {
-			position += front() * offset;
-		}
-		if (input.keyDown(Key::S)) {
-			position -= front() * offset;
-		}
-		if (input.keyDown(Key::Q)) {
-			position -= up() * offset;
-		}
-		if (input.keyDown(Key::E)) {
-			position += up() * offset;
-		}
-		
-		applyTransform();
+	mtl::float3 Viewport::worldSpaceToWindowSpace(mtl::float3 position) {
+		auto const vs = worldSpaceToViewSpace(position);
+		return { viewSpaceToWindowSpace(vs.xy), vs.z };
 	}
 	
-	void ViewportCameraActor::applyTransform() {
-		camera.setTransform(position, front());
-	}
 	
-	mtl::float3 ViewportCameraActor::front() const {
-		using std::sin;
-		using std::cos;
-		return {
-			sin(angleUD) * cos(angleLR),
-			sin(angleUD) * sin(angleLR),
-			cos(angleUD)
-		};
-	}
 	
 }

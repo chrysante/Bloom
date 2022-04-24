@@ -84,21 +84,25 @@
 		<data>
 		9QiaRneaqo8m+cp3wK3FbayKGnk=
 		</data>
+		<key>Resources/Icons/.DS_Store</key>
+		<data>
+		3y++sUAKzaCQmjLBz2v0kvESHgc=
+		</data>
+		<key>Resources/Icons/Icons.tga</key>
+		<data>
+		1rxnAaiwSfqeFisDPPaZHHV2om4=
+		</data>
 		<key>Resources/MainMenu.storyboardc/Info.plist</key>
 		<data>
 		M1rS+Tcas1ZdM4/iibTlduTJ22M=
 		</data>
 		<key>Resources/MainMenu.storyboardc/MainMenu.nib</key>
 		<data>
-		l74falYqoVPJ2czpoI2DIFXDJkc=
+		7LdWJFzSHuIYHj4OwVvEfVZDgWc=
 		</data>
 		<key>Resources/default.metallib</key>
 		<data>
-		7Y6618INTg0Ot/snSw5TPTmQgaI=
-		</data>
-		<key>Resources/imgui.ini</key>
-		<data>
-		Zbp9uQpeHPIfe4WYkDJx3sa55oE=
+		wv0cVSY5wXjAyESP87ktRx4OZZ0=
 		</data>
 		<key>Resources/platform/.DS_Store</key>
 		<data>
@@ -252,6 +256,13 @@
 			p4Vbq779e9H0ggk+MMN6NwR0ubBDLx7lxJStqnO5d9c=
 			</data>
 		</dict>
+		<key>Resources/Icons/Icons.tga</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Gw0/uVf0OuY56mEd874Vt8Mcvfr9jmOpIHon53HjFPc=
+			</data>
+		</dict>
 		<key>Resources/MainMenu.storyboardc/Info.plist</key>
 		<dict>
 			<key>hash2</key>
@@ -263,21 +274,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			c/rO/gvk7Reqq7OLYV4f97JZ0Dr7EW8PoN4LE7C+JeA=
+			Vo4XnmrpMaZB3WlL7b6ZG60cwifTH1tLh7ExsVM1284=
 			</data>
 		</dict>
 		<key>Resources/default.metallib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			XudV2YgWsWcPmofCdPKABRQthIeOm0l2e3ksKrFehqs=
-			</data>
-		</dict>
-		<key>Resources/imgui.ini</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			pIfnKnNPNwnCfj84QzNcM6sNyhCBS+Q4KdfFGbG85AM=
+			80BdhmCmihHpuH0+MXBQJwq4ZOHYtLWDf/KyJ+beDt4=
 			</data>
 		</dict>
 		<key>Resources/platform/macOS/Info.plist</key>

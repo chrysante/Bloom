@@ -89,5 +89,6 @@ namespace poppy {
 		return f();
 	}
 	
+	std::array<char, 64> generateUniqueID(std::string_view, int, bool prepentDoubleHash = false);
 	
 }

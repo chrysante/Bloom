@@ -37,5 +37,6 @@ include "Poppy"
 include "Sandbox"
 include "Vendor/Utility/utility_project.lua"
 include "Vendor/imgui"
-include "Vendor/OpenFBX"
 include "Vendor/yaml-cpp"
+include "Vendor/assimp"
+

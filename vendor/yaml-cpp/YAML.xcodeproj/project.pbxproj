@@ -41,17 +41,26 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		067F0C2C5692A0DED910D26C /* tag.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = tag.h; path = src/tag.h; sourceTree = "<group>"; };
 		06DA066E28A5B3A0655ADCAE /* exceptions.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = exceptions.cpp; path = src/exceptions.cpp; sourceTree = "<group>"; };
 		08930702ACE5A4B4BF1DED42 /* tag.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = tag.cpp; path = src/tag.cpp; sourceTree = "<group>"; };
+		102C0A5E42255510BC04909E /* singledocparser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = singledocparser.h; path = src/singledocparser.h; sourceTree = "<group>"; };
 		1031110431FCBE366EB1E744 /* regex_yaml.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = regex_yaml.cpp; path = src/regex_yaml.cpp; sourceTree = "<group>"; };
+		119E75CE5A0F5A009EAE2C0E /* regex_yaml.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = regex_yaml.h; path = src/regex_yaml.h; sourceTree = "<group>"; };
 		123CAFEC3862DF9E9F69D62C /* scantag.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = scantag.cpp; path = src/scantag.cpp; sourceTree = "<group>"; };
+		14E668682FB2D71A33836EA8 /* graphbuilderadapter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = graphbuilderadapter.h; path = src/contrib/graphbuilderadapter.h; sourceTree = "<group>"; };
 		20CBDB5AB6429A8C24DEF19A /* emitfromevents.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = emitfromevents.cpp; path = src/emitfromevents.cpp; sourceTree = "<group>"; };
 		22F0E0A07053D6D2E672D6E0 /* emitterstate.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = emitterstate.cpp; path = src/emitterstate.cpp; sourceTree = "<group>"; };
+		24D53E96C927DC48DB6024D6 /* token.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = token.h; path = src/token.h; sourceTree = "<group>"; };
 		25F4BD423D0758742D235382 /* stream.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = stream.cpp; path = src/stream.cpp; sourceTree = "<group>"; };
 		274D25482ABDF77AAC2A9B88 /* emit.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = emit.cpp; path = src/emit.cpp; sourceTree = "<group>"; };
 		2B06B25C0F4DBA8E933AE89C /* graphbuilder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = graphbuilder.cpp; path = src/contrib/graphbuilder.cpp; sourceTree = "<group>"; };
+		2C1B062A748BEA5CB92ABC6A /* scanscalar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = scanscalar.h; path = src/scanscalar.h; sourceTree = "<group>"; };
+		2C265D4474974176B9361384 /* ptr_vector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ptr_vector.h; path = src/ptr_vector.h; sourceTree = "<group>"; };
+		3078D04A52447D7C8EF9A68A /* emitterutils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = emitterutils.h; path = src/emitterutils.h; sourceTree = "<group>"; };
 		346158740284AC268992FEB4 /* singledocparser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = singledocparser.cpp; path = src/singledocparser.cpp; sourceTree = "<group>"; };
 		3BDAA9FE6200D9B0C907D03E /* emitter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = emitter.cpp; path = src/emitter.cpp; sourceTree = "<group>"; };
+		3CE626386EDF70EAE8BEAC78 /* collectionstack.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = collectionstack.h; path = src/collectionstack.h; sourceTree = "<group>"; };
 		3DF04BE05FBBF9129C712220 /* scanscalar.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = scanscalar.cpp; path = src/scanscalar.cpp; sourceTree = "<group>"; };
 		43344AC406A00C764543B104 /* nodebuilder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = nodebuilder.cpp; path = src/nodebuilder.cpp; sourceTree = "<group>"; };
 		4A4C37A87286F05A5A227DE8 /* node_data.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = node_data.cpp; path = src/node_data.cpp; sourceTree = "<group>"; };
@@ -60,19 +69,32 @@
 		6CABBEEC92D1EE9EF9D8E52C /* convert.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = convert.cpp; path = src/convert.cpp; sourceTree = "<group>"; };
 		71A98D4E93753A80D02A638E /* directives.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = directives.cpp; path = src/directives.cpp; sourceTree = "<group>"; };
 		73ED7AE095B92812D26E5120 /* nodeevents.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = nodeevents.cpp; path = src/nodeevents.cpp; sourceTree = "<group>"; };
+		75FBB02A97C75D5CD47C866A /* emitterstate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = emitterstate.h; path = src/emitterstate.h; sourceTree = "<group>"; };
+		7BBAA42EA3F55CE08B90EA6E /* nodebuilder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = nodebuilder.h; path = src/nodebuilder.h; sourceTree = "<group>"; };
 		7D2CC4DEA352F4900A59EB1E /* scanner.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = scanner.cpp; path = src/scanner.cpp; sourceTree = "<group>"; };
+		7E1A834EA6553C008DF0C98E /* indentation.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = indentation.h; path = src/indentation.h; sourceTree = "<group>"; };
 		836B2CE286DBFF140848A322 /* libYAML.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; name = libYAML.a; path = libYAML.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		847292AA19E951DC8885A8EA /* streamcharsource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = streamcharsource.h; path = src/streamcharsource.h; sourceTree = "<group>"; };
+		85C4F20828B318BAB7D8F848 /* scanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = scanner.h; path = src/scanner.h; sourceTree = "<group>"; };
 		9C604CC0E9C342F25FE24300 /* emitterutils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = emitterutils.cpp; path = src/emitterutils.cpp; sourceTree = "<group>"; };
 		A8CE7ABE1CB6F2703F04A0FE /* graphbuilderadapter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = graphbuilderadapter.cpp; path = src/contrib/graphbuilderadapter.cpp; sourceTree = "<group>"; };
+		B0C6A604D29253360F477C44 /* stringsource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = stringsource.h; path = src/stringsource.h; sourceTree = "<group>"; };
 		B6BC2716DEF6DFC8C6926D56 /* scantoken.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = scantoken.cpp; path = src/scantoken.cpp; sourceTree = "<group>"; };
+		C42D72580C9E568A513D2898 /* directives.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = directives.h; path = src/directives.h; sourceTree = "<group>"; };
 		C44476A067329D52F6587CE0 /* parse.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = parse.cpp; path = src/parse.cpp; sourceTree = "<group>"; };
 		C6068644DD192176CD351C84 /* parser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = parser.cpp; path = src/parser.cpp; sourceTree = "<group>"; };
+		C62DCAAEEC53FA60535AF0EE /* regeximpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = regeximpl.h; path = src/regeximpl.h; sourceTree = "<group>"; };
 		C6F123A0951477521C22C9E0 /* ostream_wrapper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ostream_wrapper.cpp; path = src/ostream_wrapper.cpp; sourceTree = "<group>"; };
 		CA16D0BAEBE27DEC2897A6FA /* depthguard.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = depthguard.cpp; path = src/depthguard.cpp; sourceTree = "<group>"; };
 		CA7C72E0CDED45124F59E920 /* null.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = null.cpp; path = src/null.cpp; sourceTree = "<group>"; };
+		CE10532E1E23E7E0A0A2196E /* exp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = exp.h; path = src/exp.h; sourceTree = "<group>"; };
 		D0D2C11CE7E55C4ED801575C /* memory.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = memory.cpp; path = src/memory.cpp; sourceTree = "<group>"; };
+		DA1CBE707D0AE5220C30C4B0 /* setting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = setting.h; path = src/setting.h; sourceTree = "<group>"; };
 		DC95AC36E0067E6861732276 /* node.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = node.cpp; path = src/node.cpp; sourceTree = "<group>"; };
 		DF6C6DF4F67F0926E69B0434 /* binary.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = binary.cpp; path = src/binary.cpp; sourceTree = "<group>"; };
+		E70E7FD689FCA68819228616 /* scantag.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = scantag.h; path = src/scantag.h; sourceTree = "<group>"; };
+		EF50952A37C1795C7C604B6A /* nodeevents.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = nodeevents.h; path = src/nodeevents.h; sourceTree = "<group>"; };
+		F1F2644CF563367E76CFDA8C /* stream.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = stream.h; path = src/stream.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -112,6 +134,7 @@
 			children = (
 				2B06B25C0F4DBA8E933AE89C /* graphbuilder.cpp */,
 				A8CE7ABE1CB6F2703F04A0FE /* graphbuilderadapter.cpp */,
+				14E668682FB2D71A33836EA8 /* graphbuilderadapter.h */,
 			);
 			name = contrib;
 			sourceTree = "<group>";
@@ -120,35 +143,56 @@
 			isa = PBXGroup;
 			children = (
 				DF6C6DF4F67F0926E69B0434 /* binary.cpp */,
+				3CE626386EDF70EAE8BEAC78 /* collectionstack.h */,
 				A73C0E4A4B8EABFC5DC6F48A /* contrib */,
 				6CABBEEC92D1EE9EF9D8E52C /* convert.cpp */,
 				CA16D0BAEBE27DEC2897A6FA /* depthguard.cpp */,
 				71A98D4E93753A80D02A638E /* directives.cpp */,
+				C42D72580C9E568A513D2898 /* directives.h */,
 				274D25482ABDF77AAC2A9B88 /* emit.cpp */,
 				20CBDB5AB6429A8C24DEF19A /* emitfromevents.cpp */,
 				3BDAA9FE6200D9B0C907D03E /* emitter.cpp */,
 				22F0E0A07053D6D2E672D6E0 /* emitterstate.cpp */,
+				75FBB02A97C75D5CD47C866A /* emitterstate.h */,
 				9C604CC0E9C342F25FE24300 /* emitterutils.cpp */,
+				3078D04A52447D7C8EF9A68A /* emitterutils.h */,
 				06DA066E28A5B3A0655ADCAE /* exceptions.cpp */,
 				6AEA2EC40F3CCC7621751504 /* exp.cpp */,
+				CE10532E1E23E7E0A0A2196E /* exp.h */,
+				7E1A834EA6553C008DF0C98E /* indentation.h */,
 				D0D2C11CE7E55C4ED801575C /* memory.cpp */,
 				DC95AC36E0067E6861732276 /* node.cpp */,
 				4A4C37A87286F05A5A227DE8 /* node_data.cpp */,
 				43344AC406A00C764543B104 /* nodebuilder.cpp */,
+				7BBAA42EA3F55CE08B90EA6E /* nodebuilder.h */,
 				73ED7AE095B92812D26E5120 /* nodeevents.cpp */,
+				EF50952A37C1795C7C604B6A /* nodeevents.h */,
 				CA7C72E0CDED45124F59E920 /* null.cpp */,
 				C6F123A0951477521C22C9E0 /* ostream_wrapper.cpp */,
 				C44476A067329D52F6587CE0 /* parse.cpp */,
 				C6068644DD192176CD351C84 /* parser.cpp */,
+				2C265D4474974176B9361384 /* ptr_vector.h */,
 				1031110431FCBE366EB1E744 /* regex_yaml.cpp */,
+				119E75CE5A0F5A009EAE2C0E /* regex_yaml.h */,
+				C62DCAAEEC53FA60535AF0EE /* regeximpl.h */,
 				7D2CC4DEA352F4900A59EB1E /* scanner.cpp */,
+				85C4F20828B318BAB7D8F848 /* scanner.h */,
 				3DF04BE05FBBF9129C712220 /* scanscalar.cpp */,
+				2C1B062A748BEA5CB92ABC6A /* scanscalar.h */,
 				123CAFEC3862DF9E9F69D62C /* scantag.cpp */,
+				E70E7FD689FCA68819228616 /* scantag.h */,
 				B6BC2716DEF6DFC8C6926D56 /* scantoken.cpp */,
+				DA1CBE707D0AE5220C30C4B0 /* setting.h */,
 				5898C45080D37D02686F0A90 /* simplekey.cpp */,
 				346158740284AC268992FEB4 /* singledocparser.cpp */,
+				102C0A5E42255510BC04909E /* singledocparser.h */,
 				25F4BD423D0758742D235382 /* stream.cpp */,
+				F1F2644CF563367E76CFDA8C /* stream.h */,
+				847292AA19E951DC8885A8EA /* streamcharsource.h */,
+				B0C6A604D29253360F477C44 /* stringsource.h */,
 				08930702ACE5A4B4BF1DED42 /* tag.cpp */,
+				067F0C2C5692A0DED910D26C /* tag.h */,
+				24D53E96C927DC48DB6024D6 /* token.h */,
 				A6C936B49B3FADE6EA134CF4 /* Products */,
 			);
 			name = YAML;

@@ -14,57 +14,10 @@
             filePath = "Bloom/src/Bloom/platform/macOS/AppViewController.mm"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "164"
-            endingLineNumber = "164"
+            startingLineNumber = "175"
+            endingLineNumber = "175"
             landmarkName = "-rightMouseMoved:"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "FD494F39-9740-4624-99BF-8731C2CE6159 - eff591512e9c6e1c"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[AppViewController rightMouseMoved:]"
-                  moduleName = "libBloom.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "162"
-                  endingLineNumber = "162"
-                  offsetFromSymbolStart = "79">
-               </Location>
-               <Location
-                  uuid = "FD494F39-9740-4624-99BF-8731C2CE6159 - eff591512e9c6e7d"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[AppViewController rightMouseMoved:]"
-                  moduleName = "libBloom.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "163"
-                  endingLineNumber = "163"
-                  offsetFromSymbolStart = "79">
-               </Location>
-               <Location
-                  uuid = "FD494F39-9740-4624-99BF-8731C2CE6159 - eff591512e9c6fbb"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[AppViewController rightMouseMoved:]"
-                  moduleName = "libBloom.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "165"
-                  endingLineNumber = "165"
-                  offsetFromSymbolStart = "79">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -77,55 +30,72 @@
             filePath = "Bloom/src/Bloom/platform/macOS/AppViewController.mm"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "171"
-            endingLineNumber = "171"
+            startingLineNumber = "182"
+            endingLineNumber = "182"
             landmarkName = "-otherMouseMoved:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "DF46311F-4A60-4754-B8D3-88B8FEF1523E"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Poppy/src/Poppy/EditorAssetManager.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "54"
+            endingLineNumber = "54"
+            landmarkName = "EditorAssetManager::importStaticMesh(path)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "949EF4B0-2467-48AE-A917-33BE32D13414"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Poppy/src/Poppy/Assets/MeshImporter.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "131"
+            endingLineNumber = "131"
+            landmarkName = "MeshImporter::import(path)"
             landmarkType = "7">
             <Locations>
                <Location
-                  uuid = "688AB8CD-E125-4180-872F-537AE0580DDE - 4ef4db56948f238b"
+                  uuid = "949EF4B0-2467-48AE-A917-33BE32D13414 - 5e32e9658442ffce"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "-[AppViewController otherMouseMoved:]"
-                  moduleName = "libBloom.dylib"
+                  symbolName = "poppy::MeshImporter::import(std::__1::__fs::filesystem::path)"
+                  moduleName = "Poppy"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Poppy/src/Poppy/Assets/MeshImporter.cpp"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "169"
-                  endingLineNumber = "169"
-                  offsetFromSymbolStart = "79">
+                  startingLineNumber = "138"
+                  endingLineNumber = "138"
+                  offsetFromSymbolStart = "305">
                </Location>
                <Location
-                  uuid = "688AB8CD-E125-4180-872F-537AE0580DDE - 4ef4db56948f23e8"
+                  uuid = "949EF4B0-2467-48AE-A917-33BE32D13414 - 5e32e9658442ffce"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "-[AppViewController otherMouseMoved:]"
-                  moduleName = "libBloom.dylib"
+                  symbolName = "poppy::MeshImporter::import(std::__1::__fs::filesystem::path)"
+                  moduleName = "Poppy"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Poppy/src/Poppy/Assets/MeshImporter.cpp"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "170"
-                  endingLineNumber = "170"
-                  offsetFromSymbolStart = "79">
-               </Location>
-               <Location
-                  uuid = "688AB8CD-E125-4180-872F-537AE0580DDE - 4ef4db56948f242e"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[AppViewController otherMouseMoved:]"
-                  moduleName = "libBloom.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "172"
-                  endingLineNumber = "172"
-                  offsetFromSymbolStart = "79">
+                  startingLineNumber = "138"
+                  endingLineNumber = "138"
+                  offsetFromSymbolStart = "2145">
                </Location>
             </Locations>
          </BreakpointContent>

@@ -31,7 +31,7 @@ namespace bloom {
 			_native(rhs._native),
 			_deleter(rhs._deleter)
 		{
-			if (*_refcount) {
+			if (_refcount) {
 				++*_refcount;
 			}
 		}
@@ -51,7 +51,7 @@ namespace bloom {
 			this->_native = rhs._native;
 			this->_deleter = rhs._deleter;
 					
-			if (*_refcount) {
+			if (_refcount) {
 				++*_refcount;
 			}
 			

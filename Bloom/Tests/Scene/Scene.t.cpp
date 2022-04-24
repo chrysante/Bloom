@@ -6,9 +6,10 @@
 #include "Bloom/Scene/Components.hpp"
 
 TEST_CASE() {
+	return;
 	bloom::Scene scene;
 	
-	auto mesh = bloom::StaticMesh::create();
+	auto mesh = bloom::StaticRenderMesh::create();
 	
 	bloom::MeshRenderComponent meshRenderer{ nullptr, mesh };
 	

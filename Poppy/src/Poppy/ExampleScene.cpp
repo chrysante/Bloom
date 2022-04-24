@@ -52,7 +52,7 @@ namespace poppy {
 			20, 21, 23, 20, 23, 22
 		};
 		
-		auto mesh = bloom::StaticMesh::create();
+		auto mesh = bloom::StaticRenderMesh::create();
 		mesh->vertexBuffer = renderContext.createVertexBuffer(vertices, sizeof vertices);
 		mesh->indexBuffer = renderContext.createIndexBuffer(indices);
 		return mesh;
@@ -82,19 +82,31 @@ namespace poppy {
 		}
 	}
 	
-	static void calculatePlaneIndices(std::uint32_t* indexData, mtl::usize2 quadResolution, std::size_t offset) {
+	static void calculatePlaneIndices(std::uint32_t* indexData, mtl::usize2 quadResolution,
+									  std::size_t offset, bool frontFacing) {
 		usize2 const vertexResolution = quadResolution + 1;
 		
 		std::size_t k = 0;
 		for (std::size_t j = 0; j < quadResolution.y; ++j) {
 			for (std::size_t i = 0; i < quadResolution.x; ++i) {
 				// loop over all quads in row major order
-				indexData[k + 0] = offset + indexOfVertexAt(i,     j,     vertexResolution);
-				indexData[k + 1] = offset + indexOfVertexAt(i + 1, j,     vertexResolution);
-				indexData[k + 2] = offset + indexOfVertexAt(i,     j + 1, vertexResolution);
-				indexData[k + 3] = offset + indexOfVertexAt(i,     j + 1, vertexResolution);
-				indexData[k + 4] = offset + indexOfVertexAt(i + 1, j,     vertexResolution);
-				indexData[k + 5] = offset + indexOfVertexAt(i + 1, j + 1, vertexResolution);
+				if (frontFacing) {
+					indexData[k + 0] = offset + indexOfVertexAt(i,     j,     vertexResolution);
+					indexData[k + 1] = offset + indexOfVertexAt(i + 1, j,     vertexResolution);
+					indexData[k + 2] = offset + indexOfVertexAt(i,     j + 1, vertexResolution);
+					indexData[k + 3] = offset + indexOfVertexAt(i,     j + 1, vertexResolution);
+					indexData[k + 4] = offset + indexOfVertexAt(i + 1, j,     vertexResolution);
+					indexData[k + 5] = offset + indexOfVertexAt(i + 1, j + 1, vertexResolution);
+				}
+				else {
+					indexData[k + 0] = offset + indexOfVertexAt(i,     j,     vertexResolution);
+					indexData[k + 2] = offset + indexOfVertexAt(i + 1, j,     vertexResolution);
+					indexData[k + 1] = offset + indexOfVertexAt(i,     j + 1, vertexResolution);
+					indexData[k + 3] = offset + indexOfVertexAt(i,     j + 1, vertexResolution);
+					indexData[k + 5] = offset + indexOfVertexAt(i + 1, j,     vertexResolution);
+					indexData[k + 4] = offset + indexOfVertexAt(i + 1, j + 1, vertexResolution);
+				}
+				
 				k += 6;
 			}
 		}
@@ -117,30 +129,30 @@ namespace poppy {
 		
 		calculatePlaneVertices<0, 1>(vertexData.data() + 0 * faceVertexCount, vertexResolution, { -5, -5, -5 });
 		calculatePlaneVertices<0, 1>(vertexData.data() + 1 * faceVertexCount, vertexResolution, { -5, -5,  5 });
-		calculatePlaneVertices<0, 2>(vertexData.data() + 2 * faceVertexCount, vertexResolution, { -5, -5, -5 });
-		calculatePlaneVertices<0, 2>(vertexData.data() + 3 * faceVertexCount, vertexResolution, { -5,  5, -5 });
-		calculatePlaneVertices<1, 2>(vertexData.data() + 4 * faceVertexCount, vertexResolution, { -5, -5, -5 });
-		calculatePlaneVertices<1, 2>(vertexData.data() + 5 * faceVertexCount, vertexResolution, {  5, -5, -5 });
+		calculatePlaneVertices<1, 2>(vertexData.data() + 2 * faceVertexCount, vertexResolution, { -5, -5, -5 });
+		calculatePlaneVertices<1, 2>(vertexData.data() + 3 * faceVertexCount, vertexResolution, {  5, -5, -5 });
+		calculatePlaneVertices<2, 0>(vertexData.data() + 4 * faceVertexCount, vertexResolution, { -5, -5, -5 });
+		calculatePlaneVertices<2, 0>(vertexData.data() + 5 * faceVertexCount, vertexResolution, { -5,  5, -5 });
 		
 		for (auto& vertex: vertexData) {
-
 			auto const normal = mtl::fast_normalize(vertex.position);
 			vertex.normal = normal;
 			vertex.position = radius * normal;
 		}
 		
 		for (int i = 0; i < 6; ++i) {
-			calculatePlaneIndices(indexData.data() + i * faceIndexCount, quadResolution, i * faceVertexCount);
+			calculatePlaneIndices(indexData.data() + i * faceIndexCount, quadResolution, i * faceVertexCount, i % 2 == 0);
 		}
 		
 		
-		auto result = bloom::StaticMesh::create();
+		auto result = bloom::StaticRenderMesh::create();
 		result->vertexBuffer = renderContext.createVertexBuffer(vertexData.data(), sizeof(Vertex3D) * vertexCount);
 		result->indexBuffer = renderContext.createIndexBuffer(indexData);
 		return result;
 	}
 	
 	void buildExampleScene(bloom::Scene& scene, bloom::RenderContext& renderContext) {
+		using namespace bloom;
 		auto cube = makeCubeMesh(renderContext);
 		auto sphere = makeSphereMesh(renderContext, 10, 50);
 		auto material = makeMaterial(renderContext);
@@ -153,8 +165,11 @@ namespace poppy {
 			auto& transform = scene.getComponent<bloom::TransformComponent>(entity);
 			transform.position = { 30, 10, 80 };
 			auto light = bloom::LightComponent{ bloom::PointLight{
-				.color     = { 1, 0, 1 },
-				.intensity = 5000
+				{
+					.color     = { 1, 0, 1 },
+					.intensity = 5000
+				},
+				.radius = 5
 			}};
 			scene.addComponent(entity, light);
 		}
@@ -164,8 +179,11 @@ namespace poppy {
 			auto& transform = scene.getComponent<bloom::TransformComponent>(entity);
 			transform.position = { 150, -80, 100 };
 			auto light = bloom::LightComponent{ bloom::PointLight{
-				.color     = { 1, 1, 0 },
-				.intensity = 5000
+				{
+					.color     = { 1, 1, 0 },
+					.intensity = 5000
+				},
+				.radius = 5
 			}};
 			scene.addComponent(entity, light);
 		}
@@ -175,10 +193,13 @@ namespace poppy {
 			auto& transform = scene.getComponent<bloom::TransformComponent>(entity);
 			transform.position = { -150, -80, 100 };
 			auto light = bloom::LightComponent{ bloom::SpotLight{
-				.color     = { 1, 1, 0 },
-				.intensity = 5000,
+				{
+					.color     = { 1, 1, 0 },
+					.intensity = 5000
+				},
 				.innerCutoff = 0.15,
 				.outerCutoff = 0.25,
+				.radius = 5
 			}};
 			scene.addComponent(entity, light);
 		}
@@ -190,20 +211,50 @@ namespace poppy {
 		}
 		
 		{
-			auto entity = scene.createEntity("Box1");
-			scene.addComponent(entity, cubeRenderer);
-			auto& transform = scene.getComponent<bloom::TransformComponent>(entity);
+			auto const box1 = scene.createEntity("Box1");
+			scene.addComponent(box1, cubeRenderer);
+			auto& transform = scene.getComponent<bloom::TransformComponent>(box1);
 			transform.position = { 200, 100, 50 };
 			{
-				auto child = scene.createEntity("Box2", entity);
-				scene.addComponent(child, cubeRenderer);
-				auto& transform = scene.getComponent<bloom::TransformComponent>(child);
+				auto box2 = scene.createEntity("Box2");
+				
+				scene.getComponent<HierachyComponent>(box2).parent = box1;
+				if (!scene.getComponent<HierachyComponent>(box1).childLeft) {
+					bloomAssert(!scene.getComponent<HierachyComponent>(box1).childRight);
+					scene.getComponent<HierachyComponent>(box1).childLeft = box2;
+					scene.getComponent<HierachyComponent>(box1).childRight = box2;
+				}
+				
+				
+				scene.addComponent(box2, cubeRenderer);
+				auto& transform = scene.getComponent<bloom::TransformComponent>(box2);
 				transform.position = { 200, 300, -50 };
 			}
 			{
-				auto child = scene.createEntity("Box2", entity);
-				scene.addComponent(child, cubeRenderer);
-				auto& transform = scene.getComponent<bloom::TransformComponent>(child);
+				auto box3 = scene.createEntity("Box3");
+				
+				auto& us = scene.getComponent<HierachyComponent>(box3);
+				auto& ourParent = scene.getComponent<HierachyComponent>(box1);
+				
+				us.parent = box1;
+				
+				if (!ourParent.childLeft) {
+					bloomAssert(!ourParent.childRight);
+					ourParent.childLeft = box3;
+					ourParent.childRight = box3;
+				}
+				else {
+					auto const listEnd = ourParent.childRight;
+					ourParent.childRight = box3;
+					
+					scene.getComponent<HierachyComponent>(listEnd).siblingRight = box3;
+					us.siblingLeft = listEnd;
+					us.siblingRight = ourParent.childLeft;
+				}
+				
+				
+				scene.addComponent(box3, cubeRenderer);
+				auto& transform = scene.getComponent<bloom::TransformComponent>(box3);
 				transform.position = { -200, 300, -100 };
 			}
 		}

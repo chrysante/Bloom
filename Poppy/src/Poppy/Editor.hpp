@@ -6,8 +6,10 @@
 #include "SelectionContext.hpp"
 #include "ImGui/ImGui.hpp"
 #include "Panels/Panel.hpp"
-#include "AppSettings.hpp"
+#include "ResourceManager.hpp"
 
+#include <filesystem>
+#include <yaml-cpp/yaml.h>
 #include <utl/vector.hpp>
 
 namespace poppy {
@@ -16,8 +18,9 @@ namespace poppy {
 	public:
 		Editor();
 		
-		AppSettings& settings() { return appSettings; }
 		std::filesystem::path libraryDir() const { return libDir; }
+		
+		ResourceManager* getResourceManager() { return &resourceManager; }
 		
 	private:
 		void init() override;
@@ -29,16 +32,22 @@ namespace poppy {
 		void frame();
 		void menuBar();
 		
+		template <typename>
+		void createPanel(auto&&... args);
+		
 	private:
 		void initLibraryDir();
+		
+		std::unique_ptr<bloom::AssetManager> createAssetManager() override;
 		
 	private:
 		ImGuiContext imgui;
 		utl::ref<bloom::Scene> scene;
 		SelectionContext selection;
 		utl::vector<utl::unique_ref<Panel>> panels;
-		AppSettingsMaster appSettings;
 		std::filesystem::path libDir;
+		YAML::Node settings;
+		ResourceManager resourceManager;
 	};
 	
 }

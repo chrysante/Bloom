@@ -9,7 +9,7 @@ namespace bloom {
 		
 	public:
 		EntityID() = default;
-		explicit EntityID(entt::entity value): _value(value) {}
+		EntityID(entt::entity value): _value(value) {}
 		
 		entt::entity value() const { return _value; }
 		

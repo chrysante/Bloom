@@ -47,6 +47,7 @@ namespace bloom {
 		
 		void submit(PointLight, mtl::float3 position);
 		void submit(SpotLight, mtl::float3 position, mtl::float3 direction);
+		void submit(DirectionalLight, mtl::float3 direction);
 		
 		void draw(FrameBuffer*);
 		
@@ -71,10 +72,12 @@ namespace bloom {
 	private:
 		bool buildingScene = false;
 		RenderContext* renderContext = nullptr;
+		
 		Camera camera;
 		utl::structure_of_arrays<SceneRenderObject> objects;
 		utl::vector<RenderPointLight> pointLights;
 		utl::vector<RenderSpotLight> spotLights;
+		utl::vector<RenderDirectionalLight> dirLights;
 		
 		BufferHandle entityDataBuffer, sceneDataBuffer;
 		DepthStencilHandle depthStencil;
@@ -86,6 +89,8 @@ namespace bloom {
 		RenderPipelineHandle editorPPPipeline;
 		
 		SamplerHandle postprocessSampler;
+		
+		
 	};
 	
 }

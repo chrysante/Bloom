@@ -201,7 +201,7 @@ namespace poppy {
 		
 		if (beginSection<LightComponent>("Light Component", entity)) {
 			inspectLightType(light);
-			inspectLightCommon(light.getCommon());
+			inspectLightCommon(light.getCommon(), light.type());
 		
 			switch (light.type()) {
 				case LightType::pointlight:
@@ -225,9 +225,7 @@ namespace poppy {
 		beginProperty("Type");
 		auto newType = light.type();
 		if (ImGui::BeginCombo("##Light Type",
-							  toString(newType).data()
-//							  ,ImGuiComboFlags_NoArrowButton
-							  ))
+							  toString(newType).data()))
 		{
 			for (auto i: utl::enumerate<LightType>()) {
 				bool const selected = newType == i;
@@ -251,24 +249,26 @@ namespace poppy {
 					light = SpotLight{ common };
 					break;
 					
+				case LightType::directional:
+					light = DirectionalLight{ common };
+					break;
+					
 				default:
 					poppyLog(error, "Other Light Types not implemented");
 					break;
 			}
-			
-			
-			/* reassign light type here */
 		}
 	}
 	
-	void EntityInspector::inspectLightCommon(bloom::LightCommon& light) {
+	void EntityInspector::inspectLightCommon(bloom::LightCommon& light, bloom::LightType type) {
 		beginProperty("Color");
 		ImGui::ColorEdit4("##light-color", light.color.data(),
 						  ImGuiColorEditFlags_NoInputs |
 						  ImGuiColorEditFlags_NoLabel |
 						  ImGuiColorEditFlags_HDR);
 		beginProperty("Intensity");
-		ImGui::DragFloat("##-intensity", &light.intensity, 100, 0, FLT_MAX, "%f");
+		float const speed = type == bloom::LightType::directional ? 0.01 : 100;
+		ImGui::DragFloat("##-intensity", &light.intensity, speed, 0, FLT_MAX, "%f");
 	}
 	
 	void EntityInspector::inspectPointLight(bloom::PointLight& light) {

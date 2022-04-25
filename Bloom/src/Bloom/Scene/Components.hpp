@@ -20,6 +20,11 @@ namespace bloom {
 		mtl::quaternion_float orientation = 1;
 		mtl::float3 scale = 1;
 		
+		static TransformComponent fromMatrix(mtl::float4x4 const& m) {
+			auto const [t, r, s] = mtl::decompose_transform(m);
+			return { t, r, s };
+		}
+		
 		[[ nodiscard ]] mtl::float4x4 calculate() const;
 	};
 	
@@ -31,16 +36,8 @@ namespace bloom {
 		std::string name;
 	};
 	
-//	struct BLOOM_API ParentComponent {
-//		EntityID entity;
-//	};
-//	
-//	struct BLOOM_API ChildrenComponent {
-//		utl::small_vector<EntityID> entities;
-//	};
-	
-	struct BLOOM_API HierachyComponent {
-		EntityID parent, siblingLeft, siblingRight, childLeft, childRight;
+	struct BLOOM_API HierarchyComponent {
+		EntityID parent, prevSibling, nextSibling, firstChild, lastChild;
 	};
 	
 	struct BLOOM_API MeshRenderComponent {
@@ -52,6 +49,7 @@ namespace bloom {
 		LightComponent(): LightComponent(PointLight{}) {}
 		LightComponent(PointLight p): light(p) {}
 		LightComponent(SpotLight s): light(s) {}
+		LightComponent(DirectionalLight d): light(d) {}
 		
 		LightType type() const { return (LightType)light.index(); }
 		
@@ -60,6 +58,7 @@ namespace bloom {
 			switch (type()) {
 				case LightType::pointlight: return get<PointLight>().common;
 				case LightType::spotlight: return get<SpotLight>().common;
+				case LightType::directional: return get<DirectionalLight>().common;
 				default: bloomDebugbreak(); std::terminate();
 			}
 		}
@@ -70,7 +69,7 @@ namespace bloom {
 		T const& get() const { return std::get<T>(light); }
 		
 	private:
-		std::variant<PointLight, SpotLight> light;
+		std::variant<PointLight, SpotLight, DirectionalLight> light;
 	};
 	
 }

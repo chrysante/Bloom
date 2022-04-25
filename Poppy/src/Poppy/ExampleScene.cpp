@@ -217,45 +217,19 @@ namespace poppy {
 			transform.position = { 200, 100, 50 };
 			{
 				auto box2 = scene.createEntity("Box2");
-				
-				scene.getComponent<HierachyComponent>(box2).parent = box1;
-				if (!scene.getComponent<HierachyComponent>(box1).childLeft) {
-					bloomAssert(!scene.getComponent<HierachyComponent>(box1).childRight);
-					scene.getComponent<HierachyComponent>(box1).childLeft = box2;
-					scene.getComponent<HierachyComponent>(box1).childRight = box2;
-				}
-				
-				
 				scene.addComponent(box2, cubeRenderer);
 				auto& transform = scene.getComponent<bloom::TransformComponent>(box2);
 				transform.position = { 200, 300, -50 };
+				
+				scene.parent(box2, box1);
 			}
 			{
 				auto box3 = scene.createEntity("Box3");
-				
-				auto& us = scene.getComponent<HierachyComponent>(box3);
-				auto& ourParent = scene.getComponent<HierachyComponent>(box1);
-				
-				us.parent = box1;
-				
-				if (!ourParent.childLeft) {
-					bloomAssert(!ourParent.childRight);
-					ourParent.childLeft = box3;
-					ourParent.childRight = box3;
-				}
-				else {
-					auto const listEnd = ourParent.childRight;
-					ourParent.childRight = box3;
-					
-					scene.getComponent<HierachyComponent>(listEnd).siblingRight = box3;
-					us.siblingLeft = listEnd;
-					us.siblingRight = ourParent.childLeft;
-				}
-				
-				
 				scene.addComponent(box3, cubeRenderer);
 				auto& transform = scene.getComponent<bloom::TransformComponent>(box3);
 				transform.position = { -200, 300, -100 };
+				
+				scene.parent(box3, box1);
 			}
 		}
 		

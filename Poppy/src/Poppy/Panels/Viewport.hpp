@@ -58,14 +58,13 @@ namespace poppy {
 		void displayControls();
 		
 		void displayGizmo(bloom::EntityID);
-		mtl::float4x4 getParentTransform(bloom::EntityID) const;
 		
 		void drawOverlays();
 		void drawLightOverlays();
 		
 		void drawPointLightIcon(mtl::float2 position, mtl::float3 color);
 		void drawSpotLightIcon(mtl::float2 position, mtl::float3 color);
-		void drawSpotlightVizWS(mtl::float3 position, mtl::quaternion_float orientation,
+		void drawSpotlightVizWS(bloom::EntityID entity,
 								float radius, float angle, mtl::float3 color);
 		
 		bloom::EntityID readEntityID(mtl::float2 mousePositionInView);

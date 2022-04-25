@@ -8,6 +8,7 @@
 #include "Bloom/Application/Event.hpp"
 #include "Poppy/Debug.hpp"
 #include <cstring>
+#include <yaml-cpp/helpers.hpp>
 
 // Functions
 static ImGuiKey KeyCodeToImGuiKey(bloom::Key k) {
@@ -244,9 +245,11 @@ namespace poppy {
 
 		buttonFlags |= ImGuiButtonFlags_NoNavFocus;
 		
+		
 		// save to restore later
 		ImVec2 const cursorPos = GetCursorPos();
-
+		SetCursorPos({0, 0});
+		
 		ImGuiWindow* window = GetCurrentWindow();
 		if (window->SkipItems)
 			return ViewportInput{};
@@ -523,6 +526,101 @@ namespace poppy {
 		return buffer;
 	}
 	
+
+	static void colorEdit(ImVec4* colors,  ImGuiCol index, char const* label) {
+		ImGui::ColorEdit4(label, (float*)&colors[index],
+						  ImGuiColorEditFlags_NoInputs |
+						  ImGuiColorEditFlags_HDR);
+	}
 	
+	void StyleColorsPanel(bool* open) {
+		using namespace ImGui;
+		
+		
+		std::pair<ImGuiCol, char const*> const elements[] = {
+			{ ImGuiCol_Text, "Text" },
+			{ ImGuiCol_TextDisabled, "TextDisabled" },
+			{ ImGuiCol_WindowBg, "WindowBg" },
+			{ ImGuiCol_ChildBg, "ChildBg" },
+			{ ImGuiCol_PopupBg, "PopupBg" },
+			{ ImGuiCol_Border, "Border" },
+			{ ImGuiCol_BorderShadow, "BorderShadow" },
+			{ ImGuiCol_FrameBg, "FrameBg" },
+			{ ImGuiCol_FrameBgHovered, "FrameBgHovered" },
+			{ ImGuiCol_FrameBgActive, "FrameBgActive" },
+			{ ImGuiCol_TitleBg, "TitleBg" },
+			{ ImGuiCol_TitleBgActive, "TitleBgActive" },
+			{ ImGuiCol_TitleBgCollapsed, "TitleBgCollapsed" },
+			{ ImGuiCol_MenuBarBg, "MenuBarBg" },
+			{ ImGuiCol_ScrollbarBg, "ScrollbarBg" },
+			{ ImGuiCol_ScrollbarGrab, "ScrollbarGrab" },
+			{ ImGuiCol_ScrollbarGrabHovered, "ScrollbarGrabHovered" },
+			{ ImGuiCol_ScrollbarGrabActive, "ScrollbarGrabActive" },
+			{ ImGuiCol_CheckMark, "CheckMark" },
+			{ ImGuiCol_SliderGrab, "SliderGrab" },
+			{ ImGuiCol_SliderGrabActive, "SliderGrabActive" },
+			{ ImGuiCol_Button, "Button" },
+			{ ImGuiCol_ButtonHovered, "ButtonHovered" },
+			{ ImGuiCol_ButtonActive, "ButtonActive" },
+			{ ImGuiCol_Header, "Header" },
+			{ ImGuiCol_HeaderHovered, "HeaderHovered" },
+			{ ImGuiCol_HeaderActive, "HeaderActive" },
+			{ ImGuiCol_Separator, "Separator" },
+			{ ImGuiCol_SeparatorHovered, "SeparatorHovered" },
+			{ ImGuiCol_SeparatorActive, "SeparatorActive" },
+			{ ImGuiCol_ResizeGrip, "ResizeGrip" },
+			{ ImGuiCol_ResizeGripHovered, "ResizeGripHovered" },
+			{ ImGuiCol_ResizeGripActive, "ResizeGripActive" },
+			{ ImGuiCol_Tab, "Tab" },
+			{ ImGuiCol_TabHovered, "TabHovered" },
+			{ ImGuiCol_TabActive, "TabActive" },
+			{ ImGuiCol_TabUnfocused, "TabUnfocused" },
+			{ ImGuiCol_TabUnfocusedActive, "TabUnfocusedActive" },
+			{ ImGuiCol_DockingPreview, "DockingPreview" },
+			{ ImGuiCol_DockingEmptyBg, "DockingEmptyBg" },
+			{ ImGuiCol_PlotLines, "PlotLines" },
+			{ ImGuiCol_PlotLinesHovered, "PlotLinesHovered" },
+			{ ImGuiCol_PlotHistogram, "PlotHistogram" },
+			{ ImGuiCol_PlotHistogramHovered, "PlotHistogramHovered" },
+			{ ImGuiCol_TableHeaderBg, "TableHeaderBg" },
+			{ ImGuiCol_TableBorderStrong, "TableBorderStrong" },
+			{ ImGuiCol_TableBorderLight, "TableBorderLight" },
+			{ ImGuiCol_TableRowBg, "TableRowBg" },
+			{ ImGuiCol_TableRowBgAlt, "TableRowBgAlt" },
+			{ ImGuiCol_TextSelectedBg, "TextSelectedBg" },
+			{ ImGuiCol_DragDropTarget, "DragDropTarget" },
+			{ ImGuiCol_NavHighlight, "NavHighlight" },
+			{ ImGuiCol_NavWindowingHighlight, "NavWindowingHighlight" },
+			{ ImGuiCol_NavWindowingDimBg, "NavWindowingDimBg" },
+			{ ImGuiCol_ModalWindowDimBg, "ModalWindowDimBg" }
+		};
+		
+		ImGuiStyle* style = &ImGui::GetStyle();
+		ImVec4* colors = style->Colors;
+		
+		Begin("Style Colors", open);
+		for (auto [index, label]: elements) {
+			colorEdit(colors, index, label);
+		}
+		
+		End();
+	}
+	
+	void SaveStyleColors(YAML::Node node) {
+		for (mtl::float4 color: ImGui::GetStyle().Colors) {
+			node.push_back(color);
+		}
+	}
+	
+	void LoadStyleColors(YAML::Node node) {
+		try {
+			for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+				ImGui::GetStyle().Colors[i] = node[i].as<mtl::float4>();
+			}
+		}
+		catch (...) {
+			poppyLog(warning, "Failed to load Style Colors");
+		}
+	}
 	
 }

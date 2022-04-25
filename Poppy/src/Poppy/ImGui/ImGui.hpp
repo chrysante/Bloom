@@ -7,6 +7,7 @@
 #include <utl/hashmap.hpp>
 #include <utl/scope_guard.hpp>
 #include <imgui.h>
+#include <yaml-cpp/yaml.h>
 
 struct ImGuiContext;
 
@@ -90,5 +91,10 @@ namespace poppy {
 	}
 	
 	std::array<char, 64> generateUniqueID(std::string_view, int, bool prepentDoubleHash = false);
+	
+	void StyleColorsPanel(bool* = nullptr);
+	
+	void SaveStyleColors(YAML::Node);
+	void LoadStyleColors(YAML::Node);
 	
 }

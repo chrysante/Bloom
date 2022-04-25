@@ -10,7 +10,6 @@
 
 #include "Bloom/Application/Resource.hpp"
 
-#include "Debug.hpp"
 #include "ExampleScene.hpp"
 #include "EditorAssetManager.hpp"
 
@@ -111,22 +110,14 @@ namespace poppy {
 	
 	void Editor::init() {
 		initLibraryDir();
+		loadSettingsFromINI();
 		
-		do {
-			auto const path = libraryDir() / "poppy.ini";
-			std::fstream settingsFile(path, std::ios::in);
-			if (!settingsFile) {
-				poppyLog(warning, "Failed to load Settings from {}", path);
-				break;
-			}
-			std::stringstream sstr;
-			sstr << settingsFile.rdbuf();
-			settings = YAML::Load(sstr.str());
-		} while (0);
 		resourceManager.setRenderContext(&renderContext());
 		imgui.init(&renderContext());
 		GImGui->Style.WindowRounding = 5;
 		GImGui->Style.FrameRounding = 5;
+		
+		LoadStyleColors(settings["ImGui Style Colors"]);
 		
 		scene = utl::make_ref<bloom::Scene>();
 		buildExampleScene(*scene, renderContext());
@@ -139,21 +130,12 @@ namespace poppy {
 	}
 	
 	void Editor::shutdown() {
+		SaveStyleColors(settings["ImGui Style Colors"]);
 		for (auto& panel: panels) {
 			panel->shutdown();
 			settings[yamlSanitize(panel->uniqueName())] = panel->settings;
 		}
-		do {
-			auto const path = libraryDir() / "poppy.ini";
-			std::fstream settingsFile(path, std::ios::out);
-			if (!settingsFile) {
-				poppyLog(warning, "Failed to Open Settings File at {}", path);
-				break;
-			}
-			YAML::Emitter out;
-			out << settings;
-			settingsFile << out.c_str();
-		} while (0);
+		saveSettingsToINI();
 	}
 	
 	void Editor::update(bloom::TimeStep) {
@@ -185,9 +167,25 @@ namespace poppy {
 		DockSpaceUI();
 		ToolbarUI();
 	
-		for (auto& panel: panels) {
+		for (auto p = panels.begin(); p < panels.end();) {
+			auto& panel = *p;
 			panel->doDisplay();
+			if (panel->shouldClose()) {
+				p = panels.erase(p);
+			}
+			else {
+				++p;
+			}
 		}
+		
+#if POPPY_DEBUGLEVEL > 0
+		if (showImGuiDemo) {
+			ImGui::ShowDemoWindow(&showImGuiDemo);
+		}
+		if (showStyleColorsPanel) {
+			StyleColorsPanel(&showStyleColorsPanel);
+		}
+#endif
 	}
 	
 	void Editor::menuBar() {
@@ -197,6 +195,28 @@ namespace poppy {
 			ImGui::MenuItem("Two");
 			ImGui::EndMenu();
 		}
+		
+		if (ImGui::BeginMenu("Views")) {
+			menuItemForPanel<Viewport>("Viewport", false, &renderer());
+			menuItemForPanel<AssetBrowser>("Asset Browser", false);
+			menuItemForPanel<SceneInspector>("Scene Inspector", true);
+			menuItemForPanel<EntityInspector>("Entity Inspector", true);
+			
+			ImGui::EndMenu();
+		}
+		
+#if POPPY_DEBUGLEVEL > 0
+		if (ImGui::BeginMenu("Debug")) {
+			if (ImGui::MenuItem("Demo Window")) {
+				showImGuiDemo = true;
+			}
+			if (ImGui::MenuItem("Style Colors Panel")) {
+				showStyleColorsPanel = true;
+			}
+			ImGui::EndMenu();
+		}
+#endif
+		
 		ImGui::EndMainMenuBar();
 	}
 	
@@ -214,6 +234,33 @@ namespace poppy {
 		panels.push_back(std::move(panel));
 	}
 	
+	template <typename T>
+	void Editor::menuItemForPanel(std::string_view name, bool unique, auto&&... args) {
+		if (unique) {
+			if (ImGui::MenuItem(name.data())) {
+				auto* const p = findPanelByName(name);
+				if (p) {
+					p->setFocused();
+				}
+				else {
+					createPanel<T>(UTL_FORWARD(args)...);
+				}
+			}
+		}
+		else {
+			if (ImGui::BeginMenu(name.data())) {
+				auto* const p = findPanelByName(name);
+				if (p && ImGui::MenuItem("Focus")) {
+					p->setFocused();
+				}
+				if (ImGui::MenuItem("Add")) {
+					createPanel<T>(UTL_FORWARD(args)...);
+				}
+				ImGui::EndMenu();
+			}
+		}
+	}
+	
 	void Editor::initLibraryDir() {
 		auto const systemLibDir = bloom::getLibraryDir();
 		libDir = systemLibDir / "Poppy";
@@ -222,8 +269,41 @@ namespace poppy {
 		}
 	}
 	
+	void Editor::loadSettingsFromINI() {
+		auto const path = libraryDir() / "poppy.ini";
+		std::fstream settingsFile(path, std::ios::in);
+		if (!settingsFile) {
+			poppyLog(warning, "Failed to load Settings from {}", path);
+			return;
+		}
+		std::stringstream sstr;
+		sstr << settingsFile.rdbuf();
+		settings = YAML::Load(sstr.str());
+	}
+	
+	void Editor::saveSettingsToINI() {
+		auto const path = libraryDir() / "poppy.ini";
+		std::fstream settingsFile(path, std::ios::out);
+		if (!settingsFile) {
+			poppyLog(warning, "Failed to Open Settings File at {}", path);
+			return;
+		}
+		YAML::Emitter out;
+		out << settings;
+		settingsFile << out.c_str();
+	}
+	
 	std::unique_ptr<bloom::AssetManager> Editor::createAssetManager() {
 		return std::make_unique<EditorAssetManager>();
+	}
+	
+	Panel* Editor::findPanelByName(std::string_view name) {
+		for (auto& panel: panels) {
+			if (panel->matchesName(name)) {
+				return panel.get();
+			}
+		}
+		return nullptr;
 	}
 	
 }

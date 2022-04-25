@@ -11,6 +11,9 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "poppy::SceneInspector::display():SceneInspector.cpp">
+      </ContextState>
+      <ContextState
          contextName = "ImGui::SaveIniSettingsToDisk(char const*):imgui.cpp">
       </ContextState>
       <ContextState
@@ -65,6 +68,9 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "auto bloom::sanitizeHierachy(bloom::Scene*)::$_8::operator()&lt;entt::entity&gt;(entt::entity, bloom::HierarchyComponent) const:Scene.cpp">
+      </ContextState>
+      <ContextState
          contextName = "poppy::AssetBrowser::import(std::__1::__fs::filesystem::path):AssetBrowser.cpp">
       </ContextState>
       <ContextState
@@ -94,10 +100,16 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "poppy::BasicSceneInspector::gatherChildren(bloom::EntityID):BasicSceneInspector.cpp">
+      </ContextState>
+      <ContextState
          contextName = "bloom::AssetManager::handleFromFile(std::__1::__fs::filesystem::path):AssetManager.cpp">
       </ContextState>
       <ContextState
          contextName = "poppy::AppSettingsMaster::saveToDisk():AppSettings.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "poppy::Viewport::calculateTransforms():Viewport.cpp">
       </ContextState>
       <ContextState
          contextName = "void poppy::AppSettingsMaster::deserializeImpl&lt;double, robin_hood::detail::Table&lt;true, 80ul, std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, double, robin_hood::hash&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, void&gt;, std::__1::equal_to&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; &gt; &gt;, YAML::Node&gt;(robin_hood::detail::Table&lt;true, 80ul, std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, double, robin_hood::hash&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;, void&gt;, std::__1::equal_to&lt;std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; &gt; &gt;&amp;, YAML::Node&amp;&amp;):AppSettings.cpp">

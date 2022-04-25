@@ -7,6 +7,7 @@
 #include "ImGui/ImGui.hpp"
 #include "Panels/Panel.hpp"
 #include "ResourceManager.hpp"
+#include "Debug.hpp"
 
 #include <filesystem>
 #include <yaml-cpp/yaml.h>
@@ -34,11 +35,19 @@ namespace poppy {
 		
 		template <typename>
 		void createPanel(auto&&... args);
+		template <typename>
+		void menuItemForPanel(std::string_view name, bool unique, auto&&... args);
+		Panel* findPanelByName(std::string_view name);
+		
 		
 	private:
 		void initLibraryDir();
+		void loadSettingsFromINI();
+		void saveSettingsToINI();
 		
 		std::unique_ptr<bloom::AssetManager> createAssetManager() override;
+		
+		
 		
 	private:
 		ImGuiContext imgui;
@@ -48,6 +57,11 @@ namespace poppy {
 		std::filesystem::path libDir;
 		YAML::Node settings;
 		ResourceManager resourceManager;
+		
+#if POPPY_DEBUGLEVEL > 0
+		bool showImGuiDemo = false;
+		bool showStyleColorsPanel = false;
+#endif
 	};
 	
 }

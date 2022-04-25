@@ -38,6 +38,9 @@ namespace bloom {
 	
 	void AssetManager::refreshFromWorkingDir() {
 		assets.clear();
+		if (workingDir().empty()) {
+			return;
+		}
 		auto dirItr = std::filesystem::recursive_directory_iterator(workingDir());
 		for (auto const& entry: dirItr) {
 			if (!std::filesystem::is_regular_file(entry.path())) {

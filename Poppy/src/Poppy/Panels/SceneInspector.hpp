@@ -7,6 +7,7 @@
 
 #include <utl/vector.hpp>
 #include <span>
+#include <optional>
 
 namespace poppy {
 	
@@ -16,11 +17,21 @@ namespace poppy {
 		
 	private:
 		void display() override;
-		void displayHierachyLevel(std::span<bloom::EntityID const>);
+		
+		
+		void displayEntity(bloom::EntityID);
 
+		void dragDropSource(bloom::EntityID child);
+		void dragDropTarget(bloom::EntityID parent);
+		
+		bool expanded(bloom::EntityID) const;
+		void setExpanded(bloom::EntityID, bool);
 		
 	private:
+		mutable utl::vector<bool> _expanded;
 		
+		std::pair<bloom::EntityID, bloom::EntityID> hierarchyUpdate;
+		bool hasHierarchyUpdate = 0;
 	};
 	
 	

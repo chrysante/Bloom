@@ -160,7 +160,7 @@ fragment FragmentData mainPassEditorFS(MainPassData in [[ stage_in ]],
 		lightAcc += PBRLighting(data, radiance, N, V, L, H);
 	}
 	
-	// SpotLights
+	// Spotlights
 	for (uint i = 0; i < scene.numSpotLights; ++i) {
 		float3 const lightPosition = scene.spotLights[i].position;
 		float3 const lightDirection = scene.spotLights[i].direction;
@@ -182,6 +182,18 @@ fragment FragmentData mainPassEditorFS(MainPassData in [[ stage_in ]],
 		float const attenuation = 1.0 / (dist * dist);
 		
 		float3 const radiance = intensity * light.common.color * light.common.intensity * attenuation;
+		
+		lightAcc += PBRLighting(data, radiance, N, V, L, H);
+	}
+	
+	// Directional Lights
+	for (uint i = 0; i < scene.numDirLights; ++i) {
+		float3 const lightDirection = scene.dirLights[i].direction;
+		DirectionalLight const light = scene.dirLights[i].light;
+		
+		float3 const L = lightDirection;
+		float3 const H = normalize(V + L);
+		float3 const radiance = light.common.color * light.common.intensity;
 		
 		lightAcc += PBRLighting(data, radiance, N, V, L, H);
 	}

@@ -45,10 +45,12 @@ namespace bloom {
 	void Renderer::beginScene(Camera const& camera) {
 		bloomExpect(!buildingScene, "Already called beginScene?");
 		buildingScene = true;
+		
 		this->camera = camera;
 		objects.clear();
 		pointLights.clear();
 		spotLights.clear();
+		dirLights.clear();
 	}
 	
 	void Renderer::endScene() {
@@ -72,6 +74,11 @@ namespace bloom {
 		light.innerCutoff = std::cos(light.innerCutoff);
 		light.outerCutoff = std::cos(light.outerCutoff);
 		spotLights.push_back({ light, .position = position, .direction = direction });
+	}
+	
+	void Renderer::submit(DirectionalLight light, mtl::float3 direction) {
+		bloomExpect(buildingScene, "Forgot to call beginScene?");
+		dirLights.push_back({ light, .direction = direction });
 	}
 	
 	static auto const objectOrder = [](auto&& a, auto&& b) {
@@ -106,6 +113,14 @@ namespace bloom {
 		}
 		sceneRenderData.numSpotLights = spotLights.size();
 		std::copy(spotLights.begin(), spotLights.end(), sceneRenderData.spotLights);
+		
+		// Directional Lights
+		if (dirLights.size() > 32) {
+			bloomLog(warning, "Can't render more than 32 Directional Lights");
+			dirLights.resize(32);
+		}
+		sceneRenderData.numDirLights = dirLights.size();
+		std::copy(dirLights.begin(), dirLights.end(), sceneRenderData.dirLights);
 		
 		// Editor Properties
 		sceneRenderData.selectionLineWidth = 3;

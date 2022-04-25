@@ -25,7 +25,7 @@ namespace poppy {
 		
 		void inspectLight(bloom::EntityID);
 		void inspectLightType(bloom::LightComponent&);
-		void inspectLightCommon(bloom::LightCommon&);
+		void inspectLightCommon(bloom::LightCommon&, bloom::LightType);
 		void inspectPointLight(bloom::PointLight&);
 		void inspectSpotLight(bloom::SpotLight&);
 		

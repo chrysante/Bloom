@@ -47,9 +47,32 @@ namespace bloom {
 			bloomExpect(hasComponent<Component>(entity), "Component not present");
 			return _registry.get<Component>(entity.value());
 		}
+		template <typename Component>
+		Component const& getComponent(EntityID entity) const {
+			bloomExpect(hasComponent<Component>(entity), "Component not present");
+			return _registry.get<Component>(entity.value());
+		}
 		
 		template <typename... Components>
 		auto view() { return _registry.view<Components...>(); }
+		template <typename... Components>
+		auto view() const { return _registry.view<Components...>(); }
+		
+		
+		/// MARK: Hierarchy functionality. Maybe extract this later
+		void parent(EntityID child, EntityID parent);
+		void unparent(EntityID);
+		
+		// returns true if 'descendend' and 'ancestor' are the same
+		bool descendsFrom(EntityID descendend, EntityID ancestor) const;
+		utl::small_vector<EntityID> gatherRoots() const;
+		utl::small_vector<EntityID> gatherChildren(EntityID parent) const;
+		
+		bool isLeaf(EntityID) const;
+		
+		mtl::float4x4 calculateTransformRelativeToWorld(EntityID) const;
+		
+		
 		
 	private:
 		entt::registry _registry;

@@ -17,6 +17,9 @@ namespace bloom {
 		
 		uint numSpotLights;
 		RenderSpotLight spotLights[32];
+		
+		uint numDirLights;
+		RenderDirectionalLight dirLights[32];
 	};
 	
 }

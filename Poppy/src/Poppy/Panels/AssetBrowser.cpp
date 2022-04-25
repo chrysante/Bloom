@@ -72,8 +72,21 @@ namespace poppy {
 		// Button
 		localCursor += params.itemSpacing;
 		ImGui::SetCursorPos(localCursor);
-		bool const result = ImGui::Button(uniqueID.data(), params.itemSize);
+		
+		
+		ImGui::PushStyleColor(ImGuiCol_Button, 0);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFffFF20);
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFffFF20);
+		
+		auto const flags = ImGuiButtonFlags_None
+		| ImGuiButtonFlags_PressedOnDoubleClick
+		;
+		bool const result = ImGui::ButtonEx(uniqueID.data(), params.itemSize, flags);
 	
+		
+		ImGui::PopStyleColor(3);
+		
+		
 		if (asset) {
 			if (ImGui::BeginDragDropSource()) {
 				auto const handle = *asset;
@@ -111,6 +124,9 @@ namespace poppy {
 	void DirectoryView::assignDirectory(std::filesystem::path const& dir) {
 		assetsInCurrentDir.clear();
 		foldersInCurrentDir.clear();
+		if (dir.empty()) {
+			return;
+		}
 		
 		namespace fs = std::filesystem;
 		

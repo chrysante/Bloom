@@ -1,7 +1,10 @@
+#define IMGUI_DEFINE_MATH_OPERATORS
+
 #include "SceneInspector.hpp"
 
 #include "Poppy/ImGui/ImGui.hpp"
 #include "Poppy/SelectionContext.hpp"
+#include "Poppy/Debug.hpp"
 
 #include "Bloom/Scene/Scene.hpp"
 
@@ -9,7 +12,7 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
-#include <utl/stdio.hpp>
+#include <utl/stack.hpp>
 
 using namespace mtl::short_types;
 
@@ -27,40 +30,135 @@ namespace poppy {
 		}
 		
 		using namespace bloom;
-		auto roots = gatherRootEntities();
 		
-		displayHierachyLevel(roots);
-	}
-	
-	void SceneInspector::displayHierachyLevel(std::span<bloom::EntityID const> entities) {
-		using namespace bloom;
-		for (auto e: entities) {
-			auto& tag = scene()->getComponent<bloom::TagComponent>(e);
+		displayEntity(EntityID{});
+		
+		if (hasHierarchyUpdate) {
+			auto [child, parent] = hierarchyUpdate;
+			hasHierarchyUpdate = false;
 			
-			ImGuiTreeNodeFlags flags = 0;
-			flags |= ImGuiTreeNodeFlags_OpenOnArrow;
-			flags |= ImGuiTreeNodeFlags_OpenOnDoubleClick;
-			flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
-			
-			bool const selected = selection()->isSelected(e);
-			
-			if (selected) {
-				flags |= ImGuiTreeNodeFlags_Selected;
+			/**
+			 We need to make sure that we don't attach an entity to it's own descendend
+			 */
+			if (child && !scene()->descendsFrom(parent, child)) {
+				scene()->unparent(child);
+				if (parent) {
+					scene()->parent(child, parent);
+				}
 			}
-			
-			bool const nodeExpanded = ImGui::TreeNodeEx((void*)(intptr_t)e.value(),
-														flags, "%s", tag.name.data());
-			
-			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-				selection()->select(e);
-			}
-			
-			if (nodeExpanded) {
-				auto const children = gatherChildren(e);
-				displayHierachyLevel(children);
-				ImGui::TreePop();
+			else {
+				ImGui::OpenPopup("Hierarchy Error");
 			}
 		}
+
+		// Always center this window when appearing
+		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+		if (ImGui::BeginPopupModal("Hierarchy Error", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+			
+			auto [child, parent] = hierarchyUpdate;
+			if (child) {
+			ImGui::Text("Can't attach \'%s\' to it's descendend \'%s\'. Detach \'%s\' first.",
+						scene()->getComponent<TagComponent>(child).name.data(),
+						scene()->getComponent<TagComponent>(parent).name.data(),
+						scene()->getComponent<TagComponent>(parent).name.data());
+			ImGui::Separator();
+			}
+			ImGui::SetItemDefaultFocus();
+			if (ImGui::Button("Dismiss", ImVec2(120, 0))) {
+				ImGui::CloseCurrentPopup();
+			}
+			
+			ImGui::EndPopup();
+		}
+	}
+	
+	void SceneInspector::displayEntity(bloom::EntityID e) {
+		using namespace bloom;
+		
+		std::string_view const name = e ? scene()->getComponent<bloom::TagComponent>(e).name : std::string_view("Root");
+		
+		ImGuiTreeNodeFlags flags = 0;
+		flags |= ImGuiTreeNodeFlags_OpenOnArrow;
+		flags |= ImGuiTreeNodeFlags_OpenOnDoubleClick;
+		flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
+		
+		bool const selected = selection()->isSelected(e);
+		
+		if (selected) {
+			flags |= ImGuiTreeNodeFlags_Selected;
+		}
+		
+		if (e && expanded(e)) {
+			flags |= ImGuiTreeNodeFlags_DefaultOpen;
+		}
+		
+		if (e && scene()->isLeaf(e)) {
+			flags |= ImGuiTreeNodeFlags_Leaf;
+		}
+		
+		bool const nodeExpanded = ImGui::TreeNodeEx((void*)e.raw(), flags, "%s",
+													utl::format("{} [0x{:x}]",
+																name.data(),
+																e.raw()).data());
+		if (e)
+			setExpanded(e, nodeExpanded);
+		
+		dragDropSource(e);
+		dragDropTarget(e);
+		
+		if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && e) {
+			selection()->select(e);
+		}
+		
+		if (nodeExpanded) {
+			auto const children = e ? scene()->gatherChildren(e) : scene()->gatherRoots();
+			for (auto c: children) {
+				displayEntity(c);
+			}
+			ImGui::TreePop();
+		}
+	}
+	
+	void SceneInspector::dragDropSource(bloom::EntityID child) {
+		if (ImGui::BeginDragDropSource()) {
+			ImGui::SetDragDropPayload("DD-Entity-Hierarchy-View",
+									  &child, sizeof child);
+			displayEntity(child);
+			ImGui::EndDragDropSource();
+		}
+	}
+	
+	void SceneInspector::dragDropTarget(bloom::EntityID parent) {
+		using namespace bloom;
+		if (ImGui::BeginDragDropTarget()) {
+			auto* const payload = ImGui::AcceptDragDropPayload("DD-Entity-Hierarchy-View");
+			if (payload && payload->IsDelivery()) {
+				EntityID child;
+				std::memcpy(&child, payload->Data, sizeof child);
+				poppyAssert(!hasHierarchyUpdate);
+				hierarchyUpdate = { child, parent };
+				hasHierarchyUpdate = true;
+			}
+			ImGui::EndDragDropTarget();
+		}
+	}
+	
+	bool SceneInspector::expanded(bloom::EntityID id) const {
+		auto const index = id.raw();
+		if (index >= _expanded.size()) {
+			_expanded.resize(index + 1);
+		}
+		return _expanded[index];
+	}
+	
+	void SceneInspector::setExpanded(bloom::EntityID id, bool value) {
+		auto const index = id.raw();
+		if (index >= _expanded.size()) {
+			_expanded.resize(index + 1);
+		}
+		_expanded[index] = value;
 	}
 	
 }

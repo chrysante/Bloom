@@ -10,14 +10,14 @@
 
 namespace poppy {
 	
-	static std::size_t id = 0;
+	static std::size_t gID = 0;
 	
-	Panel::Panel(std::string_view title):
+	Panel::Panel(std::string_view title, PanelOptions options):
 		title {
-			utl::format("{}##{}", title, id),
-			utl::format("{}-Child##{}", title, id++)
-		}
-	{}
+			utl::format("{}##{}", title, gID)
+		},
+		options(options)
+	{ ++gID; }
 	
 	bloom::Application& Panel::getApplication() {
 		return *app;
@@ -31,8 +31,10 @@ namespace poppy {
 		_ignoreEventMask = bloom::EventType::none;
 		
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
-		if (ImGui::Begin(title[0].data())) {
-			ImGui::BeginChild(title[1].data());
+		ImGui::SetNextWindowSize({600, 400});
+		
+		if (ImGui::Begin(title.data(), &_open)) {
+			ImGui::BeginChild("child");
 			_imguiWindow = GImGui->CurrentWindow;
 			_windowSize = ImGui::GetMainViewport()->Size;
 			_viewSize = ImGui::GetWindowSize();
@@ -62,5 +64,13 @@ namespace poppy {
 		return GImGui->NavWindow == _imguiWindow;
 	}
 	
+	bool Panel::matchesName(std::string_view name) const {
+		auto const endpos = title.find("##");
+		return name == title.substr(0, endpos);
+	}
+	
+	void Panel::setFocused() {
+		ImGui::FocusWindow((ImGuiWindow*)_imguiWindow);
+	}
 	
 }

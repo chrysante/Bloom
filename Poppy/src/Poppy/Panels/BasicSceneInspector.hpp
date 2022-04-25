@@ -23,10 +23,6 @@ namespace poppy {
 		SelectionContext*    selection()    const { return _selection;    }
 		bloom::AssetManager* assetManager() const { return _assetManager; }
 		
-		
-		utl::small_vector<bloom::EntityID> gatherRootEntities();
-		utl::small_vector<bloom::EntityID> gatherChildren(bloom::EntityID);
-		
 	private:
 		bloom::Scene* _scene = nullptr;
 		SelectionContext* _selection = nullptr;

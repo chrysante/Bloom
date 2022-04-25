@@ -47,5 +47,14 @@ namespace bloom {
 		metal::float3 direction;
 	};
 	
+	struct DirectionalLight {
+		LightCommon common;
+	};
+	
+	struct RenderDirectionalLight {
+		DirectionalLight light;
+		metal::float3 direction;
+	};
+	
 	
 }

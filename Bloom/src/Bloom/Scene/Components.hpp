@@ -53,15 +53,11 @@ namespace bloom {
 		
 		LightType type() const { return (LightType)light.index(); }
 		
+		
 		LightCommon& getCommon() { return utl::as_mutable(utl::as_const(*this).getCommon()); }
-		LightCommon const& getCommon() const {
-			switch (type()) {
-				case LightType::pointlight: return get<PointLight>().common;
-				case LightType::spotlight: return get<SpotLight>().common;
-				case LightType::directional: return get<DirectionalLight>().common;
-				default: bloomDebugbreak(); std::terminate();
-			}
-		}
+		LightCommon const& getCommon() const;
+		
+		bool castsShadows() const;
 		
 		template <typename T>
 		T& get() { return std::get<T>(light); }

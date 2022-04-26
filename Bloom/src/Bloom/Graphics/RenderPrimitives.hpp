@@ -2,6 +2,8 @@
 
 #include "Bloom/Core/Base.hpp"
 #include "ResourceHandle.hpp"
+#include <utl/common.hpp>
+#include <mtl/mtl.hpp>
 
 namespace bloom {
 	
@@ -28,12 +30,14 @@ namespace bloom {
 	};
 	
 	enum class TextureUsage {
-		none = 0,
-		shaderRead = 1,
-		shaderWrite = 2,
-		renderTarget = 4,
+		none         = 0,
+		shaderRead   = 1 << 0,
+		shaderWrite  = 1 << 1,
+		renderTarget = 1 << 2,
 //		TextureUsagePixelFormatView = 16,
 	};
+	
+	UTL_ENUM_OPERATORS(TextureUsage);
 	
 	enum class StorageMode {
 		Shared = 0,
@@ -220,6 +224,8 @@ namespace bloom {
 		std::size_t height() const { return _height; }
 		std::size_t depth() const { return _depth; }
 		
+		mtl::usize3 size() const { return { _width, _height, _depth }; }
+		
 	private:
 		std::size_t _width = 0;
 		std::size_t _height = 0;
@@ -239,6 +245,8 @@ namespace bloom {
 		std::size_t width() const { return _width; }
 		std::size_t height() const { return _height; }
 		std::size_t depth() const { return _depth; }
+		
+		mtl::usize3 size() const { return { _width, _height, _depth }; }
 		
 	private:
 		std::size_t _width = 0;

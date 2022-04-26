@@ -14,6 +14,7 @@
 #include "EditorAssetManager.hpp"
 
 #include "Panels/Viewport.hpp"
+#include "Panels/RendererSettingsPanel.hpp"
 #include "Panels/SceneInspector.hpp"
 #include "Panels/EntityInspector.hpp"
 #include "Panels/AssetBrowser.hpp"
@@ -123,7 +124,7 @@ namespace poppy {
 		buildExampleScene(*scene, renderContext());
 		
 		createPanel<Viewport>(&renderer());
-		createPanel<Viewport>(&renderer());
+		createPanel<RendererSettingsPanel>(&renderer());
 		createPanel<SceneInspector>();
 		createPanel<EntityInspector>();
 		createPanel<AssetBrowser>();
@@ -198,9 +199,12 @@ namespace poppy {
 		
 		if (ImGui::BeginMenu("Views")) {
 			menuItemForPanel<Viewport>("Viewport", false, &renderer());
+			menuItemForPanel<RendererSettingsPanel>("Renderer Settings", false, &renderer());
+			
 			menuItemForPanel<AssetBrowser>("Asset Browser", false);
 			menuItemForPanel<SceneInspector>("Scene Inspector", true);
 			menuItemForPanel<EntityInspector>("Entity Inspector", true);
+			
 			
 			ImGui::EndMenu();
 		}

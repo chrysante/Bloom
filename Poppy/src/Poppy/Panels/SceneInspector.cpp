@@ -32,25 +32,22 @@ namespace poppy {
 		using namespace bloom;
 		
 		displayEntity(EntityID{});
+		performHierarchyUpdate();
 		
-		if (hasHierarchyUpdate) {
-			auto [child, parent] = hierarchyUpdate;
-			hasHierarchyUpdate = false;
-			
-			/**
-			 We need to make sure that we don't attach an entity to it's own descendend
-			 */
-			if (child && !scene()->descendsFrom(parent, child)) {
-				scene()->unparent(child);
-				if (parent) {
-					scene()->parent(child, parent);
-				}
+		
+		
+		if (ImGui::BeginPopupContextWindow ("Context Menu")) // <-- use last item id as popup id
+		{
+			if (ImGui::MenuItem("Create Entity")) {
+				scene()->createEntity("Entity");
+				ImGui::CloseCurrentPopup();
 			}
-			else {
-				ImGui::OpenPopup("Hierarchy Error");
-			}
+			ImGui::EndPopup();
 		}
-
+		
+		
+		
+		
 		// Always center this window when appearing
 		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
 		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
@@ -137,9 +134,7 @@ namespace poppy {
 			if (payload && payload->IsDelivery()) {
 				EntityID child;
 				std::memcpy(&child, payload->Data, sizeof child);
-				poppyAssert(!hasHierarchyUpdate);
-				hierarchyUpdate = { child, parent };
-				hasHierarchyUpdate = true;
+				deferHierarchyUpdate(child, parent);
 			}
 			ImGui::EndDragDropTarget();
 		}
@@ -159,6 +154,33 @@ namespace poppy {
 			_expanded.resize(index + 1);
 		}
 		_expanded[index] = value;
+	}
+	
+	void SceneInspector::deferHierarchyUpdate(bloom::EntityID child, bloom::EntityID parent) {
+		poppyAssert(!hasHierarchyUpdate);
+		hierarchyUpdate = { child, parent };
+		hasHierarchyUpdate = true;
+	}
+	
+	void SceneInspector::performHierarchyUpdate() {
+		if (!hasHierarchyUpdate) {
+			return;
+		}
+		auto [child, parent] = hierarchyUpdate;
+		hasHierarchyUpdate = false;
+		
+		/**
+		 We need to make sure that we don't attach an entity to it's own descendend
+		 */
+		if (child && !scene()->descendsFrom(parent, child)) {
+			scene()->unparent(child);
+			if (parent) {
+				scene()->parent(child, parent);
+			}
+		}
+		else {
+			ImGui::OpenPopup("Hierarchy Error");
+		}
 	}
 	
 }

@@ -139,8 +139,8 @@ namespace poppy {
 		using namespace bloom;
 		auto& transform = scene()->getComponent<TransformComponent>(entity);
 	
-		
-		if (beginSection("Transform")) {
+		header("Transform");
+		if (beginSection()) {
 			beginProperty("Position");
 			dragFloat3Pretty(transform.position.data(), "-position");
 			
@@ -161,8 +161,8 @@ namespace poppy {
 		using namespace bloom;
 		auto& meshRenderer = scene()->getComponent<MeshRenderComponent>(entity);
 		(void)meshRenderer;
-		
-		if (beginSection<MeshRenderComponent>("Static Mesh Component", entity)) {
+		componentHeader<MeshRenderComponent>("Static Mesh Component", entity);
+		if (beginSection()) {
 			beginProperty("Mesh");
 			ImGui::Button("[Mesh Name Here]");
 			recieveMeshDragDrop(entity);
@@ -199,7 +199,8 @@ namespace poppy {
 		using namespace bloom;
 		auto& light = scene()->getComponent<LightComponent>(entity);
 		
-		if (beginSection<LightComponent>("Light Component", entity)) {
+		componentHeader<LightComponent>("Light Component", entity);
+		if (beginSection()) {
 			inspectLightType(light);
 			inspectLightCommon(light.getCommon(), light.type());
 		
@@ -209,6 +210,9 @@ namespace poppy {
 					break;
 				case LightType::spotlight:
 					inspectSpotLight(light.get<SpotLight>());
+					break;
+				case LightType::directional:
+					inspectDirectionalLight(light.get<DirectionalLight>());
 					break;
 					
 				default:
@@ -286,13 +290,37 @@ namespace poppy {
 		float angle = (inner + outer) / 2;
 		float falloff = (outer - inner) / 2;
 		
-		beginProperty("Radius");
+		beginProperty("Angle");
 		ImGui::SliderFloat("##-angle", &angle, 0, 1);
 		beginProperty("Falloff");
 		ImGui::SliderFloat("##-falloff", &falloff, 0, 0.2);
 		
 		light.innerCutoff = angle - falloff;
 		light.outerCutoff = angle + falloff;
+	}
+	
+	void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
+		beginProperty("Casts Shadow");
+		ImGui::Checkbox("##-casts-shadow", &light.castsShadows);
+		
+		if (!light.castsShadows) {
+			return;
+		}
+		
+		beginProperty("Shadow Distance");
+		ImGui::DragFloat("##-shadow-distance", &light.shadowDistance, 1, 0, FLT_MAX);
+		
+		beginProperty("Number Of Cascades");
+		ImGui::SliderInt("##-num-cascades", &light.numCascades, 1, 10);
+		
+		beginProperty("Cascade Distribution Exponent");
+		ImGui::SliderFloat("##-cascade-distribution-exponent", &light.cascadeDistributionExponent, 1, 4);
+		
+		beginProperty("Cascade Transition Fraction");
+		ImGui::SliderFloat("##-cascade-transition-fraction", &light.cascadeTransitionFraction, 0, 1);
+		
+		beginProperty("Distance Fadeout Fraction");
+		ImGui::SliderFloat("##-shadow-distance-fadeout-fraction", &light.shadowDistanceFadeoutFraction, 0, 1);
 	}
 	
 	/// MARK: - Helpers
@@ -311,17 +339,11 @@ namespace poppy {
 	void EntityInspector::componentHeaderEx(std::string_view name,
 											utl::function<void()> deleter)
 	{
+		float2 const cursorPos = ImGui::GetCursorPos();
+		header(name);
+		
+		// 'Delete' Button
 		withFont(FontWeight::semibold, FontStyle::roman, [&]{
-			float2 const cursorPos = ImGui::GetCursorPos();
-			{
-				float4 color = GImGui->Style.Colors[ImGuiCol_Text];
-				color.a *= 0.85;
-				ImGui::PushStyleColor(ImGuiCol_Text, color);
-				ImGui::Text("%s", name.data());
-				ImGui::PopStyleColor();
-			}
-			
-			// 'Delete' Button
 			if (deleter) {
 				float2 const textSize = ImGui::CalcTextSize("Delete");
 				float2 const buttonPos = { cursorPos.x + ImGui::GetWindowWidth() - textSize.x, cursorPos.y };
@@ -343,39 +365,6 @@ namespace poppy {
 		});
 	}
 	
-	bool EntityInspector::beginSection(std::string_view name) {
-		return beginSection<void>(name, bloom::EntityID{});
-	}
-	
-	template <typename T>
-	bool EntityInspector::beginSection(std::string_view name, bloom::EntityID entity) {
-		componentHeader<T>(name, entity);
-		
-		bool const open =  ImGui::BeginTable("Property Table", 2,
-											 ImGuiTableFlags_Resizable |
-											 ImGuiTableFlags_NoBordersInBodyUntilResize);
-		if (open) {
-			ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 100.0f); // Default to 100.0f
-			ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthStretch);       // Default to 200.0f
-		}
-		return open;
-	}
-	
-	void EntityInspector::endSection() {
-		ImGui::EndTable();
-	}
-	
-	void EntityInspector::beginProperty(std::string_view label) {
-		ImGui::TableNextRow();
-		ImGui::TableSetColumnIndex(0);
-		
-		withFont(FontWeight::light, FontStyle::roman, [&]{
-			ImGui::SetCursorPosX(3 * GImGui->Style.WindowPadding.x);
-			ImGui::Text("%s", label.data());
-		});
-		
-		ImGui::TableSetColumnIndex(1);
-	}
 	
 
 	

@@ -36,6 +36,7 @@ namespace bloom {
 	public:
 		EditorFrameBuffer() = default;
 		TextureView entityID() { return _entityIDBuffer; }
+		TextureView shadowCascade() { return _shadowCascadeBuffer; }
 		TextureView selected() { return _selectedBuffer; }
 		
 		TextureView finalImageEditor() { return _finalImageEditorBuffer; }
@@ -44,6 +45,7 @@ namespace bloom {
 		
 	private:
 		TextureHandle _entityIDBuffer;
+		TextureHandle _shadowCascadeBuffer;
 		TextureHandle _selectedBuffer;
 		TextureHandle _finalImageEditorBuffer;
 	};

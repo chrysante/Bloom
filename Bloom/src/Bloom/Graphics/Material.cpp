@@ -17,6 +17,7 @@ namespace bloom {
 			psDesc->colorAttachments()->object(0)->setPixelFormat(MTL::PixelFormatRGBA32Float);
 			psDesc->colorAttachments()->object(1)->setPixelFormat(MTL::PixelFormatR32Uint);
 			psDesc->colorAttachments()->object(2)->setPixelFormat(MTL::PixelFormatR8Unorm);
+			psDesc->colorAttachments()->object(3)->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
 			psDesc->setVertexFunction(lib->newFunction(bloom::makeNSString("mainPassEditorVS")));
 			psDesc->setFragmentFunction(lib->newFunction(bloom::makeNSString("mainPassEditorFS")));
 			psDesc->setDepthAttachmentPixelFormat(MTL::PixelFormatDepth32Float);

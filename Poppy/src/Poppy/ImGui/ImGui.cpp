@@ -607,8 +607,8 @@ namespace poppy {
 	}
 	
 	void SaveStyleColors(YAML::Node node) {
-		for (mtl::float4 color: ImGui::GetStyle().Colors) {
-			node.push_back(color);
+		for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+			node[i] = mtl::float4(ImGui::GetStyle().Colors[i]);
 		}
 	}
 	

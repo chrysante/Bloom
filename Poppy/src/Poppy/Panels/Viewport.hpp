@@ -83,7 +83,7 @@ namespace poppy {
 		ViewportCameraActor cameraActor;
 		Projection cameraProjection = Projection::perspective;
 		
-		bloom::DebugDrawMode drawMode = bloom::DebugDrawMode::lit;
+		bloom::DebugDrawOptions drawOptions{};
 		
 		bool viewportHovered = false;
 		

@@ -161,7 +161,7 @@ namespace poppy {
 		
 		// Lights
 		{
-			auto entity = scene.createEntity("Point Light 1");
+			auto entity = scene.createEntity("Point Light");
 			auto& transform = scene.getComponent<bloom::TransformComponent>(entity);
 			transform.position = { 30, 10, 80 };
 			auto light = bloom::LightComponent{ bloom::PointLight{
@@ -169,21 +169,22 @@ namespace poppy {
 					.color     = { 1, 0, 1 },
 					.intensity = 5000
 				},
-				.radius = 5
+				.radius = 5,
 			}};
 			scene.addComponent(entity, light);
 		}
 		
 		{
-			auto entity = scene.createEntity("Point Light 2");
+			auto entity = scene.createEntity("Directional Light");
 			auto& transform = scene.getComponent<bloom::TransformComponent>(entity);
-			transform.position = { 150, -80, 100 };
-			auto light = bloom::LightComponent{ bloom::PointLight{
+			transform.orientation = { 1, 0, 0, 0 };
+			auto light = bloom::LightComponent{ bloom::DirectionalLight{
 				{
-					.color     = { 1, 1, 0 },
-					.intensity = 5000
+					.color     = { 1, 1, 1 },
+					.intensity = 1
 				},
-				.radius = 5
+				.castsShadows = true,
+				.shadowDistance = 500
 			}};
 			scene.addComponent(entity, light);
 		}

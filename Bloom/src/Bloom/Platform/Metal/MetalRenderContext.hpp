@@ -9,55 +9,85 @@ namespace bloom {
 	
 	void BLOOM_API MTLDeleter(void*);
 	
-	class BLOOM_API MetalRenderContext: public RenderContext {
+	class BLOOM_API MetalRenderContext final: public RenderContext {
 	public:
 		MetalRenderContext(MTL::Device*, void* viewController);
 		
-		BufferHandle createBuffer(void const* data, std::size_t size, StorageMode) final;
-		BufferHandle createVertexBuffer(void const* data, std::size_t size) final;
-		BufferHandle createIndexBuffer(std::span<std::uint16_t>) final;
-		BufferHandle createIndexBuffer(std::span<std::uint32_t>) final;
-		BufferHandle createUniformBuffer(void const* data, std::size_t size) final;
+		BufferHandle createBuffer(void const* data,
+								  std::size_t size,
+								  StorageMode) override;
 		
-		DepthStencilHandle createDepthStencilState(CompareFunction) final;
+		DepthStencilHandle createDepthStencilState(CompareFunction) override;
 		
-		TextureHandle createTexture(mtl::usize3 size, PixelFormat, TextureUsage, StorageMode) final;
-		TextureHandle createRenderTarget(std::size_t width, std::size_t height,
-										 PixelFormat, StorageMode) final;
+		TextureHandle createTexture(mtl::usize3 size,
+									PixelFormat,
+									TextureUsage,
+									StorageMode) override;
+		TextureHandle createArrayTexture(mtl::usize2 size,
+										 int elements,
+										 PixelFormat,
+										 TextureUsage,
+										 StorageMode) override;
+		TextureHandle createRenderTarget(std::size_t width,
+										 std::size_t height,
+										 PixelFormat,
+										 StorageMode) override;
 		
 		
-		void fillBuffer(BufferView, void const* data, std::size_t size, std::size_t offset) final;
+		void fillBuffer(BufferView,
+						void const* data,
+						std::size_t size,
+						std::size_t offset) override;
 		
-		void setRenderTargetColor(std::size_t index, TextureView) final;
-		void setClearColor(std::size_t index, mtl::float4) final;
-		void setRenderTargetDepth(TextureView) final;
-		void setClearDepth(float) final;
+		void setRenderTargetColor(std::size_t index,
+								  TextureView) override;
+		void setClearColor(std::size_t index,
+						   mtl::float4) override;
+		void setRenderTargetDepth(TextureView) override;
+		void setClearDepth(float) override;
 
-		void beginRenderPass() final;
-		void setPipelineState(RenderPipelineView) final;
-		void setDepthStencilState(DepthStencilView) final;
+		void setRenderTargetArrayLength(std::size_t) override;
+		void setRenderTargetSize(mtl::uint2) override;
+		void setDefaultRasterSampleCount(uint) override;
 		
-		void setVertexBuffer(BufferView, int index, std::size_t offset = 0) final;
-		void setVertexTexture(TextureView, int index) final;
-		void setVertexSampler(SamplerView, int index) final;
+		void beginRenderPass() override;
+		void setPipelineState(RenderPipelineView) override;
+		void setDepthStencilState(DepthStencilView) override;
 		
-		void setFragmentBuffer(BufferView, int index, std::size_t offset = 0) final;
-		void setFragmentTexture(TextureView, int index) final;
-		void setFragmentSampler(SamplerView, int index) final;
+		void setVertexBuffer(BufferView,
+							 int index,
+							 std::size_t offset = 0) override;
+		void setVertexTexture(TextureView,
+							  int index) override;
+		void setVertexSampler(SamplerView,
+							  int index) override;
 		
-		void setTriangleFillMode(TriangleFillMode) final;
-		void setTriangleCullMode(TriangleCullMode) final;
+		void setFragmentBuffer(BufferView,
+							   int index,
+							   std::size_t offset = 0) override;
+		void setFragmentTexture(TextureView,
+								int index) override;
+		void setFragmentSampler(SamplerView,
+								int index) override;
 		
-		void drawIndexed(BufferView indices, IndexType) final;
+		void setTriangleFillMode(TriangleFillMode) override;
+		void setTriangleCullMode(TriangleCullMode) override;
 		
-		RenderPassHandle commit() final;
+		void drawIndexed(BufferView indices,
+						 IndexType) override;
 		
-		MTL::Device* device() { return _device.get(); }
-		MTL::CommandQueue* commandQueue() { return _commandQueue.get(); }
-		void* viewController() { return _viewController; }
+		void drawIndexedInstances(BufferView indices,
+								  IndexType,
+								  std::size_t instances) override;
+		
+		RenderPassHandle commit() override;
+		
+		MTL::Device*       device()         { return _device.get(); }
+		MTL::CommandQueue* commandQueue()   { return _commandQueue.get(); }
+		void*              viewController() { return _viewController; }
 		
 	private:
-		void eraseRenderTargets();
+		void resetDescriptorValues();
 		
 	private:
 		ARCPointer<MTL::Device> _device;
@@ -72,6 +102,9 @@ namespace bloom {
 		std::array<mtl::float4, 8> clearColor{};
 		TextureView currentRenderTargetDepth;
 		float clearDepth = 0;
+		uint renderTargetArrayLength = 0;
+		mtl::uint2 renderTargetSize = 0;
+		uint defaultRasterSampleCount = 0;
 	};
 	
 }

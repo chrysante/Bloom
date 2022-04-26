@@ -84,7 +84,6 @@
 	[NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
 	{
 		keyEventHandler(event);
-//		return nil;
 		return event;
 	}];
 	

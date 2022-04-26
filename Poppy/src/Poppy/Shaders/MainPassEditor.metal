@@ -4,11 +4,14 @@
 #include "Bloom/Graphics/Vertex.hpp"
 #include "Bloom/Graphics/EntityRenderData.hpp"
 
+#include "PBRShader.h"
+
 using namespace metal;
 using namespace bloom;
 
 struct MainPassData {
 	float4 positionCS [[ position ]];
+	
 	float3 normalWS;
 	float3 positionWS;
 	float3 color;
@@ -16,9 +19,17 @@ struct MainPassData {
 	uint entityID;
 };
 
+static float3 calculateLightProjection(float4 const positionLightSpace) {
+	float3 projCoords = positionLightSpace.xyz / positionLightSpace.w;
+	projCoords.y *= -1;
+	projCoords.xy = projCoords.xy * 0.5 + 0.5;
+	return projCoords;
+}
+
 vertex MainPassData mainPassEditorVS(Vertex3D device const* vertices [[ buffer(1) ]],
 									 uint const vertexID [[ vertex_id ]],
 									 SceneRenderData device const& scene [[ buffer(0) ]],
+									 ShadowRenderData device const* shadows [[ buffer(3) ]],
 									 EntityRenderData device const& entity [[ buffer(2) ]])
 {
 	Vertex3D const v = vertices[vertexID];
@@ -27,105 +38,71 @@ vertex MainPassData mainPassEditorVS(Vertex3D device const* vertices [[ buffer(1
 
 	float4 const vertexPositionWS = entity.transform * vertexPositionMS;
 	
-	return {
-		.positionCS = scene.camera * vertexPositionWS,
-		.normalWS = (entity.transform * vertexNormalMS).xyz,
-		.positionWS = vertexPositionWS.xyz,
-		.color = v.color.rgb,
-		.entityID = entity.ID
-	};
+	MainPassData result;
+	
+	result.positionCS = scene.camera * vertexPositionWS;
+	result.normalWS = (entity.transform * vertexNormalMS).xyz;
+	result.positionWS = vertexPositionWS.xyz;
+	result.color = v.color.rgb;
+	result.entityID = entity.ID;
+	
+	return result;
 }
 
 struct FragmentData {
-	float4 color [[ color(0) ]];
+	float4 color  [[ color(0) ]];
 	uint entityID [[ color(1) ]];
+	float4 shadowCascade [[ color(3) ]];
 };
 
+static bool isInLightFrustum(float3 const projCoords) {
+	bool3 const result = projCoords >= 0 && projCoords <= 1;
+	return result.x && result.y && result.z;
+}
 
-struct PBRData {
-	float3 albedo;
-	float metallic;
-	float roughness;
-	float ao;
+static float calculateShadowDirLight(float3 const projCoords,
+									 texture2d_array<float> shadowMap,
+									 sampler shadowMapSampler,
+									 int shadowMapIndex) {
+	// perform perspective divide
+	if (!isInLightFrustum(projCoords)) {
+		return 1.0;
+	}
+	
+	float const closestDepth = shadowMap.sample(shadowMapSampler,
+												projCoords.xy,
+												shadowMapIndex).r;
+	
+	// get depth of current fragment from light's perspective
+	float const currentDepth = projCoords.z;
+	// check whether current frag pos is in shadow
+	float const bias = 0.005;
+	float const shadow = currentDepth - bias > closestDepth  ? 0.0 : 1.0;
+
+	return shadow;
+}
+
+
+constant float3 shadowVizColors[10] = {
+	float3(1.0, 0.0, 0.0),
+	float3(1.0, 0.5, 0.0),
+	float3(1.0, 1.0, 0.0),
+	float3(0.5, 1.0, 0.0),
+	float3(0.0, 1.0, 0.5),
+	float3(0.0, 1.0, 1.0),
+	float3(0.0, 0.5, 1.0),
+	float3(0.0, 0.0, 1.0),
+	float3(0.5, 0.0, 1.0),
+	float3(1.0, 0.0, 1.0)
 };
 
-/*
- float const dist        = length(lightPosition - in.positionWS.xyz);
- float const attenuation = 1.0 / (light.constantTerm + light.linearTerm * dist + light.quadraticTerm * dist * dist);
- finalColor += attenuation;
- */
-
-
-static float3 fresnelSchlick(float cosTheta, float3 F0) {
-	return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}
-
-static float distributionGGX(float3 N, float3 H, float roughness) {
-	float const a      = roughness * roughness;
-	float const a2     = a * a;
-	float const NdotH  = max(dot(N, H), 0.0);
-	float const NdotH2 = NdotH * NdotH;
-	
-	float const num   = a2;
-	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-	
-	float const PI = 3.14159265359;
-	
-	denom = PI * denom * denom;
-	
-	return num / denom;
-}
-
-static float geometrySchlickGGX(float NdotV, float roughness) {
-	float r = roughness + 1.0;
-	float k = r * r / 8.0;
-
-	float num   = NdotV;
-	float denom = NdotV * (1.0 - k) + k;
-	
-	return num / denom;
-}
-
-float geometrySmith(float3 N, float3 V, float3 L, float roughness) {
-	float NdotV = max(dot(N, V), 0.0);
-	float NdotL = max(dot(N, L), 0.0);
-	float ggx2  = geometrySchlickGGX(NdotV, roughness);
-	float ggx1  = geometrySchlickGGX(NdotL, roughness);
-	
-	return ggx1 * ggx2;
-}
-
-
-static float3 PBRLighting(PBRData data,
-						  float3 const radiance,
-						  float3 const N,
-						  float3 const V,
-						  float3 const L,
-						  float3 const H)
-{
-	float3 const F0_dielectric = float3(0.04);
-	float3 const F0 = mix(F0_dielectric, data.albedo, data.metallic);
-	
-	float3 const F  = fresnelSchlick(max(dot(H, V), 0.0), F0);
-	
-	float const NDF = distributionGGX(N, H, data.roughness);
-	float const G   = geometrySmith(N, V, L, data.roughness);
-	
-	float3 const numerator  = NDF * G * F;
-	float const denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0)  + 0.0001;
-	float3 const specular   = numerator / denominator;
-	
-	float3 const kS = F;
-	float3 const kD = (1.0 - kS) * (1.0 - data.metallic);
-	
-	const float PI = 3.14159265359;
-	
-	float const NdotL = max(dot(N, L), 0.0);
-	return (kD * data.albedo / PI + specular) * radiance * NdotL;
-}
-
-fragment FragmentData mainPassEditorFS(MainPassData in [[ stage_in ]],
-									   SceneRenderData device const& scene [[ buffer(0) ]])
+fragment FragmentData mainPassEditorFS(MainPassData in                             [[ stage_in ]],
+									   SceneRenderData device const& scene         [[ buffer(0) ]],
+									   DebugDrawData device const& debugData       [[ buffer(1) ]],
+									   ShadowRenderData device const& shadowData   [[ buffer(2) ]],
+									   float4x4 device const* lightSpaceTransforms [[ buffer(3) ]],
+									   texture2d_array<float> shadowMaps           [[ texture(0) ]],
+									   sampler shadowMapSampler                    [[ sampler(0) ]])
 {
 	FragmentData result;
 	result.entityID = in.entityID;
@@ -187,15 +164,55 @@ fragment FragmentData mainPassEditorFS(MainPassData in [[ stage_in ]],
 	}
 	
 	// Directional Lights
-	for (uint i = 0; i < scene.numDirLights; ++i) {
+	for (uint i = 0, shadowCasterIndex = 0, shadowMapOffset = 0; i < scene.numDirLights; ++i) {
 		float3 const lightDirection = scene.dirLights[i].direction;
-		DirectionalLight const light = scene.dirLights[i].light;
+		auto const light = scene.dirLights[i];
 		
 		float3 const L = lightDirection;
 		float3 const H = normalize(V + L);
-		float3 const radiance = light.common.color * light.common.intensity;
+		float3 const radiance = light.light.common.color * light.light.common.intensity;
 		
-		lightAcc += PBRLighting(data, radiance, N, V, L, H);
+		float3 const dirLight = PBRLighting(data, radiance, N, V, L, H);
+		
+		
+		float shadow = 1;
+		
+		if (light.light.castsShadows) {
+			int const numCascades = shadowData.numCascades[shadowCasterIndex];
+			for (int j = numCascades - 1; j >= 0; --j) {
+				int const shadowMapIndex = shadowMapOffset + j;
+				float4 const positionLightSpace = lightSpaceTransforms[shadowMapIndex] * float4(in.positionWS, 1);
+				float3 const projLightCoords = calculateLightProjection(positionLightSpace);
+				bool const isInFrustum = isInLightFrustum(projLightCoords);
+				if (isInFrustum) {
+					shadow = calculateShadowDirLight(projLightCoords,
+													 shadowMaps,
+													 shadowMapSampler,
+													 shadowMapIndex);
+				}
+			}
+			shadowMapOffset += numCascades;
+			++shadowCasterIndex;
+		}
+		
+		lightAcc += dirLight * shadow;
+	}
+	
+	
+	// visualize shadow cascade
+	if (debugData.visualizeShadowCascades) {
+		float3 shadowViz = 0.5;
+		for (int j = shadowData.numCascades[debugData.shadowCasterIndex] - 1; j >= 0; --j) {
+			int const lightMapIndex = debugData.shadowMapOffset + j;
+			
+			float4 const positionLightSpace = lightSpaceTransforms[lightMapIndex] * float4(in.positionWS, 1);
+			float3 const projLightCoords = calculateLightProjection(positionLightSpace);
+			bool const isInFrustum = isInLightFrustum(projLightCoords);
+			if (isInFrustum) {
+				shadowViz = shadowVizColors[j];
+			}
+		}
+		result.shadowCascade = float4(shadowViz, 1);
 	}
 	
 	float3 const ambient    = 0.03 * data.albedo * data.ao;

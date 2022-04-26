@@ -25,7 +25,8 @@ namespace bloom {
 		_viewController(viewController),
 		_commandQueue(device->newCommandQueue())
 	{
-		
+		bool const suportsLayeredRendering = device->supportsFamily(MTL::GPUFamilyMac1) || device->supportsFamily(MTL::GPUFamilyApple5);
+		bloomAssert(suportsLayeredRendering);
 	}
 	
 	BufferHandle MetalRenderContext::createBuffer(void const* data,
@@ -45,22 +46,6 @@ namespace bloom {
 								MTLDeleter,
 								size);
 		}
-	}
-	
-	BufferHandle MetalRenderContext::createVertexBuffer(void const* data, std::size_t size) {
-		return createBuffer(data, size, StorageMode::Shared);
-	}
-	
-	BufferHandle MetalRenderContext::createIndexBuffer(std::span<std::uint16_t> indices) {
-		return createBuffer(indices.data(), indices.size() * 2, StorageMode::Shared);
-	}
-	
-	BufferHandle MetalRenderContext::createIndexBuffer(std::span<std::uint32_t> indices) {
-		return createBuffer(indices.data(), indices.size() * 4, StorageMode::Shared);
-	}
-	
-	BufferHandle MetalRenderContext::createUniformBuffer(void const* data, std::size_t size) {
-		return createBuffer(data, size, StorageMode::Managed);
 	}
 	
 	DepthStencilHandle MetalRenderContext::createDepthStencilState(CompareFunction cmp) {
@@ -94,6 +79,30 @@ namespace bloom {
 		return TextureHandle(device()->newTexture(texDescriptor.get()),
 							 MTLDeleter,
 							 size.x, size.y, size.z);
+	}
+	
+	TextureHandle MetalRenderContext::createArrayTexture(mtl::usize2 size, int elements,
+														 PixelFormat format,
+														 TextureUsage usage,
+														 StorageMode storageMode)
+	{
+		auto const type =
+			size.y > 1 ?
+			MTL::TextureType2DArray :
+			MTL::TextureType1DArray;
+		ARCPointer texDescriptor = MTL::TextureDescriptor::alloc()->init();
+		texDescriptor->setTextureType(type);
+		texDescriptor->setWidth(size.x);
+		texDescriptor->setHeight(size.y);
+		
+		texDescriptor->setArrayLength(elements);
+		texDescriptor->setPixelFormat((MTL::PixelFormat)format);
+		texDescriptor->setUsage((MTL::TextureUsage)usage);
+		texDescriptor->setStorageMode((MTL::StorageMode)storageMode);
+		
+		return TextureHandle(device()->newTexture(texDescriptor.get()),
+							 MTLDeleter,
+							 size.x, size.y, 1);
 	}
 	
 	TextureHandle MetalRenderContext::createRenderTarget(std::size_t width,
@@ -139,6 +148,17 @@ namespace bloom {
 		clearDepth = depth;
 	}
 	
+	void MetalRenderContext::setRenderTargetArrayLength(std::size_t size) {
+		renderTargetArrayLength = size;
+	}
+	
+	void MetalRenderContext::setRenderTargetSize(mtl::uint2 size) {
+		renderTargetSize = size;
+	}
+	
+	void MetalRenderContext::setDefaultRasterSampleCount(uint count) {
+		defaultRasterSampleCount = count;
+	}
 	
 	void MetalRenderContext::beginRenderPass() {
 		_renderPassDesc = MTL::RenderPassDescriptor::alloc()->init();
@@ -160,6 +180,18 @@ namespace bloom {
 		if (currentRenderTargetDepth) {
 			_renderPassDesc->depthAttachment()->setTexture((MTL::Texture*)currentRenderTargetDepth.nativeHandle());
 		}
+		
+		_renderPassDesc->setRenderTargetArrayLength(renderTargetArrayLength);
+		
+		if (renderTargetSize != mtl::uint2{ 0, 0 }) {
+			_renderPassDesc->setRenderTargetWidth(renderTargetSize.x);
+			_renderPassDesc->setRenderTargetHeight(renderTargetSize.y);
+		}
+		
+		if (defaultRasterSampleCount != 0) {
+			_renderPassDesc->setDefaultRasterSampleCount(defaultRasterSampleCount);
+		}
+		
 		_commandBuffer = _commandQueue->commandBuffer();
 		_commandEncoder = _commandBuffer->renderCommandEncoder(_renderPassDesc.get());
 	}
@@ -204,7 +236,9 @@ namespace bloom {
 		_commandEncoder->setCullMode((MTL::CullMode)mode);
 	}
 	
-	void MetalRenderContext::drawIndexed(BufferView indices, IndexType type) {
+	void MetalRenderContext::drawIndexed(BufferView indices,
+										 IndexType type)
+	{
 		std::size_t const indexSize = type == IndexType::uint32 ? 4 : 2;
 		_commandEncoder->drawIndexedPrimitives(MTL::PrimitiveTypeTriangle,
 											   /* indexCount = */ indices.size() / indexSize,
@@ -212,19 +246,34 @@ namespace bloom {
 											   (MTL::Buffer*)indices.nativeHandle(), 0);
 	}
 	
+	void MetalRenderContext::drawIndexedInstances(BufferView indices,
+												  IndexType type,
+												  std::size_t instances)
+	{
+		std::size_t const indexSize = type == IndexType::uint32 ? 4 : 2;
+		_commandEncoder->drawIndexedPrimitives(MTL::PrimitiveTypeTriangle,
+											   /* indexCount = */ indices.size() / indexSize,
+											   type == IndexType::uint32 ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16,
+											   (MTL::Buffer*)indices.nativeHandle(), 0,
+											   instances);
+	}
+	
 	RenderPassHandle MetalRenderContext::commit() {
 		_commandEncoder->endEncoding();
 		_commandBuffer->commit();
 		
-		eraseRenderTargets();
+		resetDescriptorValues();
 		
 		return RenderPassHandle([cmdbuf = _commandBuffer]{ cmdbuf->waitUntilCompleted(); });
 	}
 	
-	void MetalRenderContext::eraseRenderTargets() {
+	void MetalRenderContext::resetDescriptorValues() {
 		for (auto& texture: currentRenderTargetColor) {
 			texture = nullptr;
 		}
 		currentRenderTargetDepth = nullptr;
+		renderTargetArrayLength = 0;
+		renderTargetSize = 0;
+		defaultRasterSampleCount = 0;
 	}
 }

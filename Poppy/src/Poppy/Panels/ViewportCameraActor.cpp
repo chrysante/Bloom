@@ -18,10 +18,10 @@ namespace poppy {
 		}
 		
 		if (input.keyDown(Key::A)) {
-			position -= mtl::cross(front(), up()) * offset;
+			position -= mtl::normalize(mtl::cross(front(), up())) * offset;
 		}
 		if (input.keyDown(Key::D)) {
-			position += mtl::cross(front(), up()) * offset;
+			position += mtl::normalize(mtl::cross(front(), up())) * offset;
 		}
 		if (input.keyDown(Key::W)) {
 			position += front() * offset;

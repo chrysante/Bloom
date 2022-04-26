@@ -20,7 +20,7 @@ namespace bloom {
 #endif
 	
 	struct LightCommon {
-		metal::float3 color;
+		metal::packed_float3 color;
 		float intensity;
 	};
 	
@@ -49,6 +49,14 @@ namespace bloom {
 	
 	struct DirectionalLight {
 		LightCommon common;
+		
+		bool castsShadows;
+		float shadowDistance;
+		int numCascades = 1;
+		float cascadeDistributionExponent = 2;
+		float cascadeTransitionFraction = 0.05;
+		float shadowDistanceFadeoutFraction = 0.05;
+//		metal::uint2 shadowMapResolution = 512;
 	};
 	
 	struct RenderDirectionalLight {

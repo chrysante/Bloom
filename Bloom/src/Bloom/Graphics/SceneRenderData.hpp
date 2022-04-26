@@ -10,7 +10,6 @@ namespace bloom {
 		metal::float3 cameraPosition;
 		metal::float2 screenSize;
 		metal::float2 screenResolution;
-		float selectionLineWidth;
 		
 		uint numPointLights;
 		RenderPointLight pointLights[32];
@@ -20,6 +19,22 @@ namespace bloom {
 		
 		uint numDirLights;
 		RenderDirectionalLight dirLights[32];
+	};
+	
+	struct DebugDrawData {
+		float selectionLineWidth;
+		bool visualizeShadowCascades;
+		uint shadowCasterIndex;
+		uint shadowMapOffset;
+	};
+	
+	BLOOM_SHADER_CONSTANT int maxShadowCascades = 10;
+	
+	BLOOM_SHADER_CONSTANT int maxShadowCasters = 32;
+	
+	struct alignas(metal::float4x4) ShadowRenderData {
+		int numShadowCasters;
+		int numCascades[maxShadowCasters];
 	};
 	
 }

@@ -66,19 +66,28 @@ static float edgeDetect(texture2d<float> selectionMap, sampler sampler2D, float2
 
 fragment float4 editorPP(PPRasterOutput in                          [[ stage_in   ]],
 						 bloom::SceneRenderData device const& scene [[ buffer(0)  ]],
+						 bloom::DebugDrawData device const& debug   [[ buffer(1)  ]],
 						 texture2d<float> finalImage                [[ texture(0) ]],
 						 texture2d<float> selectionMap              [[ texture(1) ]],
+						 texture2d<float> shadowCascadeTexture      [[ texture(2) ]],
 						 sampler          sampler2D                 [[ sampler(0) ]])
 {
 	float const edge = edgeDetect(selectionMap,
 								  sampler2D,
 								  in.screenCoords,
-								  scene.selectionLineWidth,
+								  debug.selectionLineWidth,
 								  scene.screenResolution);
 	
-	float3 const imageColor = finalImage.sample(sampler2D, in.screenCoords).rgb;
+	float3 imageColor = clamp(finalImage.sample(sampler2D, in.screenCoords).rgb, 0.0, 1.0);
 	
+	if (debug.visualizeShadowCascades) {
+		float3 const shadowCascade = clamp(shadowCascadeTexture.sample(sampler2D, in.screenCoords).rgb, 0.0, 1.0);
+		imageColor = mix(imageColor, shadowCascade, 0.5);
+	}
+	
+	// edges of selected
 	float3 const finalColor = mix(imageColor, float3(1, 0.5, 0), edge);
+	
 	
 	return float4(finalColor, 1);
 }

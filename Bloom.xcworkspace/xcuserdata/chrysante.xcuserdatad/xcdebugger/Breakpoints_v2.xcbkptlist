@@ -14,10 +14,42 @@
             filePath = "Bloom/src/Bloom/platform/macOS/AppViewController.mm"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "175"
-            endingLineNumber = "175"
+            startingLineNumber = "174"
+            endingLineNumber = "174"
             landmarkName = "-rightMouseMoved:"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "FD494F39-9740-4624-99BF-8731C2CE6159 - eff591512e9c682e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController rightMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "176"
+                  endingLineNumber = "176"
+                  offsetFromSymbolStart = "79">
+               </Location>
+               <Location
+                  uuid = "FD494F39-9740-4624-99BF-8731C2CE6159 - eff591512e9c68c1"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController rightMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "175"
+                  endingLineNumber = "175"
+                  offsetFromSymbolStart = "79">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -30,10 +62,42 @@
             filePath = "Bloom/src/Bloom/platform/macOS/AppViewController.mm"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "182"
-            endingLineNumber = "182"
+            startingLineNumber = "181"
+            endingLineNumber = "181"
             landmarkName = "-otherMouseMoved:"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "688AB8CD-E125-4180-872F-537AE0580DDE - 4ef4db56948f2545"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController otherMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "183"
+                  endingLineNumber = "183"
+                  offsetFromSymbolStart = "79">
+               </Location>
+               <Location
+                  uuid = "688AB8CD-E125-4180-872F-537AE0580DDE - 4ef4db56948f2564"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[AppViewController otherMouseMoved:]"
+                  moduleName = "libBloom.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chrysante/dev/Bloom/Bloom/src/Bloom/platform/macOS/AppViewController.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "182"
+                  endingLineNumber = "182"
+                  offsetFromSymbolStart = "79">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy

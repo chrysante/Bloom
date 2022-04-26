@@ -20,6 +20,7 @@
 #include <Metal/Metal.hpp>
 
 using namespace mtl::short_types;
+using namespace bloom;
 
 template<> struct YAML::convert<poppy::Viewport::Parameters> {
 	static Node encode(poppy::Viewport::Parameters const& p) {
@@ -64,7 +65,7 @@ namespace poppy{
 	}
 	
 	Viewport::Viewport(bloom::Renderer* r):
-		Panel("Viewport"),
+		Panel("Viewport", PanelOptions{ .unique = false }),
 		renderer(r)
 	{
 		padding = 0;
@@ -151,6 +152,34 @@ namespace poppy{
 		if (wantsInput.held) {
 			cameraActor.update(getApplication().getRenderTime(), getApplication().input());
 		}
+		
+		ImGui::Begin("Shadow Map");
+		
+		for (auto&& [entity, light]: scene()->view<bloom::LightComponent>().each()) {
+			if (light.type() != bloom::LightType::directional) {
+				continue;
+			}
+			auto const dirLight = light.get<bloom::DirectionalLight>();
+			if (!dirLight.castsShadows) {
+				continue;
+			}
+			auto shadowMap = renderer->debugGetShadowMap((uint32_t)entity, 0);
+			if (!shadowMap) {
+				continue;
+			}
+			static float intensity = 1;
+			
+			
+//			ImGui::DragFloat("Multiplier", &intensity, .0001, 0, 1);
+			auto* img = shadowMap.nativeHandle();
+//			auto* img = frameBuffer.depth().nativeHandle();
+			ImGui::Image(img, ImGui::GetWindowSize(), {0, 0}, {1, 1}, {intensity, intensity, intensity, 1});
+			break;
+		}
+		
+		
+		
+		ImGui::End();
 	}
 	
 	void Viewport::drawOverlays() {
@@ -329,15 +358,40 @@ namespace poppy{
 		
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 5, 5 });
 		if (ImGui::BeginCombo("##displayControlMenu", nullptr, ImGuiComboFlags_NoPreview)) {
-			ImGui::Button("Button");
+			
 			ImGui::SetNextItemWidth(100);
 			ImGui::SliderFloat("Field of View", &params.fieldOfView, 30, 180);
+			ImGui::Checkbox("Alternate Light Frustum", &drawOptions.alternateLightFrustum);
+			ImGui::Checkbox("Visualize Shadow Cascades", &drawOptions.visualizeShadowCascades);
+			if (drawOptions.visualizeShadowCascades) {
+				EntityID const lightEntity{ drawOptions.lightEntityID };
+				
+				char const* preview = nullptr;
+				if (!lightEntity ||
+					!scene()->hasComponent<LightComponent>(lightEntity) ||
+					!scene()->getComponent<LightComponent>(lightEntity).castsShadows())
+				{
+					preview = "Select Shadow Caster";
+				}
+				else {
+					preview = scene()->getComponent<TagComponent>(lightEntity).name.data();
+				}
+				
+				if (ImGui::BeginCombo("Shadow Caster", preview)) {
+					for (auto&& [entity, light, tag]: scene()->view<LightComponent const, TagComponent const>().each()) {
+						if (light.castsShadows() && ImGui::Selectable(tag.name.data())) {
+							drawOptions.lightEntityID = (uint32_t)entity;
+						}
+					}
+					ImGui::EndCombo();
+				}
+			}
 			ImGui::EndCombo();
 		}
 		ImGui::PopStyleVar();
 		
 		ImGui::SameLine();
-		inputControlCombo("##DrawMode", drawMode);
+		inputControlCombo("##DrawMode", drawOptions.mode);
 		ImGui::SameLine();
 		inputControlCombo("##EditMode", gizmoMode, 3);
 		ImGui::SameLine();
@@ -366,9 +420,12 @@ namespace poppy{
 		proj = mtl::transpose(proj);
 		transform = mtl::transpose(transform);
 		
+		auto const imguizmoOperation = (ImGuizmo::OPERATION)operation;
+		auto const imguizmoMode = operation == GizmoMode::scale ? ImGuizmo::MODE::LOCAL : (ImGuizmo::MODE)(1 - (int)space);
+		
 		if (ImGuizmo::Manipulate(view.data(), proj.data(),
-								 (ImGuizmo::OPERATION)operation,
-								 (ImGuizmo::MODE)(1 - (int)space),
+								 imguizmoOperation,
+								 imguizmoMode,
 								 transform.data()))
 		{
 			return { true, mtl::transpose(transform) };
@@ -382,8 +439,8 @@ namespace poppy{
 		bloom::TransformComponent& transformComponent = scene()->getComponent<TransformComponent>(entity);
 		EntityID const parent = scene()->getComponent<HierarchyComponent>(entity).parent;
 		
-		auto const view = cameraActor.camera.getView();
-		auto const proj = cameraActor.camera.getProjection();
+		auto const view = cameraActor.camera.view();
+		auto const proj = cameraActor.camera.projection();
 		auto const localTransform = transformComponent.calculate();
 		auto const parentTransform = scene()->calculateTransformRelativeToWorld(parent);
 		
@@ -447,7 +504,7 @@ namespace poppy{
 									  0, 5000);
 		}
 		
-		renderer->beginScene(camera);
+		renderer->beginScene(camera, drawOptions);
 		
 		/* submit meshes */ {
 			auto view = scene()->view<TransformMatrixComponent const, MeshRenderComponent const>();
@@ -478,18 +535,21 @@ namespace poppy{
 										 transform.matrix.column(3).xyz,
 										 mtl::normalize((transform.matrix * mtl::float4{ 1, 0, 0, 0 }).xyz));
 						break;
-					case LightType::directional:
-						renderer->submit(light.get<DirectionalLight>(),
-										 mtl::normalize((transform.matrix * mtl::float4{ 1, 0, 0, 0 }).xyz));
+					case LightType::directional: {
+						float3 const direction = mtl::normalize((transform.matrix * mtl::float4{ 0, 0, 1, 0 }).xyz);
+						
+						renderer->submit((uint32_t)id,
+										 light.get<DirectionalLight>(),
+										 direction);
 						break;
+					}
 					default:
 						break;
 				}
 			});
 		}
 		renderer->endScene();
-		
-		renderer->debugDraw(&frameBuffer, drawMode);
+		renderer->debugDraw(&frameBuffer);
 	}
 	
 	void Viewport::updateRenderTarget(mtl::usize2 size) {
@@ -528,7 +588,7 @@ namespace poppy{
 	}
 	
 	mtl::float3 Viewport::worldSpaceToViewSpace(mtl::float3 const positionWS) {
-		auto const viewProj = cameraActor.camera.getMatrix();
+		auto const viewProj = cameraActor.camera.viewProjection();
 		auto const tmp = viewProj * mtl::float4(positionWS, 1);
 		auto const ndc = tmp.xyz / tmp.w;
 		

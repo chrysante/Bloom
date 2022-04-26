@@ -126,11 +126,12 @@ namespace bloom {
 	}
 
 	KeyEvent toKeyEvent(NSEvent* event) {
-		return {
-			toEventBase(event),
-			.key = translateKeyCode(event.keyCode),
-			.repeat = event.isARepeat
-		};
+		KeyEvent result{ toEventBase(event) };
+		result.key = translateKeyCode(event.keyCode);
+		if (event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp) {
+			result.repeat = event.isARepeat;
+		}
+		return result;
 	}
 
 	MouseEvent toMouseEvent(NSEvent* event) {

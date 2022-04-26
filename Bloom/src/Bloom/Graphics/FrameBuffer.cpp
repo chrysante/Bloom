@@ -29,6 +29,9 @@ namespace bloom {
 		result._entityIDBuffer = renderContext->createRenderTarget(width, height,
 																   PixelFormat::R32Uint,
 																   StorageMode::Managed);
+		result._shadowCascadeBuffer = renderContext->createRenderTarget(width, height,
+																		PixelFormat::RGBA8Unorm,
+																		StorageMode::Private);
 		result._selectedBuffer = renderContext->createRenderTarget(width, height,
 																   PixelFormat::R8Unorm,
 																   StorageMode::Private);

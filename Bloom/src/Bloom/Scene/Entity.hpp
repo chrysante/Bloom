@@ -16,6 +16,7 @@ namespace bloom {
 	public:
 		EntityID() = default;
 		EntityID(entt::entity value): _value(value) {}
+		explicit EntityID(RawType value): _value((entt::entity)value) {}
 		
 		entt::entity value() const { return _value; }
 		RawType raw() const { return utl::to_underlying(_value); }

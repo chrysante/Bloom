@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Panel.hpp"
+#include "PropertiesPanel.hpp"
 #include "BasicSceneInspector.hpp"
 
 #include "Bloom/Scene/Entity.hpp"
@@ -11,7 +12,10 @@
 
 namespace poppy {
 	
-	class SceneInspector: public Panel, public BasicSceneInspector {
+	class SceneInspector:
+		public Panel,
+		public BasicSceneInspector
+	{
 	public:
 		SceneInspector();
 		
@@ -26,6 +30,9 @@ namespace poppy {
 		
 		bool expanded(bloom::EntityID) const;
 		void setExpanded(bloom::EntityID, bool);
+		
+		void deferHierarchyUpdate(bloom::EntityID child, bloom::EntityID parent);
+		void performHierarchyUpdate();
 		
 	private:
 		mutable utl::vector<bool> _expanded;

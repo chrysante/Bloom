@@ -79,7 +79,7 @@ namespace poppy {
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFffFF20);
 		
 		auto const flags = ImGuiButtonFlags_None
-		| ImGuiButtonFlags_PressedOnDoubleClick
+//		| ImGuiButtonFlags_PressedOnDoubleClick
 		;
 		bool const result = ImGui::ButtonEx(uniqueID.data(), params.itemSize, flags);
 	
@@ -147,7 +147,7 @@ namespace poppy {
 	
 	/// MARK: - AssetBrowser
 	AssetBrowser::AssetBrowser():
-		Panel("Asset Browser")
+		Panel("Asset Browser", PanelOptions{ .unique = false })
 	{
 		
 	}

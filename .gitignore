@@ -1,0 +1,12 @@
+Build/
+.vs/
+
+
+**.xcworkspace
+**.xcodeproj
+**.DS_Store
+
+**.vcxproj
+**.vcxproj.user
+**.vcxproj.filters
+**.sln

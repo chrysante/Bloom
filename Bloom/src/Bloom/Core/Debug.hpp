@@ -24,6 +24,8 @@
 	UTL_FANCY_ASSERT("Bloom", BLOOM_DEBUGLEVEL, postcondition, __VA_ARGS__)
 #define bloomDebugbreak(msg) \
 	__utl_debugbreak(msg)
+#define bloomDebugfail(msg) \
+	__utl_debugfail(msg)
 #define bloomBoundsCheck(index, lower, upper) \
 	UTL_FANCY_BOUNDS_CHECK("Bloom", BLOOM_DEBUGLEVEL, index, lower, upper)
 

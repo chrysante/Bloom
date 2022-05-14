@@ -9,89 +9,26 @@
 #include <sstream>
 
 #include "Bloom/Application/Resource.hpp"
+#include "Bloom/Scene/SceneSystem.hpp"
+#include "Bloom/Scene/SceneSerialize.hpp"
+#include "Bloom/Assets/AssetManager.hpp"
+#include "Bloom/Assets/ConcreteAssets.hpp"
 
-#include "ExampleScene.hpp"
-#include "EditorAssetManager.hpp"
-
-#include "Panels/Viewport.hpp"
+#include "Panels/Viewport/Viewport.hpp"
 #include "Panels/RendererSettingsPanel.hpp"
 #include "Panels/SceneInspector.hpp"
 #include "Panels/EntityInspector.hpp"
 #include "Panels/AssetBrowser.hpp"
 
-
 using namespace mtl::short_types;
+using namespace bloom;
 
 bloom::Application* createBloomApplication() {
 	return new poppy::Editor();
 }
 
 namespace {
-	const float toolbarSize = 50;
 	
-	static void DockSpaceUI() {
-		ImGuiViewport* viewport = ImGui::GetMainViewport();
-		auto nextWindowPos = viewport->Pos;
-		auto nextWindowSize = viewport->Size;
-#if 1
-		nextWindowPos.y += toolbarSize;
-		nextWindowSize.y -= toolbarSize;
-#endif
-		ImGui::SetNextWindowPos(nextWindowPos);
-		ImGui::SetNextWindowSize(nextWindowSize);
-		ImGui::SetNextWindowViewport(viewport->ID);
-		ImGuiWindowFlags window_flags = 0
-			| ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking
-			| ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse
-			| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
-			| ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-		ImGui::Begin("Master DockSpace", NULL, window_flags);
-		ImGuiID dockMain = ImGui::GetID("MyDockspace");
-
-	//	ImGuiIO& io = ImGui::GetIO();
-		ImGuiStyle& style = ImGui::GetStyle();
-		auto const winSizeSaved = style.WindowMinSize.x;
-		style.WindowMinSize.x = 250;
-		ImGui::DockSpace(dockMain);
-		style.WindowMinSize.x = winSizeSaved;
-		ImGui::End();
-		ImGui::PopStyleVar(3);
-	}
-
-	static void ToolbarUI() {
-		ImGuiViewport* viewport = ImGui::GetMainViewport();
-		
-		ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x,
-									   viewport->Pos.y + ImGui::FindWindowByName("Master DockSpace")-> MenuBarHeight()));
-		ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, toolbarSize));
-		ImGui::SetNextWindowViewport(viewport->ID);
-
-		ImGuiWindowFlags window_flags = 0
-			| ImGuiWindowFlags_NoDocking
-			| ImGuiWindowFlags_NoTitleBar
-			| ImGuiWindowFlags_NoResize
-			| ImGuiWindowFlags_NoMove
-			| ImGuiWindowFlags_NoScrollbar
-			| ImGuiWindowFlags_NoSavedSettings
-			;
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
-		ImGui::Begin("TOOLBAR", NULL, window_flags);
-		ImGui::PopStyleVar();
-
-
-		ImGui::Button("Toolbar goes here", ImVec2(0, 37)); ImGui::SameLine();
-		ImGui::Button("Toolbar goes here", ImVec2(0, 37)); ImGui::SameLine();
-		ImGui::Button("Toolbar goes here", ImVec2(0, 37)); ImGui::SameLine();
-
-
-
-		ImGui::End();
-	}
-
 	std::string yamlSanitize(std::string s) {
 		std::replace(s.begin(), s.end(), '#', '*');
 		return std::move(s);
@@ -120,9 +57,6 @@ namespace poppy {
 		
 		LoadStyleColors(settings["ImGui Style Colors"]);
 		
-		scene = utl::make_ref<bloom::Scene>();
-		buildExampleScene(*scene, renderContext());
-		
 		createPanel<Viewport>(&renderer());
 		createPanel<RendererSettingsPanel>(&renderer());
 		createPanel<SceneInspector>();
@@ -149,15 +83,36 @@ namespace poppy {
 		imgui.present();
 	}
 	
-	void Editor::onEvent(bloom::Event const& event) {
+	void Editor::onEvent(bloom::Event& event) {
 		imgui.handleMouseEvent(event);
-		bool eventHandled = false;
+		
+		event.dispatch<EventType::keyUp>([&](KeyEvent e){
+			if (e.key == Key::S && test(e.modifierFlags & EventModifierFlags::super)) {
+				saveScene();
+				return true;
+			}
+			return false;
+		});
+		
+		if (event.handled()) {
+			return;
+		}
+		
+		auto const focusedPanel = std::find_if(panels.begin(), panels.end(), [](auto const& p) { return p->focused(); });
+		if (focusedPanel != panels.end()) {
+			(**focusedPanel).onEvent(event);
+			if (event.handled()) {
+				return;
+			}
+		}
+		// give to all unfocused panels
 		for (auto& panel: panels) {
-			if (!eventHandled && panel->focused()) {
-				if (!(panel->_ignoreEventMask & event.type())) {
-					panel->onEvent(event);
-				}
-				eventHandled = true;
+			if (panel->focused()) {
+				continue;
+			}
+			panel->onEvent(event);
+			if (event.handled()) {
+				break;
 			}
 		}
 	}
@@ -165,8 +120,8 @@ namespace poppy {
 	void Editor::frame() {
 		menuBar();
 		
-		DockSpaceUI();
-		ToolbarUI();
+		dockspace();
+		toolbar();
 	
 		for (auto p = panels.begin(); p < panels.end();) {
 			auto& panel = *p;
@@ -191,9 +146,13 @@ namespace poppy {
 	
 	void Editor::menuBar() {
 		ImGui::BeginMainMenuBar();
-		if (ImGui::BeginMenu("Test")) {
-			ImGui::MenuItem("One");
-			ImGui::MenuItem("Two");
+		if (ImGui::BeginMenu("File")) {
+			if (ImGui::MenuItem("New Scene...")) {
+				newScene();
+			}
+			if (ImGui::MenuItem("Save Scene")) {
+				saveScene();
+			}
 			ImGui::EndMenu();
 		}
 		
@@ -228,9 +187,7 @@ namespace poppy {
 	void Editor::createPanel(auto&&... args) {
 		auto panel = Panel::create<T>(this, UTL_FORWARD(args)...);
 		if (auto* const sc = dynamic_cast<BasicSceneInspector*>(panel.get())) {
-			sc->setScene(scene.get());
-			sc->setSelectionContext(&selection);
-			sc->setAssetManager(getAssetManager());
+			sc->editor = this;
 		}
 		
 		panel->settings = settings[yamlSanitize(panel->uniqueName())];
@@ -265,6 +222,86 @@ namespace poppy {
 		}
 	}
 	
+	
+	void Editor::dockspace() {
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		auto nextWindowPos = viewport->Pos;
+		auto nextWindowSize = viewport->Size;
+#if 1
+		nextWindowPos.y += toolbarHeight;
+		nextWindowSize.y -= toolbarHeight;
+#endif
+		ImGui::SetNextWindowPos(nextWindowPos);
+		ImGui::SetNextWindowSize(nextWindowSize);
+		ImGui::SetNextWindowViewport(viewport->ID);
+		ImGuiWindowFlags window_flags = 0
+			| ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking
+			| ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse
+			| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+			| ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		ImGui::Begin("Master DockSpace", NULL, window_flags);
+		ImGuiID dockMain = ImGui::GetID("MyDockspace");
+
+	//	ImGuiIO& io = ImGui::GetIO();
+		ImGuiStyle& style = ImGui::GetStyle();
+		auto const winSizeSaved = style.WindowMinSize.x;
+		style.WindowMinSize.x = 250;
+		ImGui::DockSpace(dockMain);
+		style.WindowMinSize.x = winSizeSaved;
+		ImGui::End();
+		ImGui::PopStyleVar(3);
+	}
+	
+	void Editor::toolbar() {
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		
+		ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x,
+									   viewport->Pos.y + ImGui::FindWindowByName("Master DockSpace")->MenuBarHeight()));
+		ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, toolbarHeight));
+		ImGui::SetNextWindowViewport(viewport->ID);
+
+		ImGuiWindowFlags window_flags = 0
+			| ImGuiWindowFlags_NoDocking
+			| ImGuiWindowFlags_NoTitleBar
+			| ImGuiWindowFlags_NoResize
+			| ImGuiWindowFlags_NoMove
+			| ImGuiWindowFlags_NoScrollbar
+			| ImGuiWindowFlags_NoSavedSettings
+			;
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+		ImGui::Begin("TOOLBAR", NULL, window_flags);
+		ImGui::PopStyleVar();
+
+		auto* const sceneSystem = getSceneSystem();
+		bool const isSimulating = sceneSystem->isRunning();
+		
+		char const* const buttonLabel = !isSimulating ? "Simulate" : "Stop";
+		
+		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, sceneSystem->getScene() == nullptr);
+		if (ImGui::Button(buttonLabel, ImVec2(0, 37))) {
+			!isSimulating ? startSimulation() : stopSimulation();
+		}
+		ImGui::PopItemFlag();
+		
+		ImGui::SameLine();
+		
+		ImGui::End();
+	}
+	
+	void Editor::startSimulation() {
+		sceneBackup = scene->scene.copy();
+		getSceneSystem()->runUpdateThread();
+	}
+	
+	void Editor::stopSimulation() {
+		getSceneSystem()->stopUpdateThread();
+		scene->scene = std::move(sceneBackup);
+	}
+	
 	void Editor::initLibraryDir() {
 		auto const systemLibDir = bloom::getLibraryDir();
 		libDir = systemLibDir / "Poppy";
@@ -297,8 +334,27 @@ namespace poppy {
 		settingsFile << out.c_str();
 	}
 	
+	void Editor::newScene() {
+		showSaveFilePanel([this](std::filesystem::path path) {
+			auto asset = getAssetManager()->create(AssetType::scene,
+												   path.filename().replace_extension().string(),
+												   std::filesystem::path{ path }.remove_filename());
+			setScene(as<SceneAsset>(asset));
+		});
+	}
+	
+	void Editor::saveScene() {
+		getAssetManager()->saveToDisk(scene->handle());
+	}
+	
+	void Editor::setScene(Reference<SceneAsset> scene) {
+		this->scene = std::move(scene);
+		selection.clear();
+		getSceneSystem()->setScene(bloom::Reference<Scene>(this->scene, &this->scene->scene));
+	}
+	
 	std::unique_ptr<bloom::AssetManager> Editor::createAssetManager() {
-		return std::make_unique<EditorAssetManager>();
+		return std::make_unique<AssetManager>();
 	}
 	
 	Panel* Editor::findPanelByName(std::string_view name) {

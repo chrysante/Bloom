@@ -64,26 +64,29 @@
 	
 	self.keyEventResponder = [[BloomKeyEventResponder alloc] initWithFrame: NSZeroRect];
 
-	__weak AppViewController* weakSelf = self;
-	auto keyEventHandler = [weakSelf](NSEvent* _Nonnull event) -> bool {
-		using bloom::internal::AppInternals;
-		bloom::Event const bloomEvent(event.type == NSEventTypeKeyDown ? bloom::EventType::keyDown : bloom::EventType::keyUp,
-									  bloom::toKeyEvent(event));
-		
-		AppInternals::handleEvent(weakSelf.application, bloomEvent, nullptr);
-		return true;
-	};
 	
-//	self.keyEventResponder.keyEventHandler = keyEventHandler;
+	
+	
 	self.inputContext = [[NSTextInputContext alloc] initWithClient: self.keyEventResponder];
 	[self.view addSubview: self.keyEventResponder];
 	
 	// Some events do not raise callbacks of AppView in some circumstances (for example when CMD key is held down).
 	// This monitor taps into global event stream and captures these events.
 	NSEventMask eventMask = NSEventMaskFlagsChanged | NSEventMaskKeyDown | NSEventMaskKeyUp;
+	__weak AppViewController* weakSelf = self;
 	[NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
 	{
-		keyEventHandler(event);
+		using bloom::internal::AppInternals;
+		
+		auto const type =
+			event.type == NSEventTypeKeyDown ?
+			bloom::EventType::keyDown :
+			event.type == NSEventTypeKeyUp ?
+			bloom::EventType::keyUp :
+			bloom::EventType::keyFlagsChanged;
+		
+		AppInternals::handleEvent(weakSelf.application, bloom::Event(type, bloom::toKeyEvent(event)));
+		
 		return event;
 	}];
 	
@@ -118,7 +121,7 @@
 
 -(void)handleEvent:(bloom::Event)bloomEvent withEvent: (NSEvent*)event {
 	using bloom::internal::AppInternals;
-	AppInternals::handleEvent(self.application, bloomEvent, (__bridge void*)event);
+	AppInternals::handleEvent(self.application, bloomEvent);
 }
 
 -(void)mouseDown:(NSEvent *)event {

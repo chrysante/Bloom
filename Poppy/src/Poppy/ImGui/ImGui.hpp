@@ -59,9 +59,11 @@ namespace poppy {
 		bool handleMouseEvent(bloom::Event const&);
 		
 		void* getFont(FontWeight, FontStyle);
+		void* getFont(FontWeight, FontStyle, int fontSize);
 		
 	private:
-		void* loadFont(FontWeight, FontStyle);
+		void* loadFont(std::filesystem::path const&, int size, void const* glyphs = nullptr);
+		void* loadFont(FontWeight, FontStyle, int size);
 		
 	private:
 		bloom::RenderContext* renderContext = nullptr;
@@ -70,8 +72,12 @@ namespace poppy {
 		void* _renderPassDescriptor;
 		void* _commandBuffer;
 		std::string _iniFilename;
-		using FontMap = utl::hashmap<std::pair<FontWeight, FontStyle>, void*, utl::hash<std::pair<FontWeight, FontStyle>>>;
+		using FontMap = utl::hashmap<std::tuple<FontWeight, FontStyle, int>,
+									 void*,
+									 utl::hash<std::tuple<FontWeight, FontStyle, int>>>;
 		FontMap fontMap;
+		
+		int _defaultFontSize = 16;
 	};
 	
 	struct ViewportInput {

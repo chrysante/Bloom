@@ -9,15 +9,15 @@ namespace bloom {
 									std::size_t height)
 	{
 		FrameBuffer result;
-		result._colorBuffer = renderContext->createRenderTarget(width, height,
-																PixelFormat::RGBA32Float,
-																StorageMode::Private);
-		result._depthBuffer = renderContext->createRenderTarget(width, height,
-																PixelFormat::Depth32Float,
-																StorageMode::Private);
-		result._finalImageBuffer = renderContext->createRenderTarget(width, height,
-																	 PixelFormat::RGBA8Unorm,
-																	 StorageMode::Private);
+		result.color = renderContext->createRenderTarget(width, height,
+														 PixelFormat::RGBA32Float,
+														 StorageMode::Private);
+		result.depth = renderContext->createRenderTarget(width, height,
+														 PixelFormat::Depth32Float,
+														 StorageMode::Private);
+		result.finalImage = renderContext->createRenderTarget(width, height,
+															  PixelFormat::RGBA8Unorm,
+															  StorageMode::Private);
 		return result;
 	}
 	
@@ -26,18 +26,23 @@ namespace bloom {
 												std::size_t height)
 	{
 		EditorFrameBuffer result(FrameBuffer::create(renderContext, width, height));
-		result._entityIDBuffer = renderContext->createRenderTarget(width, height,
-																   PixelFormat::R32Uint,
-																   StorageMode::Managed);
-		result._shadowCascadeBuffer = renderContext->createRenderTarget(width, height,
-																		PixelFormat::RGBA8Unorm,
-																		StorageMode::Private);
-		result._selectedBuffer = renderContext->createRenderTarget(width, height,
-																   PixelFormat::R8Unorm,
-																   StorageMode::Private);
-		result._finalImageEditorBuffer = renderContext->createRenderTarget(width, height,
-																		   PixelFormat::RGBA8Unorm,
-																		   StorageMode::Private);
+		
+		result.editorDepth = renderContext->createRenderTarget(width, height,
+															   PixelFormat::Depth32Float,
+															   StorageMode::Private);
+		result.entityID = renderContext->createRenderTarget(width, height,
+															PixelFormat::R32Uint,
+															StorageMode::Managed);
+		result.shadowCascade = renderContext->createRenderTarget(width, height,
+																 PixelFormat::RGBA8Unorm,
+																 StorageMode::Private);
+		result.selected = renderContext->createRenderTarget(width, height,
+															PixelFormat::R8Unorm,
+															StorageMode::Private);
+		result.finalImageEditor = renderContext->createRenderTarget(width, height,
+																	PixelFormat::RGBA8Unorm,
+																	StorageMode::Private);
+		
 		return result;
 	}
 	

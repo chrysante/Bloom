@@ -4,7 +4,8 @@ kind "SharedLib"
 language "C++"
 
 sysincludedirs {
-    "../Vendor/Metal-cpp"
+    "../Vendor/Metal-cpp",
+    "../Vendor/assimp/include"
 }
 
 includedirs {
@@ -16,7 +17,10 @@ files {
     "src/Bloom/**.cpp"
 }
 
-removefiles { "src/Bloom/platform/**" }
+removefiles { 
+    "src/Bloom/platform/**",
+    "src/Bloom/ScriptEngine/**"
+}
 
 filter  "system:macosx"
     files {
@@ -40,8 +44,10 @@ filter "system:macosx"
 filter {}
 
 links { 
+    "ScriptEngine",
     "Utility",
-    "YAML"
+    "YAML",
+    "assimp"
 }
 
 filter "system:macosx"
@@ -52,4 +58,5 @@ filter "system:macosx"
     }
 filter {}
 
+include "ScriptEngine.lua"
 include "BloomTest.lua"

@@ -11,14 +11,14 @@ namespace bloom {
 	
 	class BLOOM_API Material {
 	public:
-		static Reference<Material> makeDefaultMaterial(RenderContext*);
+		static Material makeDefaultMaterial(RenderContext*);
 		
 		utl::UUID assetID() const { return _id; }
 		
 //	private:
 		utl::UUID _id;
 		
-		RenderPipelineHandle mainPassEditor;
+		RenderPipelineHandle mainPass;
 		RenderPipelineHandle outlinePass;
 		TriangleCullMode cullMode = TriangleCullMode::back;
 		void* functionTable;

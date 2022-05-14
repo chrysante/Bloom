@@ -4,13 +4,18 @@
 #include <imgui/imgui_internal.h>
 #include "Bloom/Application/Application.hpp"
 #include "Bloom/Application/Resource.hpp"
+#include "Bloom/Assets/AssetManager.hpp"
+
 #include "Poppy/Editor.hpp"
 #include "Poppy/Debug.hpp"
 #include "Poppy/ResourceManager.hpp"
-#include "Poppy/Assets/EditorAssetManager.hpp"
 
 #include <utl/stdio.hpp>
 #include <utl/filesystem_ext.hpp>
+
+#include "Poppy/IconConfig.hpp"
+
+using namespace bloom;
 
 namespace poppy {
 	
@@ -41,7 +46,7 @@ namespace poppy {
 	
 	/// MARK: - DirectoryView
 	void DirectoryView::display() {
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
+//		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
 		ImGui::BeginChild("Asset Browser DirView");
 		{
 			contentSize = ImGui::GetWindowSize();
@@ -60,49 +65,139 @@ namespace poppy {
 			}
 		}
 		ImGui::EndChild();
-		ImGui::PopStyleVar();
+//		ImGui::PopStyleVar();
+	}
+	
+	static auto selectIcon(bloom::AssetType t) -> std::string_view {
+		using bloom::AssetType;
+		
+		switch (t) {
+			case AssetType::staticMesh:
+				return "cube";
+			case AssetType::skinnedMesh:
+				return "cube";
+			case AssetType::material:
+				return "delicious";
+			case AssetType::scene:
+				return "cubes";
+				
+			default:
+				return "doc";
+		}
 	}
 	
 	bool DirectoryView::displayItem(std::string_view label, std::optional<bloom::AssetHandle> asset) {
+		
+		
+		
+		
+		
+		
 		mtl::float2 const labelSize = ImGui::CalcTextSize(label.data());
 		auto const uniqueID = generateUniqueID(label, itemIndex, true);
+		
+		auto const popupID = generateUniqueID(uniqueID.data(), itemIndex);
+		
 		
 		mtl::float2 localCursor = cursor;
 		
 		// Button
 		localCursor += params.itemSpacing;
-		ImGui::SetCursorPos(localCursor);
+		params.itemSize = 128;
 		
-		
+		// button
 		ImGui::PushStyleColor(ImGuiCol_Button, 0);
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFffFF20);
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFffFF20);
-		
-		auto const flags = ImGuiButtonFlags_None
-//		| ImGuiButtonFlags_PressedOnDoubleClick
-		;
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0x20FFffFF);
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0x20FFffFF);
+		auto const flags = ImGuiButtonFlags_None;
+		ImGui::SetCursorPos(localCursor);
 		bool const result = ImGui::ButtonEx(uniqueID.data(), params.itemSize, flags);
-	
-		
 		ImGui::PopStyleColor(3);
 		
+		// popup
+		ImGui::OpenPopupOnItemClick(popupID.data());
+		if (ImGui::BeginPopup(popupID.data())) {
+			if (ImGui::Selectable("Rename")) {
+				renaming = itemIndex;
+				setRenameFocus = true;
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
 		
+		// dragdrop
 		if (asset) {
 			if (ImGui::BeginDragDropSource()) {
 				auto const handle = *asset;
 				ImGui::SetDragDropPayload(toDragDropType(asset->type()).data(),
 										  &handle, sizeof handle);
+				
+				
+				ImGui::PushFont((ImFont*)IconConfig::font(64));
+				
+				auto const iconText = IconConfig::unicodeStr(std::string(selectIcon(asset ? asset->type() : AssetType::none)));
+				ImGui::Text("%s", iconText.data());
+				ImGui::PopFont();
+				
 				ImGui::EndDragDropSource();
 			}
 		}
 		
+		// icon
+		{
+			
+			
+			
+			ImGui::PushFont((ImFont*)IconConfig::font(64));
+			mtl::float2 const framePadding = mtl::float2(GImGui->Style.FramePadding);
+			auto const iconText = IconConfig::unicodeStr(std::string(selectIcon(asset ? asset->type() : AssetType::none)));
+			
+			auto iconCursor = localCursor;
+			iconCursor.y += (params.itemSize.y - params.labelHeight) / 2;
+			iconCursor.x += params.itemSize.x / 2;
+			mtl::float2 const iconSize = ImGui::CalcTextSize(iconText.data());
+			iconCursor -= iconSize / 2;
+//			iconCursor -= framePadding / 2;
+			
+			ImGui::SetCursorPos(iconCursor);
+			
+			ImGui::Text("%s", iconText.data());
+			ImGui::PopFont();
+		}
 		// Label
-		localCursor.y += params.itemSize.y - params.labelHeight / 2;
-		localCursor.x += params.itemSize.x / 2;
-		localCursor -= labelSize / 2;
+		if (itemIndex == renaming) {
+			if (setRenameFocus) {
+				std::strncpy(renameBuffer.data(), label.data(), renameBuffer.size() - 1);
+			}
+			mtl::float2 const labelSize = ImGui::CalcTextSize(renameBuffer.data());
+			mtl::float2 const framePadding = mtl::float2(GImGui->Style.FramePadding);
+			localCursor.y += params.itemSize.y - params.labelHeight / 2;
+			localCursor.x += params.itemSize.x / 2;
+			localCursor -= labelSize / 2;
+			localCursor -= framePadding / 2;
+			ImGui::SetCursorPos(localCursor);
+			std::strncpy(renameBuffer.data(), label.data(), renameBuffer.size() - 1);
+			if (setRenameFocus) {
+				ImGui::SetKeyboardFocusHere();
+				setRenameFocus = false;
+			}
+			ImGui::SetNextItemWidth(labelSize.x + 2 * framePadding.x);
+			if (ImGui::InputText("##rename-field", renameBuffer.data(), renameBuffer.size(),
+								 ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				renaming = -1;
+				renameBuffer = {};
+			}
+			poppyLog("ItemID: {}, FocusID: {}", ImGui::GetItemID(), ImGui::GetFocusID());
+		}
+		else {
+			localCursor.y += params.itemSize.y - params.labelHeight / 2;
+			localCursor.x += params.itemSize.x / 2;
+			localCursor -= labelSize / 2;
+			ImGui::SetCursorPos(localCursor);
+			ImGui::Text("%s", label.data());
+		}
 		
-		ImGui::SetCursorPos(localCursor);
-		ImGui::Text("%s", label.data());
 		
 		advanceCursor();
 		
@@ -153,7 +248,7 @@ namespace poppy {
 	}
 	
 	void AssetBrowser::init() {
-		assetManager = utl::down_cast<EditorAssetManager*>(getApplication().getAssetManager());
+		assetManager = getApplication().getAssetManager();
 		dirView.setAssetManager(assetManager);
 		
 		setWorkingDir(settings["Working Directory"].as<std::string>(std::string{}));
@@ -199,15 +294,16 @@ namespace poppy {
 	
 	void AssetBrowser::toolbar() {
 		float const toolbarSize = 30;
-		
+
 		{
-			auto* const resourceManager = getEditor().getResourceManager();
-			auto* const texture = resourceManager->getResource<TextureResource>("Icons/Icons.tga").handle.nativeHandle();
+			
+			
 			auto const size = toolbarButtonSize(toolbarSize);
-			if (ImGui::ImageButton(texture, size,
-								   mtl::float2{ 0.0, 1.0 }, // uv0
-								   mtl::float2{ 1./8., .5 }, // uv1
-								   0))
+			
+			ImGui::PushFont((ImFont*)IconConfig::font(32));
+			bool const goUp = ImGui::Button(IconConfig::unicodeStr("up-big").data());
+			ImGui::PopFont();
+			if (goUp)
 			{
 				// go up
 			}
@@ -224,16 +320,19 @@ namespace poppy {
 			}
 		});
 		
+		
+		
 		ImGui::SameLine();
 		{
-			auto* const resourceManager = getEditor().getResourceManager();
-			auto* const texture = resourceManager->getResource<TextureResource>("Icons/Icons.tga").handle.nativeHandle();
-			auto const size = toolbarButtonSize(toolbarSize);
-			if (ImGui::ImageButton(texture, size,
-								   mtl::float2{ 1./8., 0.5 }, // uv0
-								   mtl::float2{ 2./8., 1.0 }, // uv1
-								   0))
-			{
+			if (toolbarButton("Refresh", toolbarSize)) {
+				refresh();
+			}
+		}
+		
+		ImGui::SameLine();
+		{
+			if (toolbarButton("Create Default Material", toolbarSize)) {
+				assetManager->create(AssetType::material, "Default Material", current);
 				refresh();
 			}
 		}
@@ -250,6 +349,7 @@ namespace poppy {
 	void AssetBrowser::import(std::filesystem::path source) {
 		
 		assetManager->import(source, std::filesystem::relative(current, assetManager->workingDir()).lexically_normal());
+		refresh();
 	}
 	
 	void AssetBrowser::setWorkingDir(std::filesystem::path path) {
@@ -268,6 +368,7 @@ namespace poppy {
 	}
 	
 	void AssetBrowser::refresh() {
+		assetManager->setWorkingDir(assetManager->workingDir());
 		setCurrentDir(current);
 	}
 	

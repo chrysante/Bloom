@@ -4,7 +4,8 @@
 
 namespace bloom {
 
-	BLOOM_API std::string_view toString(AssetType type) {
+	/// MARK: - AssetType
+	BLOOM_API std::string toString(AssetType type) {
 		auto const i = utl::to_underlying(type);
 		bloomAssert(std::popcount(i) <= 1, "'type' is a Mask");
 		if (type == AssetType::none) {
@@ -13,7 +14,8 @@ namespace bloom {
 		return std::array {
 			"Static Mesh",
 			"Skinned Mesh",
-			"Material"
+			"Material",
+			"Scene"
 		}[utl::log2(i)];
 	}
 	
@@ -27,6 +29,9 @@ namespace bloom {
 		if (str == "Material") {
 			return AssetType::material;
 		}
+		if (str == "Scene") {
+			return AssetType::scene;
+		}
 		return AssetType::none;
 	}
 	
@@ -34,6 +39,33 @@ namespace bloom {
 		return str << toString(type);
 	}
 	
+	BLOOM_API std::string toExtension(AssetType type) {
+		auto const i = utl::to_underlying(type);
+		bloomAssert(std::popcount(i) <= 1, "'type' is a Mask");
+		if (type == AssetType::none) {
+			return std::string{};
+		}
+		return std::array {
+			".bmesh",
+			".invalid",
+			".bmat",
+			".bsc"
+		}[utl::log2(i)];
+	}
+	BLOOM_API AssetType assetTypeFromExtension(std::string_view extension) {
+		if (extension == ".bmesh") {
+			return AssetType::staticMesh;
+		}
+		if (extension == ".bmat") {
+			return AssetType::material;
+		}
+		if (extension == ".bsc") {
+			return AssetType::scene;
+		}
+		return AssetType::none;
+	}
+	
+	/// MARK: - AssetHandle
 	AssetHandle AssetHandle::generate(AssetType type) {
 		return AssetHandle(type, utl::UUID::generate());
 	}

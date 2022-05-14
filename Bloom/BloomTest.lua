@@ -23,5 +23,5 @@ filter { "system:macosx", "configurations:Debug or Development" }
 filter {}
 
 links { 
-    "Bloom"
+    "Bloom", "YAML"
 }

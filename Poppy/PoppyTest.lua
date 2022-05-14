@@ -23,7 +23,7 @@ filter { "system:macosx", "configurations:Debug or Development" }
 filter {}
 
 links { 
-    "Bloom",
+    "PoppyLib",
     "YAML",
     "Utility",
 }

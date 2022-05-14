@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Bloom/Core/Base.hpp"
+#include "Bloom/Core/Reference.hpp"
 
 #include <mtl/mtl.hpp>
 #include <utl/structure_of_arrays.hpp>
@@ -35,7 +36,7 @@ namespace bloom {
 	
 		bool visualizeShadowCascades = false;
 		/// used only with 'visualizeShadowCascades' == true
-		uint32_t lightEntityID;
+		uint32_t lightVizEntityID = 0xFFffFFff;
 		
 		bool alternateLightFrustum = false;
 	};
@@ -45,23 +46,8 @@ namespace bloom {
 	
 	UTL_SOA_TYPE(SceneRenderObject,
 				 (EntityRenderData, entity),
-				 (bool, selected),
-				 (Material*, material),
-				 (StaticRenderMesh*, mesh));
-	
-//	struct ShadowMap {
-//		TextureHandle cascades;
-//		int numCascades = 0;
-//		mtl::uint2 resolution = 0;
-//	};
-	
-//	using LightSpaceTransformArray = std::array<mtl::float4x4, maxShadowCascades>;
-//
-//	UTL_SOA_TYPE(ShadowMapPass,
-//				 (uint32_t, shadowMapID),
-//				 (int, numCascades),
-//				 (LightSpaceTransformArray, lightSpaceTransform)
-//				 );
+				 (Reference<Material>, material),
+				 (Reference<StaticRenderMesh>, mesh));
 	
 	class BLOOM_API Renderer {
 	public:
@@ -70,29 +56,36 @@ namespace bloom {
 		void beginScene(Camera const&, DebugDrawOptions);
 		void endScene();
 		
-		void submit(StaticRenderMesh*, Material*, EntityRenderData, bool selected);
+		void submit(Reference<StaticRenderMesh>, Reference<Material>, EntityRenderData);
 		
-		void submit(PointLight, mtl::float3 position);
-		void submit(SpotLight, mtl::float3 position, mtl::float3 direction);
-		void submit(uint32_t id, DirectionalLight, mtl::float3 direction);
+		void submitSelected(Reference<StaticRenderMesh>, Reference<Material>, EntityRenderData);
+		
+		void submit(PointLight);
+		void submit(SpotLight);
+		void submit(DirectionalLight);
+		void submit(SkyLight);
+		
+		void submitShadowCascadeViz(DirectionalLight);
 		
 		void draw(FrameBuffer*);
-		
-		void debugDraw(EditorFrameBuffer*);
+		void drawDebugInfo(EditorFrameBuffer*);
 		
 		RenderContext* getRenderContext() { return renderContext; }
-#warning
-		TextureView debugGetShadowMap(uint32_t id, int cascade) { return {}; }
 		
 		mtl::uint2 getShadowMapResolution() const { return shadowMapResolution; }
-		void setShadowMapResolution(mtl::uint2 r) { shadowMapResolution = r; }
+		void setShadowMapResolution(mtl::uint2);
+		
+		TriangleCullMode getShadowCullMode() const { return shadowCullMode; }
+		void setShadowCullMode(TriangleCullMode mode) { shadowCullMode = mode; }
 		
 	private:
-		void postprocess(EditorFrameBuffer*);
+		void postprocess(FrameBuffer*);
 		
-		RenderPassHandle mainPassEditor(EditorFrameBuffer*, DebugDrawOptions::Mode);
+		RenderPassHandle mainPass(FrameBuffer*);
+		RenderPassHandle wireframePass(FrameBuffer*);
+		RenderPassHandle editorPass(EditorFrameBuffer*, DebugDrawOptions::Mode);
 		RenderPassHandle shadowMapPass();
-		RenderPassHandle outlinePass(EditorFrameBuffer*);
+		RenderPassHandle selectionPass(EditorFrameBuffer*);
 		RenderPassHandle editorPP(EditorFrameBuffer*, bool visShadowCascades, uint32_t lightEntity);
 		
 	private:
@@ -100,9 +93,12 @@ namespace bloom {
 		void uploadSceneData();
 		void uploadDebugDrawData();
 		
-		void uploadShadowData(ShadowRenderData const&);
+		void uploadShadowData();
 		void createShadowPipeline();
 		void createShadowMapSampler();
+		
+		void createEditorPassPipeline();
+		void createWireframePassPipeline();
 		
 		void createPostprocessQuad();
 		void createPostprocessPipelines();
@@ -120,18 +116,17 @@ namespace bloom {
 		/// This must be flushed on beginScene()
 		Camera camera;
 		utl::structure_of_arrays<SceneRenderObject> objects;
-		utl::vector<RenderPointLight> pointLights;
-		utl::vector<RenderSpotLight> spotLights;
-		utl::vector<RenderDirectionalLight> dirLights;
+		utl::vector<PointLight> pointLights;
+		utl::vector<SpotLight> spotLights;
+		utl::vector<DirectionalLight> dirLights;
+		utl::vector<SkyLight> skyLights;
+		
+		utl::structure_of_arrays<SceneRenderObject> selectedObjects;
 		
 		/// Shadow Stuff
-//		utl::hashmap<uint32_t, ShadowMap> shadowMaps;
-//		utl::structure_of_arrays<ShadowMapPass> shadowMapPassses;
 		RenderPipelineHandle shadowPipeline;
 		BufferHandle shadowDataBuffer;
 		SamplerHandle shadowMapSampler;
-		
-		
 		
 		int numShadowCasters;
 		utl::small_vector<int> numCascades;
@@ -139,13 +134,19 @@ namespace bloom {
 		TextureHandle shadowMapArray;
 		int shadowMapArrayLength = 0;
 		mtl::uint2 shadowMapResolution = 512;
-		int visualizerIndex = 0;
-		
+		bool needsNewShadowMaps = true;
+		TriangleCullMode shadowCullMode = TriangleCullMode::front;
+	
+		uint shadowCascadeVizCount = 0;
+		std::array<mtl::float4x4, 10> shadowCascadeVizTransforms{};
 		
 		/// Main Pass Render Buffers
-		BufferHandle entityDataBuffer, sceneDataBuffer, debugDrawDataBuffer;
+		BufferHandle entityDataBuffer, selectedEntityDataBuffer, sceneDataBuffer, debugDrawDataBuffer;
 		DepthStencilHandle depthStencil;
 		
+		/// Editor Pass
+		RenderPipelineHandle editorPassPipeline;
+		RenderPipelineHandle wireframePassPipeline;
 		
 		/// Post Processing
 		BufferHandle quadVB, quadIB;

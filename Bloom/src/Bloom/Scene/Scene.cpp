@@ -1,10 +1,25 @@
 #include "Scene.hpp"
 
-#include "Components.hpp"
+#include "Bloom/Core/Debug.hpp"
+
+#include "Components/Tag.hpp"
+#include "Components/Transform.hpp"
+#include "Components/Hierarchy.hpp"
 
 #include <utl/stack.hpp>
+#include <utl/format.hpp>
+#include <utl/hashmap.hpp>
 
 namespace bloom {
+	
+	EntityID Scene::createEmptyEntity() {
+		return createEmptyEntity(EntityID{});
+	}
+	
+	EntityID Scene::createEmptyEntity(EntityID hint) {
+		EntityID const entity = EntityID(_registry.create(hint.value()));
+		return entity;
+	}
 	
 	EntityID Scene::createEntity(std::string_view name) {
 		EntityID const entity = EntityID(_registry.create());
@@ -14,6 +29,79 @@ namespace bloom {
 		addComponent(entity, HierarchyComponent{});
 
 		return entity;
+	}
+	
+	EntityID Scene::cloneEntity(EntityID from) {
+		EntityID const result = createEmptyEntity();
+		
+		forEachComponent([&]<typename C>(utl::tag<C>) {
+			if (hasComponent<C>(from)) {
+				C const& c = getComponent<C>(from);
+				addComponent(result, c);
+			}
+		});
+		
+		getComponent<HierarchyComponent>(result) = {};
+		auto const fromHierarchy = getComponent<HierarchyComponent>(from);
+		if (fromHierarchy.parent) {
+			parent(result, fromHierarchy.parent);
+		}
+	
+		return result;
+	}
+	
+	void Scene::deleteEntity(EntityID id) {
+		_registry.destroy(id.value());
+	}
+	
+	Scene Scene::copy() {
+		utl::hashmap<EntityID, EntityID> idMap;
+		
+		Scene result;
+		_registry.each([&](EntityID fromID) {
+			auto const fromHandle = this->getHandle(fromID);
+			EntityID const toID = result.createEmptyEntity(fromID);
+			auto const toHandle = result.getHandle(toID);
+			
+			idMap.insert({ fromID, toID });
+			forEachComponent([&]<typename C>(utl::tag<C>){
+				if (fromHandle.has<C>()) {
+					toHandle.add(fromHandle.get<C>());
+				}
+			});
+		});
+		
+		// copy hierarchy
+		for (auto [from, to]: idMap) {
+			if (from == to) {
+				continue;
+			}
+			bloomDebugbreak("Probably not going to happen");
+			auto fromHandle = this->getHandle(from);
+			auto toHandle = result.getHandle(to);
+			if (toHandle.has<HierarchyComponent>()) {
+				auto const& fromHierarchy = fromHandle.get<HierarchyComponent>();
+				auto& toHierarchy = toHandle.get<HierarchyComponent>();
+				
+				if (fromHierarchy.parent) {
+					toHierarchy.parent = idMap[fromHierarchy.parent];
+				}
+				if (fromHierarchy.firstChild) {
+					toHierarchy.firstChild = idMap[fromHierarchy.firstChild];
+				}
+				if (fromHierarchy.lastChild) {
+					toHierarchy.lastChild = idMap[fromHierarchy.lastChild];
+				}
+				if (fromHierarchy.nextSibling) {
+					toHierarchy.nextSibling = idMap[fromHierarchy.nextSibling];
+				}
+				if (fromHierarchy.prevSibling) {
+					toHierarchy.prevSibling = idMap[fromHierarchy.prevSibling];
+				}
+			}
+		}
+		
+		return result;
 	}
 	
 	[[ maybe_unused ]] static void sanitizeHierachy(Scene* scene) {

@@ -22,86 +22,86 @@
 
 namespace bloom {
 	
-	static mtl::float4x4 directionalLightSpaceTransform(Camera const& camera, float dist, mtl::float3 lightDirection) {
-		using namespace mtl;
-		
-		float  const ar        = camera.aspectRatio();
-		float  const fov       = camera.fieldOfView();
-		float  const nearDist  = camera.nearClipPlane();
-		float  const farDist   = dist;
-		float  const Hnear     = 2 * std::tan(fov/2) * nearDist;
-		float  const Wnear     = Hnear * ar;
-		float  const Hfar      = 2 * std::tan(fov/2) * farDist;
-		float  const Wfar      = Hfar * ar;
-		float3 const centerFar = camera.position() + camera.front() * farDist;
+//	static mtl::float4x4 directionalLightSpaceTransform(Camera const& camera, float dist, mtl::float3 lightDirection) {
+//		using namespace mtl;
+//
+//		float  const ar        = camera.aspectRatio();
+//		float  const fov       = camera.fieldOfView();
+//		float  const nearDist  = camera.nearClipPlane();
+//		float  const farDist   = dist;
+//		float  const Hnear     = 2 * std::tan(fov/2) * nearDist;
+//		float  const Wnear     = Hnear * ar;
+//		float  const Hfar      = 2 * std::tan(fov/2) * farDist;
+//		float  const Wfar      = Hfar * ar;
+//		float3 const centerFar = camera.position() + camera.front() * farDist;
+//
+//		float3 const topLeftFar     = centerFar + (camera.up() * Hfar / 2) - (camera.right() * Wfar / 2);
+//		float3 const topRightFar    = centerFar + (camera.up() * Hfar / 2) + (camera.right() * Wfar / 2);
+//		float3 const bottomLeftFar  = centerFar - (camera.up() * Hfar / 2) - (camera.right() * Wfar / 2);
+//		float3 const bottomRightFar = centerFar - (camera.up() * Hfar / 2) + (camera.right() * Wfar / 2);
+//
+//		float3 const centerNear = camera.position() + camera.front() * nearDist;
+//
+//		float3 const topLeftNear     = centerNear + (camera.up() * Hnear / 2) - (camera.right() * Wnear / 2);
+//		float3 const topRightNear    = centerNear + (camera.up() * Hnear / 2) + (camera.right() * Wnear / 2);
+//		float3 const bottomLeftNear  = centerNear - (camera.up() * Hnear / 2) - (camera.right() * Wnear / 2);
+//		float3 const bottomRightNear = centerNear - (camera.up() * Hnear / 2) + (camera.right() * Wnear / 2);
+//
+//		float3 const frustumCenter = (centerFar- centerNear) * 0.5f;
+//
+//		float4x4 const lightView = mtl::look_at<mtl::right_handed>(mtl::normalize(lightDirection), float3(0,0,0), float3(0,0,1));
+//
+//		std::array<float4, 8> const frustumToLightView {
+//			lightView * float4(bottomRightNear, 1.0f),
+//			lightView * float4(topRightNear,    1.0f),
+//			lightView * float4(bottomLeftNear,  1.0f),
+//			lightView * float4(topLeftNear,     1.0f),
+//			lightView * float4(bottomRightFar,  1.0f),
+//			lightView * float4(topRightFar,     1.0f),
+//			lightView * float4(bottomLeftFar,   1.0f),
+//			lightView * float4(topLeftFar,      1.0f)
+//		};
+//
+//		// find max and min points to define a ortho matrix around
+//		float3 min{  INFINITY,  INFINITY,  INFINITY };
+//		float3 max{ -INFINITY, -INFINITY, -INFINITY };
+//		for (std::size_t i = 0; i < frustumToLightView.size(); i++) {
+//			if (frustumToLightView[i].x < min.x)
+//				min.x = frustumToLightView[i].x;
+//			if (frustumToLightView[i].y < min.y)
+//				min.y = frustumToLightView[i].y;
+//			if (frustumToLightView[i].z < min.z)
+//				min.z = frustumToLightView[i].z;
+//
+//			if (frustumToLightView[i].x > max.x)
+//				max.x = frustumToLightView[i].x;
+//			if (frustumToLightView[i].y > max.y)
+//				max.y = frustumToLightView[i].y;
+//			if (frustumToLightView[i].z > max.z)
+//				max.z = frustumToLightView[i].z;
+//		}
+//
+//		float const l =  min.x;
+//		float const r =  max.x;
+//		float const b =  min.y;
+//		float const t =  max.y;
+//		// because max.z is positive and in NDC the positive z axis is
+//		// towards us so need to set it as the near plane flipped same for min.z.
+//		float const n = -max.z;
+//		float const f = -min.z;
+//
+//		// finally, set our ortho projection
+//		// and create the light space view-projection matrix
+//		mtl::float4x4 const lightProjection = mtl::ortho<mtl::right_handed>(l,r,b,t,n,f);
+//		mtl::float4x4 const lightSpaceMatrix = lightProjection * lightView;
+//
+//		return lightSpaceMatrix;
+//	}
 
-		float3 const topLeftFar     = centerFar + (camera.up() * Hfar / 2) - (camera.right() * Wfar / 2);
-		float3 const topRightFar    = centerFar + (camera.up() * Hfar / 2) + (camera.right() * Wfar / 2);
-		float3 const bottomLeftFar  = centerFar - (camera.up() * Hfar / 2) - (camera.right() * Wfar / 2);
-		float3 const bottomRightFar = centerFar - (camera.up() * Hfar / 2) + (camera.right() * Wfar / 2);
-
-		float3 const centerNear = camera.position() + camera.front() * nearDist;
-
-		float3 const topLeftNear     = centerNear + (camera.up() * Hnear / 2) - (camera.right() * Wnear / 2);
-		float3 const topRightNear    = centerNear + (camera.up() * Hnear / 2) + (camera.right() * Wnear / 2);
-		float3 const bottomLeftNear  = centerNear - (camera.up() * Hnear / 2) - (camera.right() * Wnear / 2);
-		float3 const bottomRightNear = centerNear - (camera.up() * Hnear / 2) + (camera.right() * Wnear / 2);
-
-		float3 const frustumCenter = (centerFar- centerNear) * 0.5f;
-
-		float4x4 const lightView = mtl::look_at<mtl::right_handed>(mtl::normalize(lightDirection), float3(0,0,0), float3(0,0,1));
-
-		std::array<float4, 8> const frustumToLightView {
-			lightView * float4(bottomRightNear, 1.0f),
-			lightView * float4(topRightNear,    1.0f),
-			lightView * float4(bottomLeftNear,  1.0f),
-			lightView * float4(topLeftNear,     1.0f),
-			lightView * float4(bottomRightFar,  1.0f),
-			lightView * float4(topRightFar,     1.0f),
-			lightView * float4(bottomLeftFar,   1.0f),
-			lightView * float4(topLeftFar,      1.0f)
-		};
-
-		// find max and min points to define a ortho matrix around
-		float3 min{  INFINITY,  INFINITY,  INFINITY };
-		float3 max{ -INFINITY, -INFINITY, -INFINITY };
-		for (std::size_t i = 0; i < frustumToLightView.size(); i++) {
-			if (frustumToLightView[i].x < min.x)
-				min.x = frustumToLightView[i].x;
-			if (frustumToLightView[i].y < min.y)
-				min.y = frustumToLightView[i].y;
-			if (frustumToLightView[i].z < min.z)
-				min.z = frustumToLightView[i].z;
-
-			if (frustumToLightView[i].x > max.x)
-				max.x = frustumToLightView[i].x;
-			if (frustumToLightView[i].y > max.y)
-				max.y = frustumToLightView[i].y;
-			if (frustumToLightView[i].z > max.z)
-				max.z = frustumToLightView[i].z;
-		}
-
-		float const l =  min.x;
-		float const r =  max.x;
-		float const b =  min.y;
-		float const t =  max.y;
-		// because max.z is positive and in NDC the positive z axis is
-		// towards us so need to set it as the near plane flipped same for min.z.
-		float const n = -max.z;
-		float const f = -min.z;
-
-		// finally, set our ortho projection
-		// and create the light space view-projection matrix
-		mtl::float4x4 const lightProjection = mtl::ortho<mtl::right_handed>(l,r,b,t,n,f);
-		mtl::float4x4 const lightSpaceMatrix = lightProjection * lightView;
-		
-		return lightSpaceMatrix;
-	}
-
-	static mtl::float4x4 directionalLightSpaceTransform2(Camera const& camera, float dist, mtl::float3 lightDirection) {
+	static mtl::float4x4 directionalLightSpaceTransform(Camera const& camera, float dist, float zDist, mtl::float3 lightDirection) {
 		mtl::float4x4 const lsProj = mtl::ortho<mtl::right_handed>(-dist, dist,
 																   -dist, dist,
-																   -dist, dist);
+																   -zDist, zDist);
 
 		mtl::float4x4 const lsView = mtl::look_at<mtl::right_handed>(camera.position(), camera.position() - lightDirection, { 0, 1, 0 });
 		return lsProj * lsView;
@@ -128,18 +128,13 @@ namespace bloom {
 		createShadowPipeline();
 		createShadowMapSampler();
 		
+		createEditorPassPipeline();
+		createWireframePassPipeline();
+		
 		createPostprocessQuad();
 		createPostprocessPipelines();
 		createPostprocessSampler();
 	}
-	
-//	TextureView Renderer::debugGetShadowMap(uint32_t id, int cascade) {
-//		auto itr = shadowMaps.find(id);
-//		if (itr == shadowMaps.end()) {
-//			return {};
-//		}
-//		return itr->second.cascades;
-//	}
 	
 	void Renderer::beginScene(Camera const& camera, DebugDrawOptions options) {
 		bloomExpect(!buildingScene, "Already called beginScene?");
@@ -148,15 +143,18 @@ namespace bloom {
 		
 		this->camera = camera;
 		objects.clear();
+		selectedObjects.clear();
 		pointLights.clear();
 		spotLights.clear();
 		dirLights.clear();
+		skyLights.clear();
 		
 		// shadows
 		numShadowCasters = 0;
 		numCascades.clear();
 		lightSpaceTransforms.clear();
-		visualizerIndex = 0;
+		
+		shadowCascadeVizCount = 0;
 	}
 	
 	void Renderer::endScene() {
@@ -164,27 +162,33 @@ namespace bloom {
 		buildingScene = false;
 	}
 	
-	void Renderer::submit(StaticRenderMesh* mesh, Material* material, EntityRenderData entityData, bool selected) {
+	void Renderer::submit(Reference<StaticRenderMesh> mesh, Reference<Material> material, EntityRenderData entityData) {
 		bloomExpect(buildingScene, "Forgot to call beginScene?");
 		entityData.transform = mtl::transpose(entityData.transform);
-		objects.push_back({ entityData, selected, material, mesh });
+		objects.push_back({ entityData, std::move(material), std::move(mesh) });
 	}
 	
-	void Renderer::submit(PointLight light, mtl::float3 position) {
+	void Renderer::submitSelected(Reference<StaticRenderMesh> mesh, Reference<Material> material, EntityRenderData entityData) {
 		bloomExpect(buildingScene, "Forgot to call beginScene?");
-		pointLights.push_back({ light, .position = position });
+		entityData.transform = mtl::transpose(entityData.transform);
+		selectedObjects.push_back({ entityData, std::move(material), std::move(mesh) });
 	}
 	
-	void Renderer::submit(SpotLight light, mtl::float3 position, mtl::float3 direction) {
+	void Renderer::submit(PointLight light) {
+		bloomExpect(buildingScene, "Forgot to call beginScene?");
+		pointLights.push_back(light);
+	}
+	
+	void Renderer::submit(SpotLight light) {
 		bloomExpect(buildingScene, "Forgot to call beginScene?");
 		light.innerCutoff = std::cos(light.innerCutoff);
 		light.outerCutoff = std::cos(light.outerCutoff);
-		spotLights.push_back({ light, .position = position, .direction = direction });
+		spotLights.push_back(light);
 	}
 	
-	void Renderer::submit(uint32_t id, DirectionalLight light, mtl::float3 direction) {
+	void Renderer::submit(DirectionalLight light) {
 		bloomExpect(buildingScene, "Forgot to call beginScene?");
-		dirLights.push_back({ light, .direction = direction });
+		dirLights.push_back(light);
 		
 		if (!light.castsShadows) {
 			return;
@@ -195,19 +199,39 @@ namespace bloom {
 		
 		float distance = light.shadowDistance;
 		for (int i = 0; i < light.numCascades; ++i) {
-			auto const lightSpaceTransform = options.alternateLightFrustum ?
-				directionalLightSpaceTransform(camera,
-											   distance,
-											   direction) :
-				directionalLightSpaceTransform2(camera,
-												distance,
-												direction);
+			auto const lightSpaceTransform = directionalLightSpaceTransform(camera,
+																			distance,
+																			light.shadowDistanceZ,
+																			light.direction);
 			lightSpaceTransforms.push_back(mtl::transpose(lightSpaceTransform));
 			distance *= light.cascadeDistributionExponent;
 		}
-		if (options.visualizeShadowCascades && options.lightEntityID == id) {
-			visualizerIndex = numShadowCasters - 1;
+	}
+	
+	void Renderer::submitShadowCascadeViz(DirectionalLight light) {
+		bloomExpect(buildingScene, "Forgot to call beginScene?");
+		
+		if (!light.castsShadows) {
+			return;
 		}
+		
+		shadowCascadeVizCount = light.numCascades;
+		
+		float distance = light.shadowDistance;
+		
+		for (int i = 0; i < light.numCascades; ++i) {
+			auto const lightSpaceTransform = directionalLightSpaceTransform(camera,
+																			distance,
+																			light.shadowDistanceZ,
+																			light.direction);
+			shadowCascadeVizTransforms[i] = mtl::transpose(lightSpaceTransform);
+			distance *= light.cascadeDistributionExponent;
+		}
+	}
+	
+	void Renderer::submit(SkyLight light) {
+		bloomExpect(buildingScene, "Forgot to call beginScene?");
+		skyLights.push_back(light);
 	}
 	
 	static auto const objectOrder = [](auto&& a, auto&& b) {
@@ -217,7 +241,7 @@ namespace bloom {
 		return a.material < b.material;
 	};
 	
-	void Renderer::debugDraw(EditorFrameBuffer* frameBuffer) {
+	void Renderer::draw(FrameBuffer* frameBuffer) {
 		std::sort(objects.begin(), objects.end(), objectOrder);
 		uploadEntityData();
 		SceneRenderData sceneRenderData;
@@ -251,35 +275,51 @@ namespace bloom {
 		sceneRenderData.numDirLights = dirLights.size();
 		std::copy(dirLights.begin(), dirLights.end(), sceneRenderData.dirLights);
 		
+		// Skylights
+		if (skyLights.size() > 32) {
+			bloomLog(warning, "Can't render more than 32 Sky Lights");
+			skyLights.resize(32);
+		}
+		sceneRenderData.numSkyLights = skyLights.size();
+		std::copy(skyLights.begin(), skyLights.end(), sceneRenderData.skyLights);
+		
 		renderContext->fillBuffer(sceneDataBuffer, &sceneRenderData, sizeof sceneRenderData);
 		
-		// Debug Draw Data
-		DebugDrawData debugDrawData;
-		debugDrawData.selectionLineWidth = 3;
-		debugDrawData.visualizeShadowCascades = options.visualizeShadowCascades;
-		debugDrawData.shadowCasterIndex = visualizerIndex;
 		
-		debugDrawData.shadowMapOffset = std::accumulate(numCascades.begin(),
-														numCascades.begin() + visualizerIndex,
-														0);
-		
-		renderContext->fillBuffer(debugDrawDataBuffer, &debugDrawData, sizeof debugDrawData);
 		
 		auto shadowHandle = shadowMapPass();
 		shadowHandle.wait();
 		
-		auto mainHandle = mainPassEditor(frameBuffer, options.mode);
-		auto outlineHandle = outlinePass(frameBuffer);
+		auto mainHandle = options.mode == DebugDrawOptions::Mode::wireframe ?
+			wireframePass(frameBuffer) : mainPass(frameBuffer);
 		
-		mainHandle.wait();
-		outlineHandle.wait();
+//		mainHandle.wait();
+//		editorHandle.wait();
+//		outlineHandle.wait();
 		
 		postprocess(frameBuffer);
-		editorPP(frameBuffer, options.visualizeShadowCascades, options.lightEntityID);
 	}
 	
-	void Renderer::postprocess(EditorFrameBuffer* frameBuffer) {
-		renderContext->setRenderTargetColor(0, frameBuffer->finalImage());
+	
+	void Renderer::drawDebugInfo(EditorFrameBuffer* frameBuffer) {
+		// Debug Draw Data
+		DebugDrawData debugDrawData;
+		debugDrawData.selectionLineWidth = 3;
+		debugDrawData.visualizeShadowCascades = options.visualizeShadowCascades;
+		debugDrawData.shadowCascadeVizCount = shadowCascadeVizCount;
+		std::copy(shadowCascadeVizTransforms.begin(),
+				  shadowCascadeVizTransforms.end(),
+				  debugDrawData.shadowCascadeVizTransforms);
+		
+		renderContext->fillBuffer(debugDrawDataBuffer, &debugDrawData, sizeof debugDrawData);
+		
+		auto editorHandle = editorPass(frameBuffer, options.mode);
+		auto outlineHandle = selectionPass(frameBuffer);
+		editorPP(frameBuffer, options.visualizeShadowCascades, options.lightVizEntityID);
+	}
+	
+	void Renderer::postprocess(FrameBuffer* frameBuffer) {
+		renderContext->setRenderTargetColor(0, frameBuffer->finalImage);
 		
 		renderContext->beginRenderPass();
 		
@@ -287,7 +327,7 @@ namespace bloom {
 		renderContext->setVertexBuffer(quadVB, 1);
 		
 		renderContext->setFragmentBuffer(sceneDataBuffer, 0);
-		renderContext->setFragmentTexture(frameBuffer->color(), 0);
+		renderContext->setFragmentTexture(frameBuffer->color, 0);
 		renderContext->setFragmentSampler(postprocessSampler, 0);
 		
 		renderContext->drawIndexed(quadIB, bloom::IndexType::uint32);
@@ -295,60 +335,35 @@ namespace bloom {
 		renderContext->commit().wait();
 	}
 	
-	RenderPassHandle Renderer::mainPassEditor(EditorFrameBuffer* frameBuffer, DebugDrawOptions::Mode mode) {
-		renderContext->setRenderTargetColor(0, frameBuffer->color());
-		switch (mode) {
-			case DebugDrawOptions::Mode::lit:
-				renderContext->setClearColor(0, mtl::float4{ 0, 0, 0, 1 });
-				break;
-			
-			case DebugDrawOptions::Mode::wireframe:
-				renderContext->setClearColor(0, mtl::float4{ 0, 0, 0, 1 });
-				break;
-				
-			default:
-				break;
-		}
-		
-		renderContext->setRenderTargetColor(1, frameBuffer->entityID());
-		renderContext->setClearColor(1, 0xFFffFFff /* null entity */);
-		
-		renderContext->setRenderTargetColor(2, frameBuffer->selected());
-		renderContext->setClearColor(2, 0);
-		
-		renderContext->setRenderTargetColor(3, frameBuffer->shadowCascade());
-		renderContext->setClearColor(3, 0);
-		
-		renderContext->setRenderTargetDepth(frameBuffer->depth());
-		
-		Material* currentMaterial = nullptr;
+	RenderPassHandle Renderer::mainPass(FrameBuffer* frameBuffer) {
+		renderContext->setRenderTargetColor(0, frameBuffer->color);
+		renderContext->setClearColor(0, { 0,0,0,0 });
+		renderContext->setRenderTargetDepth(frameBuffer->depth);
 		
 		renderContext->beginRenderPass();
 		
+		// Vertex buffers
 		renderContext->setVertexBuffer(sceneDataBuffer, 0);
-		renderContext->setVertexBuffer(shadowDataBuffer, 3);
 		
+		// Fragment buffers
 		renderContext->setFragmentBuffer(sceneDataBuffer, 0);
-		renderContext->setFragmentBuffer(debugDrawDataBuffer, 1);
-		renderContext->setFragmentBuffer(shadowDataBuffer, 2);
-		renderContext->setFragmentBuffer(shadowDataBuffer, 3, sizeof(ShadowRenderData) /* offset */);
+		renderContext->setFragmentBuffer(shadowDataBuffer, 1);
+		renderContext->setFragmentBuffer(shadowDataBuffer, 2, sizeof(ShadowRenderData) /* offset */);
 		renderContext->setFragmentTexture(shadowMapArray, 0);
 		renderContext->setFragmentSampler(shadowMapSampler, 0);
 		
-		if (mode == DebugDrawOptions::Mode::wireframe) {
-			renderContext->setTriangleFillMode(TriangleFillMode::lines);
-		}
-		
+		Material* currentMaterial = nullptr;
 		for (std::size_t index = 0;
-			 auto object: objects)
+			 auto&& object: objects)
 		{
 			utl_defer { ++index; };
-			if (object.material != currentMaterial) {
-				currentMaterial = object.material;
-				renderContext->setPipelineState(currentMaterial->mainPassEditor);
+			if (object.material.get() != currentMaterial) {
+				currentMaterial = object.material.get();
+				renderContext->setPipelineState(currentMaterial->mainPass);
 				renderContext->setTriangleCullMode(currentMaterial->cullMode);
 				renderContext->setDepthStencilState(depthStencil);
 			}
+			
 			renderContext->setVertexBuffer(object.mesh->vertexBuffer, 1);
 			renderContext->setVertexBuffer(entityDataBuffer, 2, index * sizeof(EntityRenderData));
 			renderContext->drawIndexed(object.mesh->indexBuffer, bloom::IndexType::uint32);
@@ -357,17 +372,87 @@ namespace bloom {
 		return renderContext->commit();
 	}
 	
-	RenderPassHandle Renderer::shadowMapPass() {
-		ShadowRenderData bufferHeader;
-		bufferHeader.numShadowCasters = numShadowCasters;
-		bloomAssert(numShadowCasters == numCascades.size());
-		std::copy(numCascades.begin(), numCascades.end(), std::begin(bufferHeader.numCascades));
-		uploadShadowData(bufferHeader);
+	RenderPassHandle Renderer::wireframePass(FrameBuffer* frameBuffer) {
+		renderContext->setRenderTargetColor(0, frameBuffer->color);
+		renderContext->setClearColor(0, { 0,0,0,0 });
 		
+		renderContext->beginRenderPass();
+		
+		// Vertex buffers
+		renderContext->setVertexBuffer(sceneDataBuffer, 0);
+		
+		renderContext->setTriangleFillMode(TriangleFillMode::lines);
+		
+		Material* currentMaterial = nullptr;
+		for (std::size_t index = 0;
+			 auto&& object: objects)
+		{
+			utl_defer { ++index; };
+			if (object.material.get() != currentMaterial) {
+				currentMaterial = object.material.get();
+				renderContext->setPipelineState(wireframePassPipeline);
+				renderContext->setTriangleCullMode(TriangleCullMode::none);
+			}
+			
+			renderContext->setVertexBuffer(object.mesh->vertexBuffer, 1);
+			renderContext->setVertexBuffer(entityDataBuffer, 2, index * sizeof(EntityRenderData));
+			renderContext->drawIndexed(object.mesh->indexBuffer, bloom::IndexType::uint32);
+		}
+		
+		return renderContext->commit();
+	}
+	
+	RenderPassHandle Renderer::editorPass(EditorFrameBuffer* frameBuffer, DebugDrawOptions::Mode mode) {
+		renderContext->setRenderTargetColor(0, frameBuffer->entityID);
+		renderContext->setClearColor(0, 0xFFffFFff /* null entity */);
+
+		renderContext->setRenderTargetColor(1, frameBuffer->shadowCascade);
+		renderContext->setClearColor(1, 0);
+
+		renderContext->setRenderTargetDepth(frameBuffer->editorDepth);
+
+		Material* currentMaterial = nullptr;
+
+		renderContext->beginRenderPass();
+
+		renderContext->setVertexBuffer(sceneDataBuffer, 0);
+
+		renderContext->setFragmentBuffer(sceneDataBuffer, 0);
+		renderContext->setFragmentBuffer(debugDrawDataBuffer, 1);
+		renderContext->setFragmentBuffer(shadowDataBuffer, 2);
+		renderContext->setFragmentBuffer(shadowDataBuffer, 3, sizeof(ShadowRenderData) /* offset */);
+		renderContext->setFragmentTexture(shadowMapArray, 0);
+		renderContext->setFragmentSampler(shadowMapSampler, 0);
+
+		for (std::size_t index = 0;
+			 auto object: objects)
+		{
+			utl_defer { ++index; };
+			if (object.material.get() != currentMaterial) {
+				currentMaterial = object.material.get();
+				renderContext->setPipelineState(editorPassPipeline);
+				renderContext->setTriangleCullMode(currentMaterial->cullMode);
+				renderContext->setDepthStencilState(depthStencil);
+			}
+			renderContext->setVertexBuffer(object.mesh->vertexBuffer, 1);
+			renderContext->setVertexBuffer(entityDataBuffer, 2, index * sizeof(EntityRenderData));
+			renderContext->drawIndexed(object.mesh->indexBuffer, bloom::IndexType::uint32);
+		}
+
+		return renderContext->commit();
+	}
+	
+	RenderPassHandle Renderer::shadowMapPass() {
+		uploadShadowData();
+		
+		if (numShadowCasters == 0) {
+			return {};
+		}
+	
 		std::size_t const numShadowMaps = std::accumulate(numCascades.begin(),
 														  numCascades.end(), 0);
 		
-		if (numShadowMaps > shadowMapArrayLength) {
+		if (numShadowMaps > shadowMapArrayLength || needsNewShadowMaps) {
 			shadowMapArray = createShadowMaps(numShadowMaps);
 		}
 		
@@ -382,7 +467,7 @@ namespace bloom {
 		renderContext->setFragmentBuffer(sceneDataBuffer, 0);
 		
 		renderContext->setPipelineState(shadowPipeline);
-		renderContext->setTriangleCullMode(TriangleCullMode::none); /// TODO: temporary
+		renderContext->setTriangleCullMode(shadowCullMode); /// TODO: temporary
 		renderContext->setDepthStencilState(depthStencil);
 		
 		for (std::size_t objectIndex = 0;
@@ -400,8 +485,8 @@ namespace bloom {
 		return renderContext->commit();
 	}
 	
-	RenderPassHandle Renderer::outlinePass(EditorFrameBuffer* frameBuffer) {
-		renderContext->setRenderTargetColor(0, frameBuffer->selected());
+	RenderPassHandle Renderer::selectionPass(EditorFrameBuffer* frameBuffer) {
+		renderContext->setRenderTargetColor(0, frameBuffer->selected);
 		renderContext->setClearColor(0, 0.0f);
 		
 		Material* currentMaterial = nullptr;
@@ -411,18 +496,15 @@ namespace bloom {
 		renderContext->setVertexBuffer(sceneDataBuffer, 0);
 	
 		for (std::size_t index = 0;
-			 auto object: objects)
+			 auto object: selectedObjects)
 		{
 			utl_defer { ++index; };
-			if (!object.selected) {
-				continue;
-			}
-			if (object.material != currentMaterial) {
-				currentMaterial = object.material;
+			if (object.material.get() != currentMaterial) {
+				currentMaterial = object.material.get();
 				renderContext->setPipelineState(currentMaterial->outlinePass);
 			}
 			renderContext->setVertexBuffer(object.mesh->vertexBuffer, 1);
-			renderContext->setVertexBuffer(entityDataBuffer, 2, index * sizeof(EntityRenderData));
+			renderContext->setVertexBuffer(selectedEntityDataBuffer, 2, index * sizeof(EntityRenderData));
 			renderContext->drawIndexed(object.mesh->indexBuffer, bloom::IndexType::uint32);
 		}
 		
@@ -430,7 +512,7 @@ namespace bloom {
 	}
 	
 	RenderPassHandle Renderer::editorPP(EditorFrameBuffer* frameBuffer, bool vizShadowCascades, uint32_t lightEntity) {
-		renderContext->setRenderTargetColor(0, frameBuffer->_finalImageEditorBuffer);
+		renderContext->setRenderTargetColor(0, frameBuffer->finalImageEditor);
 		
 		
 		renderContext->beginRenderPass();
@@ -440,9 +522,9 @@ namespace bloom {
 		
 		renderContext->setFragmentBuffer(sceneDataBuffer, 0);
 		renderContext->setFragmentBuffer(debugDrawDataBuffer, 1);
-		renderContext->setFragmentTexture(frameBuffer->finalImage(), 0);
-		renderContext->setFragmentTexture(frameBuffer->_selectedBuffer, 1);
-		renderContext->setFragmentTexture(frameBuffer->shadowCascade(), 2);
+		renderContext->setFragmentTexture(frameBuffer->finalImage, 0);
+		renderContext->setFragmentTexture(frameBuffer->selected, 1);
+		renderContext->setFragmentTexture(frameBuffer->shadowCascade, 2);
 		renderContext->setFragmentSampler(postprocessSampler, 0);
 		
 		renderContext->drawIndexed(quadIB, bloom::IndexType::uint32);
@@ -450,12 +532,20 @@ namespace bloom {
 		return renderContext->commit();
 	}
 	
-	void Renderer::uploadEntityData() {
+	static void uploadEntityDataEx(auto&& objects, auto&& entityDataBuffer, auto renderContext) {
 		std::size_t const size = objects.size() * sizeof(EntityRenderData);
+		if (size == 0) {
+			return;
+		}
 		if (entityDataBuffer.size() < size) {
 			entityDataBuffer = renderContext->createUniformBuffer(nullptr, size);
 		}
-		return renderContext->fillBuffer(entityDataBuffer, objects.data().entity, size);
+		renderContext->fillBuffer(entityDataBuffer, objects.data().entity, size);
+	}
+	
+	void Renderer::uploadEntityData() {
+		uploadEntityDataEx(objects, entityDataBuffer, renderContext);
+		uploadEntityDataEx(selectedObjects, selectedEntityDataBuffer, renderContext);
 	}
 	
 	void Renderer::uploadSceneData() {
@@ -464,6 +554,11 @@ namespace bloom {
 	
 	void Renderer::uploadDebugDrawData() {
 		
+	}
+	
+	void Renderer::setShadowMapResolution(mtl::uint2 r) {
+		shadowMapResolution = r;
+		needsNewShadowMaps = true;
 	}
 	
 	void Renderer::createShadowPipeline() {
@@ -478,24 +573,23 @@ namespace bloom {
 		psDesc->setSampleCount(1);
 		
 		psDesc->setVertexFunction(lib->newFunction(bloom::makeNSString("shadowVertexShader")));
-		psDesc->setFragmentFunction(lib->newFunction(bloom::makeNSString("shadowFragmentShader")));
+//		psDesc->setFragmentFunction(lib->newFunction(bloom::makeNSString("shadowFragmentShader"))); // no fragment function needed
 
-		NS::Error* errors;
+		NS::Error* errors = nullptr;
 		auto* ps = device->newRenderPipelineState(psDesc.get(), &errors);
 		assert(ps);
+		assert(!errors);
 		
 		shadowPipeline = bloom::RenderPipelineHandle(ps, MTLDeleter);
-		
-		errors->release();
 	}
 	
 	void Renderer::createShadowMapSampler() {
 		auto* device = dynamic_cast<bloom::MetalRenderContext*>(renderContext)->device();
 		
 		ARCPointer desc = MTL::SamplerDescriptor::alloc()->init();
-		desc->setMinFilter(MTL::SamplerMinMagFilterLinear);
-		desc->setMagFilter(MTL::SamplerMinMagFilterLinear);
-		desc->setMipFilter(MTL::SamplerMipFilterLinear);
+		desc->setMinFilter(MTL::SamplerMinMagFilterNearest);
+		desc->setMagFilter(MTL::SamplerMinMagFilterNearest);
+		desc->setMipFilter(MTL::SamplerMipFilterNearest);
 		desc->setMaxAnisotropy(1);
 		desc->setSAddressMode(MTL::SamplerAddressModeClampToEdge);
 		desc->setTAddressMode(MTL::SamplerAddressModeClampToEdge);
@@ -506,9 +600,13 @@ namespace bloom {
 		shadowMapSampler = SamplerHandle(sampler, MTLDeleter);
 	}
 	
-	
-	void Renderer::uploadShadowData(ShadowRenderData const& header) {
-		std::size_t const size = sizeof(ShadowRenderData) + lightSpaceTransforms.size() * sizeof(mtl::float4x4);
+	void Renderer::uploadShadowData() {
+		ShadowRenderData header;
+		header.numShadowCasters = numShadowCasters;
+		bloomAssert(numShadowCasters == numCascades.size());
+		std::copy(numCascades.begin(), numCascades.end(), std::begin(header.numCascades));
+		
+		std::size_t const size = sizeof(ShadowRenderData) + std::max(lightSpaceTransforms.size(), std::size_t{ 1 }) * sizeof(mtl::float4x4);
 		
 		if (shadowDataBuffer.size() < size) {
 			shadowDataBuffer = renderContext->createUniformBuffer(nullptr, size);
@@ -523,11 +621,51 @@ namespace bloom {
 	}
 	
 	TextureHandle Renderer::createShadowMaps(int totalShadowMaps) {
+		shadowMapArrayLength = totalShadowMaps;
+		needsNewShadowMaps = false;
 		return renderContext->createArrayTexture(shadowMapResolution,
 												 totalShadowMaps,
 												 PixelFormat::Depth32Float,
 												 TextureUsage::renderTarget | TextureUsage::shaderRead,
 												 StorageMode::Private);
+	}
+	
+	void Renderer::createEditorPassPipeline() {
+		auto* device = dynamic_cast<bloom::MetalRenderContext*>(renderContext)->device();
+		auto* lib = device->newDefaultLibrary();
+		
+		auto* psDesc = MTL::RenderPipelineDescriptor::alloc()->init();
+		psDesc->colorAttachments()->object(0)->setPixelFormat(MTL::PixelFormatR32Uint);
+		psDesc->colorAttachments()->object(1)->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
+		psDesc->setVertexFunction(lib->newFunction(bloom::makeNSString("editorPassVS")));
+		psDesc->setFragmentFunction(lib->newFunction(bloom::makeNSString("editorPassFS")));
+		psDesc->setDepthAttachmentPixelFormat(MTL::PixelFormatDepth32Float);
+
+		NS::Error* errors;
+		auto* ps = device->newRenderPipelineState(psDesc, &errors);
+		assert(ps);
+		assert(!errors);
+		editorPassPipeline = bloom::RenderPipelineHandle(ps, MTLDeleter);
+		
+		psDesc->release();
+	}
+	
+	void Renderer::createWireframePassPipeline() {
+		auto* device = dynamic_cast<bloom::MetalRenderContext*>(renderContext)->device();
+		auto* lib = device->newDefaultLibrary();
+		
+		auto* psDesc = MTL::RenderPipelineDescriptor::alloc()->init();
+		psDesc->colorAttachments()->object(0)->setPixelFormat(MTL::PixelFormatRGBA32Float);
+		psDesc->setVertexFunction(lib->newFunction(bloom::makeNSString("editorPassVS")));
+		psDesc->setFragmentFunction(lib->newFunction(bloom::makeNSString("wireframePassFS")));
+
+		NS::Error* errors;
+		auto* ps = device->newRenderPipelineState(psDesc, &errors);
+		assert(ps);
+		assert(!errors);
+		wireframePassPipeline = bloom::RenderPipelineHandle(ps, MTLDeleter);
+		
+		psDesc->release();
 	}
 	
 	void Renderer::createPostprocessQuad() {
@@ -555,10 +693,8 @@ namespace bloom {
 			NS::Error* errors;
 			auto* ps = device->newRenderPipelineState(psDesc.get(), &errors);
 			assert(ps);
-			
+			assert(!errors);
 			postprocessPipeline = bloom::RenderPipelineHandle(ps, MTLDeleter);
-			
-			errors->release();
 		}
 		
 		/* editorPPPipeline */ {
@@ -570,10 +706,8 @@ namespace bloom {
 			NS::Error* errors;
 			auto* ps = device->newRenderPipelineState(psDesc.get(), &errors);
 			assert(ps);
-			
+			assert(!errors);
 			editorPPPipeline = bloom::RenderPipelineHandle(ps, MTLDeleter);
-			
-			errors->release();
 		}
 	}
 	

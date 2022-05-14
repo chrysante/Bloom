@@ -12,6 +12,10 @@ namespace poppy {
 		
 		void beginProperty(std::string_view label);
 		
+		static bool dragFloat(std::string_view label, float* data, float speed = 1, float min = 0, float max = 0, char const* format = "%.3f");
+		static bool sliderFloat(std::string_view label, float* data, float min, float max);
+		static bool sliderInt(std::string_view label, int* data, int min, int max);
+		
 	private:
 		
 	};

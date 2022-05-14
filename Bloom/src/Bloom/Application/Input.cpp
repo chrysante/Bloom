@@ -5,7 +5,18 @@
 namespace bloom {
 	
 	void Input::_setFromEvent(Event const& event) {
-		try {
+		auto const modFlags = event.modifierFlags();
+		
+		
+		_setKey(Key::capsLock, test(modFlags & EventModifierFlags::capsLock));
+		_setKey(Key::leftShift, test(modFlags & EventModifierFlags::shift));
+		_setKey(Key::leftCtrl, test(modFlags & EventModifierFlags::control));
+		_setKey(Key::leftAlt, test(modFlags & EventModifierFlags::option));
+		_setKey(Key::leftSuper, test(modFlags & EventModifierFlags::super));
+//		_setKey(Key::numLock, test(modFlags & EventModifierFlags::numericPad));
+//		_setKey(Key::, test(modFlags & EventModifierFlags::help));
+//		_setKey(Key::, test(modFlags & EventModifierFlags::function));
+		
 		switch (event.type()) {
 			case EventType::leftMouseDown:
 				_setMouseButton(MouseButton::left, 1);
@@ -36,7 +47,6 @@ namespace bloom {
 				_mouseOffset = std::get<MouseDragEvent>(event._union).offset;
 				break;
 				
-				
 			case EventType::scrollWheel:
 				_scrollOffset = std::get<ScrollEvent>(event._union).offset;
 				break;
@@ -53,12 +63,6 @@ namespace bloom {
 				
 			default:
 				break;
-		}
-		}
-		catch (std::bad_variant_access const& e) {
-			bloomLog("{}", e.what());
-			bloomDebugbreak();
-			std::terminate();
 		}
 	}
 	

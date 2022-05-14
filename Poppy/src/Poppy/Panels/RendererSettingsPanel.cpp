@@ -17,11 +17,9 @@ namespace poppy {
 	}
 	
 	void RendererSettingsPanel::shadowProperties() {
-		
 		header("Shadow Properties");
 		if (beginSection()) {
 			beginProperty("Resolution");
-			
 			mtl::uint2 resolution = renderer->getShadowMapResolution();
 			
 			if (ImGui::BeginCombo("##-shadow-resolution", utl::format("{}", resolution.x).data())) {
@@ -38,8 +36,16 @@ namespace poppy {
 				ImGui::EndCombo();
 			}
 			
+			beginProperty("Cull Front Faces");
+			auto const cullMode = renderer->getShadowCullMode();
+			bool frontFaces = cullMode == bloom::TriangleCullMode::front;
+			if (ImGui::Checkbox("##-shadow-cull-mode", &frontFaces)) {
+				renderer->setShadowCullMode(frontFaces ? bloom::TriangleCullMode::front : bloom::TriangleCullMode::back);
+			}
+			
 			endSection();
 		}
+		
 	}
 	
 }

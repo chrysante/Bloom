@@ -13,17 +13,27 @@
 
 namespace bloom {
 	
+//	template <typename E>
+//	void forEach(std::invocable<E> auto&&);
+	
 	enum class EventModifierFlags: unsigned {
-		none       = 0,
-		capsLock   = 1 << 0, // Set if Caps Lock key is pressed.
-		shift      = 1 << 1, // Set if Shift key is pressed.
-		control    = 1 << 2, // Set if Control key is pressed.
-		option     = 1 << 3, // Set if Option or Alternate key is pressed.
-		super      = 1 << 4, // Set if Command key is pressed.
-		numericPad = 1 << 5, // Set if any key in the numeric keypad is pressed.
-		help       = 1 << 6, // Set if the Help key is pressed.
-		function   = 1 << 7  // Set if any function key is pressed.
+		none       = 0u,
+		capsLock   = 1u << 0, // Set if Caps Lock key is pressed.
+		shift      = 1u << 1, // Set if Shift key is pressed.
+		control    = 1u << 2, // Set if Control key is pressed.
+		option     = 1u << 3, // Set if Option or Alternate key is pressed.
+		super      = 1u << 4, // Set if Command key is pressed.
+		numericPad = 1u << 5, // Set if any key in the numeric keypad is pressed.
+		help       = 1u << 6, // Set if the Help key is pressed.
+		function   = 1u << 7  // Set if any function key is pressed.
 	};
+	
+//	template <>
+//	void forEach<EventModifierFlags>(std::invocable<EventModifierFlags> auto&& f) {
+//		for (int i = 0; i <= 7; ++i) {
+//			f((EventModifierFlags)(1u << i));
+//		}
+//	}
 	
 	UTL_ENUM_OPERATORS(EventModifierFlags);
 	
@@ -92,7 +102,8 @@ namespace bloom {
 		
 		keyDown           = 1 << 12,
 		keyUp             = 1 << 13,
-		key               = keyDown | keyUp
+		keyFlagsChanged   = 1 << 14,
+		key               = keyDown | keyUp | keyFlagsChanged
 	};
 	
 	UTL_ENUM_OPERATORS(EventType);
@@ -139,18 +150,26 @@ namespace bloom {
 		template <typename E> requires (internal::IsEvent<E>::value)
 		Event(EventType type, E e): _type(type), _union(std::move(e)) {}
 		
+		auto visit(auto&& f) const {
+			return std::visit(f, _union);
+		}
+		
+		template <typename E> requires (internal::IsEvent<E>::value)
+		E& get() { return std::get<E>(_union); }
+		template <typename E> requires (internal::IsEvent<E>::value)
+		E const& get() const { return std::get<E>(_union); }
+		
 		template <EventType Type, typename E = typename internal::ToEvent<Type>::type>
-		bool dispatch(std::invocable<E const> auto&& f) const {
-			if (Type != _type) {
-				return false;
+		void dispatch(std::invocable<E const> auto&& f) {
+			if (Type != _type || handled()) {
+				return;
 			}
 			try {
 				if constexpr (std::predicate<decltype(f), E const>) {
-					return std::invoke(f, std::get<E>(_union));
+					_handled = std::invoke(f, std::get<E>(_union));
 				}
 				else {
 					std::invoke(f, std::get<E>(_union));
-					return true;
 				}
 			}
 			catch (std::bad_variant_access const&) {
@@ -160,11 +179,13 @@ namespace bloom {
 		}
 		
 		EventType type() const { return _type; }
+		bool handled() const { return _handled; }
 		
-		template <typename E> requires (internal::IsEvent<E>::value)
-		E& get() { return std::get<E>(_union); }
-		template <typename E> requires (internal::IsEvent<E>::value)
-		E const& get() const { return std::get<E>(_union); }
+		EventModifierFlags modifierFlags() const {
+			return visit([](auto& e) {
+				return e.modifierFlags;
+			});
+		}
 		
 	private:
 		friend class Application;
@@ -181,6 +202,7 @@ namespace bloom {
 		>;
 		EventType _type;
 		EventUnion _union;
+		bool _handled = false;
 	};
 	
 }

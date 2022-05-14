@@ -18,6 +18,9 @@
 
 #include <utl/utility.hpp>
 
+#include "Poppy/IconConfig.hpp"
+#include "Poppy/Debug.hpp"
+
 namespace poppy {
 	
 	std::string_view toString(FontWeight w) {
@@ -76,10 +79,22 @@ namespace poppy {
 		// load fonts
 		for (auto w: utl::enumerate<FontWeight>()) {
 			for (auto s: utl::enumerate<FontStyle>()) {
-				fontMap.insert({ { w, s }, loadFont(w, s) });
+				fontMap.insert({ { w, s, _defaultFontSize }, loadFont(w, s, _defaultFontSize) });
 			}
 		}
 		this->_defaultFont = getFont(FontWeight::regular, FontStyle::roman);
+		
+		// load icon font
+		if ((0)) {
+			poppyLog(trace, "Loading Icon Font");
+			IconConfig::initFromFile("Icons/IconConfig.json");
+			auto glyphs = IconConfig::glyphs();
+			glyphs.push_back(0); // null terminator
+			for (int size: { 128, 64, 48, 32, 24, 16 }) {
+				IconConfig::addFont(size, loadFont("Icons/Icon.ttf", size, glyphs.data()));
+			}
+			poppyLog(trace, "Icon Font loaded");
+		}
 		
 		ImGui_ImplOSX_Init(viewController.view);
 		
@@ -88,10 +103,17 @@ namespace poppy {
 			if (ImGui::GetIO().WantCaptureKeyboard) {
 				return ImGui_ImplOSX_HandleEvent(event, nil);
 			}
-			
-			return presentKeyEventHandler ? presentKeyEventHandler(event) : false;			
+			return false;
 		};
-		viewController.keyEventResponder.keyEventHandler = keyEventHandler;
+		if (viewController.keyEventResponder.keyEventHandler) {
+			auto newHandler = [=, present = viewController.keyEventResponder.keyEventHandler](NSEvent* _Nonnull event) {
+				return keyEventHandler(event) || present(event);
+			};
+			viewController.keyEventResponder.keyEventHandler = newHandler;
+		}
+		else {
+			viewController.keyEventResponder.keyEventHandler = keyEventHandler;
+		}
 		
 		auto insertTextHandler = [](id _Nonnull aString, NSRange) {
 			ImGuiIO& io = ImGui::GetIO();
@@ -187,13 +209,21 @@ namespace poppy {
 	}
 	
 	void* ImGuiContext::getFont(FontWeight weight, FontStyle style) {
-		auto const key = std::pair{ weight, style };
+		return getFont(weight, style, _defaultFontSize);
+	}
+	
+	void* ImGuiContext::getFont(FontWeight weight, FontStyle style, int fontSize) {
+		auto const key = std::tuple{ weight, style, fontSize };
 		auto itr = fontMap.find(key);
 		assert(itr != fontMap.end());
 		return itr->second;
 	}
 	
-	void* ImGuiContext::loadFont(FontWeight weight, FontStyle style) {
+	void* ImGuiContext::loadFont(FontWeight weight, FontStyle style, int fontSize) {
+		return loadFont(utl::format("Font/SFPro-{}-{}.ttf", toString(weight), toString(style)), fontSize);
+	}
+
+	void* ImGuiContext::loadFont(std::filesystem::path const& path, int fontSize, void const* glyphs) {
 		// Load Fonts
 		// - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
 		// - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
@@ -210,21 +240,11 @@ namespace poppy {
 		
 		ImGuiIO& io = ImGui::GetIO();
 		
-		float const fontSize = 16;
 		float const dpiScale = 2;
 		
-//		char16_t const glyphs[] =
-//			u" !\"#$%&'()*+,-./0123456789:;<=>?"
-//			u"@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
-//			u"`abcdefghijklmnopqrstuvwxyz{|}~"
-//			u"äöüÄÖÜ" // and so on
-//			u"ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘꞯʀꜱᴛᴜᴠᴡʏᴢ"
-		;
-		
-		auto fontPath = utl::format("Font/SFPro-{}-{}.ttf", toString(weight), toString(style));
-		auto result = io.Fonts->AddFontFromFileTTF(bloom::pathForResource(fontPath).string().data(),
-												   fontSize * dpiScale
-//												   , nullptr, (ImWchar const*)glyphs
+		auto result = io.Fonts->AddFontFromFileTTF(bloom::pathForResource(path).string().data(),
+												   fontSize * dpiScale,
+												   nullptr, (ImWchar const*)glyphs
 												   );
 		bloomAssert(result);
 		

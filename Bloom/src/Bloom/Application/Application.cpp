@@ -6,6 +6,8 @@
 #include "Bloom/Graphics/RenderContext.hpp"
 #include "Bloom/Graphics/Renderer.hpp"
 
+#include "Bloom/Scene/SceneSystem.hpp"
+
 #include "Bloom/Assets/AssetManager.hpp"
 
 BLOOM_API BLOOM_WEAK bloom::Application* createBloomApplication() {
@@ -24,6 +26,9 @@ namespace bloom {
 		_renderer->init(_renderContext.get());
 		_assetManager = createAssetManager();
 		_assetManager->setRenderContext(_renderContext.get());
+		
+		_sceneSystem = utl::make_unique_ref<SceneSystem>();
+		
 		// call to base
 		this->init();
 	}
@@ -53,9 +58,7 @@ namespace bloom {
 		_input._clearOffsets();
 	}
 	
-	void Application::handleEvent(Event const& event,
-								  void* nativeEvent)
-	{
+	void Application::handleEvent(Event const& event) {
 		_eventBuffer.push_back(event);
 	}
 	

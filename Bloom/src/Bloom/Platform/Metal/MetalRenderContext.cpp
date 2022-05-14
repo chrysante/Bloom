@@ -86,6 +86,9 @@ namespace bloom {
 														 TextureUsage usage,
 														 StorageMode storageMode)
 	{
+		if (elements == 0) {
+			return {};
+		}
 		auto const type =
 			size.y > 1 ?
 			MTL::TextureType2DArray :
@@ -125,6 +128,9 @@ namespace bloom {
 	}
 	
 	void MetalRenderContext::fillBuffer(BufferView view, void const* data, std::size_t size, std::size_t offset) {
+		if (size == 0) {
+			return;
+		}
 		auto* buffer = (MTL::Buffer*)view.nativeHandle();
 		std::memcpy((char*)buffer->contents() + offset, data, size);
 		buffer->didModifyRange(NS::Range(offset, size));

@@ -30,23 +30,19 @@ namespace poppy {
 		}
 		
 		using namespace bloom;
+
 		
-		displayEntity(EntityID{});
-		performHierarchyUpdate();
-		
-		
-		
-		if (ImGui::BeginPopupContextWindow ("Context Menu")) // <-- use last item id as popup id
-		{
+		if (ImGui::BeginPopupContextWindow ("Context Menu")) {
 			if (ImGui::MenuItem("Create Entity")) {
 				scene()->createEntity("Entity");
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::EndPopup();
 		}
+
 		
-		
-		
+		displayEntity(EntityID{});
+		performUpdates();
 		
 		// Always center this window when appearing
 		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -95,10 +91,23 @@ namespace poppy {
 			flags |= ImGuiTreeNodeFlags_Leaf;
 		}
 		
-		bool const nodeExpanded = ImGui::TreeNodeEx((void*)e.raw(), flags, "%s",
-													utl::format("{} [0x{:x}]",
-																name.data(),
-																e.raw()).data());
+		bool const displayEntityIDs = false;
+		
+		bool const nodeExpanded = ImGui::TreeNodeEx((void*)(std::uintptr_t)e.raw(), flags, "%s",
+													displayEntityIDs ?
+														utl::format("{} [0x{:x}]", name, e.raw()).data() :
+														utl::format("{}", name).data()
+													);
+		auto const popupID = generateUniqueID("Context Menu", e.raw());
+		ImGui::OpenPopupOnItemClick(popupID.data());
+		if (ImGui::BeginPopup(popupID.data())) {
+			if (ImGui::MenuItem("Delete Entity")) {
+				toDelete = e;
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
+		
 		if (e)
 			setExpanded(e, nodeExpanded);
 		
@@ -156,10 +165,9 @@ namespace poppy {
 		_expanded[index] = value;
 	}
 	
-	void SceneInspector::deferHierarchyUpdate(bloom::EntityID child, bloom::EntityID parent) {
-		poppyAssert(!hasHierarchyUpdate);
-		hierarchyUpdate = { child, parent };
-		hasHierarchyUpdate = true;
+	void SceneInspector::performUpdates() {
+		performHierarchyUpdate();
+		performDeletion();
 	}
 	
 	void SceneInspector::performHierarchyUpdate() {
@@ -180,6 +188,20 @@ namespace poppy {
 		}
 		else {
 			ImGui::OpenPopup("Hierarchy Error");
+		}
+	}
+	
+	void SceneInspector::deferHierarchyUpdate(bloom::EntityID child, bloom::EntityID parent) {
+		poppyAssert(!hasHierarchyUpdate);
+		hierarchyUpdate = { child, parent };
+		hasHierarchyUpdate = true;
+	}
+	
+	void SceneInspector::performDeletion() {
+		if (toDelete) {
+			scene()->deleteEntity(toDelete);
+			selection()->deselect(toDelete);
+			toDelete = {};
 		}
 	}
 	

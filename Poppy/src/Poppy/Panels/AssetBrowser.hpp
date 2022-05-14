@@ -7,9 +7,9 @@
 #include <filesystem>
 #include <mtl/mtl.hpp>
 
+namespace bloom { class AssetManager; }
+
 namespace poppy {
-	
-	class EditorAssetManager;
 	
 	std::optional<bloom::AssetHandle> acceptAssetDragDrop(bloom::AssetType);
 	
@@ -23,7 +23,7 @@ namespace poppy {
 	public:
 		void display();
 		void assignDirectory(std::filesystem::path const&);
-		void setAssetManager(EditorAssetManager* m) { assetManager = m; }
+		void setAssetManager(bloom::AssetManager* m) { assetManager = m; }
 		
 		Parameters params;
 		
@@ -35,12 +35,15 @@ namespace poppy {
 	private:
 		utl::vector<std::string> foldersInCurrentDir;
 		utl::vector<bloom::AssetHandle> assetsInCurrentDir;
-		EditorAssetManager* assetManager = nullptr;
+		bloom::AssetManager* assetManager = nullptr;
 		
 	private:
 		mtl::float2 contentSize = 0;
 		mtl::float2 cursor = 0;
 		int itemIndex = 0;
+		int renaming = -1;
+		bool setRenameFocus = false;
+		std::array<char, 256> renameBuffer{};
 	};
 	
 	class AssetBrowser: public Panel {
@@ -62,7 +65,7 @@ namespace poppy {
 		void refresh();
 		
 	private:
-		EditorAssetManager* assetManager = nullptr;
+		bloom::AssetManager* assetManager = nullptr;
 		std::filesystem::path current; // absolute path
 		DirectoryView dirView;
 	};

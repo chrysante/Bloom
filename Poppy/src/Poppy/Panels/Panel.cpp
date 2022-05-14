@@ -28,7 +28,7 @@ namespace poppy {
 	}
 	
 	void Panel::doDisplay() {
-		_ignoreEventMask = bloom::EventType::none;
+//		_ignoreEventMask = bloom::EventType::none;
 		
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
 		ImGui::SetNextWindowSize({600, 400});
@@ -56,9 +56,9 @@ namespace poppy {
 		return position + _viewPosition;
 	}
 	
-	void Panel::ignoreEvents(bloom::EventType mask) {
-		_ignoreEventMask |= mask;
-	}
+//	void Panel::ignoreEvents(bloom::EventType mask) {
+//		_ignoreEventMask |= mask;
+//	}
 	
 	bool Panel::focused() const {
 		return GImGui->NavWindow == _imguiWindow;

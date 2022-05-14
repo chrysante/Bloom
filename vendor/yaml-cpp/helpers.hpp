@@ -16,6 +16,31 @@ namespace YAML {
 		return out << YAML::EndSeq;
 	}
 
+	/// MARK: mtl::complex
+	template <typename T>
+	struct YAML::convert<mtl::complex<T>> {
+		static Node encode(mtl::complex<T> const& z) {
+			return convert<mtl::vector<T, 2>>::encode(z);
+		}
+		 
+		static bool decode(Node const& node, mtl::complex<T>& z) {
+			return convert<mtl::vector<T, 2>>::decode(node, z);
+		}
+	};
+	
+	/// MARK: mtl::quaternion
+	template <typename T>
+	struct YAML::convert<mtl::quaternion<T>> {
+		static Node encode(mtl::quaternion<T> const& z) {
+			return convert<mtl::vector<T, 4>>::encode(z);
+		}
+		 
+		static bool decode(Node const& node, mtl::quaternion<T>& z) {
+			return convert<mtl::vector<T, 4>>::decode(node, z);
+		}
+	};
+	
+	/// MARK: mtl::vector
 	template <typename T, std::size_t Size, mtl::vector_options O>
 	struct YAML::convert<mtl::vector<T, Size, O>> {
 		static Node encode(mtl::vector<T, Size, O> const& v) {
@@ -35,7 +60,29 @@ namespace YAML {
 			return true;
 		}
 	};
+	
+	/// MARK: mtl::matrix
+	template <typename T, std::size_t Rows, std::size_t Columns, mtl::vector_options O>
+	struct YAML::convert<mtl::matrix<T, Rows, Columns, O>> {
+		static Node encode(mtl::matrix<T, Rows, Columns, O> const& m) {
+			Node node;
+			for (auto i: m) {
+				node.push_back(i);
+			}
+			return node;
+		}
+		 
+		static bool decode(Node const& node, mtl::matrix<T, Rows, Columns, O>& m) {
+			if (!node.IsSequence() || node.size() != Rows * Columns) { return false; }
+			 
+			UTL_WITH_INDEX_SEQUENCE((I, Rows * Columns), {
+				m = { node[I].as<T>()... };
+			});
+			return true;
+		}
+	};
 
+	/// MARK: utl::UUID
 	template <>
 	struct YAML::convert<utl::UUID> {
 		static Node encode(utl::UUID const& id) {

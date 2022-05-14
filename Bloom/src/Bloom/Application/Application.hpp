@@ -15,6 +15,7 @@ namespace bloom {
 	class RenderContext;
 	class Renderer;
 	class AssetManager;
+	class SceneSystem;
 	
 	namespace internal {
 		struct AppInternals;
@@ -34,12 +35,14 @@ namespace bloom {
 		
 		AssetManager* getAssetManager() { return _assetManager.get(); }
 		
+		SceneSystem* getSceneSystem() { return _sceneSystem.get(); }
+		
 	private:
 		virtual void init() {}
 		virtual void shutdown() {}
 		virtual void update(TimeStep) {}
 		virtual void render(TimeStep) {}
-		virtual void onEvent(Event const&) {}
+		virtual void onEvent(Event&) {}
 		
 		virtual void mouseEventExtra(void* nativeEvent) {}
 		
@@ -53,7 +56,7 @@ namespace bloom {
 		
 		void doTickMainThread();
 		
-		void handleEvent(Event const&, void* nativeEvent);
+		void handleEvent(Event const&);
 		
 		void flushEventBuffer();
 		
@@ -66,6 +69,7 @@ namespace bloom {
 		Timer _updateTimer, _renderTimer;
 		utl::vector<Event> _eventBuffer;
 		utl::unique_ref<AssetManager> _assetManager;
+		utl::unique_ref<SceneSystem> _sceneSystem;
 	};
 
 }
@@ -77,6 +81,6 @@ struct bloom::internal::AppInternals {
 	static void shutdown(Application* app) { app->doShutdown(); }
 	static void tick(Application* app) { app->doTickMainThread(); }
 	
-	static void handleEvent(Application* app, Event const& event, void* nativeEvent) { app->handleEvent(event, nativeEvent); }
+	static void handleEvent(Application* app, Event const& event) { app->handleEvent(event); }
 //	static void handleKeyEvent(Application* app, KeyEvent const& event, bool down) { app->handleKeyEvent(event, down); }
 };

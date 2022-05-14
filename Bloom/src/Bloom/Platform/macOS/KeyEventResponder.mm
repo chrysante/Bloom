@@ -33,9 +33,13 @@ using namespace mtl::short_types;
 
 - (void)keyDown:(NSEvent*)event
 {
-	if (!self.keyEventHandler(event))
-		[super keyDown:event];
+//	if (!self.keyEventHandler(event))
+//		[super keyDown:event];
 
+//	 we just take all the events, give nothing to super
+	if (self.keyEventHandler)
+		self.keyEventHandler(event);
+	
 	// Call to the macOS input manager system.
 	[self interpretKeyEvents:@[event]];
 }

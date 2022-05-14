@@ -28,8 +28,3 @@ vertex ShadowPassInOut shadowVertexShader(bloom::Vertex3D device const* vertices
 	
 	return result;
 }
-
-
-fragment void shadowFragmentShader(ShadowPassInOut in [[ stage_in ]]) {
-	
-}

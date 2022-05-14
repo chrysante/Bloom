@@ -5,8 +5,8 @@
 
 namespace bloom {
 	
-	Reference<Material> Material::makeDefaultMaterial(RenderContext* renderContext) {
-		auto material = std::make_shared<bloom::Material>();
+	Material Material::makeDefaultMaterial(RenderContext* renderContext) {
+		Material material;
 
 		auto* device = dynamic_cast<bloom::MetalRenderContext*>(renderContext)->device();
 		auto* lib = device->newDefaultLibrary();
@@ -15,21 +15,31 @@ namespace bloom {
 		/* main pass */ {
 			auto* psDesc = MTL::RenderPipelineDescriptor::alloc()->init();
 			psDesc->colorAttachments()->object(0)->setPixelFormat(MTL::PixelFormatRGBA32Float);
-			psDesc->colorAttachments()->object(1)->setPixelFormat(MTL::PixelFormatR32Uint);
-			psDesc->colorAttachments()->object(2)->setPixelFormat(MTL::PixelFormatR8Unorm);
-			psDesc->colorAttachments()->object(3)->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
-			psDesc->setVertexFunction(lib->newFunction(bloom::makeNSString("mainPassEditorVS")));
-			psDesc->setFragmentFunction(lib->newFunction(bloom::makeNSString("mainPassEditorFS")));
+	
+#define USE_PCSS_TEST_SHADER 0
+
+			auto* vertexFunction = lib->newFunction(bloom::makeNSString("mainPassVS"));
+			
+#if !USE_PCSS_TEST_SHADER
+			auto* fragmentFunction = lib->newFunction(bloom::makeNSString("mainPassFS"));
+#else
+			auto* fragmentFunction = lib->newFunction(bloom::makeNSString("mainPassFS_PCSSTest"));
+#endif
+			
+			
+			bloomAssert(vertexFunction);
+			bloomAssert(fragmentFunction);
+			psDesc->setVertexFunction(vertexFunction);
+			psDesc->setFragmentFunction(fragmentFunction);
 			psDesc->setDepthAttachmentPixelFormat(MTL::PixelFormatDepth32Float);
 
 			NS::Error* errors;
 			auto* ps = device->newRenderPipelineState(psDesc, &errors);
 			assert(ps);
-			
-			material->mainPassEditor = bloom::RenderPipelineHandle(ps, MTLDeleter);
+			assert(!errors);
+			material.mainPass = bloom::RenderPipelineHandle(ps, MTLDeleter);
 			
 			psDesc->release();
-			errors->release();
 		}
 		
 		/* outline pass */ {
@@ -41,11 +51,10 @@ namespace bloom {
 			NS::Error* errors;
 			auto* ps = device->newRenderPipelineState(psDesc, &errors);
 			assert(ps);
-			
-			material->outlinePass = bloom::RenderPipelineHandle(ps, MTLDeleter);
+			assert(!errors);
+			material.outlinePass = bloom::RenderPipelineHandle(ps, MTLDeleter);
 			
 			psDesc->release();
-			errors->release();
 		}
 		
 		

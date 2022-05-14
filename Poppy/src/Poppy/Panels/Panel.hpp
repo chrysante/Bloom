@@ -62,11 +62,9 @@ namespace poppy {
 		virtual void init() {};
 		virtual void shutdown() {};
 		virtual void display() = 0;
-		virtual void onEvent(bloom::Event const&) {}
+		virtual void onEvent(bloom::Event&) {}
 		
 	protected:
-		void ignoreEvents(bloom::EventType mask);
-		
 		YAML::Node settings;
 		mtl::float2 padding = 5;
 		
@@ -78,7 +76,6 @@ namespace poppy {
 		Editor* app = nullptr;
 		std::string title;
 		mtl::float2 _windowSize, _viewSize, _viewPosition;
-		bloom::EventType _ignoreEventMask = bloom::EventType::none;;
 		void* _imguiWindow = nullptr;
 		bool _open = true;
 	};

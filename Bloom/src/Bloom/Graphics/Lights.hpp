@@ -2,22 +2,7 @@
 
 #include "ShaderBase.hpp"
 
-#ifdef BLOOM_CPP
-#include <string_view>
-#endif
-
 namespace bloom {
-	
-	enum struct LightType {
-		pointlight = 0,
-		spotlight = 1,
-		directional = 2,
-		_count
-	};
-	
-#ifdef BLOOM_CPP
-	BLOOM_API std::string_view toString(LightType);
-#endif
 	
 	struct LightCommon {
 		metal::packed_float3 color;
@@ -26,43 +11,71 @@ namespace bloom {
 	
 	struct PointLight {
 		LightCommon common;
-		float radius;
-	};
-	
-	struct RenderPointLight {
-		PointLight light;
 		metal::float3 position;
+		float radius;
 	};
 	
 	struct SpotLight {
 		LightCommon common;
+		metal::float3 position;
+		metal::float3 direction;
 		float innerCutoff;
 		float outerCutoff;
 		float radius;
 	};
 	
-	struct RenderSpotLight {
-		SpotLight light;
-		metal::float3 position;
-		metal::float3 direction;
-	};
-	
 	struct DirectionalLight {
-		LightCommon common;
+		LightCommon common;                            // 16 bytes
+	
+		metal::packed_float3 direction;                //
+		bool castsShadows;                             //
+		int16_t numCascades = 1;                       // 16 bytes
+		 
+		float shadowDistance = 500;                    // dedim
 		
-		bool castsShadows;
-		float shadowDistance;
-		int numCascades = 1;
-		float cascadeDistributionExponent = 2;
-		float cascadeTransitionFraction = 0.05;
-		float shadowDistanceFadeoutFraction = 0.05;
-//		metal::uint2 shadowMapResolution = 512;
+		float shadowDistanceZ = 10'000;                //
+		float cascadeDistributionExponent = 2;         //
+		float cascadeTransitionFraction = 0.05;        //
+		float shadowDistanceFadeoutFraction = 0.05;    // 16 bytes
 	};
 	
-	struct RenderDirectionalLight {
-		DirectionalLight light;
-		metal::float3 direction;
+	struct SkyLight {
+		LightCommon common;
 	};
-	
 	
 }
+
+
+#ifdef BLOOM_CPP
+
+#include "Bloom/Core/Serialize.hpp"
+
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::LightCommon,
+						   color,
+						   intensity);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::PointLight,
+						   common,
+						   position,
+						   radius);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::SpotLight,
+						   common,
+						   position,
+						   direction,
+						   innerCutoff,
+						   outerCutoff,
+						   radius);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::DirectionalLight,
+						   common,
+						   direction,
+						   castsShadows,
+						   numCascades,
+						   shadowDistance,
+						   shadowDistanceZ,
+						   cascadeDistributionExponent,
+						   cascadeTransitionFraction,
+						   shadowDistanceFadeoutFraction);
+
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::SkyLight,
+						   common);
+
+#endif

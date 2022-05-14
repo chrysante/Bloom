@@ -31,14 +31,21 @@ namespace poppy {
 		bool expanded(bloom::EntityID) const;
 		void setExpanded(bloom::EntityID, bool);
 		
-		void deferHierarchyUpdate(bloom::EntityID child, bloom::EntityID parent);
+		
+		
+		void performUpdates();
 		void performHierarchyUpdate();
+		void deferHierarchyUpdate(bloom::EntityID child, bloom::EntityID parent);
+		
+		void performDeletion();
 		
 	private:
 		mutable utl::vector<bool> _expanded;
 		
 		std::pair<bloom::EntityID, bloom::EntityID> hierarchyUpdate;
 		bool hasHierarchyUpdate = 0;
+		
+		bloom::EntityID toDelete;
 	};
 	
 	

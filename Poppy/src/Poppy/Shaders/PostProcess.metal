@@ -64,6 +64,17 @@ static float edgeDetect(texture2d<float> selectionMap, sampler sampler2D, float2
 	return min(abs(edgeX) + abs(edgeY), 1.0);
 }
 
+float3 blur(texture2d<float> texture                [[ texture(0) ]],
+			sampler          sampler2D                 [[ sampler(0) ]],
+			float2 coords)
+{
+	float3 acc = 0;
+	for (int i = 0; i < 31; ++i) {
+		acc += texture.sample(sampler2D, coords + float2((i - 15) / 100.0, 0)).rgb;
+	}
+	return acc / 31;
+}
+
 fragment float4 editorPP(PPRasterOutput in                          [[ stage_in   ]],
 						 bloom::SceneRenderData device const& scene [[ buffer(0)  ]],
 						 bloom::DebugDrawData device const& debug   [[ buffer(1)  ]],

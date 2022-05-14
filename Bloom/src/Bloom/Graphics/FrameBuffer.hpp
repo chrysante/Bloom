@@ -9,45 +9,29 @@ namespace bloom {
 	
 	class RenderContext;
 	
-	class BLOOM_API FrameBuffer {
-	public:
+	struct BLOOM_API FrameBuffer {
 		FrameBuffer() = default;
 		
-		
-		TextureView color() { return _colorBuffer; }
-		TextureView depth() { return _depthBuffer; }
-		TextureView finalImage() { return _finalImageBuffer; }
-		
-		mtl::usize2 size() const { return { _colorBuffer.width(), _colorBuffer.height() }; }
-		
 		static FrameBuffer create(RenderContext*, std::size_t width, std::size_t height);
+		mtl::usize2 size() const { return { color.width(), color.height() }; }
 		
-	private:
-		TextureHandle _colorBuffer;
-		TextureHandle _depthBuffer;
-		TextureHandle _finalImageBuffer;
+		TextureHandle color;
+		TextureHandle depth;
+		TextureHandle finalImage;
 	};
 	
-	class BLOOM_API EditorFrameBuffer: public FrameBuffer {
+	struct BLOOM_API EditorFrameBuffer: public FrameBuffer {
 		EditorFrameBuffer(FrameBuffer rhs): FrameBuffer(std::move(rhs)) {}
 		
-		friend class Renderer;
-		
-	public:
 		EditorFrameBuffer() = default;
-		TextureView entityID() { return _entityIDBuffer; }
-		TextureView shadowCascade() { return _shadowCascadeBuffer; }
-		TextureView selected() { return _selectedBuffer; }
-		
-		TextureView finalImageEditor() { return _finalImageEditorBuffer; }
 		
 		static EditorFrameBuffer create(RenderContext*, std::size_t width, std::size_t height);
 		
-	private:
-		TextureHandle _entityIDBuffer;
-		TextureHandle _shadowCascadeBuffer;
-		TextureHandle _selectedBuffer;
-		TextureHandle _finalImageEditorBuffer;
+		TextureHandle editorDepth;
+		TextureHandle entityID;
+		TextureHandle shadowCascade;
+		TextureHandle selected;
+		TextureHandle finalImageEditor;
 	};
 	
 }

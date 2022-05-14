@@ -49,4 +49,44 @@ namespace poppy {
 		ImGui::TableSetColumnIndex(1);
 	}
 	
+	constexpr static std::size_t labelBufferSize = 128;
+	std::array<char, labelBufferSize> makeAnonLabel(std::string_view label) {
+		bloomAssert(label.size() < labelBufferSize);
+		std::array<char, labelBufferSize> result{};
+		result[0] = '#';
+		result[1] = '#';
+		result[2] = '-';
+		std::memcpy(result.data() + 3, label.data(), std::min(label.size(), labelBufferSize - 4));
+		return result;
+	}
+	
+	bool PropertiesPanel::dragFloat(std::string_view label,
+									float* data,
+									float speed,
+									float min,
+									float max,
+									char const* format)
+	{
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+		return ImGui::DragFloat(makeAnonLabel(label).data(), data, speed, min, max, format);
+	}
+	
+	bool PropertiesPanel::sliderFloat(std::string_view label,
+									  float* data,
+									  float min,
+									  float max)
+	{
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+		return ImGui::SliderFloat(makeAnonLabel(label).data(), data, min, max);
+	}
+	
+	bool PropertiesPanel::sliderInt(std::string_view label,
+									int* data,
+									int min,
+									int max)
+	{
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+		return ImGui::SliderInt(makeAnonLabel(label).data(), data, min, max);
+	}
+	
 }

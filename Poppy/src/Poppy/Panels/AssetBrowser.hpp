@@ -12,6 +12,8 @@ namespace bloom { class AssetManager; }
 namespace poppy {
 	
 	std::optional<bloom::AssetHandle> acceptAssetDragDrop(bloom::AssetType);
+
+	class AssetBrowser;
 	
 	class DirectoryView {
 	public:
@@ -21,6 +23,7 @@ namespace poppy {
 			float labelHeight = 20;
 		};
 	public:
+		DirectoryView(AssetBrowser* browser): browser(browser) {}
 		void display();
 		void assignDirectory(std::filesystem::path const&);
 		void setAssetManager(bloom::AssetManager* m) { assetManager = m; }
@@ -36,6 +39,7 @@ namespace poppy {
 		utl::vector<std::string> foldersInCurrentDir;
 		utl::vector<bloom::AssetHandle> assetsInCurrentDir;
 		bloom::AssetManager* assetManager = nullptr;
+		AssetBrowser* browser = nullptr;
 		
 	private:
 		mtl::float2 contentSize = 0;
@@ -50,6 +54,8 @@ namespace poppy {
 	public:
 		AssetBrowser();
 		
+		void openAsset(bloom::AssetHandle);
+		
 	private:
 		void init() override;
 		void shutdown() override;
@@ -59,7 +65,7 @@ namespace poppy {
 		
 		void import(std::filesystem::path);
 	
-		void setWorkingDir(std::filesystem::path);
+		void setWorkingDir(std::filesystem::path wd, std::filesystem::path current = {});
 		void setCurrentDir(std::filesystem::path);
 		
 		void refresh();

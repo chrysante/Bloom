@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "Bloom/Scene/Scene.hpp"
-#include "Bloom/Scene/Components.hpp"
+#include "Bloom/Scene/Components/AllComponents.hpp"
 
 TEST_CASE() {
 	

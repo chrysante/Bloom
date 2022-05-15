@@ -39,4 +39,5 @@ include "Vendor/Utility/utility_project.lua"
 include "Vendor/imgui"
 include "Vendor/yaml-cpp"
 include "Vendor/assimp"
+include "Vendor/simplefilewatcher"
 

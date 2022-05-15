@@ -1,0 +1,11 @@
+class TestClass {
+    var data;
+    def TestClass() {
+        this.data = -1;
+    }
+    def update() {
+        this.data += 1;
+    }
+}
+
+print("Evaluating TestScript.chai");

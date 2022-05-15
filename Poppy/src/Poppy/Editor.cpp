@@ -276,12 +276,12 @@ namespace poppy {
 		ImGui::Begin("TOOLBAR", NULL, window_flags);
 		ImGui::PopStyleVar();
 
-		auto* const sceneSystem = getSceneSystem();
-		bool const isSimulating = sceneSystem->isRunning();
+		auto& sceneSystem = this->sceneSystem();
+		bool const isSimulating = sceneSystem.isRunning();
 		
 		char const* const buttonLabel = !isSimulating ? "Simulate" : "Stop";
 		
-		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, sceneSystem->getScene() == nullptr);
+		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, sceneSystem.getScene() == nullptr);
 		if (ImGui::Button(buttonLabel, ImVec2(0, 37))) {
 			!isSimulating ? startSimulation() : stopSimulation();
 		}
@@ -294,11 +294,11 @@ namespace poppy {
 	
 	void Editor::startSimulation() {
 		sceneBackup = scene->scene.copy();
-		getSceneSystem()->runUpdateThread();
+		sceneSystem().runUpdateThread();
 	}
 	
 	void Editor::stopSimulation() {
-		getSceneSystem()->stopUpdateThread();
+		sceneSystem().stopUpdateThread();
 		scene->scene = std::move(sceneBackup);
 	}
 	
@@ -336,21 +336,21 @@ namespace poppy {
 	
 	void Editor::newScene() {
 		showSaveFilePanel([this](std::filesystem::path path) {
-			auto asset = getAssetManager()->create(AssetType::scene,
-												   path.filename().replace_extension().string(),
-												   std::filesystem::path{ path }.remove_filename());
+			auto asset = assetManager().create(AssetType::scene,
+											   path.filename().replace_extension().string(),
+											   std::filesystem::path{ path }.remove_filename());
 			setScene(as<SceneAsset>(asset));
 		});
 	}
 	
 	void Editor::saveScene() {
-		getAssetManager()->saveToDisk(scene->handle());
+		assetManager().saveToDisk(scene->handle());
 	}
 	
 	void Editor::setScene(Reference<SceneAsset> scene) {
 		this->scene = std::move(scene);
 		selection.clear();
-		getSceneSystem()->setScene(bloom::Reference<Scene>(this->scene, &this->scene->scene));
+		sceneSystem().setScene(bloom::Reference<Scene>(this->scene, &this->scene->scene));
 	}
 	
 	std::unique_ptr<bloom::AssetManager> Editor::createAssetManager() {

@@ -18,9 +18,10 @@ namespace bloom {
 	}
 	
 	ScriptEngine::ScriptEngine():
-		_engine(new chaiscript::ChaiScript())
+		_engine(new chaiscript::ChaiScript()),
+		_beginState(getState())
 	{
-		asChai(_engine.get()).get_state();
+		
 	}
 	
 	void ScriptEngine::Deleter::operator()(void* engine) const {
@@ -49,6 +50,10 @@ namespace bloom {
 	
 	void ScriptEngine::setState(State state) {
 		asChai(_engine.get()).set_state(asState(state._state.get()));
+	}
+	
+	void ScriptEngine::restoreBeginState() {
+		setState(_beginState);
 	}
 	
 	ScriptEngine::State::State(void* state): _state(state) {

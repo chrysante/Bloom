@@ -5,10 +5,9 @@
 
 #include "Bloom/Graphics/RenderContext.hpp"
 #include "Bloom/Graphics/Renderer.hpp"
-
-#include "Bloom/Scene/SceneSystem.hpp"
-
 #include "Bloom/Assets/AssetManager.hpp"
+#include "Bloom/Scene/SceneSystem.hpp"
+#include "Bloom/ScriptEngine/ScriptEngine.hpp"
 
 BLOOM_API BLOOM_WEAK bloom::Application* createBloomApplication() {
 	std::cerr << "createBloomApplication() must be overriden by client" << std::endl;
@@ -22,12 +21,13 @@ namespace bloom {
 	}
 	
 	void Application::doInit() {
-		_renderer = utl::make_unique_ref<Renderer>();
+		_renderer = utl::make_ref<Renderer>();
 		_renderer->init(_renderContext.get());
 		_assetManager = createAssetManager();
 		_assetManager->setRenderContext(_renderContext.get());
 		
-		_sceneSystem = utl::make_unique_ref<SceneSystem>();
+		_sceneSystem = utl::make_ref<SceneSystem>();
+		_scriptEngine = utl::make_ref<ScriptEngine>();
 		
 		// call to base
 		this->init();

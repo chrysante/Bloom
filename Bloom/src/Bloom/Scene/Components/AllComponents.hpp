@@ -5,6 +5,7 @@
 #include "MeshRenderer.hpp"
 #include "Hierarchy.hpp"
 #include "Lights.hpp"
+#include "Script.hpp"
 
 #include <tuple>
 
@@ -19,7 +20,8 @@ namespace bloom {
 		PointLightComponent,
 		SpotLightComponent,
 		DirectionalLightComponent,
-		SkyLightComponent
+		SkyLightComponent,
+		ScriptComponent
 	>;
 
 	template <typename...T>

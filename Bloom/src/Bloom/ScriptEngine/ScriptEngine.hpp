@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Bloom/Core/Base.hpp"
+
 #include <memory>
 #include <chaiscript/chaiscript.hpp>
 #include <chaiscript/dispatchkit/register_function.hpp>
@@ -10,7 +12,7 @@ namespace bloom {
 
 	using ScriptObject = chaiscript::dispatch::Dynamic_Object;
 	
-    class ScriptEngine {
+    class BLOOM_API ScriptEngine {
     public:
 		ScriptEngine();
 		
@@ -36,6 +38,8 @@ namespace bloom {
 		State getState();
 		void setState(State);
 		
+		void restoreBeginState();
+		
 	private:
 		void registerFunction(chaiscript::Proxy_Function&&, std::string&&);
 		void registerType(chaiscript::Type_Info&&, std::string&&);
@@ -44,6 +48,7 @@ namespace bloom {
     private:
 		struct Deleter { void operator()(void*) const; };
 		std::unique_ptr<void, Deleter> _engine;
+		State _beginState;
     };
 
 }

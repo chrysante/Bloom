@@ -5,6 +5,8 @@
 #include "Bloom/Application/Application.hpp"
 #include "Bloom/Application/Resource.hpp"
 #include "Bloom/Assets/AssetManager.hpp"
+#include "Bloom/Assets/ConcreteAssets.hpp"
+#include "Bloom/ScriptEngine/ScriptEngine.hpp"
 
 #include "Poppy/Editor.hpp"
 #include "Poppy/Debug.hpp"
@@ -74,7 +76,7 @@ namespace poppy {
 		switch (t) {
 			case AssetType::staticMesh:
 				return "cube";
-			case AssetType::skinnedMesh:
+			case AssetType::skeletalMesh:
 				return "cube";
 			case AssetType::material:
 				return "delicious";
@@ -87,12 +89,6 @@ namespace poppy {
 	}
 	
 	bool DirectoryView::displayItem(std::string_view label, std::optional<bloom::AssetHandle> asset) {
-		
-		
-		
-		
-		
-		
 		mtl::float2 const labelSize = ImGui::CalcTextSize(label.data());
 		auto const uniqueID = generateUniqueID(label, itemIndex, true);
 		
@@ -109,10 +105,14 @@ namespace poppy {
 		ImGui::PushStyleColor(ImGuiCol_Button, 0);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0x20FFffFF);
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0x20FFffFF);
-		auto const flags = ImGuiButtonFlags_None;
+		auto const flags = ImGuiButtonFlags_PressedOnDoubleClick;
 		ImGui::SetCursorPos(localCursor);
 		bool const result = ImGui::ButtonEx(uniqueID.data(), params.itemSize, flags);
 		ImGui::PopStyleColor(3);
+		
+		if (result && asset) {
+			browser->openAsset(*asset);
+		}
 		
 		// popup
 		ImGui::OpenPopupOnItemClick(popupID.data());
@@ -145,11 +145,7 @@ namespace poppy {
 		
 		// icon
 		{
-			
-			
-			
 			ImGui::PushFont((ImFont*)IconConfig::font(64));
-			mtl::float2 const framePadding = mtl::float2(GImGui->Style.FramePadding);
 			auto const iconText = IconConfig::unicodeStr(std::string(selectIcon(asset ? asset->type() : AssetType::none)));
 			
 			auto iconCursor = localCursor;
@@ -242,18 +238,39 @@ namespace poppy {
 	
 	/// MARK: - AssetBrowser
 	AssetBrowser::AssetBrowser():
-		Panel("Asset Browser", PanelOptions{ .unique = false })
+		Panel("Asset Browser", PanelOptions{ .unique = false }),
+		dirView(this)
 	{
 		
 	}
 	
+	void AssetBrowser::openAsset(bloom::AssetHandle handle) {
+		switch (handle.type()) {
+			case AssetType::scene: {
+				auto scene = as<SceneAsset>(assetManager->get(handle));
+				assetManager->makeAvailable(handle, AssetRepresentation::CPU);
+				getEditor().setScene(scene);
+				break;
+			}
+			case AssetType::script: {
+				auto const command = utl::format("open -a Visual\\ Studio\\ Code.app {}",
+												 assetManager->getAbsoluteFilepath(handle));
+				
+				
+				std::system(command.data());
+				break;
+			}
+			default:
+				break;
+		}
+	}
+	
 	void AssetBrowser::init() {
-		assetManager = getApplication().getAssetManager();
+		assetManager = &getApplication().assetManager();
 		dirView.setAssetManager(assetManager);
 		
-		setWorkingDir(settings["Working Directory"].as<std::string>(std::string{}));
-		current = settings["Current"].as<std::string>(assetManager->workingDir());
-		refresh();
+		setWorkingDir(settings["Working Directory"].as<std::string>(std::string{}),
+					  settings["Current"].as<std::string>(std::filesystem::path{}));
 	}
 	
 	void AssetBrowser::shutdown() {
@@ -294,10 +311,7 @@ namespace poppy {
 	
 	void AssetBrowser::toolbar() {
 		float const toolbarSize = 30;
-
 		{
-			
-			
 			auto const size = toolbarButtonSize(toolbarSize);
 			
 			ImGui::PushFont((ImFont*)IconConfig::font(32));
@@ -308,8 +322,6 @@ namespace poppy {
 				// go up
 			}
 		}
-		
-		
 		
 		ImGui::SameLine();
 		withFont(FontWeight::bold, FontStyle::roman, [&]{
@@ -331,45 +343,95 @@ namespace poppy {
 		
 		ImGui::SameLine();
 		{
+			if (toolbarButton("New Asset...", toolbarSize)) {
+				ImGui::OpenPopup("New Asset");
+			}
+			
+				
+			if (ImGui::BeginPopupModal("New Asset", NULL, ImGuiWindowFlags_NoTitleBar)) {
+				static AssetType type = AssetType::none;
+				if (ImGui::BeginCombo("Type", toString(type).data())) {
+					for (int i = 0; i < (std::size_t)AssetType::itemCount; ++i) {
+						auto const t = (AssetType)(1 << i);
+						bool const selected = type == t;
+						if (ImGui::Selectable(toString(t).data(), selected)) {
+							type = t;
+						}
+						if (selected) {
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					
+					ImGui::EndCombo();
+				}
+				static char nameBuffer[256]{};
+				ImGui::InputText("Name", nameBuffer, std::size(nameBuffer));
+				
+				if (ImGui::Button("Cancel")) {
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Create")) {
+					assetManager->create(type, nameBuffer, current);
+					refresh();
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+		}
+		ImGui::SameLine();
+		ImGui::Spacing();
+		ImGui::SameLine();
+		{
 			if (toolbarButton("Create Default Material", toolbarSize)) {
 				assetManager->create(AssetType::material, "Default Material", current);
 				refresh();
 			}
 		}
-		
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(100);
-		ImGui::SliderFloat("Preview Size", &dirView.params.itemSize.x, 30, 500);
-		dirView.params.itemSize.y = dirView.params.itemSize.x;
+		{
+			if (toolbarButton("Reload Scripts", toolbarSize)) {
+				auto& scriptEngine = getApplication().scriptEngine();
+				assetManager->loadScripts(scriptEngine);
+			}
+		}
 		
 		ImGui::Separator();
 	}
 		
 	/// MARK: -
 	void AssetBrowser::import(std::filesystem::path source) {
-		
 		assetManager->import(source, std::filesystem::relative(current, assetManager->workingDir()).lexically_normal());
 		refresh();
 	}
 	
-	void AssetBrowser::setWorkingDir(std::filesystem::path path) {
+	void AssetBrowser::setWorkingDir(std::filesystem::path wd, std::filesystem::path current) {
 		if (!assetManager) {
 			return;
 		}
-		assetManager->setWorkingDir(path);
-		current = path;
+		assetManager->setWorkingDir(wd);
+		assetManager->loadScripts(getApplication().scriptEngine());
+		if (current.empty()) {
+			current = wd;
+		}
+		setCurrentDir(current);
 	}
 	
 	void AssetBrowser::setCurrentDir(std::filesystem::path path) {
-		current = assetManager->workingDir() / path;
+		if (path.is_relative()) {
+			current = assetManager->workingDir() / path;
+		}
+		else {
+			current = path;
+		}
+		
 		namespace fs = std::filesystem;
 		
 		dirView.assignDirectory(path);
 	}
 	
 	void AssetBrowser::refresh() {
-		assetManager->setWorkingDir(assetManager->workingDir());
-		setCurrentDir(current);
+		setWorkingDir(assetManager->workingDir(), current);
 	}
 	
 }

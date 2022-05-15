@@ -11,29 +11,52 @@
 #include <yaml-cpp/yaml.h>
 #include <yaml-cpp/helpers.hpp>
 
-namespace poppy { class EditorAssetManager; }
-
 namespace bloom {
+	
+	enum class FileFormat {
+		binary, text
+	};
 	
 	/// MARK: - AssetType
 	enum class AssetType: unsigned {
 		none = 0,
 		staticMesh = 1 << 0,
-		skinnedMesh = 1 << 1, // not supported yet...
-		mesh = staticMesh | skinnedMesh,
+		skeletalMesh = 1 << 1, // not supported yet...
+		mesh = staticMesh | skeletalMesh,
 		
 		material = 1 << 2,
 		
-		scene = 1 << 3
+		scene = 1 << 3,
+		
+		script = 1 << 4,
+		
+		itemCount = 5
 	};
 	UTL_ENUM_OPERATORS(AssetType);
+	
+	enum class FileExtension {
+		invalid = 0,
+		bmesh,
+		bmat,
+		bscene,
+		chai
+	};
+	
+	FileExtension toExtension(std::filesystem::path const&);
+	FileExtension toExtension(std::string_view);
+	
+	bool hasHeader(FileExtension);
+	
+	utl::UUID toUUID(std::string_view);
 	
 	BLOOM_API std::string toString(AssetType);
 	BLOOM_API AssetType assetTypeFromString(std::string_view);
 	BLOOM_API std::ostream& operator<<(std::ostream&, AssetType);
 	
 	BLOOM_API std::string toExtension(AssetType);
-	BLOOM_API AssetType assetTypeFromExtension(std::string_view);
+	BLOOM_API AssetType toAssetType(FileExtension);
+	BLOOM_API FileFormat toFileFormat(FileExtension);
+	
 	
 	/// MARK: - AssetRepresentation
 	enum class AssetRepresentation {
@@ -89,6 +112,8 @@ namespace bloom {
 				return f(utl::tag<MaterialAsset>{});
 			case AssetType::scene:
 				return f(utl::tag<SceneAsset>{});
+			case AssetType::script:
+				return f(utl::tag<ScriptAsset>{});
 				
 			default:
 				bloomDebugbreak();

@@ -16,6 +16,7 @@ namespace bloom {
 	class Renderer;
 	class AssetManager;
 	class SceneSystem;
+	class ScriptEngine;
 	
 	namespace internal {
 		struct AppInternals;
@@ -27,15 +28,14 @@ namespace bloom {
 		
 		RenderContext& renderContext() { return *_renderContext; }
 		Renderer& renderer() { return *_renderer; }
+		AssetManager& assetManager() { return *_assetManager; }
+		SceneSystem& sceneSystem() { return *_sceneSystem; }
+		ScriptEngine& scriptEngine() { return *_scriptEngine; }
 		
 		Input const& input() const { return _input; }
 		
 		TimeStep getUpdateTime() const { return _updateTimer.getTimeStep(); }
 		TimeStep getRenderTime() const { return _renderTimer.getTimeStep(); }
-		
-		AssetManager* getAssetManager() { return _assetManager.get(); }
-		
-		SceneSystem* getSceneSystem() { return _sceneSystem.get(); }
 		
 	private:
 		virtual void init() {}
@@ -63,13 +63,14 @@ namespace bloom {
 		virtual utl::unique_ref<AssetManager> createAssetManager();
 		
 	private:
-		utl::unique_ref<RenderContext> _renderContext;
-		utl::unique_ref<Renderer> _renderer;
+		utl::ref<RenderContext> _renderContext;
+		utl::ref<Renderer> _renderer;
 		Input _input;
-		Timer _updateTimer, _renderTimer;
+		Timer _renderTimer, _updateTimer;
 		utl::vector<Event> _eventBuffer;
-		utl::unique_ref<AssetManager> _assetManager;
-		utl::unique_ref<SceneSystem> _sceneSystem;
+		utl::ref<AssetManager> _assetManager;
+		utl::ref<SceneSystem> _sceneSystem;
+		utl::ref<ScriptEngine> _scriptEngine;
 	};
 
 }

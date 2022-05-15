@@ -1,10 +1,8 @@
 #pragma once
 
+#include "Asset.hpp"
+
 namespace bloom {
-	
-	enum class FileFormat {
-		binary, text
-	};
 	
 	struct AssetFileHeader {
 		static constexpr std::size_t customDataSize = 256;

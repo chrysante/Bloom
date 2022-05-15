@@ -136,7 +136,7 @@ namespace poppy{
 			cameraActor.update(getApplication().getRenderTime(), getApplication().input());
 		}
 		
-		if (!getApplication().getSceneSystem()->isRunning() && GImGui->DragDropActive) {
+		if (!getApplication().sceneSystem().isRunning() && GImGui->DragDropActive) {
 			float const spacing = 6.5;
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 			ImGui::SetCursorPos({ spacing, spacing });
@@ -281,13 +281,13 @@ namespace poppy{
 		
 		renderer.beginScene(cameraActor.camera, drawOptions);
 		
-		auto* const sceneSystem = getApplication().getSceneSystem();
+		auto& sceneSystem = getApplication().sceneSystem();
 		
-		auto lock = sceneSystem->lock();
+		auto lock = sceneSystem.lock();
 		
-		sceneSystem->applyTransformHierarchy();
+		sceneSystem.applyTransformHierarchy();
 		
-		sceneSystem->sumbitToRenderer(renderer);
+		sceneSystem.sumbitToRenderer(renderer);
 		
 		for (auto id: selection()->ids()) {
 			auto entity = scene()->getHandle(id);

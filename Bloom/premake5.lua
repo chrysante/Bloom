@@ -5,7 +5,8 @@ language "C++"
 
 sysincludedirs {
     "../Vendor/Metal-cpp",
-    "../Vendor/assimp/include"
+    "../Vendor/assimp/include",
+    "../Vendor/simplefilewatcher/FileWatcher"
 }
 
 includedirs {

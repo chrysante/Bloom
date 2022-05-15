@@ -45,6 +45,7 @@ filter {}
 
 links { 
     "Bloom",
+    "ScriptEngine",
     "Utility",
     "ImGui",
     "YAML",

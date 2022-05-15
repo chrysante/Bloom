@@ -9,6 +9,8 @@
 
 #include "Bloom/Scene/SceneSerialize.hpp"
 
+#include "Bloom/ScriptEngine/ScriptEngine.hpp"
+
 #include <fstream>
 #include <utl/filesystem_ext.hpp>
 
@@ -18,12 +20,12 @@ namespace bloom {
 		switch (type) {
 			case AssetType::staticMesh:
 				return ".bmesh";
-			case AssetType::skinnedMesh:
-				return ".bskinnedmesh";
+			case AssetType::skeletalMesh:
+				return ".bskeletalMesh";
 			case AssetType::material:
 				return ".bmaterial";
 			case AssetType::scene:
-				return ".bsc";
+				return ".bscene";
 				
 			default:
 				return "";
@@ -55,33 +57,6 @@ namespace bloom {
 			readAssetMetaData(entry.path());
 		}
 	}
-	
-//	void AssetManager::refreshFromWorkingDir() {
-//		assets.clear();
-//		if (workingDir().empty()) {
-//			return;
-//		}
-//		auto dirItr = std::filesystem::recursive_directory_iterator(workingDir());
-//		for (auto const& entry: dirItr) {
-//			if (!std::filesystem::is_regular_file(entry.path())) {
-//				continue;
-//			}
-//			if (utl::is_hidden(entry.path())) {
-//				continue;
-//			}
-//			auto const header = readHeader(entry.path());
-//			auto asset = createReference(header.getAssetHandle(),
-//										 header.name(),
-//										 makeRelative(entry.path()));
-//			if (!storeReference(std::move(asset))) {
-//				bloomLog(warning,
-//						 "Failed to store Reference. Asset '{}' with ID {} "
-//						 "already exists,",
-//						 header.name(), header.id);
-//			}
-//
-//		}
-//	}
 
 	/// MARK: - Create
 	Reference<Asset> AssetManager::create(AssetType type,
@@ -93,7 +68,8 @@ namespace bloom {
 		InternalAsset asset {
 			.theAsset = ref,
 			.name = std::string(name),
-			.diskLocation = dest / utl::format("{}{}", name, toExtension(type))
+			.diskLocation = dest / utl::format("{}{}", name, toExtension(type)),
+			.handle = handle
 		};
 		assets.insert({ handle.id(), asset });
 		flushToDisk(handle);
@@ -197,6 +173,18 @@ namespace bloom {
 		return std::string{};
 	}
 	
+	std::filesystem::path AssetManager::getAbsoluteFilepath(AssetHandle handle) const {
+		auto rel = getRelativeFilepath(handle);
+		return rel.empty() ? rel : makeAbsolute(rel);
+	}
+	
+	std::filesystem::path AssetManager::getRelativeFilepath(AssetHandle handle) const {
+		if (auto const* asset = find(handle)) {
+			return asset->diskLocation;
+		}
+		return std::filesystem::path{};
+	}
+	
 	void AssetManager::makeAvailable(AssetHandle handle, AssetRepresentation rep, bool force) {
 		auto const itr = assets.find(handle.id());
 		if (itr == assets.end()) {
@@ -226,8 +214,12 @@ namespace bloom {
 				makeSceneAvailable(itr->second, rep, force);
 				break;
 				
+			case AssetType::script:
+				makeScriptAvailable(itr->second, rep, force);
+				break;
+				
 			default:
-				bloomDebugbreak("Unimplemented");
+				bloomDebugfail("Unimplemented");
 				break;
 		}
 	}
@@ -241,9 +233,30 @@ namespace bloom {
 		flushToDisk(handle);
 	}
 	
-	
+	/// MARK: - Uncategorized
 	AssetHandle AssetManager::getHandleFromFile(std::filesystem::path path) const {
 		return readHeader(path).handle();
+	}
+	
+	void AssetManager::loadScripts(ScriptEngine& engine) {
+		_scriptClasses.clear();
+		engine.restoreBeginState();
+		for (auto&& [id, internal]: assets) {
+			if (internal.handle.type() != AssetType::script) {
+				continue;
+			}
+			auto const script = as<ScriptAsset>(get(internal.handle));
+			makeAvailable(internal.handle, AssetRepresentation::CPU, true);
+			try {
+				engine.eval(script->text);
+				for (auto&& name: script->classes) {
+					_scriptClasses.push_back(name);
+				}
+			}
+			catch (std::exception const& e) {
+				bloomLog(error, "Failed to evaluate script: {}", e.what());
+			}
+		}
 	}
 	
 	/// MARK: - Internals
@@ -275,14 +288,16 @@ namespace bloom {
 			bloomLog(warning, "Asset at {} is already loaded.", diskLocation);
 			return;
 		}
-		assets.insert({ handle.id(), InternalAsset{
+		auto const [itr, success] = assets.insert({ handle.id(), InternalAsset{
 			.theAsset = allocateAsset(handle),
 			.name = header.name(),
-			.diskLocation = diskLocation
+			.diskLocation = diskLocation,
+			.handle = handle
 		} });
+		if (!success) {
+			bloomDebugfail();
+		}
 	}
-	
-	
 	
 	/// MARK: - Make Available
 	void AssetManager::makeStaticMeshAvailable(InternalAsset& ia, AssetRepresentation rep, bool force) {
@@ -321,8 +336,21 @@ namespace bloom {
 		}
 	}
 	
+	void AssetManager::makeScriptAvailable(InternalAsset& ia, AssetRepresentation rep, bool force) {
+		ScriptAsset* asset = utl::down_cast<ScriptAsset*>(ia.theAsset.lock().get());
+		
+		if (test(rep & AssetRepresentation::CPU)) {
+			asset->setText(loadTextFromDisk(ia.diskLocation));
+		}
+		
+		if (test(rep & AssetRepresentation::GPU)) {
+			bloomLog(warning, "No GPU Representation for scripts");
+		}
+	}
+	
 	///MARK: Disk -> Memory
 	Reference<StaticMeshData> AssetManager::readStaticMeshFromDisk(std::filesystem::path source) {
+		bloomExpect(toExtension(source) == FileExtension::bmesh);
 		source = makeAbsolute(source);
 		std::fstream file(source, std::ios::in | std::ios::binary);
 		handleFileError(file, source);
@@ -347,6 +375,7 @@ namespace bloom {
 	}
 	
 	Scene AssetManager::loadSceneFromDisk(std::filesystem::path source) {
+		bloomExpect(toExtension(source) == FileExtension::bscene);
 		source = makeAbsolute(source);
 		std::fstream file(source, std::ios::in | std::ios::binary);
 		handleFileError(file, source);
@@ -369,6 +398,16 @@ namespace bloom {
 		deserialize(sstr.str(), &scene, this);
 		
 		return scene;
+	}
+	
+	std::string AssetManager::loadTextFromDisk(std::filesystem::path source) {
+		bloomExpect(toExtension(source) == FileExtension::chai);
+		source = makeAbsolute(source);
+		std::fstream file(source, std::ios::in);
+		handleFileError(file, source);
+		std::stringstream sstr;
+		sstr << file.rdbuf();
+		return sstr.str();
 	}
 	
 	/// MARK: - Memory -> GPU
@@ -410,8 +449,12 @@ namespace bloom {
 			case AssetType::scene:
 				flushSceneToDisk(handle);
 				break;
+			case AssetType::script:
+				flushScriptToDisk(handle);
+				break;
 				
 			default:
+				bloomDebugbreak();
 				break;
 		}
 		
@@ -495,6 +538,22 @@ namespace bloom {
 		file << serialize(&scene);
 	}
 	
+	void AssetManager::flushScriptToDisk(AssetHandle handle) {
+		auto const* const asset = find(handle);
+		bloomAssert(asset);
+		auto const assetRef = asset->theAsset.lock();
+		bloomAssert(!!assetRef);
+		bloomAssert(assetRef->handle() == handle);
+		
+		auto const& script = utl::down_cast<ScriptAsset const*>(assetRef.get())->text;
+		
+		auto const dest = makeAbsolute(asset->diskLocation);
+		std::fstream file(dest, std::ios::out | std::ios::trunc);
+		handleFileError(file, dest);
+				
+		file << script;
+	}
+	
 	/// MARK: - Import
 	AssetType AssetManager::getImportType(std::string_view extView) const {
 		std::string ext(extView);
@@ -530,10 +589,20 @@ namespace bloom {
 	}
 	
 	AssetFileHeader AssetManager::readHeader(std::filesystem::path path) const {
-		path = makeAbsolute(path);
-		std::fstream file(path);
-		handleFileError(file, path);
-		return readHeader(file);
+		FileExtension const extension = toExtension(path);
+		if (hasHeader(extension)) {
+			path = makeAbsolute(path);
+			std::fstream file(path);
+			handleFileError(file, path);
+			return readHeader(file);
+		}
+		else {
+			return AssetFileHeader{
+				AssetHandle(toAssetType(extension), toUUID(path.lexically_normal().string())),
+				toFileFormat(extension),
+				path.filename().replace_extension().string()
+			};
+		}
 	}
 	
 	AssetFileHeader AssetManager::readHeader(std::fstream& file) const {

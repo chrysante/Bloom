@@ -39,6 +39,8 @@ namespace poppy {
 		void inspectDirectionalLight(bloom::DirectionalLight&);
 		void inspectSkyLight(bloom::SkyLight&);
 		
+		void inspectScript(bloom::EntityID);
+		
 		// Helpers
 		template <typename>
 		bool componentHeader(std::string_view name, bloom::EntityID);

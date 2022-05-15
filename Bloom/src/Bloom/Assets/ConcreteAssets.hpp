@@ -9,6 +9,8 @@
 
 #include <utl/vector.hpp>
 
+#include "ScriptAsset.hpp"
+
 namespace bloom {
 	
 	/// MARK: Static Mesh
@@ -21,7 +23,6 @@ namespace bloom {
 	
 	class BLOOM_API StaticMeshAsset: public Asset {
 		friend class AssetManager;
-		friend class poppy::EditorAssetManager;
 		
 	public:
 		using Asset::Asset;

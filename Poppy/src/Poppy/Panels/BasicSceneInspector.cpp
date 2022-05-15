@@ -29,7 +29,7 @@ namespace poppy {
 	}
 	
 	bloom::AssetManager* BasicSceneInspector::assetManager() const {
-		return editor->getAssetManager();
+		return &editor->assetManager();
 	}
 	
 	bool BasicSceneInspector::hasLightComponent(bloom::EntityID entity) const {

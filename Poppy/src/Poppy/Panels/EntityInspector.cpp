@@ -31,31 +31,36 @@ namespace poppy {
 			return;
 		}
 		bloom::EntityID const activeEntity = selection()->empty() ? bloom::EntityID{} : selection()->ids()[0];
-		auto const entity = activeEntity;
+		auto const id = activeEntity;
 		
-		if (!entity) {
+		if (!id) {
 			return;
 		}
 		
-		using namespace bloom;
+		auto const entity = scene()->getHandle(id);
 		
-		if (scene()->hasComponent<TagComponent>(entity)) {
+		if (entity.has<TagComponent>()) {
 			inspectTag(entity);
 			ImGui::Separator();
 		}
 		
-		if (scene()->hasComponent<TransformComponent>(entity)) {
+		if (entity.has<TransformComponent>()) {
 			inspectTransform(entity);
 			ImGui::Separator();
 		}
 		
-		if (scene()->hasComponent<MeshRendererComponent>(entity)) {
+		if (entity.has<MeshRendererComponent>()) {
 			inspectMesh(entity);
 			ImGui::Separator();
 		}
 		
 		if (hasLightComponent(entity)) {
 			inspectLight(entity);
+			ImGui::Separator();
+		}
+		
+		if (entity.has<ScriptComponent>()) {
+			inspectScript(entity);
 			ImGui::Separator();
 		}
 	}
@@ -136,6 +141,7 @@ namespace poppy {
 					addComponentButton(utl::tag<SpotLightComponent>{},        "Spot Light",        entity, hasLight);
 					addComponentButton(utl::tag<DirectionalLightComponent>{}, "Directional Light", entity, hasLight);
 					addComponentButton(utl::tag<SkyLightComponent>{},         "Sky Light",         entity, hasLight);
+					addComponentButton(utl::tag<ScriptComponent>{},           "Script",            entity);
 				});
 				ImGui::EndCombo();
 			}
@@ -167,7 +173,6 @@ namespace poppy {
 	}
 	
 	void EntityInspector::inspectMesh(bloom::EntityID entity) {
-		using namespace bloom;
 		auto& meshRenderer = scene()->getComponent<MeshRendererComponent>(entity);
 		
 		componentHeader<MeshRendererComponent>("Mesh Renderer", entity);
@@ -397,6 +402,31 @@ namespace poppy {
 	
 	void EntityInspector::inspectSkyLight(bloom::SkyLight& light) {
 		inspectLightCommon(light.common, LightType::skylight);
+	}
+	
+	void EntityInspector::inspectScript(bloom::EntityID id) {
+		auto entity = scene()->getHandle(id);
+		auto& script = entity.get<ScriptComponent>();
+		
+		componentHeader<ScriptComponent>("Script", id);
+		if (beginSection()) {
+			beginProperty("Class");
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+			if (ImGui::BeginCombo("##-script", script.className.data())) {
+				for (auto className: assetManager()->scriptClasses()) {
+					bool const selected = script.className == className;
+					if (ImGui::Selectable(className.data(), selected)) {
+						script.className = className;
+						script.object = getApplication().scriptEngine().instanciateObject(className);
+					}
+					if (selected) {
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+			endSection();
+		}
 	}
 	
 	/// MARK: - Helpers

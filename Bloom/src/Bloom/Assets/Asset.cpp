@@ -4,6 +4,40 @@
 
 namespace bloom {
 
+	FileExtension toExtension(std::filesystem::path const& path) {
+		return toExtension(std::string_view(path.extension().string()));
+	}
+	
+	FileExtension toExtension(std::string_view extension) {
+		if (extension == ".bmesh") {
+			return FileExtension::bmesh;
+		}
+		if (extension == ".bmat") {
+			return FileExtension::bmat;
+		}
+		if (extension == ".bscene") {
+			return FileExtension::bscene;
+		}
+		if (extension == ".chai") {
+			return FileExtension::chai;
+		}
+		return FileExtension::invalid;
+	}
+	
+	bool hasHeader(FileExtension ext) {
+		return ext != FileExtension::chai;
+	}
+	
+	utl::UUID toUUID(std::string_view str) {
+		char const* const begin = str.data();
+		std::size_t const offset = str.size() / 2;
+		struct { std::size_t first, second; } values = {
+			utl::hash_string(std::string_view(begin, offset)),
+			utl::hash_string(std::string_view(begin + offset, str.size() - offset))
+		};
+		return utl::UUID::construct_from_value(utl::bit_cast<utl::UUID::value_type>(values));
+	}
+	
 	/// MARK: - AssetType
 	BLOOM_API std::string toString(AssetType type) {
 		auto const i = utl::to_underlying(type);
@@ -13,9 +47,10 @@ namespace bloom {
 		}
 		return std::array {
 			"Static Mesh",
-			"Skinned Mesh",
+			"Skeletal Mesh",
 			"Material",
-			"Scene"
+			"Scene",
+			"Script"
 		}[utl::log2(i)];
 	}
 	
@@ -23,8 +58,8 @@ namespace bloom {
 		if (str == "Static Mesh") {
 			return AssetType::staticMesh;
 		}
-		if (str == "Skinned Mesh") {
-			return AssetType::skinnedMesh;
+		if (str == "Skeletal Mesh") {
+			return AssetType::skeletalMesh;
 		}
 		if (str == "Material") {
 			return AssetType::material;
@@ -49,20 +84,46 @@ namespace bloom {
 			".bmesh",
 			".invalid",
 			".bmat",
-			".bsc"
+			".bscene",
+			".chai",
 		}[utl::log2(i)];
 	}
-	BLOOM_API AssetType assetTypeFromExtension(std::string_view extension) {
-		if (extension == ".bmesh") {
-			return AssetType::staticMesh;
+	BLOOM_API AssetType toAssetType(FileExtension ext) {
+		switch (ext) {
+			case FileExtension::bmesh:
+				return AssetType::staticMesh;
+				
+			case FileExtension::bmat:
+				return AssetType::material;
+				
+			case FileExtension::bscene:
+				return AssetType::scene;
+				
+			case FileExtension::chai:
+				return AssetType::script;
+				
+			default:
+				return AssetType::none;
 		}
-		if (extension == ".bmat") {
-			return AssetType::material;
+	}
+	
+	BLOOM_API FileFormat toFileFormat(FileExtension ext) {
+		switch (ext) {
+			case FileExtension::bmesh:
+				return FileFormat::binary;
+				
+			case FileExtension::bmat:
+				return FileFormat::binary;
+				
+			case FileExtension::bscene:
+				return FileFormat::text;
+				
+			case FileExtension::chai:
+				return FileFormat::text;
+				
+			default:
+				return FileFormat::text;
 		}
-		if (extension == ".bsc") {
-			return AssetType::scene;
-		}
-		return AssetType::none;
 	}
 	
 	/// MARK: - AssetHandle

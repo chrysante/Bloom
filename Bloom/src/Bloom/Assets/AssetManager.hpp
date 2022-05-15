@@ -10,12 +10,14 @@
 #include "AssetFileHeader.hpp"
 #include <future>
 #include <optional>
+#include <span>
 
 namespace bloom {
 	
 	class RenderContext;
 	class StaticMeshData;
 	class StaticMeshAsset;
+	class ScriptEngine;
 	
 	class BLOOM_API AssetManager {
 	public:
@@ -76,6 +78,16 @@ namespace bloom {
 		/// @returns		Name of the Asset. Will be empty if handle was null or invalid.
 		std::string getName(AssetHandle handle) const;
 		
+		/// @brief Retrieves the filepath of an asset.
+		/// @param handle 	Handle to an Asset. May be null or invalid.
+		/// @returns		Filepath to the Asset. Will be empty if handle was null or invalid.
+		std::filesystem::path getAbsoluteFilepath(AssetHandle handle) const;
+		
+		/// @brief Retrieves the filepath of an asset.
+		/// @param handle 	Handle to an Asset. May be null or invalid.
+		/// @returns		Filepath to the Asset. Will be empty if handle was null or invalid.
+		std::filesystem::path getRelativeFilepath(AssetHandle handle) const;
+		
 		/// @brief 			Loads an asset from disk into CPU and/or GPU memory.
 		/// @param handle 	Handle to an asset. May be null or invalid.
 		/// @param rep		Representation. Shall be any combination of AssetRepresentation::CPU and AssetRepresentation::GPU.
@@ -96,10 +108,11 @@ namespace bloom {
 		
 		
 		
+		/// MARK: Uncategorized
 		// path can be relative or absolute
 		AssetHandle getHandleFromFile(std::filesystem::path path) const;
-		
-		
+		void loadScripts(ScriptEngine&);
+		std::span<std::string const> scriptClasses() const { return _scriptClasses; }
 		
 	private:
 		struct InternalAsset {
@@ -107,6 +120,7 @@ namespace bloom {
 			std::string name;
 			/// relative to working directory
 			std::filesystem::path diskLocation;
+			AssetHandle handle;
 		};
 		
 		Reference<Asset> allocateAsset(AssetHandle) const;
@@ -119,11 +133,13 @@ namespace bloom {
 		void makeStaticMeshAvailable(InternalAsset&, AssetRepresentation rep, bool force);
 		void makeMaterialAvailable(InternalAsset&, AssetRepresentation rep, bool force);
 		void makeSceneAvailable(InternalAsset&, AssetRepresentation rep, bool force);
+		void makeScriptAvailable(InternalAsset&, AssetRepresentation rep, bool force);
 		
 		
 		///MARK: Disk -> Memory
 		Reference<StaticMeshData> readStaticMeshFromDisk(std::filesystem::path source);
 		Scene loadSceneFromDisk(std::filesystem::path source);
+		std::string loadTextFromDisk(std::filesystem::path source);
 		
 		/// MARK: Memory -> GPU
 		void loadStaticRenderMesh(InternalAsset&);
@@ -133,6 +149,7 @@ namespace bloom {
 		void flushStaticMeshToDisk(AssetHandle);
 		void flushMaterialToDisk(AssetHandle);
 		void flushSceneToDisk(AssetHandle);
+		void flushScriptToDisk(AssetHandle);
 		
 		
 		/// MARK: Import
@@ -154,6 +171,7 @@ namespace bloom {
 		
 		RenderContext* _renderContext = nullptr;
 		std::filesystem::path _workingDir;
+		utl::vector<std::string> _scriptClasses;
 	};
 
 	

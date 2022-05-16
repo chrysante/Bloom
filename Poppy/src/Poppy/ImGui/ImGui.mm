@@ -246,7 +246,7 @@ namespace poppy {
 												   fontSize * dpiScale,
 												   nullptr, (ImWchar const*)glyphs
 												   );
-		io.Fonts->AddFont(nullptr);
+		
 		bloomAssert(result);
 		
 		io.Fonts->Build();

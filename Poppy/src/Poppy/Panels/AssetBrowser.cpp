@@ -9,7 +9,7 @@
 #include "Bloom/Scene/Components/Script.hpp"
 #include "Bloom/ScriptEngine/ScriptEngine.hpp"
 
-#include "Poppy/Editor.hpp"
+#include "Poppy/Editor/Editor.hpp"
 #include "Poppy/Debug.hpp"
 #include "Poppy/ResourceManager.hpp"
 

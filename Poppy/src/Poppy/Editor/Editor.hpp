@@ -1,13 +1,15 @@
 #pragma once
 
+#include "Dockspace.hpp"
+
 #include "Bloom/Application/Application.hpp"
 #include "Bloom/Scene/Scene.hpp"
 
-#include "SelectionContext.hpp"
-#include "ImGui/ImGui.hpp"
-#include "Panels/Panel.hpp"
-#include "ResourceManager.hpp"
-#include "Debug.hpp"
+#include "Poppy/SelectionContext.hpp"
+#include "Poppy/ImGui/ImGui.hpp"
+#include "Poppy/Panels/Panel.hpp"
+#include "Poppy/ResourceManager.hpp"
+#include "Poppy/Debug.hpp"
 
 #include <filesystem>
 #include <yaml-cpp/yaml.h>
@@ -44,10 +46,7 @@ namespace poppy {
 		void menuItemForPanel(std::string_view name, bool unique, auto&&... args);
 		Panel* findPanelByName(std::string_view name);
 		
-	private:
-		void dockspace();
-		void toolbar();
-		
+	public:
 		void startSimulation();
 		void stopSimulation();
 		
@@ -69,8 +68,8 @@ namespace poppy {
 		std::filesystem::path libDir;
 		YAML::Node settings;
 		ResourceManager resourceManager;
-		float toolbarHeight = 50;
 		
+		Dockspace dockspace;
 #if POPPY_DEBUGLEVEL > 0
 		bool showImGuiDemo = false;
 		bool showStyleColorsPanel = false;

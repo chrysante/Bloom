@@ -15,7 +15,7 @@
 #include "Bloom/Application/InputEvent.hpp"
 #include "Bloom/Assets/ConcreteAssets.hpp"
  
-#include "Poppy/Editor.hpp"
+#include "Poppy/Editor/Editor.hpp"
 #include "Poppy/SelectionContext.hpp"
 
 #include "AssetBrowser.hpp"

@@ -5,7 +5,7 @@
 #include "Bloom/Assets/ConcreteAssets.hpp"
 #include "Bloom/Scene/Scene.hpp"
 #include "Bloom/Scene/Components/AllComponents.hpp"
-#include "Poppy/Editor.hpp"
+#include "Poppy/Editor/Editor.hpp"
 
 using namespace bloom;
 

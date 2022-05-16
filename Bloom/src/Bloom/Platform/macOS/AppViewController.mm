@@ -1,7 +1,7 @@
 #import "AppViewController.h"
 
 #import "KeyEventResponder.h"
-#import "Event.h"
+#import "InputEvent.h"
 
 #include <utl/memory.hpp>
 #include <utl/stdio.hpp>
@@ -80,12 +80,12 @@
 		
 		auto const type =
 			event.type == NSEventTypeKeyDown ?
-			bloom::EventType::keyDown :
+			bloom::InputEventType::keyDown :
 			event.type == NSEventTypeKeyUp ?
-			bloom::EventType::keyUp :
-			bloom::EventType::keyFlagsChanged;
+			bloom::InputEventType::keyUp :
+			bloom::InputEventType::keyFlagsChanged;
 		
-		AppInternals::handleEvent(weakSelf.application, bloom::Event(type, bloom::toKeyEvent(event)));
+		AppInternals::handleInputEvent(weakSelf.application, bloom::InputEvent(type, bloom::toKeyEvent(event)));
 		
 		return event;
 	}];
@@ -119,106 +119,106 @@
 	
 }
 
--(void)handleEvent:(bloom::Event)bloomEvent withEvent: (NSEvent*)event {
+-(void)handleEvent:(bloom::InputEvent)bloomEvent withEvent: (NSEvent*)event {
 	using bloom::internal::AppInternals;
-	AppInternals::handleEvent(self.application, bloomEvent);
+	AppInternals::handleInputEvent(self.application, bloomEvent);
 }
 
 -(void)mouseDown:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::leftMouseDown,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::leftMouseDown,
 		toMouseDownEvent(event)
 	} withEvent:event];
 }
 -(void)rightMouseDown:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::rightMouseDown,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::rightMouseDown,
 		toMouseDownEvent(event)
 	} withEvent:event];
 }
 -(void)otherMouseDown:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::otherMouseDown,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::otherMouseDown,
 		toMouseDownEvent(event)
 	} withEvent:event];
 }
 -(void)mouseUp:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::leftMouseUp,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::leftMouseUp,
 		toMouseUpEvent(event)
 	} withEvent:event];
 }
 -(void)rightMouseUp:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::rightMouseUp,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::rightMouseUp,
 		toMouseUpEvent(event)
 	} withEvent:event];
 }
 -(void)otherMouseUp:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::otherMouseUp,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::otherMouseUp,
 		toMouseUpEvent(event)
 	} withEvent:event];
 }
 -(void)mouseMoved:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::mouseMoved,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::mouseMoved,
 		toMouseMoveEvent(event)
 	} withEvent:event];
 }
 -(void)rightMouseMoved:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::mouseMoved,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::mouseMoved,
 		toMouseMoveEvent(event)
 	} withEvent:event];
 }
 -(void)otherMouseMoved:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::mouseMoved,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::mouseMoved,
 		toMouseMoveEvent(event)
 	} withEvent:event];
 }
 -(void)mouseDragged:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::leftMouseDragged,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::leftMouseDragged,
 		toMouseDraggedEvent(event)
 	} withEvent:event];
 }
 -(void)rightMouseDragged:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::rightMouseDragged,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::rightMouseDragged,
 		toMouseDraggedEvent(event)
 	} withEvent:event];
 }
 -(void)otherMouseDragged:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::otherMouseDragged,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::otherMouseDragged,
 		toMouseDraggedEvent(event)
 	} withEvent:event];
 }
 -(void)scrollWheel:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::scrollWheel,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::scrollWheel,
 		toScrollEvent(event)
 	} withEvent:event];
 }
 -(void)magnifyWithEvent:(NSEvent *)event {
 	using namespace bloom;
-	[self handleEvent:Event{
-		bloom::EventType::magnify,
+	[self handleEvent:InputEvent{
+		bloom::InputEventType::magnify,
 		toMagnificationEvent(event)
 	} withEvent:event];
 }

@@ -2,9 +2,31 @@ class TestClass {
     var data;
     def TestClass() {
         this.data = -1;
+        print("TestClass::TestClass()")
     }
-    def update() {
+    def update(t) {
         this.data += 1;
+    }
+}
+
+class SineMovement {
+    var speed;
+    var speedZ;
+    var offset;
+    var offsetZ;
+    def SineMovement() {
+        this.speed = 1.0f;
+        this.speedZ = 1.0f;
+        this.offset = 1.0f;
+        this.offsetZ = 1.0f;
+        print("SineMovement::SineMovement()")
+    }
+    def update(TimeStep time) {
+        this.transform.position.x += this.offset * cos(time.absolute * this.speed);
+        this.transform.position.y += this.offset * sin(time.absolute * this.speed);
+        this.transform.position.z += this.offsetZ * sin(time.absolute * this.speedZ + 0.54);
+
+
     }
 }
 

@@ -2,6 +2,7 @@
 
 #include <mtl/mtl.hpp>
 #include <utl/common.hpp>
+#include <utl/messenger.hpp>
 #include <array>
 #include <iosfwd>
 #include <variant>
@@ -13,10 +14,7 @@
 
 namespace bloom {
 	
-//	template <typename E>
-//	void forEach(std::invocable<E> auto&&);
-	
-	enum class EventModifierFlags: unsigned {
+	enum class InputModifierFlags: unsigned {
 		none       = 0u,
 		capsLock   = 1u << 0, // Set if Caps Lock key is pressed.
 		shift      = 1u << 1, // Set if Shift key is pressed.
@@ -28,20 +26,13 @@ namespace bloom {
 		function   = 1u << 7  // Set if any function key is pressed.
 	};
 	
-//	template <>
-//	void forEach<EventModifierFlags>(std::invocable<EventModifierFlags> auto&& f) {
-//		for (int i = 0; i <= 7; ++i) {
-//			f((EventModifierFlags)(1u << i));
-//		}
-//	}
+	UTL_ENUM_OPERATORS(InputModifierFlags);
 	
-	UTL_ENUM_OPERATORS(EventModifierFlags);
-	
-	struct EventBase {
-		EventModifierFlags modifierFlags;
+	struct InputEventBase {
+		InputModifierFlags modifierFlags;
 	};
 	
-	struct MouseEvent: EventBase {
+	struct MouseEvent: InputEventBase {
 		mtl::double2 locationInWindow;
 	};
 	
@@ -70,12 +61,12 @@ namespace bloom {
 		mtl::double2 offset;
 	};
 	
-	struct KeyEvent: EventBase {
+	struct KeyEvent: InputEventBase {
 		Key key;
 		int repeat;
 	};
 	
-	enum struct EventType: unsigned {
+	enum struct InputEventType: unsigned {
 		none              = 0,
 		
 		leftMouseDown     = 1 <<  0,
@@ -106,60 +97,60 @@ namespace bloom {
 		key               = keyDown | keyUp | keyFlagsChanged
 	};
 	
-	UTL_ENUM_OPERATORS(EventType);
+	UTL_ENUM_OPERATORS(InputEventType);
 	
-	inline bool isMouseEvent(EventType type) {
-		return (int)type != 0 && (int)type <= (int)EventType::magnify;
+	inline bool isMouseEvent(InputEventType type) {
+		return (int)type != 0 && (int)type <= (int)InputEventType::magnify;
 	}
 	
-	std::string_view toString(EventType);
-	std::ostream& operator<<(std::ostream&, EventType);
+	std::string_view toString(InputEventType);
+	std::ostream& operator<<(std::ostream&, InputEventType);
 	
 	namespace internal {
 		
-		template <EventType>
-		struct ToEvent;
+		template <InputEventType>
+		struct ToInputEvent;
 		
-		template <> struct ToEvent<EventType::leftMouseDown>     { using type = MouseDownEvent; };
-		template <> struct ToEvent<EventType::rightMouseDown>    { using type = MouseDownEvent; };
-		template <> struct ToEvent<EventType::otherMouseDown>    { using type = MouseDownEvent; };
+		template <> struct ToInputEvent<InputEventType::leftMouseDown>     { using type = MouseDownEvent; };
+		template <> struct ToInputEvent<InputEventType::rightMouseDown>    { using type = MouseDownEvent; };
+		template <> struct ToInputEvent<InputEventType::otherMouseDown>    { using type = MouseDownEvent; };
 		
-		template <> struct ToEvent<EventType::leftMouseUp>       { using type = MouseUpEvent; };
-		template <> struct ToEvent<EventType::rightMouseUp>      { using type = MouseUpEvent; };
-		template <> struct ToEvent<EventType::otherMouseUp>      { using type = MouseUpEvent; };
+		template <> struct ToInputEvent<InputEventType::leftMouseUp>       { using type = MouseUpEvent; };
+		template <> struct ToInputEvent<InputEventType::rightMouseUp>      { using type = MouseUpEvent; };
+		template <> struct ToInputEvent<InputEventType::otherMouseUp>      { using type = MouseUpEvent; };
 		
-		template <> struct ToEvent<EventType::mouseMoved>        { using type = MouseMoveEvent; };
+		template <> struct ToInputEvent<InputEventType::mouseMoved>        { using type = MouseMoveEvent; };
 		
-		template <> struct ToEvent<EventType::leftMouseDragged>  { using type = MouseDragEvent; };
-		template <> struct ToEvent<EventType::rightMouseDragged> { using type = MouseDragEvent; };
-		template <> struct ToEvent<EventType::otherMouseDragged> { using type = MouseDragEvent; };
+		template <> struct ToInputEvent<InputEventType::leftMouseDragged>  { using type = MouseDragEvent; };
+		template <> struct ToInputEvent<InputEventType::rightMouseDragged> { using type = MouseDragEvent; };
+		template <> struct ToInputEvent<InputEventType::otherMouseDragged> { using type = MouseDragEvent; };
 		
-		template <> struct ToEvent<EventType::scrollWheel>       { using type = ScrollEvent; };
-		template <> struct ToEvent<EventType::magnify>           { using type = MagnificationEvent; };
+		template <> struct ToInputEvent<InputEventType::scrollWheel>       { using type = ScrollEvent; };
+		template <> struct ToInputEvent<InputEventType::magnify>           { using type = MagnificationEvent; };
 		
-		template <> struct ToEvent<EventType::keyDown>           { using type = KeyEvent; };
-		template <> struct ToEvent<EventType::keyUp>             { using type = KeyEvent; };
+		template <> struct ToInputEvent<InputEventType::keyDown>           { using type = KeyEvent; };
+		template <> struct ToInputEvent<InputEventType::keyUp>             { using type = KeyEvent; };
 		
 		
 		template <typename E>
-		struct IsEvent: std::bool_constant<std::is_base_of_v<EventBase, std::decay_t<E>>>{};
+		struct IsInputEvent: std::bool_constant<std::is_base_of_v<InputEventBase, std::decay_t<E>>>{};
 	}
 	
-	class Event {
+	class InputEvent: public utl::message<InputEvent> {
 	public:
-		template <typename E> requires (internal::IsEvent<E>::value)
-		Event(EventType type, E e): _type(type), _union(std::move(e)) {}
+		template <typename E> requires (internal::IsInputEvent<E>::value)
+		InputEvent(InputEventType type, E e): _type(type), _union(std::move(e)) {}
 		
 		auto visit(auto&& f) const {
 			return std::visit(f, _union);
 		}
 		
-		template <typename E> requires (internal::IsEvent<E>::value)
+		template <typename E> requires (internal::IsInputEvent<E>::value)
 		E& get() { return std::get<E>(_union); }
-		template <typename E> requires (internal::IsEvent<E>::value)
+		template <typename E> requires (internal::IsInputEvent<E>::value)
 		E const& get() const { return std::get<E>(_union); }
 		
-		template <EventType Type, typename E = typename internal::ToEvent<Type>::type>
+		template <InputEventType Type, typename E = typename internal::ToInputEvent<Type>::type>
 		void dispatch(std::invocable<E const> auto&& f) {
 			if (Type != _type || handled()) {
 				return;
@@ -178,10 +169,10 @@ namespace bloom {
 			}
 		}
 		
-		EventType type() const { return _type; }
+		InputEventType type() const { return _type; }
 		bool handled() const { return _handled; }
 		
-		EventModifierFlags modifierFlags() const {
+		InputModifierFlags modifierFlags() const {
 			return visit([](auto& e) {
 				return e.modifierFlags;
 			});
@@ -200,7 +191,7 @@ namespace bloom {
 			MagnificationEvent,
 			KeyEvent	
 		>;
-		EventType _type;
+		InputEventType _type;
 		EventUnion _union;
 		bool _handled = false;
 	};

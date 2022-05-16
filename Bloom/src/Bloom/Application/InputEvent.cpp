@@ -1,10 +1,10 @@
-#include "Event.hpp"
+#include "InputEvent.hpp"
 
 #include <ostream>
 
 namespace bloom {
 	
-	std::string_view toString(EventType e) {
+	std::string_view toString(InputEventType e) {
 		return std::array{
 			"mouseDown",
 			"rightMouseDown",
@@ -23,7 +23,7 @@ namespace bloom {
 		}[(unsigned)e];
 	}
 	
-	std::ostream& operator<<(std::ostream& str, EventType e) {
+	std::ostream& operator<<(std::ostream& str, InputEventType e) {
 		return str << toString(e);
 	}
 	

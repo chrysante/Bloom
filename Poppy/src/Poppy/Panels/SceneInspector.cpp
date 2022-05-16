@@ -26,6 +26,7 @@ namespace poppy {
 	
 	void SceneInspector::display() {
 		if (!scene()) {
+			emptyWithReason("No active Scene");
 			return;
 		}
 		

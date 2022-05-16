@@ -85,7 +85,7 @@ namespace poppy {
 		this->_defaultFont = getFont(FontWeight::regular, FontStyle::roman);
 		
 		// load icon font
-		if ((0)) {
+		if ((1)) {
 			poppyLog(trace, "Loading Icon Font");
 			IconConfig::initFromFile("Icons/IconConfig.json");
 			auto glyphs = IconConfig::glyphs();
@@ -246,6 +246,7 @@ namespace poppy {
 												   fontSize * dpiScale,
 												   nullptr, (ImWchar const*)glyphs
 												   );
+		io.Fonts->AddFont(nullptr);
 		bloomAssert(result);
 		
 		io.Fonts->Build();

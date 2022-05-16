@@ -1,7 +1,8 @@
 #include "ScriptEngine.hpp"
 
-#include <chaiscript/chaiscript.hpp>
 #include <utl/format.hpp>
+
+#include <chaiscript/extras/math.hpp>
 
 namespace bloom {
     
@@ -18,10 +19,12 @@ namespace bloom {
 	}
 	
 	ScriptEngine::ScriptEngine():
-		_engine(new chaiscript::ChaiScript()),
-		_beginState(getState())
+		_engine(new chaiscript::ChaiScript())
 	{
+		auto mathlib = chaiscript::extras::math::bootstrap();
+		asChai(_engine.get()).add(mathlib);
 		
+		_beginState = getState();
 	}
 	
 	void ScriptEngine::Deleter::operator()(void* engine) const {
@@ -34,6 +37,10 @@ namespace bloom {
 	
 	void ScriptEngine::registerType(chaiscript::Type_Info&& type, std::string&& name) {
 		asChai(_engine.get()).add(std::move(type), std::move(name));
+	}
+	
+	void ScriptEngine::registerConversion(chaiscript::Type_Conversion&& conv) {
+		asChai(_engine.get()).add(std::move(conv));
 	}
 	
 	chaiscript::Boxed_Value ScriptEngine::doEval(std::string const& text) {
@@ -52,7 +59,11 @@ namespace bloom {
 		asChai(_engine.get()).set_state(asState(state._state.get()));
 	}
 	
-	void ScriptEngine::restoreBeginState() {
+	void ScriptEngine::rememberBaseState() {
+		_beginState = getState();
+	}
+	
+	void ScriptEngine::restoreBaseState() {
 		setState(_beginState);
 	}
 	
@@ -66,8 +77,15 @@ namespace bloom {
 		
 	}
 	
+	ScriptEngine::State& ScriptEngine::State::operator=(State const& rhs) {
+		_state = std::unique_ptr<void, Deleter>(new chaiscript::ChaiScript::State(asState(rhs._state.get())));
+		return *this;
+	}
+	
 	void ScriptEngine::State::Deleter::operator()(void* state) const {
-		delete &asState(state);
+		if (state) {
+			delete &asState(state);
+		}
 	}
 	
 }

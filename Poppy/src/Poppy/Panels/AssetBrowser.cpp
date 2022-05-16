@@ -6,6 +6,7 @@
 #include "Bloom/Application/Resource.hpp"
 #include "Bloom/Assets/AssetManager.hpp"
 #include "Bloom/Assets/ConcreteAssets.hpp"
+#include "Bloom/Scene/Components/Script.hpp"
 #include "Bloom/ScriptEngine/ScriptEngine.hpp"
 
 #include "Poppy/Editor.hpp"
@@ -82,6 +83,8 @@ namespace poppy {
 				return "delicious";
 			case AssetType::scene:
 				return "cubes";
+			case AssetType::script:
+				return "file-code";
 				
 			default:
 				return "doc";
@@ -249,7 +252,7 @@ namespace poppy {
 			case AssetType::scene: {
 				auto scene = as<SceneAsset>(assetManager->get(handle));
 				assetManager->makeAvailable(handle, AssetRepresentation::CPU);
-				getEditor().setScene(scene);
+				Editor::get().setScene(scene);
 				break;
 			}
 			case AssetType::script: {
@@ -266,7 +269,7 @@ namespace poppy {
 	}
 	
 	void AssetBrowser::init() {
-		assetManager = &getApplication().assetManager();
+		assetManager = &Application::get().assetManager();
 		dirView.setAssetManager(assetManager);
 		
 		setWorkingDir(settings["Working Directory"].as<std::string>(std::string{}),
@@ -314,8 +317,8 @@ namespace poppy {
 		{
 			auto const size = toolbarButtonSize(toolbarSize);
 			
-			ImGui::PushFont((ImFont*)IconConfig::font(32));
-			bool const goUp = ImGui::Button(IconConfig::unicodeStr("up-big").data());
+			ImGui::PushFont((ImFont*)IconConfig::font(16));
+			bool const goUp = ImGui::Button(IconConfig::unicodeStr("up-big").data(), size);
 			ImGui::PopFont();
 			if (goUp)
 			{
@@ -391,8 +394,9 @@ namespace poppy {
 		ImGui::SameLine();
 		{
 			if (toolbarButton("Reload Scripts", toolbarSize)) {
-				auto& scriptEngine = getApplication().scriptEngine();
+				auto& scriptEngine = Application::get().scriptEngine();
 				assetManager->loadScripts(scriptEngine);
+				Application::get().publishEvent(ScriptLoadEvent{});
 			}
 		}
 		
@@ -410,7 +414,7 @@ namespace poppy {
 			return;
 		}
 		assetManager->setWorkingDir(wd);
-		assetManager->loadScripts(getApplication().scriptEngine());
+		assetManager->loadScripts(Application::get().scriptEngine());
 		if (current.empty()) {
 			current = wd;
 		}
@@ -431,7 +435,9 @@ namespace poppy {
 	}
 	
 	void AssetBrowser::refresh() {
-		setWorkingDir(assetManager->workingDir(), current);
+		assetManager->refreshWorkingDir();
+		assetManager->loadScripts(Application::get().scriptEngine());
+		dirView.assignDirectory(assetManager->workingDir() / current);
 	}
 	
 }

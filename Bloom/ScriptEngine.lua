@@ -1,6 +1,6 @@
 project "ScriptEngine"
 location "."
-kind "SharedLib"
+kind "StaticLib"
 language "C++"
 
 sysincludedirs {

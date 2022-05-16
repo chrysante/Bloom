@@ -1,12 +1,13 @@
 #pragma once
 
 #include <string>
+#include "Poppy/ImGui/ImGui.hpp"
 
 namespace poppy {
 	
 	class PropertiesPanel {
 	protected:
-		void header(std::string_view name);
+		void header(std::string_view name, FontWeight = FontWeight::semibold, FontStyle = FontStyle::roman);
 		bool beginSection();
 		void endSection();
 		

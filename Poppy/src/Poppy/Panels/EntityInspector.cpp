@@ -14,6 +14,7 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include <mtl/mtl.hpp>
+#include <utl/typeinfo.hpp>
 
 using namespace mtl::short_types;
 using namespace bloom;
@@ -28,12 +29,14 @@ namespace poppy {
 	
 	void EntityInspector::display() {
 		if (!scene()) {
+			emptyWithReason("No active Scene");
 			return;
 		}
 		bloom::EntityID const activeEntity = selection()->empty() ? bloom::EntityID{} : selection()->ids()[0];
 		auto const id = activeEntity;
 		
 		if (!id) {
+			emptyWithReason("No Entity selected");
 			return;
 		}
 		
@@ -81,7 +84,7 @@ namespace poppy {
 			
 			// name field
 			float2 const nameTextSize = { windowSize.x - addButtonSize.x - spacing.x, windowSize.y };
-			if (editingNameState) {
+			if (editingNameState && !isSimulating()) {
 				ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
 				
 				char buffer[256]{};
@@ -106,45 +109,47 @@ namespace poppy {
 			}
 			
 			// 'add' button
-			ImGui::SetCursorPos({ nameTextSize.x + spacing.x, 0 });
-			using Color = mtl::colors<float3>;
+			inactiveWhenSimulating([&]{
+				ImGui::SetCursorPos({ nameTextSize.x + spacing.x, 0 });
+				using Color = mtl::colors<float3>;
+				
+				auto convert = [](float3 x, float a) { return ImGui::ColorConvertFloat4ToU32(float4{ x, a }); };
+				
+				ImGui::PushStyleColor(ImGuiCol_FrameBg,        convert(Color::green, .35));
+				ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, convert(Color::green, .5));
 			
-			auto convert = [](float3 x, float a) { return ImGui::ColorConvertFloat4ToU32(float4{ x, a }); };
-			
-			ImGui::PushStyleColor(ImGuiCol_FrameBg,        convert(Color::green, .35));
-			ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, convert(Color::green, .5));
-		
-			ImGui::SetNextItemWidth(addButtonSize.x);
-			bool const comboOpen = ImGui::BeginCombo("##-add-component", "Add Component", ImGuiComboFlags_NoArrowButton);
+				ImGui::SetNextItemWidth(addButtonSize.x);
+				bool const comboOpen = ImGui::BeginCombo("##-add-component", "Add Component", ImGuiComboFlags_NoArrowButton);
 
-			ImGui::PopStyleColor(2);
-			
-			
-			if (comboOpen) {
-				withFont(FontWeight::regular, FontStyle::roman, [&]{
-					auto addComponentButton = [&]<typename Component>(utl::tag<Component>,
-																	  char const* name,
-																	  EntityID entity,
-																	  bool forceDisable = false)
-					{
-						auto flags = 0;
-						if (scene()->hasComponent<Component>(entity) || forceDisable) {
-							flags |= ImGuiSelectableFlags_Disabled;
-						}
-						if (ImGui::Selectable(name, false, flags)) {
-							scene()->addComponent(entity, Component{});
-						}
-					};
-					bool const hasLight = hasLightComponent(entity);
-					addComponentButton(utl::tag<MeshRendererComponent>{},     "Mesh Renderer",     entity);
-					addComponentButton(utl::tag<PointLightComponent>{},       "Point Light",       entity, hasLight);
-					addComponentButton(utl::tag<SpotLightComponent>{},        "Spot Light",        entity, hasLight);
-					addComponentButton(utl::tag<DirectionalLightComponent>{}, "Directional Light", entity, hasLight);
-					addComponentButton(utl::tag<SkyLightComponent>{},         "Sky Light",         entity, hasLight);
-					addComponentButton(utl::tag<ScriptComponent>{},           "Script",            entity);
-				});
-				ImGui::EndCombo();
-			}
+				ImGui::PopStyleColor(2);
+				
+				
+				if (comboOpen) {
+					withFont(FontWeight::regular, FontStyle::roman, [&]{
+						auto addComponentButton = [&]<typename Component>(utl::tag<Component>,
+																		  char const* name,
+																		  EntityID entity,
+																		  bool forceDisable = false)
+						{
+							auto flags = 0;
+							if (scene()->hasComponent<Component>(entity) || forceDisable) {
+								flags |= ImGuiSelectableFlags_Disabled;
+							}
+							if (ImGui::Selectable(name, false, flags)) {
+								scene()->addComponent(entity, Component{});
+							}
+						};
+						bool const hasLight = hasLightComponent(entity);
+						addComponentButton(utl::tag<MeshRendererComponent>{},     "Mesh Renderer",     entity);
+						addComponentButton(utl::tag<PointLightComponent>{},       "Point Light",       entity, hasLight);
+						addComponentButton(utl::tag<SpotLightComponent>{},        "Spot Light",        entity, hasLight);
+						addComponentButton(utl::tag<DirectionalLightComponent>{}, "Directional Light", entity, hasLight);
+						addComponentButton(utl::tag<SkyLightComponent>{},         "Sky Light",         entity, hasLight);
+						addComponentButton(utl::tag<ScriptComponent>{},           "Script",            entity);
+					});
+					ImGui::EndCombo();
+				}
+			});
 		});
 		
 		ImGui::EndChild();
@@ -154,20 +159,20 @@ namespace poppy {
 		using namespace bloom;
 		auto& transform = scene()->getComponent<TransformComponent>(entity);
 	
-		header("Transform");
-		if (beginSection()) {
-			beginProperty("Position");
-			dragFloat3Pretty(transform.position.data(), "-position");
-			
-			beginProperty("Orientation");
-			float3 euler = mtl::to_euler(transform.orientation) * 180;
-			if (dragFloat3Pretty(euler.data(), "-orientation")) {
-				transform.orientation = mtl::to_quaternion(euler / 180);
-			}
-			
-			beginProperty("Scale");
-			dragFloat3Pretty(transform.scale.data(), "-scale", 0.02);
-
+		if (beginComponentSection("Transform")) {
+			inactiveWhenSimulating([&]{
+				beginProperty("Position");
+				dragFloat3Pretty(transform.position.data(), "-position");
+				
+				beginProperty("Orientation");
+				float3 euler = mtl::to_euler(transform.orientation) * 180;
+				if (dragFloat3Pretty(euler.data(), "-orientation")) {
+					transform.orientation = mtl::to_quaternion(euler / 180);
+				}
+				
+				beginProperty("Scale");
+				dragFloat3Pretty(transform.scale.data(), "-scale", 0.02);
+			});
 			endSection();
 		}
 	}
@@ -175,22 +180,22 @@ namespace poppy {
 	void EntityInspector::inspectMesh(bloom::EntityID entity) {
 		auto& meshRenderer = scene()->getComponent<MeshRendererComponent>(entity);
 		
-		componentHeader<MeshRendererComponent>("Mesh Renderer", entity);
-		if (beginSection()) {
-			beginProperty("Mesh");
-			ImGui::Button(meshRenderer.mesh ?
-						  assetManager()->getName(meshRenderer.mesh->handle()).data() :
-						  "No mesh assigned",
-						  { ImGui::GetContentRegionAvail().x, 0 });
-			recieveMeshDragDrop(entity);
-	
-			beginProperty("Material");
-			ImGui::Button(meshRenderer.material ?
-						  assetManager()->getName(meshRenderer.material->handle()).data() :
-						  "No material assigned",
-						  { ImGui::GetContentRegionAvail().x, 0 });
-			recieveMaterialDragDrop(entity);
-			
+		if (beginComponentSection<MeshRendererComponent>("Mesh Renderer", entity)) {
+			inactiveWhenSimulating([&]{
+				beginProperty("Mesh");
+				ImGui::Button(meshRenderer.mesh ?
+							  assetManager()->getName(meshRenderer.mesh->handle()).data() :
+							  "No mesh assigned",
+							  { ImGui::GetContentRegionAvail().x, 0 });
+				recieveMeshDragDrop(entity);
+		
+				beginProperty("Material");
+				ImGui::Button(meshRenderer.material ?
+							  assetManager()->getName(meshRenderer.material->handle()).data() :
+							  "No material assigned",
+							  { ImGui::GetContentRegionAvail().x, 0 });
+				recieveMaterialDragDrop(entity);
+			});
 			endSection();
 		}
 	}
@@ -253,27 +258,28 @@ namespace poppy {
 			}
 		};
 		
-		if (componentHeaderEx("Light Component", deleter) && beginSection()) {
-			inspectLightType(type, entity);
-	
-			switch (type) {
-				case LightType::pointlight:
-					inspectPointLight(scene()->getComponent<PointLightComponent>(entity).light);
-					break;
-				case LightType::spotlight:
-					inspectSpotLight(scene()->getComponent<SpotLightComponent>(entity).light);
-					break;
-				case LightType::directional:
-					inspectDirectionalLight(scene()->getComponent<DirectionalLightComponent>(entity).light);
-					break;
-				case LightType::skylight:
-					inspectSkyLight(scene()->getComponent<SkyLightComponent>(entity).light);
-					break;
-					
-				default:
-					break;
-			}
-			
+		if (beginGenericSection("Light Component", FontWeight::semibold, FontStyle::roman, deleter)) {
+			inactiveWhenSimulating([&]{
+				inspectLightType(type, entity);
+		
+				switch (type) {
+					case LightType::pointlight:
+						inspectPointLight(scene()->getComponent<PointLightComponent>(entity).light);
+						break;
+					case LightType::spotlight:
+						inspectSpotLight(scene()->getComponent<SpotLightComponent>(entity).light);
+						break;
+					case LightType::directional:
+						inspectDirectionalLight(scene()->getComponent<DirectionalLightComponent>(entity).light);
+						break;
+					case LightType::skylight:
+						inspectSkyLight(scene()->getComponent<SkyLightComponent>(entity).light);
+						break;
+						
+					default:
+						break;
+				}
+			});
 			endSection();
 		}
 	}
@@ -404,74 +410,142 @@ namespace poppy {
 		inspectLightCommon(light.common, LightType::skylight);
 	}
 	
+	template <typename T>
+	static void editDataField(std::string_view id, T*) {
+		ImGui::Text("No Impl for %s", utl::nameof<T>.data());
+	}
+	
+	template <>
+	void editDataField(std::string_view id, float* value) {
+		ImGui::PushID(generateUniqueID(id, 0).data());
+
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+		ImGui::DragFloat(generateUniqueID(id, 1).data(), value);
+		
+		ImGui::PopID();
+	}
+	
 	void EntityInspector::inspectScript(bloom::EntityID id) {
 		auto entity = scene()->getHandle(id);
 		auto& script = entity.get<ScriptComponent>();
 		
-		componentHeader<ScriptComponent>("Script", id);
-		if (beginSection()) {
-			beginProperty("Class");
-			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-			if (ImGui::BeginCombo("##-script", script.className.data())) {
-				for (auto className: assetManager()->scriptClasses()) {
-					bool const selected = script.className == className;
-					if (ImGui::Selectable(className.data(), selected)) {
-						script.className = className;
-						script.object = getApplication().scriptEngine().instanciateObject(className);
+		if (beginComponentSection<ScriptComponent>("Script", id)) {
+			inactiveWhenSimulating([&]{
+				beginProperty("Class");
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+				if (ImGui::BeginCombo("##-script", script.className.data())) {
+					for (auto className: assetManager()->scriptClasses()) {
+						bool const selected = script.className == className;
+						if (ImGui::Selectable(className.data(), selected)) {
+							script.className = className;
+							script.object = Application::get().scriptEngine().instanciateObject(className);
+						}
+						if (selected) {
+							ImGui::SetItemDefaultFocus();
+						}
 					}
-					if (selected) {
-						ImGui::SetItemDefaultFocus();
-					}
+					ImGui::EndCombo();
 				}
-				ImGui::EndCombo();
-			}
+				
+				if (script.object && beginSubSection("Attributes")) {
+					auto fields = script.object->get_attrs();
+					for (auto&& [name, value]: fields) {
+						if (ScriptHelpers::isReserved(name)) {
+							continue;
+						}
+						
+						beginProperty(name.data());
+						
+						if (value.get().type() == typeid(std::shared_ptr<float>)) {
+							editDataField(name, value.get().cast<std::shared_ptr<float>>().get());
+						}
+						else if (value.get().type() == typeid(std::shared_ptr<double>)) {
+							editDataField(name, value.get().cast<std::shared_ptr<double>>().get());
+						}
+						else {
+							editDataField<void>(name, nullptr);
+						}
+					}
+					endSubSection();
+				}
+			});
 			endSection();
 		}
 	}
 	
 	/// MARK: - Helpers
+	bool EntityInspector::beginComponentSection(std::string_view name) {
+		return beginComponentSection<void>(name, EntityID{});
+	}
 	template <typename T>
-	bool EntityInspector::componentHeader(std::string_view name, bloom::EntityID entity) {
+	bool EntityInspector::beginComponentSection(std::string_view name, bloom::EntityID entity) {
 		if constexpr (std::is_same_v<T, void>) {
-			return componentHeaderEx(name, nullptr);
+			return beginGenericSection(name, FontWeight::semibold, FontStyle::roman, nullptr);
 		}
 		else {
-			return componentHeaderEx(name, [&]{
+			return beginGenericSection(name, FontWeight::semibold, FontStyle::roman, [&]{
 				scene()->removeComponent<T>(entity);
 			});
 		}
 	}
 	
-	bool EntityInspector::componentHeaderEx(std::string_view name,
-											utl::function<void()> deleter)
+	bool EntityInspector::beginSubSection(std::string_view name) {
+		endSection();
+		return beginGenericSection(name, FontWeight::regular, FontStyle::italic, nullptr);
+	}
+	
+	bool EntityInspector::beginGenericSection(std::string_view name,
+										FontWeight weight, FontStyle style,
+										utl::function<void()> deleter)
 	{
 		float2 const cursorPos = ImGui::GetCursorPos();
-		header(name);
-		
-		// 'Delete' Button
-		return withFont(FontWeight::semibold, FontStyle::roman, [&]{
-			bool result = true;
-			if (deleter) {
-				float2 const textSize = ImGui::CalcTextSize("Delete");
-				float2 const buttonPos = { cursorPos.x + ImGui::GetContentRegionAvail().x - textSize.x, cursorPos.y };
-				
-				ImGui::SetCursorPos(buttonPos);
-				char deleteButtonLabel[64] = "-delete-button";
-				std::strncpy(&deleteButtonLabel[14], name.data(), 49);
-				if (ImGui::InvisibleButton(deleteButtonLabel, textSize)) {
-					deleter();
-					result = false;
-				}
-				
-				float4 const color = GImGui->Style.Colors[ImGuiCol_TextDisabled];
-				float4 const hightlightColor = (float4(GImGui->Style.Colors[ImGuiCol_Text]) + color) / 2;
-				ImGui::PushStyleColor(ImGuiCol_Text, ImGui::IsItemHovered() ? hightlightColor : color);
-				ImGui::SetCursorPos(buttonPos);
-				ImGui::Text("Delete");
-				ImGui::PopStyleColor();
+		header(name, weight, style);
+		bool const open = [&]{
+			if (!deleter) {
+				return true;
 			}
-			return result;
-		});
+			
+			// 'Delete' Button
+			return withFont(FontWeight::semibold, FontStyle::roman, [&]{
+				return inactiveWhenSimulating([&]{
+					bool result = true;
+					float2 const textSize = ImGui::CalcTextSize("Delete");
+					float2 const buttonPos = { cursorPos.x + ImGui::GetContentRegionAvail().x - textSize.x, cursorPos.y };
+					
+					ImGui::SetCursorPos(buttonPos);
+					char deleteButtonLabel[64] = "-delete-button";
+					std::strncpy(&deleteButtonLabel[14], name.data(), 49);
+					if (ImGui::InvisibleButton(deleteButtonLabel, textSize)) {
+						deleter();
+						result = false;
+					}
+					
+					float4 const color = GImGui->Style.Colors[ImGuiCol_TextDisabled];
+					float4 const hightlightColor = (float4(GImGui->Style.Colors[ImGuiCol_Text]) + color) / 2;
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::IsItemHovered() ? hightlightColor : color);
+					ImGui::SetCursorPos(buttonPos);
+					ImGui::Text("Delete");
+					ImGui::PopStyleColor();
+					return result;
+				});
+			});
+		}();
+		if (open) {
+			beginSection();
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	
+	void EntityInspector::endSection() {
+		PropertiesPanel::endSection();
+	}
+	
+	void EntityInspector::endSubSection() {
+		endSection();
+		beginSection();
 	}
 	
 }

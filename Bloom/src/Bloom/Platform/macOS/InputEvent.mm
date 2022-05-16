@@ -1,4 +1,4 @@
-#include "Event.h"
+#include "InputEvent.h"
 
 #import <Carbon/Carbon.h>
 
@@ -119,14 +119,14 @@ namespace bloom {
 		return event.phase != 0 || event.momentumPhase != 0;
 	}
 
-	EventBase toEventBase(NSEvent* event) {
+	InputEventBase toInputEventBase(NSEvent* event) {
 		return {
-			.modifierFlags    = (EventModifierFlags)((unsigned)event.modifierFlags >> 16)
+			.modifierFlags    = (InputModifierFlags)((unsigned)event.modifierFlags >> 16)
 		};
 	}
 
 	KeyEvent toKeyEvent(NSEvent* event) {
-		KeyEvent result{ toEventBase(event) };
+		KeyEvent result{ toInputEventBase(event) };
 		result.key = translateKeyCode(event.keyCode);
 		if (event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp) {
 			result.repeat = event.isARepeat;
@@ -139,7 +139,7 @@ namespace bloom {
 		mtl::double2 const locationInWindow = { event.locationInWindow.x, height - event.locationInWindow.y };
 		
 		return {
-			toEventBase(event),
+			toInputEventBase(event),
 			.locationInWindow = locationInWindow
 		};
 	}

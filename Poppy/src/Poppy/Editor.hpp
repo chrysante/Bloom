@@ -26,12 +26,14 @@ namespace poppy {
 		ResourceManager* getResourceManager() { return &resourceManager; }
 		void setScene(bloom::Reference<bloom::SceneAsset>);
 		
+		static Editor& get() { return utl::down_cast<Editor&>(bloom::Application::get()); }
+		
 	private:
 		void init() override;
 		void shutdown() override;
 		void update(bloom::TimeStep) override;
 		void render(bloom::TimeStep) override;
-		void onEvent(bloom::Event&) override;
+		void onInputEvent(bloom::InputEvent&) override;
 		
 		void frame();
 		void menuBar();
@@ -72,6 +74,7 @@ namespace poppy {
 #if POPPY_DEBUGLEVEL > 0
 		bool showImGuiDemo = false;
 		bool showStyleColorsPanel = false;
+		bool showAlternateStyleColorsPanel = false;
 #endif
 	};
 	

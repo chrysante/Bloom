@@ -5,15 +5,15 @@
 #include <concepts>
 #include <mtl/mtl.hpp>
 #include <utl/memory.hpp>
+#include <utl/scope_guard.hpp>
+#include <utl/messenger.hpp>
 #include <yaml-cpp/yaml.h>
-#include "Bloom/Application/Event.hpp"
 
+#include "Bloom/Application/InputEvent.hpp"
 
 namespace bloom { class Application; }
 
 namespace poppy {
-	
-	class Editor;
 	
 	struct PanelOptions {
 		bool unique = true;
@@ -27,12 +27,6 @@ namespace poppy {
 		virtual ~Panel() = default;
 		
 		bool focused() const;
-		
-		bloom::Application& getApplication();
-		bloom::Application const& getApplication() const;
-		
-		Editor& getEditor() { return *app; }
-		Editor const& getEditor() const { return *app; }
 		
 		mtl::float2 windowSpaceToViewSpace(mtl::float2) const;
 		mtl::float2 viewSpaceToWindowSpace(mtl::float2) const;
@@ -48,11 +42,10 @@ namespace poppy {
 		void setFocused();
 		
 		template <std::derived_from<Panel> T>
-		static utl::unique_ref<Panel> create(Editor* editor, auto&&... args)
+		static utl::unique_ref<Panel> create(auto&&... args)
 			requires std::constructible_from<T, decltype(args)...>
 		{
 			utl::unique_ref<Panel> result = utl::make_unique_ref<T>(UTL_FORWARD(args)...);
-			result->app = editor;
 			return result;
 		}
 		
@@ -62,9 +55,17 @@ namespace poppy {
 		virtual void init() {};
 		virtual void shutdown() {};
 		virtual void display() = 0;
-		virtual void onEvent(bloom::Event&) {}
+		virtual void onInputEvent(bloom::InputEvent&) {}
 		
 	protected:
+		void beginInactive(bool = true) const;
+		void endInactive() const;
+		auto inactiveWhenSimulating(std::invocable auto&& block) { return utl::as_const(*this).inactiveWhenSimulating(UTL_FORWARD(block)); }
+		auto inactiveWhenSimulating(std::invocable auto&& block) const;
+		bool isSimulating() const;
+		
+		void emptyWithReason(std::string_view reason) const;
+		
 		YAML::Node settings;
 		mtl::float2 padding = 5;
 		
@@ -73,11 +74,19 @@ namespace poppy {
 		
 	private:
 		PanelOptions options;
-		Editor* app = nullptr;
 		std::string title;
 		mtl::float2 _windowSize, _viewSize, _viewPosition;
 		void* _imguiWindow = nullptr;
 		bool _open = true;
+		utl::listener_id_bag _listenerIDs;
 	};
+
+	inline auto Panel::inactiveWhenSimulating(std::invocable auto&& block) const {
+		beginInactive(isSimulating());
+		utl::scope_guard end = [this]{
+			endInactive();
+		};
+		return block();
+	}
 	
 }

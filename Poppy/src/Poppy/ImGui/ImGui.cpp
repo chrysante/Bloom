@@ -2,11 +2,12 @@
 
 #include "ImGui.hpp"
 
+#include "Bloom/Application/InputEvent.hpp"
+#include "Poppy/Debug.hpp"
+
+
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
-
-#include "Bloom/Application/Event.hpp"
-#include "Poppy/Debug.hpp"
 #include <cstring>
 #include <yaml-cpp/helpers.hpp>
 
@@ -122,53 +123,53 @@ static ImGuiKey KeyCodeToImGuiKey(bloom::Key k) {
 
 namespace poppy {
 	
-	bool ImGuiContext::handleMouseEvent(bloom::Event const& event) {
+	bool ImGuiContext::handleMouseEvent(bloom::InputEvent const& event) {
 		ImGuiIO& io = ImGui::GetIO();
 
 		using namespace bloom;
 		
 		switch (event.type()) {
-			case EventType::leftMouseDown:
+			case InputEventType::leftMouseDown:
 				io.AddMouseButtonEvent(ImGuiMouseButton_Left, true);
 				return io.WantCaptureMouse;
-			case EventType::rightMouseDown:
+			case InputEventType::rightMouseDown:
 				io.AddMouseButtonEvent(ImGuiMouseButton_Right, true);
 				return io.WantCaptureMouse;
-			case EventType::otherMouseDown:
+			case InputEventType::otherMouseDown:
 				io.AddMouseButtonEvent(ImGuiMouseButton_Middle, true);
 				return io.WantCaptureMouse;
 				
 				
-			case EventType::leftMouseUp:
+			case InputEventType::leftMouseUp:
 				io.AddMouseButtonEvent(ImGuiMouseButton_Left, false);
 				return io.WantCaptureMouse;
-			case EventType::rightMouseUp:
+			case InputEventType::rightMouseUp:
 				io.AddMouseButtonEvent(ImGuiMouseButton_Right, false);
 				return io.WantCaptureMouse;
-			case EventType::otherMouseUp:
+			case InputEventType::otherMouseUp:
 				io.AddMouseButtonEvent(ImGuiMouseButton_Middle, false);
 				return io.WantCaptureMouse;
 				
-			case EventType::mouseMoved: {
+			case InputEventType::mouseMoved: {
 				auto const locationInWindow = event.get<MouseMoveEvent>().locationInWindow;
 				io.AddMousePosEvent(locationInWindow.x, locationInWindow.y);
 				break;
 			}
-			case EventType::leftMouseDragged:
-			case EventType::rightMouseDragged:
-			case EventType::otherMouseDragged: {
+			case InputEventType::leftMouseDragged:
+			case InputEventType::rightMouseDragged:
+			case InputEventType::otherMouseDragged: {
 				auto const locationInWindow = event.get<MouseDragEvent>().locationInWindow;
 				io.AddMousePosEvent(locationInWindow.x, locationInWindow.y);
 				break;
 			}
-			case EventType::scrollWheel: {
+			case InputEventType::scrollWheel: {
 				auto const offset = event.get<ScrollEvent>().offset / 10;
 				if (offset.x != 0.0 || offset.y != 0.0) {
 					io.AddMouseWheelEvent(offset.x, offset.y);
 				}
 				return io.WantCaptureMouse;
 			}
-			case EventType::keyDown: {
+			case InputEventType::keyDown: {
 				auto& keyEvent = event.get<KeyEvent>();
 				if (keyEvent.repeat) {
 					return io.WantCaptureKeyboard;
@@ -177,7 +178,7 @@ namespace poppy {
 				io.AddKeyEvent(imguiKey, true);
 				return io.WantCaptureKeyboard;
 			}
-			case EventType::keyUp: {
+			case InputEventType::keyUp: {
 				auto& keyEvent = event.get<KeyEvent>();
 				if (keyEvent.repeat) {
 					return io.WantCaptureKeyboard;
@@ -541,8 +542,8 @@ namespace poppy {
 			{ ImGuiCol_Text, "Text" },
 			{ ImGuiCol_TextDisabled, "TextDisabled" },
 			{ ImGuiCol_WindowBg, "WindowBg" },
-			{ ImGuiCol_ChildBg, "ChildBg" },
-			{ ImGuiCol_PopupBg, "PopupBg" },
+//			{ ImGuiCol_ChildBg, "ChildBg" },
+//			{ ImGuiCol_PopupBg, "PopupBg" },
 			{ ImGuiCol_Border, "Border" },
 			{ ImGuiCol_BorderShadow, "BorderShadow" },
 			{ ImGuiCol_FrameBg, "FrameBg" },
@@ -552,32 +553,32 @@ namespace poppy {
 			{ ImGuiCol_TitleBgActive, "TitleBgActive" },
 			{ ImGuiCol_TitleBgCollapsed, "TitleBgCollapsed" },
 			{ ImGuiCol_MenuBarBg, "MenuBarBg" },
-			{ ImGuiCol_ScrollbarBg, "ScrollbarBg" },
-			{ ImGuiCol_ScrollbarGrab, "ScrollbarGrab" },
-			{ ImGuiCol_ScrollbarGrabHovered, "ScrollbarGrabHovered" },
-			{ ImGuiCol_ScrollbarGrabActive, "ScrollbarGrabActive" },
+//			{ ImGuiCol_ScrollbarBg, "ScrollbarBg" },
+//			{ ImGuiCol_ScrollbarGrab, "ScrollbarGrab" },
+//			{ ImGuiCol_ScrollbarGrabHovered, "ScrollbarGrabHovered" },
+//			{ ImGuiCol_ScrollbarGrabActive, "ScrollbarGrabActive" },
 			{ ImGuiCol_CheckMark, "CheckMark" },
-			{ ImGuiCol_SliderGrab, "SliderGrab" },
-			{ ImGuiCol_SliderGrabActive, "SliderGrabActive" },
-			{ ImGuiCol_Button, "Button" },
-			{ ImGuiCol_ButtonHovered, "ButtonHovered" },
-			{ ImGuiCol_ButtonActive, "ButtonActive" },
-			{ ImGuiCol_Header, "Header" },
-			{ ImGuiCol_HeaderHovered, "HeaderHovered" },
-			{ ImGuiCol_HeaderActive, "HeaderActive" },
+//			{ ImGuiCol_SliderGrab, "SliderGrab" },
+//			{ ImGuiCol_SliderGrabActive, "SliderGrabActive" },
+//			{ ImGuiCol_Button, "Button" },
+//			{ ImGuiCol_ButtonHovered, "ButtonHovered" },
+//			{ ImGuiCol_ButtonActive, "ButtonActive" },
+//			{ ImGuiCol_Header, "Header" },
+//			{ ImGuiCol_HeaderHovered, "HeaderHovered" },
+//			{ ImGuiCol_HeaderActive, "HeaderActive" },
 			{ ImGuiCol_Separator, "Separator" },
-			{ ImGuiCol_SeparatorHovered, "SeparatorHovered" },
-			{ ImGuiCol_SeparatorActive, "SeparatorActive" },
-			{ ImGuiCol_ResizeGrip, "ResizeGrip" },
-			{ ImGuiCol_ResizeGripHovered, "ResizeGripHovered" },
-			{ ImGuiCol_ResizeGripActive, "ResizeGripActive" },
-			{ ImGuiCol_Tab, "Tab" },
-			{ ImGuiCol_TabHovered, "TabHovered" },
-			{ ImGuiCol_TabActive, "TabActive" },
-			{ ImGuiCol_TabUnfocused, "TabUnfocused" },
-			{ ImGuiCol_TabUnfocusedActive, "TabUnfocusedActive" },
-			{ ImGuiCol_DockingPreview, "DockingPreview" },
-			{ ImGuiCol_DockingEmptyBg, "DockingEmptyBg" },
+//			{ ImGuiCol_SeparatorHovered, "SeparatorHovered" },
+//			{ ImGuiCol_SeparatorActive, "SeparatorActive" },
+//			{ ImGuiCol_ResizeGrip, "ResizeGrip" },
+//			{ ImGuiCol_ResizeGripHovered, "ResizeGripHovered" },
+//			{ ImGuiCol_ResizeGripActive, "ResizeGripActive" },
+//			{ ImGuiCol_Tab, "Tab" },
+//			{ ImGuiCol_TabHovered, "TabHovered" },
+//			{ ImGuiCol_TabActive, "TabActive" },
+//			{ ImGuiCol_TabUnfocused, "TabUnfocused" },
+//			{ ImGuiCol_TabUnfocusedActive, "TabUnfocusedActive" },
+//			{ ImGuiCol_DockingPreview, "DockingPreview" },
+//			{ ImGuiCol_DockingEmptyBg, "DockingEmptyBg" },
 			{ ImGuiCol_PlotLines, "PlotLines" },
 			{ ImGuiCol_PlotLinesHovered, "PlotLinesHovered" },
 			{ ImGuiCol_PlotHistogram, "PlotHistogram" },
@@ -603,7 +604,133 @@ namespace poppy {
 			colorEdit(colors, index, label);
 		}
 		
+		auto const none = ImVec4{0, 0, 0, 0};
+		
+		colors[ImGuiCol_ChildBg] = colors[ImGuiCol_WindowBg];
+		colors[ImGuiCol_PopupBg] = colors[ImGuiCol_WindowBg];
+		
+		colors[ImGuiCol_Button] = colors[ImGuiCol_FrameBg];
+		colors[ImGuiCol_ButtonHovered] = colors[ImGuiCol_FrameBgHovered];
+		colors[ImGuiCol_ButtonActive] = colors[ImGuiCol_FrameBgActive];
+		
+		colors[ImGuiCol_ScrollbarBg] = none;
+		colors[ImGuiCol_ScrollbarGrab] = colors[ImGuiCol_FrameBg];
+		colors[ImGuiCol_ScrollbarGrabHovered] = colors[ImGuiCol_FrameBgHovered];
+		
+		colors[ImGuiCol_Tab] = none;
+		colors[ImGuiCol_TabHovered] = colors[ImGuiCol_WindowBg];
+		colors[ImGuiCol_TabActive] = colors[ImGuiCol_WindowBg];
+		
+		colors[ImGuiCol_TabUnfocused] = none;
+		colors[ImGuiCol_TabUnfocusedActive] = colors[ImGuiCol_WindowBg];
+		
+		colors[ImGuiCol_SliderGrab] = colors[ImGuiCol_FrameBg];
+		colors[ImGuiCol_SliderGrabActive] = colors[ImGuiCol_FrameBg]; // sic
+		
+		colors[ImGuiCol_Header] = colors[ImGuiCol_FrameBg];
+		colors[ImGuiCol_HeaderHovered] = colors[ImGuiCol_FrameBgHovered];
+		colors[ImGuiCol_HeaderActive] = colors[ImGuiCol_FrameBgActive];
+		
+		colors[ImGuiCol_SeparatorHovered] = colors[ImGuiCol_Separator];
+		colors[ImGuiCol_SeparatorActive] = colors[ImGuiCol_Separator];
+		
+		colors[ImGuiCol_ResizeGrip] = colors[ImGuiCol_FrameBg];
+		colors[ImGuiCol_ResizeGripHovered] = colors[ImGuiCol_FrameBg];
+		colors[ImGuiCol_ResizeGripActive] = colors[ImGuiCol_FrameBg];
+		
+		colors[ImGuiCol_DockingPreview] = colors[ImGuiCol_FrameBg];
+		colors[ImGuiCol_DockingEmptyBg] = colors[ImGuiCol_WindowBg];
+		
 		End();
+	}
+	
+	void AlternateStyleColorsPanel(bool* open) {
+//		using namespace ImGui;
+//
+//
+//
+//		std::pair<ImGuiCol, char const*> const elements[] = {
+//			{ ImGuiCol_Text, "Text" },
+//			{ ImGuiCol_TextDisabled, "TextDisabled" },
+//			{ ImGuiCol_WindowBg, "WindowBg" },
+//			{ ImGuiCol_ChildBg, "ChildBg" },
+//			{ ImGuiCol_PopupBg, "PopupBg" },
+//			{ ImGuiCol_Border, "Border" },
+//			{ ImGuiCol_BorderShadow, "BorderShadow" },
+//			{ ImGuiCol_FrameBg, "FrameBg" },
+//			{ ImGuiCol_FrameBgHovered, "FrameBgHovered" },
+//			{ ImGuiCol_FrameBgActive, "FrameBgActive" },
+//			{ ImGuiCol_TitleBg, "TitleBg" },
+//			{ ImGuiCol_TitleBgActive, "TitleBgActive" },
+//			{ ImGuiCol_TitleBgCollapsed, "TitleBgCollapsed" },
+//			{ ImGuiCol_MenuBarBg, "MenuBarBg" },
+//			{ ImGuiCol_ScrollbarBg, "ScrollbarBg" },
+//			{ ImGuiCol_ScrollbarGrab, "ScrollbarGrab" },
+//			{ ImGuiCol_ScrollbarGrabHovered, "ScrollbarGrabHovered" },
+//			{ ImGuiCol_ScrollbarGrabActive, "ScrollbarGrabActive" },
+//			{ ImGuiCol_CheckMark, "CheckMark" },
+//			{ ImGuiCol_SliderGrab, "SliderGrab" },
+//			{ ImGuiCol_SliderGrabActive, "SliderGrabActive" },
+//			{ ImGuiCol_Button, "Button" },
+//			{ ImGuiCol_ButtonHovered, "ButtonHovered" },
+//			{ ImGuiCol_ButtonActive, "ButtonActive" },
+//			{ ImGuiCol_Header, "Header" },
+//			{ ImGuiCol_HeaderHovered, "HeaderHovered" },
+//			{ ImGuiCol_HeaderActive, "HeaderActive" },
+//			{ ImGuiCol_Separator, "Separator" },
+//			{ ImGuiCol_SeparatorHovered, "SeparatorHovered" },
+//			{ ImGuiCol_SeparatorActive, "SeparatorActive" },
+//			{ ImGuiCol_ResizeGrip, "ResizeGrip" },
+//			{ ImGuiCol_ResizeGripHovered, "ResizeGripHovered" },
+//			{ ImGuiCol_ResizeGripActive, "ResizeGripActive" },
+//			{ ImGuiCol_Tab, "Tab" },
+//			{ ImGuiCol_TabHovered, "TabHovered" },
+//			{ ImGuiCol_TabActive, "TabActive" },
+//			{ ImGuiCol_TabUnfocused, "TabUnfocused" },
+//			{ ImGuiCol_TabUnfocusedActive, "TabUnfocusedActive" },
+//			{ ImGuiCol_DockingPreview, "DockingPreview" },
+//			{ ImGuiCol_DockingEmptyBg, "DockingEmptyBg" },
+//			{ ImGuiCol_PlotLines, "PlotLines" },
+//			{ ImGuiCol_PlotLinesHovered, "PlotLinesHovered" },
+//			{ ImGuiCol_PlotHistogram, "PlotHistogram" },
+//			{ ImGuiCol_PlotHistogramHovered, "PlotHistogramHovered" },
+//			{ ImGuiCol_TableHeaderBg, "TableHeaderBg" },
+//			{ ImGuiCol_TableBorderStrong, "TableBorderStrong" },
+//			{ ImGuiCol_TableBorderLight, "TableBorderLight" },
+//			{ ImGuiCol_TableRowBg, "TableRowBg" },
+//			{ ImGuiCol_TableRowBgAlt, "TableRowBgAlt" },
+//			{ ImGuiCol_TextSelectedBg, "TextSelectedBg" },
+//			{ ImGuiCol_DragDropTarget, "DragDropTarget" },
+//			{ ImGuiCol_NavHighlight, "NavHighlight" },
+//			{ ImGuiCol_NavWindowingHighlight, "NavWindowingHighlight" },
+//			{ ImGuiCol_NavWindowingDimBg, "NavWindowingDimBg" },
+//			{ ImGuiCol_ModalWindowDimBg, "ModalWindowDimBg" }
+//		};
+//
+//		ImGuiStyle* style = &ImGui::GetStyle();
+//		ImVec4* colors = style->Colors;
+//
+//		enum class ColorOptions {
+//			elementBG,
+//			elementBGHovered,
+//			elementBGPressedDark,
+//			elementBGPressedLight,
+//			_count
+//		};
+//
+//		ImVec4 colors[(std::size_t)ColorOptions::_count];
+//
+//		Begin("Style Colors", open);
+//		colorEdit(colors, index, label);
+//		for (auto [index, label]: elements) {
+//
+//		}
+//
+//		colors[ImGuiCol_Button] = colors[ImGuiCol_FrameBg];
+//		colors[ImGuiCol_ButtonHovered] = colors[ImGuiCol_FrameBgHovered];
+//		colors[ImGuiCol_ButtonActive] = colors[ImGuiCol_FrameBgActive];
+//
+//		End();
 	}
 	
 	void SaveStyleColors(YAML::Node node) {

@@ -72,7 +72,7 @@ namespace bloom {
 		YAML::Node root = YAML::Load(std::move(text));
 		
 		if (!root.IsSequence()) {
-			bloomLog(error, "Failed to deserialize Scene: Root node is not a sequence.");
+			bloomLog(info, "Failed to deserialize Scene: Scene is empty.");
 			return;
 		}
 		

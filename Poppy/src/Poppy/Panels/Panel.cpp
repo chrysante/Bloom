@@ -7,6 +7,10 @@
 #include <utl/stdio.hpp>
 
 #include "Editor.hpp"
+#include "Bloom/Scene/SceneSystem.hpp"
+ 
+using namespace bloom;
+using namespace mtl::short_types;
 
 namespace poppy {
 	
@@ -19,17 +23,7 @@ namespace poppy {
 		options(options)
 	{ ++gID; }
 	
-	bloom::Application& Panel::getApplication() {
-		return *app;
-	}
-	
-	bloom::Application const& Panel::getApplication() const {
-		return *app;
-	}
-	
 	void Panel::doDisplay() {
-//		_ignoreEventMask = bloom::EventType::none;
-		
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
 		ImGui::SetNextWindowSize({600, 400});
 		
@@ -41,6 +35,7 @@ namespace poppy {
 			_viewPosition = ImGui::GetWindowPos();
 			
 			this->display();
+			
 			ImGui::EndChild();
 			
 		}
@@ -56,10 +51,6 @@ namespace poppy {
 		return position + _viewPosition;
 	}
 	
-//	void Panel::ignoreEvents(bloom::EventType mask) {
-//		_ignoreEventMask |= mask;
-//	}
-	
 	bool Panel::focused() const {
 		return GImGui->NavWindow == _imguiWindow;
 	}
@@ -71,6 +62,33 @@ namespace poppy {
 	
 	void Panel::setFocused() {
 		ImGui::FocusWindow((ImGuiWindow*)_imguiWindow);
+	}
+	
+	void Panel::beginInactive(bool b) const {
+		ImGui::BeginDisabled(b);
+	}
+	
+	void Panel::endInactive() const {
+		ImGui::EndDisabled();
+	}
+	
+	bool Panel::isSimulating() const {
+		return Application::get().sceneSystem().isSimulating();
+	}
+	
+	void Panel::emptyWithReason(std::string_view reason) const {
+		auto const oldCursorPos = ImGui::GetCursorPos();
+		utl::scope_guard reset = [&]{
+			ImGui::SetCursorPos(oldCursorPos);
+		};
+		
+		float2 const textSize =	ImGui::CalcTextSize(reason.data());
+		
+		ImGui::SetCursorPos((size() - textSize) / 2);
+		withFont(FontWeight::semibold, FontStyle::roman, [&]{
+			ImGui::TextDisabled("%s", reason.data());
+		});
+		
 	}
 	
 }

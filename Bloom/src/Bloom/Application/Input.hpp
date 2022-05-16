@@ -71,7 +71,7 @@ namespace bloom {
 		none = 0, left, right, other, _count
 	};
 	
-	class Event;
+	class InputEvent;
 	
 	class Input {
 	public:
@@ -86,7 +86,7 @@ namespace bloom {
 	private:
 		friend class Application;
 		
-		void _setFromEvent(Event const&);
+		void _setFromEvent(InputEvent const&);
 		
 		void _setKey(Key k, bool down) {
 			_keys[(std::size_t)k] = down;

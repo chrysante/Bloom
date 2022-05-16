@@ -42,9 +42,15 @@ namespace poppy {
 		void inspectScript(bloom::EntityID);
 		
 		// Helpers
+		bool beginComponentSection(std::string_view name);
 		template <typename>
-		bool componentHeader(std::string_view name, bloom::EntityID);
-		bool componentHeaderEx(std::string_view name, utl::function<void()> deleter);
+		bool beginComponentSection(std::string_view name, bloom::EntityID);
+		bool beginSubSection(std::string_view name);
+		
+		bool beginGenericSection(std::string_view name, FontWeight, FontStyle, utl::function<void()> deleter);
+		
+		void endSection();
+		void endSubSection();
 		
 	private:
 		int editingNameState = 0;

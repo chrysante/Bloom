@@ -56,7 +56,7 @@ namespace poppy {
 		void present();
 		
 		void handleMouseEvent(void* nativeEvent);
-		bool handleMouseEvent(bloom::Event const&);
+		bool handleMouseEvent(bloom::InputEvent const&);
 		
 		void* getFont(FontWeight, FontStyle);
 		void* getFont(FontWeight, FontStyle, int fontSize);
@@ -99,6 +99,7 @@ namespace poppy {
 	std::array<char, 64> generateUniqueID(std::string_view, int, bool prepentDoubleHash = false);
 	
 	void StyleColorsPanel(bool* = nullptr);
+	void AlternateStyleColorsPanel(bool* = nullptr);
 	
 	void SaveStyleColors(YAML::Node);
 	void LoadStyleColors(YAML::Node);

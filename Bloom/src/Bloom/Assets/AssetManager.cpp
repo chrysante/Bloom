@@ -43,6 +43,10 @@ namespace bloom {
 		
 		// load working dir
 		assets.clear();
+		refreshWorkingDir();
+	}
+	
+	void AssetManager::refreshWorkingDir(bool forceOverrides) {
 		if (_workingDir.empty()) {
 			return;
 		}
@@ -54,7 +58,7 @@ namespace bloom {
 			if (utl::is_hidden(entry.path())) {
 				continue;
 			}
-			readAssetMetaData(entry.path());
+			readAssetMetaData(entry.path(), forceOverrides);
 		}
 	}
 
@@ -64,7 +68,7 @@ namespace bloom {
 										  std::filesystem::path dest)
 	{
 		auto const handle = AssetHandle::generate(type);
-		auto const ref = allocateAsset(handle);
+		Reference<Asset> const ref = allocateAsset(handle);
 		InternalAsset asset {
 			.theAsset = ref,
 			.name = std::string(name),
@@ -240,7 +244,7 @@ namespace bloom {
 	
 	void AssetManager::loadScripts(ScriptEngine& engine) {
 		_scriptClasses.clear();
-		engine.restoreBeginState();
+		engine.restoreBaseState();
 		for (auto&& [id, internal]: assets) {
 			if (internal.handle.type() != AssetType::script) {
 				continue;
@@ -281,21 +285,24 @@ namespace bloom {
 		return &itr->second;
 	}
 	
-	void AssetManager::readAssetMetaData(std::filesystem::path diskLocation) {
+	void AssetManager::readAssetMetaData(std::filesystem::path diskLocation, bool forceOverride) {
 		AssetFileHeader const header = readHeader(makeAbsolute(diskLocation));
 		auto const handle = header.handle();
 		if (find(handle)) {
-			bloomLog(warning, "Asset at {} is already loaded.", diskLocation);
-			return;
+			if (!forceOverride)
+				return;
 		}
-		auto const [itr, success] = assets.insert({ handle.id(), InternalAsset{
+		
+		auto iAsset = InternalAsset{
 			.theAsset = allocateAsset(handle),
 			.name = header.name(),
 			.diskLocation = diskLocation,
 			.handle = handle
-		} });
+		};
+		
+		auto const [itr, success] = assets.insert({ handle.id(), iAsset });
 		if (!success) {
-			bloomDebugfail();
+			itr->second = iAsset;
 		}
 	}
 	

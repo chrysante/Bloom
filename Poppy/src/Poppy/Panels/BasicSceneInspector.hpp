@@ -39,9 +39,6 @@ namespace poppy {
 		LightType getLightType(bloom::EntityID) const;
 		bloom::LightCommon getLightCommon(LightType, bloom::EntityID) const;
 		void removeLightComponent(LightType, bloom::EntityID);
-		
-	private:
-		Editor* editor;
 	};
 	
 }

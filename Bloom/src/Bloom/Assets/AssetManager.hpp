@@ -29,6 +29,8 @@ namespace bloom {
 		/// @param path	Must be an absolute directory. Directory will be created if not existent.
 		void setWorkingDir(std::filesystem::path path);
 		
+		void refreshWorkingDir(bool forceOverrides = false);
+		
 		/// @returns	Absolute path to working directory.
 		std::filesystem::path const& workingDir() const { return _workingDir; };
 		
@@ -127,7 +129,7 @@ namespace bloom {
 		InternalAsset* find(AssetHandle);
 		InternalAsset const* find(AssetHandle) const;
 		
-		void readAssetMetaData(std::filesystem::path diskLocation);
+		void readAssetMetaData(std::filesystem::path diskLocation, bool forceOverride = false);
 		
 		/// MARK: Make Available
 		void makeStaticMeshAvailable(InternalAsset&, AssetRepresentation rep, bool force);

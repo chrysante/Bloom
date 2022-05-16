@@ -7,8 +7,6 @@
 #include "ViewportOverlays.hpp"
 #include "ViewportCameraActor.hpp"
 
-#include "Bloom/Application/Event.hpp"
-
 #include "Bloom/Scene/Scene.hpp"
 
 #include "Bloom/Graphics/Renderer.hpp"
@@ -32,8 +30,6 @@ namespace poppy {
 		
 	public:
 		Viewport(bloom::Renderer*);
-		
-		void onEvent(bloom::Event& event) override;
 				
 		mtl::float3 worldSpaceToViewSpace(mtl::float3 position);
 		mtl::float3 worldSpaceToWindowSpace(mtl::float3 position);
@@ -45,7 +41,11 @@ namespace poppy {
 		void init() override;
 		void shutdown() override;
 		void display() override;
+		
+		void displayScene();
 	
+		void onInputEvent(bloom::InputEvent&) override;
+		
 		void drawScene(bloom::Renderer&);
 		void updateRenderTarget(bloom::Renderer&, mtl::usize2 size);
 		

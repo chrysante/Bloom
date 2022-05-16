@@ -7,11 +7,14 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <utl/memory.hpp>
 
 namespace bloom {
 
 	class Scene;
 	class Renderer;
+	
+	class ScriptSystem;
 	
 	struct UpdateOptions {
 		std::size_t stepsPerSecond = 50;
@@ -21,6 +24,8 @@ namespace bloom {
     public:
 		SceneSystem();
 		~SceneSystem();
+		
+		void init();
 		
 		void setScene(Reference<Scene> scene);
 		Scene* getScene() { return _scene.get(); }
@@ -35,18 +40,21 @@ namespace bloom {
 		
 		void applyTransformHierarchy();
 		
-		bool isRunning() const { return _isRunning; }
+		bool isSimulating() const { return _isRunning; }
 		
 		std::unique_lock<std::mutex> lock() { return std::unique_lock<std::mutex>{ _updateMutex }; }
 		
 		Scene copyScene();
 		
 	private:
-		void updateLoop();
+		void updateThread();
+		void updateLoop(TimeStep);
 		void calculateTransforms();
 		void simulationStep(TimeStep);
 		
 		
+	private:
+		friend class ScriptSystem;
 		
     private:
 		Reference<Scene> _scene;
@@ -55,6 +63,8 @@ namespace bloom {
 		std::atomic_bool _isRunning = false;
 		std::chrono::high_resolution_clock::time_point _beginTime;
 		UpdateOptions _updateOptions{};
+		
+		utl::unique_ref<ScriptSystem> _scriptSystem;
     };
 
 }

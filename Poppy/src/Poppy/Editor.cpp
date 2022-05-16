@@ -20,6 +20,8 @@
 #include "Panels/EntityInspector.hpp"
 #include "Panels/AssetBrowser.hpp"
 
+#include "IconConfig.hpp"
+
 using namespace mtl::short_types;
 using namespace bloom;
 
@@ -83,11 +85,11 @@ namespace poppy {
 		imgui.present();
 	}
 	
-	void Editor::onEvent(bloom::Event& event) {
+	void Editor::onInputEvent(bloom::InputEvent& event) {
 		imgui.handleMouseEvent(event);
 		
-		event.dispatch<EventType::keyUp>([&](KeyEvent e){
-			if (e.key == Key::S && test(e.modifierFlags & EventModifierFlags::super)) {
+		event.dispatch<InputEventType::keyUp>([&](KeyEvent e){
+			if (e.key == Key::S && test(e.modifierFlags & InputModifierFlags::super)) {
 				saveScene();
 				return true;
 			}
@@ -100,7 +102,7 @@ namespace poppy {
 		
 		auto const focusedPanel = std::find_if(panels.begin(), panels.end(), [](auto const& p) { return p->focused(); });
 		if (focusedPanel != panels.end()) {
-			(**focusedPanel).onEvent(event);
+			(**focusedPanel).onInputEvent(event);
 			if (event.handled()) {
 				return;
 			}
@@ -110,7 +112,7 @@ namespace poppy {
 			if (panel->focused()) {
 				continue;
 			}
-			panel->onEvent(event);
+			panel->onInputEvent(event);
 			if (event.handled()) {
 				break;
 			}
@@ -140,6 +142,9 @@ namespace poppy {
 		}
 		if (showStyleColorsPanel) {
 			StyleColorsPanel(&showStyleColorsPanel);
+		}
+		if (showAlternateStyleColorsPanel) {
+			AlternateStyleColorsPanel(&showAlternateStyleColorsPanel);
 		}
 #endif
 	}
@@ -185,11 +190,7 @@ namespace poppy {
 	
 	template <typename T>
 	void Editor::createPanel(auto&&... args) {
-		auto panel = Panel::create<T>(this, UTL_FORWARD(args)...);
-		if (auto* const sc = dynamic_cast<BasicSceneInspector*>(panel.get())) {
-			sc->editor = this;
-		}
-		
+		auto panel = Panel::create<T>(UTL_FORWARD(args)...);
 		panel->settings = settings[yamlSanitize(panel->uniqueName())];
 		panel->init();
 		panels.push_back(std::move(panel));
@@ -250,7 +251,11 @@ namespace poppy {
 		ImGuiStyle& style = ImGui::GetStyle();
 		auto const winSizeSaved = style.WindowMinSize.x;
 		style.WindowMinSize.x = 250;
-		ImGui::DockSpace(dockMain);
+		
+		int dsFlags = 0;
+		dsFlags |= ImGuiDockNodeFlags_NoWindowMenuButton;
+		dsFlags |= ImGuiDockNodeFlags_NoCloseButton;
+		ImGui::DockSpace(dockMain, /* size arg */ {}, dsFlags);
 		style.WindowMinSize.x = winSizeSaved;
 		ImGui::End();
 		ImGui::PopStyleVar(3);
@@ -272,22 +277,34 @@ namespace poppy {
 			| ImGuiWindowFlags_NoScrollbar
 			| ImGuiWindowFlags_NoSavedSettings
 			;
+		
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, GImGui->Style.Colors[ImGuiCol_TitleBg]);
 		ImGui::Begin("TOOLBAR", NULL, window_flags);
+		ImGui::PopStyleColor();
 		ImGui::PopStyleVar();
 
 		auto& sceneSystem = this->sceneSystem();
-		bool const isSimulating = sceneSystem.isRunning();
+		bool const isSimulating = sceneSystem.isSimulating();
 		
-		char const* const buttonLabel = !isSimulating ? "Simulate" : "Stop";
 		
-		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, sceneSystem.getScene() == nullptr);
-		if (ImGui::Button(buttonLabel, ImVec2(0, 37))) {
+		
+		ImGui::BeginDisabled(sceneSystem.getScene() == nullptr);
+		auto const buttonLabel = !isSimulating ? IconConfig::unicodeStr("play") : IconConfig::unicodeStr("stop");
+		ImGui::PushFont((ImFont*)IconConfig::font(16));
+		bool const playStop = ImGui::Button(buttonLabel.data(), ImVec2(37, 37));
+		ImGui::PopFont();
+		if (playStop) {
 			!isSimulating ? startSimulation() : stopSimulation();
 		}
-		ImGui::PopItemFlag();
+		
+		ImGui::EndDisabled();
 		
 		ImGui::SameLine();
+		if (ImGui::Button("Some Other Button", ImVec2(0, 37))) {
+			
+		}
+		ImGui::Separator();
 		
 		ImGui::End();
 	}

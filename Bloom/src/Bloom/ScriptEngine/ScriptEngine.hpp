@@ -3,10 +3,8 @@
 #include "Bloom/Core/Base.hpp"
 
 #include <memory>
+#include <concepts>
 #include <chaiscript/chaiscript.hpp>
-#include <chaiscript/dispatchkit/register_function.hpp>
-#include <chaiscript/dispatchkit/boxed_value.hpp>
-#include <chaiscript/dispatchkit/function_call.hpp>
 
 namespace bloom {
 
@@ -19,6 +17,10 @@ namespace bloom {
 		void registerFunction(auto&&, std::string);
 		template <typename>
 		void registerType(std::string);
+		template <typename Base, std::derived_from<Base> Derived>
+		void registerRelation();
+		template <typename>
+		void registerConstructor(std::string name);
 		
 		template <typename T = void>
 		T eval(std::string const&);
@@ -27,9 +29,12 @@ namespace bloom {
 		
 		struct State {
 			friend class ScriptEngine;
-			State(void*);
+			State(void* = nullptr);
 			State(State const&);
 			State(State&&) = default;
+			
+			State& operator=(State const&);
+			State& operator=(State&&) = default;
 		private:
 			struct Deleter { void operator()(void*) const; };
 			std::unique_ptr<void, Deleter> _state;
@@ -38,11 +43,13 @@ namespace bloom {
 		State getState();
 		void setState(State);
 		
-		void restoreBeginState();
+		void rememberBaseState();
+		void restoreBaseState();
 		
 	private:
 		void registerFunction(chaiscript::Proxy_Function&&, std::string&&);
 		void registerType(chaiscript::Type_Info&&, std::string&&);
+		void registerConversion(chaiscript::Type_Conversion&&);
 		chaiscript::Boxed_Value doEval(std::string const&);
 		
     private:
@@ -61,6 +68,16 @@ void bloom::ScriptEngine::registerFunction(auto&& function, std::string name) {
 template <typename T>
 void bloom::ScriptEngine::registerType(std::string name) {
 	registerType(chaiscript::user_type<T>(), std::move(name));
+}
+
+template <typename Base, std::derived_from<Base> Derived>
+void bloom::ScriptEngine::registerRelation() {
+	registerConversion(chaiscript::base_class<Base, Derived>());
+}
+
+template <typename Ctor>
+void bloom::ScriptEngine::registerConstructor(std::string name) {
+	registerFunction(chaiscript::constructor<Ctor>(), std::move(name));
 }
 
 template <typename T>

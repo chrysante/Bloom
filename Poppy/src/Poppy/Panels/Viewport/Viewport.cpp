@@ -12,7 +12,7 @@
 #include "Bloom/Scene/SceneSystem.hpp"
 #include "Bloom/Graphics/RenderContext.hpp"
 #include "Bloom/Application/Application.hpp"
-#include "Bloom/Application/Event.hpp"
+#include "Bloom/Application/InputEvent.hpp"
 #include "Bloom/Assets/ConcreteAssets.hpp"
  
 #include "Poppy/Editor.hpp"
@@ -60,8 +60,66 @@ namespace poppy{
 		padding = 0;
 	}
 
-	void Viewport::onEvent(bloom::Event& event) {
-		event.dispatch<bloom::EventType::leftMouseDown>([&](bloom::MouseEvent const& e) {
+	void Viewport::init() {
+		params = settings["Parameters"].as<Parameters>(Parameters{});
+		cameraActor = settings["Camera"].as<ViewportCameraActor>(ViewportCameraActor{});
+		cameraActor.applyTransform();
+		gizmo.setInput(Application::get().input());
+		overlays.init(this);
+	}
+	
+	void Viewport::shutdown() {
+		settings["Parameters"] = params;
+		settings["Camera"] = cameraActor;
+	}
+	
+	void Viewport::display() {
+		if (scene()) {
+			displayScene();
+		}
+		else {
+			emptyWithReason("No active Scene");
+		}
+		
+		displayControls();
+		
+		if (scene()) {
+			auto const wantsInput = detectViewportInput(ImGuiButtonFlags_MouseButtonRight);
+			viewportHovered = wantsInput.hovered;
+			if (wantsInput.held) {
+				cameraActor.update(Application::get().getRenderTime(), Application::get().input());
+			}
+		}
+		
+		if (!isSimulating() && GImGui->DragDropActive) {
+			float const spacing = 6.5;
+			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+			ImGui::SetCursorPos({ spacing, spacing });
+			ImGui::InvisibleButton("viewport-drag-drop-button",
+								   ImGui::GetContentRegionAvail() - ImVec2{ spacing, spacing });
+			ImGui::PopItemFlag();
+			recieveSceneDragDrop();
+		}
+	}
+
+	void Viewport::displayScene() {
+		poppyExpect(scene());
+		
+		drawScene(Application::get().renderer());
+		
+		ImGui::Image(gameView ?
+					 frameBuffer.finalImage.nativeHandle() :
+					 frameBuffer.finalImageEditor.nativeHandle(),
+					 ImGui::GetWindowSize());
+		if (!gameView) {
+			overlays.display();
+		}
+		
+		gizmo.display(cameraActor.camera, scene(), selection());
+	}
+	
+	void Viewport::onInputEvent(bloom::InputEvent& event) {
+		event.dispatch<bloom::InputEventType::leftMouseDown>([&](bloom::MouseEvent const& e) {
 			if (!viewportHovered || gizmo.isHovered()) {
 				return;
 			}
@@ -76,7 +134,7 @@ namespace poppy{
 			}
 		});
 		
-		event.dispatch<bloom::EventType::keyDown>([&](bloom::KeyEvent const& e) {
+		event.dispatch<bloom::InputEventType::keyDown>([&](bloom::KeyEvent const& e) {
 			using bloom::Key;
 			switch (e.key) {
 				case Key::tab:
@@ -99,52 +157,6 @@ namespace poppy{
 					break;
 			}
 		});
-	}
-	
-	void Viewport::init() {
-		params = settings["Parameters"].as<Parameters>(Parameters{});
-		cameraActor = settings["Camera"].as<ViewportCameraActor>(ViewportCameraActor{});
-		cameraActor.applyTransform();
-		gizmo.setInput(getApplication().input());
-		overlays.init(this);
-	}
-	
-	void Viewport::shutdown() {
-		settings["Parameters"] = params;
-		settings["Camera"] = cameraActor;
-	}
-	
-	void Viewport::display() {
-		if (scene()) {
-			drawScene(getApplication().renderer());
-			
-			ImGui::Image(gameView ?
-						 frameBuffer.finalImage.nativeHandle() :
-						 frameBuffer.finalImageEditor.nativeHandle(),
-						 ImGui::GetWindowSize());
-			if (!gameView) {
-				overlays.display();
-			}
-		}
-		
-		gizmo.display(cameraActor.camera, scene(), selection());
-		displayControls();
-		
-		auto const wantsInput = detectViewportInput(ImGuiButtonFlags_MouseButtonRight);
-		viewportHovered = wantsInput.hovered;
-		if (wantsInput.held) {
-			cameraActor.update(getApplication().getRenderTime(), getApplication().input());
-		}
-		
-		if (!getApplication().sceneSystem().isRunning() && GImGui->DragDropActive) {
-			float const spacing = 6.5;
-			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-			ImGui::SetCursorPos({ spacing, spacing });
-			ImGui::InvisibleButton("viewport-drag-drop-button",
-								   ImGui::GetContentRegionAvail() - ImVec2{ spacing, spacing });
-			ImGui::PopItemFlag();
-			recieveSceneDragDrop();
-		}
 	}
 	
 	template <typename E>
@@ -281,7 +293,7 @@ namespace poppy{
 		
 		renderer.beginScene(cameraActor.camera, drawOptions);
 		
-		auto& sceneSystem = getApplication().sceneSystem();
+		auto& sceneSystem = Application::get().sceneSystem();
 		
 		auto lock = sceneSystem.lock();
 		
@@ -373,7 +385,7 @@ namespace poppy{
 			AssetHandle const handle = *payload;
 			auto scene = assetManager()->get(handle);
 			assetManager()->makeAvailable(handle, AssetRepresentation::CPU);
-			getEditor().setScene(as<SceneAsset>(scene));
+			Editor::get().setScene(as<SceneAsset>(scene));
 		}
 	}
 	

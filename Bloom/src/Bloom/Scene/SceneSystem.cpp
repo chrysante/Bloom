@@ -1,9 +1,11 @@
 #include "SceneSystem.hpp"
 
 #include "Scene.hpp"
+#include "ScriptSystem.hpp"
 #include "Components/AllComponents.hpp"
 
 #include "Bloom/Core/Reference.hpp"
+#include "Bloom/Application/Application.hpp"
 #include "Bloom/Assets/ConcreteAssets.hpp"
 #include "Bloom/Graphics/Renderer.hpp"
 
@@ -11,7 +13,7 @@
 
 namespace bloom {
     
-	SceneSystem::SceneSystem() {
+	SceneSystem::SceneSystem(): _scriptSystem(new ScriptSystem(this)) {
 		
 	}
 	
@@ -19,17 +21,19 @@ namespace bloom {
 		stopUpdateThread();
 	}
 	
+	void SceneSystem::init() {
+		_scriptSystem->init();
+	}
+	
 	void SceneSystem::setScene(Reference<Scene> scene) {
 		_scene = std::move(scene);
+		_scriptSystem->onSceneConstruction();
 	}
 	
 	void SceneSystem::runUpdateThread() {
-		_beginTime = std::chrono::high_resolution_clock::now();
 		_isRunning = true;
 		_updateThread = std::thread([this]{
-			while (_isRunning) {
-				updateLoop();
-			}
+			updateThread();
 		});
 	}
 	
@@ -59,7 +63,6 @@ namespace bloom {
 		if (!_scene) {
 			return;
 		}
-//		std::unique_lock lock(_updateMutex);
 		auto* scene = _scene.get();
 		/* submit meshes */ {
 			auto view = scene->view<TransformMatrixComponent const, MeshRendererComponent const>();
@@ -113,20 +116,42 @@ namespace bloom {
 	Scene SceneSystem::copyScene() {
 		return _scene->copy();
 	}
-	
-	void SceneSystem::updateLoop() {
-		std::lock_guard lock(_updateMutex);
+
+	void SceneSystem::updateThread() {
+		_beginTime = std::chrono::high_resolution_clock::now();
 		
-		auto const stepBeginTime = std::chrono::high_resolution_clock::now();
-		TimeStep const t = {
-			(stepBeginTime - _beginTime).count() / 1'000'000'000.0,
-			1.0 / _updateOptions.stepsPerSecond
-		};
-		
-		for (auto&& [id, transform, mesh]: _scene->view<TransformComponent, MeshRendererComponent const>().each()) {
-			transform.position.x += std::cos(t.absolute) / 1000;
-			break;
+		while (_isRunning) {
+			constexpr std::int64_t oneBillion = 1'000'000'000;
+			std::unique_lock lock(_updateMutex);
+			
+			auto const stepBeginTime = std::chrono::high_resolution_clock::now();
+			TimeStep const t = {
+				(stepBeginTime - _beginTime).count() / (double)oneBillion,
+				1.0 / _updateOptions.stepsPerSecond
+			};
+			
+
+			updateLoop(t);
+			
+			// End
+			auto const stepEndTime = std::chrono::high_resolution_clock::now();
+			std::int64_t const stepDurationNS = (stepEndTime - stepBeginTime).count();
+			std::int64_t const remaining = oneBillion / _updateOptions.stepsPerSecond - stepDurationNS;
+			if (remaining < 0) {
+				bloomLog(warning, "Failed to meet time step requirement of {}s", t.delta);
+			}
+			else {
+				lock.unlock();
+				std::this_thread::sleep_for(std::chrono::nanoseconds(remaining));
+			}
 		}
+	}
+	
+	void SceneSystem::updateLoop(TimeStep t) {
+				
+		_scriptSystem->onSceneUpdate(t);
+		
+		
 	}
 
 }

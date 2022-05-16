@@ -2,13 +2,14 @@
 
 #include "Bloom/Core/Base.hpp"
 #include "Bloom/Core/Time.hpp"
-#include "Event.hpp"
+#include "InputEvent.hpp"
 #include "Input.hpp"
 
 #include "Bloom/Assets/AssetManager.hpp"
 
 #include <utl/memory.hpp>
 #include <utl/vector.hpp>
+#include <utl/messenger.hpp>
 
 namespace bloom {
 	
@@ -24,6 +25,7 @@ namespace bloom {
 	
 	class BLOOM_API Application {
 	public:
+		Application();
 		virtual ~Application();
 		
 		RenderContext& renderContext() { return *_renderContext; }
@@ -37,14 +39,20 @@ namespace bloom {
 		TimeStep getUpdateTime() const { return _updateTimer.getTimeStep(); }
 		TimeStep getRenderTime() const { return _renderTimer.getTimeStep(); }
 		
+		utl::listener_id addEventListener(utl::listener);
+		void addStaticEventListener(utl::listener);
+		void publishEvent(utl::message_type auto const& event) {
+			_messenger.send_message(event);
+		}
+		
+		static Application& get() { return *_instance; }
+		
 	private:
 		virtual void init() {}
 		virtual void shutdown() {}
 		virtual void update(TimeStep) {}
 		virtual void render(TimeStep) {}
-		virtual void onEvent(Event&) {}
-		
-		virtual void mouseEventExtra(void* nativeEvent) {}
+		virtual void onInputEvent(InputEvent&) {}
 		
 	private:
 		friend struct internal::AppInternals;
@@ -56,21 +64,23 @@ namespace bloom {
 		
 		void doTickMainThread();
 		
-		void handleEvent(Event const&);
+		void handleInputEvent(InputEvent const&);
 		
 		void flushEventBuffer();
 		
 		virtual utl::unique_ref<AssetManager> createAssetManager();
 		
 	private:
+		static Application* _instance;
 		utl::ref<RenderContext> _renderContext;
 		utl::ref<Renderer> _renderer;
 		Input _input;
 		Timer _renderTimer, _updateTimer;
-		utl::vector<Event> _eventBuffer;
 		utl::ref<AssetManager> _assetManager;
 		utl::ref<SceneSystem> _sceneSystem;
 		utl::ref<ScriptEngine> _scriptEngine;
+		utl::buffered_messenger _messenger;
+		utl::listener_id_bag _listenerIDs;
 	};
 
 }
@@ -82,6 +92,5 @@ struct bloom::internal::AppInternals {
 	static void shutdown(Application* app) { app->doShutdown(); }
 	static void tick(Application* app) { app->doTickMainThread(); }
 	
-	static void handleEvent(Application* app, Event const& event) { app->handleEvent(event); }
-//	static void handleKeyEvent(Application* app, KeyEvent const& event, bool down) { app->handleKeyEvent(event, down); }
+	static void handleInputEvent(Application* app, InputEvent const& event) { app->handleInputEvent(event); }
 };

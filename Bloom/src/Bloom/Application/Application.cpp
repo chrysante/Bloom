@@ -16,21 +16,43 @@ BLOOM_API BLOOM_WEAK bloom::Application* createBloomApplication() {
 
 namespace bloom {
 	
+	Application* Application::_instance = nullptr;
+	
+	Application::Application() {
+		_instance = this;
+	}
+	
 	Application::~Application() {
 		
 	}
 	
+	utl::listener_id Application::addEventListener(utl::listener l) {
+		return _messenger.register_listener(std::move(l));
+		
+	}
+	
+	void Application::addStaticEventListener(utl::listener l) {
+		_listenerIDs.insert(addEventListener(std::move(l)));
+	}
+	
 	void Application::doInit() {
+		_scriptEngine = utl::make_ref<ScriptEngine>();
+		_sceneSystem = utl::make_ref<SceneSystem>();
+		_sceneSystem->init();
+		
+		
 		_renderer = utl::make_ref<Renderer>();
 		_renderer->init(_renderContext.get());
 		_assetManager = createAssetManager();
 		_assetManager->setRenderContext(_renderContext.get());
 		
-		_sceneSystem = utl::make_ref<SceneSystem>();
-		_scriptEngine = utl::make_ref<ScriptEngine>();
-		
 		// call to base
 		this->init();
+		
+		addStaticEventListener([this](InputEvent event) {
+			_input._setFromEvent(event);
+			this->onInputEvent(event);
+		});
 	}
 	
 	void Application::doShutdown() {
@@ -58,16 +80,12 @@ namespace bloom {
 		_input._clearOffsets();
 	}
 	
-	void Application::handleEvent(Event const& event) {
-		_eventBuffer.push_back(event);
+	void Application::handleInputEvent(InputEvent const& event) {
+		_messenger.send_message(event);
 	}
 	
 	void Application::flushEventBuffer() {
-		for (auto& event: _eventBuffer) {
-			_input._setFromEvent(event);
-			this->onEvent(event);
-		}
-		_eventBuffer.clear();
+		_messenger.flush();
 	}
 	
 	utl::unique_ref<AssetManager> Application::createAssetManager() {

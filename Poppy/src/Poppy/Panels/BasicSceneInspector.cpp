@@ -21,15 +21,15 @@ namespace poppy {
 	}
 	
 	bloom::Scene*        BasicSceneInspector::scene()        const {
-		return editor->scene ? &editor->scene->scene : nullptr;
+		return Editor::get().scene ? &Editor::get().scene->scene : nullptr;
 	}
 	
 	SelectionContext*    BasicSceneInspector::selection()    const {
-		return &editor->selection;
+		return &Editor::get().selection;
 	}
 	
 	bloom::AssetManager* BasicSceneInspector::assetManager() const {
-		return &editor->assetManager();
+		return &Editor::get().assetManager();
 	}
 	
 	bool BasicSceneInspector::hasLightComponent(bloom::EntityID entity) const {
@@ -66,6 +66,8 @@ namespace poppy {
 				return impl.operator()<SpotLightComponent>();
 			case LightType::directional:
 				return impl.operator()<DirectionalLightComponent>();
+			case LightType::skylight:
+				return impl.operator()<SkyLightComponent>();
 			default:
 				poppyDebugbreak();
 				std::terminate();
@@ -83,6 +85,8 @@ namespace poppy {
 				return impl.operator()<SpotLightComponent>();
 			case LightType::directional:
 				return impl.operator()<DirectionalLightComponent>();
+			case LightType::skylight:
+				return impl.operator()<SkyLightComponent>();
 			default:
 				poppyDebugbreak();
 				std::terminate();

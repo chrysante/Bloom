@@ -11,8 +11,8 @@ using namespace mtl::short_types;
 namespace poppy {
 	
 	
-	void PropertiesPanel::header(std::string_view name) {
-		withFont(FontWeight::semibold, FontStyle::roman, [&]{
+	void PropertiesPanel::header(std::string_view name, FontWeight weight, FontStyle style) {
+		withFont(weight, style, [&]{
 			float4 color = GImGui->Style.Colors[ImGuiCol_Text];
 			color.a *= 0.85;
 			ImGui::PushStyleColor(ImGuiCol_Text, color);

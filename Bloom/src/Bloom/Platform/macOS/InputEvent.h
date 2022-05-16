@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Bloom/Application/Event.hpp"
+#include "Bloom/Application/InputEvent.hpp"
 
 #import <Cocoa/Cocoa.h>
 
@@ -8,7 +8,7 @@ namespace bloom {
 	
 	Key translateKeyCode(int keyCode);
 
-	EventBase toEventBase(NSEvent*);
+	InputEventBase toInputEventBase(NSEvent*);
 
 	KeyEvent toKeyEvent(NSEvent*);
 

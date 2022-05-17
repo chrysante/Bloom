@@ -48,7 +48,7 @@ namespace poppy {
 		dockspace.setLeftToolbar({
 			ToolbarIconButton{
 				"menu",
-				[this]{ poppyLog("Menu"); }
+				[this]{ poppyLog("Menu Left"); }
 			},
 			ToolbarSpacer{},
 			ToolbarIconButton{
@@ -64,9 +64,13 @@ namespace poppy {
 				"plus",
 				[]{ poppyLog("Some Button Pressed"); }
 			},
-			
+			ToolbarIconButton{
+				"bank",
+				[]{ poppyLog("Some Button Pressed"); }
+			},
 			
 			ToolbarSpacer{},
+			
 			ToolbarIconButton{
 				"cog-alt",
 				[]{ poppyLog("Another Button Pressed"); }
@@ -75,13 +79,13 @@ namespace poppy {
 		
 		dockspace.setRightToolbar({
 			ToolbarIconButton{
-				"bank",
+				"attention-circled",
 				[this]{ poppyLog("Libraries"); }
 			},
 			ToolbarSpacer{},
 			ToolbarIconButton{
-				"attention",
-				[this]{ poppyLog("Attention"); }
+				"menu",
+				[this]{ poppyLog("Menu Right"); }
 			},
 		});
 	}
@@ -185,8 +189,8 @@ namespace poppy {
 		if (showStyleColorsPanel) {
 			StyleColorsPanel(&showStyleColorsPanel);
 		}
-		if (showAlternateStyleColorsPanel) {
-			AlternateStyleColorsPanel(&showAlternateStyleColorsPanel);
+		if (showUIDebugger) {
+			ImGui::ShowMetricsWindow(&showUIDebugger);
 		}
 #endif
 	}
@@ -222,6 +226,9 @@ namespace poppy {
 			}
 			if (ImGui::MenuItem("Style Colors Panel")) {
 				showStyleColorsPanel = true;
+			}
+			if (ImGui::MenuItem("UI Debugger")) {
+				showUIDebugger = true;
 			}
 			ImGui::EndMenu();
 		}

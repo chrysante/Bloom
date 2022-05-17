@@ -65,7 +65,7 @@ namespace poppy {
 					return ImGui::CalcTextSize(get<Type::button>().label.data());
 				});
 				
-				width = textSize.x + 2 * GImGui->Style.FramePadding.y;
+				width = textSize.x + 6 * GImGui->Style.FramePadding.y;
 				break;
 			}
 			case Type::iconButton: {
@@ -135,11 +135,11 @@ namespace poppy {
 	void Toolbar::displayBlock(Block const& block) {
 		ImGui::SetCursorPos(position + float2(block.offset, 0));
 		for (std::size_t i = block.itemBeginIndex; i < block.itemEndIndex; ++i) {
-			displayItem(items[i]);
+			displayItem(items[i], i);
 		}
 	}
 	
-	static bool toolbarStyleButtonEx(char const* label, mtl::float2 size, bool enabled = true) {
+	static bool toolbarStyleButtonEx(char const* label, std::size_t id, mtl::float2 size, bool enabled = true) {
 		ImGui::BeginDisabled(!enabled);
 		ImGui::PushStyleColor(ImGuiCol_Button, 0);
 		float4 hovered = GImGui->Style.Colors[ImGuiCol_ButtonHovered];
@@ -148,32 +148,35 @@ namespace poppy {
 		active.a /= 2;
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hovered);
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, active);
+		ImGui::PushID((int)id);
 		bool const result = ImGui::Button(label, size);
+		ImGui::PopID();
 		ImGui::PopStyleColor(3);
 		ImGui::EndDisabled();
 		return result;
 	}
 	
-	static bool toolbarStyleButton(char const* label, mtl::float2 size, bool enabled = true) {
+	static bool toolbarStyleButton(char const* label, std::size_t id, mtl::float2 size, bool enabled = true) {
 		return withFont(FontWeight::semibold, FontStyle::roman, [&]{
-			return toolbarStyleButtonEx(label, size, enabled);
+			return toolbarStyleButtonEx(label, id, size, enabled);
 		});
 	}
 	
-	static bool toolbarStyleIconButton(char const* icon, mtl::float2 size, bool enabled = true) {
+	static bool toolbarStyleIconButton(char const* icon, std::size_t id, mtl::float2 size, bool enabled = true) {
 		ImGui::PushFont((ImFont*)IconConfig::font(16));
-		bool const result = toolbarStyleButtonEx(IconConfig::unicodeStr(icon).data(), size, enabled);
+		bool const result = toolbarStyleButtonEx(IconConfig::unicodeStr(icon).data(), id, size, enabled);
 		ImGui::PopFont();
 		return result;
 	}
 	
 	static bool toolbarStyleIconButton(char const* icon,
+									   std::size_t id,
 									   mtl::float2 size,
 									   char const* tooltip = nullptr,
 									   bool enabled = true)
 	{
 		ImGui::PushFont((ImFont*)IconConfig::font(16));
-		bool const result = toolbarStyleButtonEx(IconConfig::unicodeStr(icon).data(), size, enabled);
+		bool const result = toolbarStyleButtonEx(IconConfig::unicodeStr(icon).data(), id, size, enabled);
 		ImGui::PopFont();
 		
 		static float tooltipTimer = 1;
@@ -194,11 +197,11 @@ namespace poppy {
 		return result;
 	}
 	
-	void Toolbar::displayItem(ToolbarItem const& item) {
+	void Toolbar::displayItem(ToolbarItem const& item, std::size_t index) {
 		switch (item.type()) {
 			case ToolbarItem::Type::button: {
 				auto const& button = item.get<ToolbarItem::Type::button>();
-				if (toolbarStyleButton(button.label.data(), { item.width, height })) {
+				if (toolbarStyleButton(button.label.data(), index, { item.width, height })) {
 					button.block();
 				}
 				break;
@@ -208,7 +211,7 @@ namespace poppy {
 				auto const& button = item.get<ToolbarItem::Type::iconButton>();
 				char const* const tooltip = button.tooltip ? button.tooltip() : nullptr;
 				bool const enabled = button.enabled == nullptr || button.enabled();
-				if (toolbarStyleIconButton(button.icon(),
+				if (toolbarStyleIconButton(button.icon(), index,
 										   { item.width, height },
 										   tooltip,
 										   enabled))

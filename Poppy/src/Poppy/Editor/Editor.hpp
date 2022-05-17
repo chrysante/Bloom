@@ -73,7 +73,7 @@ namespace poppy {
 #if POPPY_DEBUGLEVEL > 0
 		bool showImGuiDemo = false;
 		bool showStyleColorsPanel = false;
-		bool showAlternateStyleColorsPanel = false;
+		bool showUIDebugger = false;
 #endif
 	};
 	

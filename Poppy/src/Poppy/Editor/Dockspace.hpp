@@ -24,6 +24,10 @@ namespace poppy {
 		
 		void displayToolbar();
 		
+		void toolbarLayoutOne(utl::small_vector<int, 2>);
+		void toolbarLayoutTwo(utl::small_vector<int, 2>);
+		void toolbarLayoutThree(utl::small_vector<int, 2>);
+		
 		utl::small_vector<int, 2> getToolbarSpacing() const;
 		
     private:

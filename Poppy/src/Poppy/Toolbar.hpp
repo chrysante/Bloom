@@ -108,7 +108,7 @@ namespace poppy {
 		};
 		
 		void displayBlock(Block const&);
-		void displayItem(ToolbarItem const&);
+		void displayItem(ToolbarItem const&, std::size_t index);
 		
 		// called once after adding items
 		void cook();

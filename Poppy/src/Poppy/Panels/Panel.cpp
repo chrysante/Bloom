@@ -25,9 +25,12 @@ namespace poppy {
 	
 	void Panel::doDisplay() {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
-		ImGui::SetNextWindowSize({600, 400});
+		ImGui::SetNextWindowSize({ 600, 400 });
+		bool const open = ImGui::Begin(title.data(), &_open);
+		ImGui::PopStyleVar();
 		
-		if (ImGui::Begin(title.data(), &_open)) {
+		if (open) {
+			
 			ImGui::BeginChild("child");
 			_imguiWindow = GImGui->CurrentWindow;
 			_windowSize = ImGui::GetMainViewport()->Size;
@@ -40,7 +43,7 @@ namespace poppy {
 			
 		}
 		ImGui::End();
-		ImGui::PopStyleVar();
+		
 	}
 	
 	void Panel::doInit() {

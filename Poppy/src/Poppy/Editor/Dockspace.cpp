@@ -224,96 +224,30 @@ namespace poppy {
 		
 		ImGuiViewport* viewport = ImGui::GetMainViewport();
 		
-		
-		auto const spacing = getToolbarSpacing();
+		auto spacing = getToolbarSpacing();
+		for (auto itr = spacing.begin(); itr != spacing.end(); ) {
+			if (*itr >= viewport->Size.x * 0.33 && *itr <= viewport->Size.x * 0.67) {
+				itr = spacing.erase(itr);
+			}
+			else {
+				++itr;
+			}
+		}
 		poppyAssert(spacing.size() <= 2);
-
+		
 		toolbarWindow("toolbar", 0,
 					  { viewport->Size.x, height },
 					  [&]{
-			
-			float2 const padding = GImGui->Style.WindowPadding;
-			
 			switch (spacing.size()) {
-				case 0: {
-					float const t0Width = toolbars[0].getWidthWithoutSpacers();
-					float const t2Width = toolbars[2].getWidthWithoutSpacers();
-					ImGui::SetCursorPos(padding);
-					toolbars[0].display(t0Width);
-					ImGui::SetCursorPos(ImVec2(padding.x + t0Width, padding.y));
-					toolbars[1].display(viewport->Size.x - t0Width - t2Width - 2 * padding.x);
-					ImGui::SetCursorPos(ImVec2(viewport->Size.x - t2Width - padding.x, padding.y));
-					toolbars[2].display(t2Width);
-					
+				case 0:
+					toolbarLayoutOne(spacing);
 					break;
-				}
-				case 1: {
-					float const spacer = spacing[0];
-					float const position[2] = {
-						0, spacer
-					};
-					
-					float const width[2] = {
-						spacer,
-						viewport->Size.x - spacer
-					};
-					
-					if (spacer >= viewport->Size.x / 2) {
-						// first section is big
-						
-						// 1. section
-						float const t0Width = toolbars[0].getWidthWithoutSpacers();
-						ImGui::SetCursorPos(ImVec2(position[0] + padding.x, padding.y));
-						toolbars[0].display(t0Width);
-						ImGui::SetCursorPos(ImVec2(position[0] + padding.x + t0Width, padding.y));
-						toolbars[1].display(width[0] - t0Width - 2 * padding.x);
-						
-						// 2. section
-						ImGui::SetCursorPos(ImVec2(position[1] + padding.x, padding.y));
-						toolbars[2].display(width[1] - 2 * padding.x);
-					}
-					else {
-						// second section is big
-						
-						// 1. section
-						ImGui::SetCursorPos(ImVec2(position[0] + padding.x, padding.y));
-						toolbars[0].display(width[0] - 2 * padding.x);
-						
-						// 2. section
-						float const t2Width = toolbars[2].getWidthWithoutSpacers();
-						ImGui::SetCursorPos(ImVec2(position[1] + padding.x, padding.y));
-						toolbars[1].display(width[1] - t2Width - 2 * padding.x);
-						ImGui::SetCursorPos(ImVec2(viewport->Size.x - padding.x - t2Width, padding.y));
-						toolbars[2].display(t2Width);
-					}
-					
-					drawSeparator(spacer);
-					
+				case 1:
+					toolbarLayoutTwo(spacing);
 					break;
-				}
-					
-				case 2: {
-					float const position[3] = {
-						0, (float)spacing[0], (float)spacing[1]
-					};
-					
-					float const width[3] = {
-						(float)spacing[0],
-						(float)(spacing[1] - spacing[0]),
-						viewport->Size.x - spacing[1]
-					};
-					
-					for (std::size_t i = 0; i < 3; ++i) {
-						ImGui::SetCursorPos(ImVec2(position[i] + padding.x, padding.y));
-						toolbars[i].display(width[i] - 2 * padding.x);
-					}
-					
-					drawSeparator(spacing[0]);
-					drawSeparator(spacing[1]);
-					
+				case 2:
+					toolbarLayoutThree(spacing);
 					break;
-				}
-
 				default:
 					poppyDebugbreak();
 					break;
@@ -326,8 +260,89 @@ namespace poppy {
 							  float2(window->Size.x, window->Pos.y + window->Size.y - 1),
 							  ImGui::ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_Separator]));
 		});
+	}
+	
+	void Dockspace::toolbarLayoutOne(utl::small_vector<int, 2> spacing) {
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		float2 const padding = GImGui->Style.WindowPadding;
 		
+		float const t0Width = toolbars[0].getWidthWithoutSpacers();
+		float const t2Width = toolbars[2].getWidthWithoutSpacers();
+		ImGui::SetCursorPos(padding);
+		toolbars[0].display(t0Width);
+		ImGui::SetCursorPos(ImVec2(padding.x + t0Width + padding.x, padding.y));
+		toolbars[1].display(viewport->Size.x - t0Width - t2Width - 4 * padding.x);
+		ImGui::SetCursorPos(ImVec2(viewport->Size.x - t2Width - padding.x, padding.y));
+		toolbars[2].display(t2Width);
+	}
+	
+	void Dockspace::toolbarLayoutTwo(utl::small_vector<int, 2> spacing) {
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		float2 const padding = GImGui->Style.WindowPadding;
 		
+		float const spacer = spacing[0];
+		float const position[2] = {
+			0, spacer
+		};
+		
+		float const width[2] = {
+			spacer,
+			viewport->Size.x - spacer
+		};
+		
+		if (spacer >= viewport->Size.x / 2) {
+			// left section is big
+			
+			// 1. section
+			float const t0Width = toolbars[0].getWidthWithoutSpacers();
+			ImGui::SetCursorPos(ImVec2(position[0] + padding.x, padding.y));
+			toolbars[0].display(t0Width);
+			ImGui::SetCursorPos(ImVec2(position[0] + padding.x + t0Width + padding.x, padding.y));
+			toolbars[1].display(width[0] - t0Width - 3 * padding.x);
+			
+			// 2. section
+			ImGui::SetCursorPos(ImVec2(position[1] + padding.x, padding.y));
+			toolbars[2].display(width[1] - 2 * padding.x);
+		}
+		else {
+			// right section is big
+			
+			// 1. section
+			ImGui::SetCursorPos(ImVec2(position[0] + padding.x, padding.y));
+			toolbars[0].display(width[0] - 2 * padding.x);
+			
+			// 2. section
+			float const t2Width = toolbars[2].getWidthWithoutSpacers();
+			ImGui::SetCursorPos(ImVec2(position[1] + padding.x, padding.y));
+			toolbars[1].display(width[1] - t2Width - 3 * padding.x);
+			ImGui::SetCursorPos(ImVec2(viewport->Size.x - padding.x - t2Width, padding.y));
+			toolbars[2].display(t2Width);
+		}
+		
+		drawSeparator(spacer);
+	}
+	
+	void Dockspace::toolbarLayoutThree(utl::small_vector<int, 2> spacing) {
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		float2 const padding = GImGui->Style.WindowPadding;
+		
+		float const position[3] = {
+			0, (float)spacing[0], (float)spacing[1]
+		};
+		
+		float const width[3] = {
+			(float)spacing[0],
+			(float)(spacing[1] - spacing[0]),
+			viewport->Size.x - spacing[1]
+		};
+		
+		for (std::size_t i = 0; i < 3; ++i) {
+			ImGui::SetCursorPos(ImVec2(position[i] + padding.x, padding.y));
+			toolbars[i].display(width[i] - 2 * padding.x);
+		}
+		
+		drawSeparator(spacing[0]);
+		drawSeparator(spacing[1]);
 	}
 
 }

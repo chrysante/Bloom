@@ -8289,8 +8289,12 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
     IM_UNUSED(flags);
     IM_ASSERT(width > 0.0f);
     const float rounding = ImMax(0.0f, ImMin((flags & ImGuiTabItemFlags_Button) ? g.Style.FrameRounding : g.Style.TabRounding, width * 0.5f - 1.0f));
+#if 0
     const float y1 = bb.Min.y + 1.0f;
-    const float y2 = bb.Max.y + ((flags & ImGuiTabItemFlags_Preview) ? 0.0f : -1.0f);
+#else
+	const float y1 = bb.Min.y + 0.0f;
+#endif
+	const float y2 = bb.Max.y + ((flags & ImGuiTabItemFlags_Preview) ? 0.0f : -1.0f);
     draw_list->PathLineTo(ImVec2(bb.Min.x, y2));
     draw_list->PathArcToFast(ImVec2(bb.Min.x + rounding, y1 + rounding), rounding, 6, 9);
     draw_list->PathArcToFast(ImVec2(bb.Max.x - rounding, y1 + rounding), rounding, 9, 12);

@@ -483,7 +483,12 @@ namespace poppy {
 		char dragFloatID[64] = "##x";
 		dragFloatID[2] += index;
 		std::strncpy(dragFloatID + 3, userLabelID, 60);
-		return ImGui::DragFloat(dragFloatID, element, speed);
+//		ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+//		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, 0);
+//		ImGui::PushStyleColor(ImGuiCol_FrameBgActive, 0);
+		bool const result = ImGui::DragFloat(dragFloatID, element, speed);
+//		ImGui::PopStyleColor(3);
+		return result;
 	}
 	
 	bool dragFloat3Pretty(float* v, char const* labelID, float speed) {
@@ -491,10 +496,33 @@ namespace poppy {
 		float const itemWidth = totalWidth / 3;
 		auto cursorPos = ImGui::GetCursorPos();
 		bool result = false;
+		
+		if ((0)) {
+			auto* window = ImGui::GetCurrentWindow();
+			
+			auto const height = ImGui::CalcTextSize("##", NULL, true).y + GImGui->Style.FramePadding.y * 2;
+			
+			auto const rectPos =  window->Pos + cursorPos;
+			auto const rectSize = ImVec2(totalWidth, height);
+			
+			ImRect const bb(rectPos, rectPos + rectSize);
+			auto const mousePos = GImGui->IO.MousePos;
+			auto const offset = mousePos - rectPos;
+			bool const hovered = offset.x >= 0 && offset.x <= rectSize.x && offset.y >= 0 && offset.y <= rectSize.y;
+			bool const active = hovered && GImGui->IO.MouseDown[ImGuiMouseButton_Left];
+			
+			auto const color = ImGui::GetColorU32(active ? ImGuiCol_FrameBgActive :
+												  hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+			
+			auto* drawList = window->DrawList;
+			drawList->AddRectFilled(bb.Min, bb.Max, color, GImGui->Style.FrameRounding);
+		}
+		
 		for (int i = 0; i < 3; ++i) {
 			ImGui::SetCursorPos({ cursorPos.x + i * itemWidth, cursorPos.y });
 			result |= float3PrettyElement(i, v + i, itemWidth, labelID, speed);
 		}
+		
 		return result;
 	}
 	
@@ -529,9 +557,9 @@ namespace poppy {
 	
 
 	static void colorEdit(ImVec4* colors,  ImGuiCol index, char const* label) {
-		ImGui::ColorEdit4(label, (float*)&colors[index],
-						  ImGuiColorEditFlags_NoInputs |
-						  ImGuiColorEditFlags_HDR);
+		ImGuiColorEditFlags flags = 0;
+		flags |= ImGuiColorEditFlags_NoInputs;
+		ImGui::ColorEdit4(label, (float*)&colors[index], flags);
 	}
 	
 	void StyleColorsPanel(bool* open) {
@@ -572,11 +600,11 @@ namespace poppy {
 //			{ ImGuiCol_ResizeGrip, "ResizeGrip" },
 //			{ ImGuiCol_ResizeGripHovered, "ResizeGripHovered" },
 //			{ ImGuiCol_ResizeGripActive, "ResizeGripActive" },
-//			{ ImGuiCol_Tab, "Tab" },
-//			{ ImGuiCol_TabHovered, "TabHovered" },
-//			{ ImGuiCol_TabActive, "TabActive" },
-//			{ ImGuiCol_TabUnfocused, "TabUnfocused" },
-//			{ ImGuiCol_TabUnfocusedActive, "TabUnfocusedActive" },
+			{ ImGuiCol_Tab, "Tab" },
+			{ ImGuiCol_TabHovered, "TabHovered" },
+			{ ImGuiCol_TabActive, "TabActive" },
+			{ ImGuiCol_TabUnfocused, "TabUnfocused" },
+			{ ImGuiCol_TabUnfocusedActive, "TabUnfocusedActive" },
 //			{ ImGuiCol_DockingPreview, "DockingPreview" },
 //			{ ImGuiCol_DockingEmptyBg, "DockingEmptyBg" },
 			{ ImGuiCol_PlotLines, "PlotLines" },
@@ -617,12 +645,12 @@ namespace poppy {
 		colors[ImGuiCol_ScrollbarGrab] = colors[ImGuiCol_FrameBg];
 		colors[ImGuiCol_ScrollbarGrabHovered] = colors[ImGuiCol_FrameBgHovered];
 		
-		colors[ImGuiCol_Tab] = none;
-		colors[ImGuiCol_TabHovered] = colors[ImGuiCol_WindowBg];
-		colors[ImGuiCol_TabActive] = colors[ImGuiCol_WindowBg];
-		
-		colors[ImGuiCol_TabUnfocused] = none;
-		colors[ImGuiCol_TabUnfocusedActive] = colors[ImGuiCol_WindowBg];
+//		colors[ImGuiCol_Tab] = none;
+//		colors[ImGuiCol_TabHovered] = colors[ImGuiCol_WindowBg];
+//		colors[ImGuiCol_TabActive] = colors[ImGuiCol_WindowBg];
+//
+//		colors[ImGuiCol_TabUnfocused] = none;
+//		colors[ImGuiCol_TabUnfocusedActive] = colors[ImGuiCol_WindowBg];
 		
 		colors[ImGuiCol_SliderGrab] = colors[ImGuiCol_FrameBg];
 		colors[ImGuiCol_SliderGrabActive] = colors[ImGuiCol_FrameBg]; // sic

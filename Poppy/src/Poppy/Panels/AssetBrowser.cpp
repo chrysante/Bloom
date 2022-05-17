@@ -19,7 +19,7 @@
 #include "Poppy/IconConfig.hpp"
 
 using namespace bloom;
-
+using namespace mtl::short_types;
 namespace poppy {
 	
 	static std::string toDragDropType(bloom::AssetType type) {
@@ -244,7 +244,79 @@ namespace poppy {
 		Panel("Asset Browser", PanelOptions{ .unique = false }),
 		dirView(this)
 	{
+		toolbar = {
+			ToolbarIconButton{ [this]{ }, []{ return "up-open"; }, []{ return "Go up"; } },
+			ToolbarIconButton{ [this]{ }, []{ return "left-open"; }, []{ return "Go back"; } },
+			ToolbarIconButton{ [this]{ }, []{ return "right-open"; }, []{ return "Go forward"; } },
+			
+			ToolbarSpacer{},
+			ToolbarButton{ "Refresh", [this]{ refresh(); } },
+			
+			
+			
+			ToolbarIconButton{
+				[this]{
+					bloom::showOpenFilePanel([this](std::string filepath) {
+						import(filepath);
+					});
+				},
+				[]{ return "down-open"; },
+				[]{ return "Import..."; },
+			},
+			ToolbarIconButton{
+				[this]{ ImGui::OpenPopup("New Asset"); },
+				[]{ return "plus"; },
+				[]{ return "Create Asset..."; }
+			},
+			ToolbarIconButton{
+				[this]{
+					assetManager->create(AssetType::material, "Default Material", current);
+					refresh();
+				},
+				[]{ return "delicious"; },
+				[]{ return "Create Default Material"; }
+			},
+			ToolbarButton{ "Reload Scripts", [this]{
+				auto& scriptEngine = Application::get().scriptEngine();
+				assetManager->loadScripts(scriptEngine);
+				Application::get().publishEvent(ScriptLoadEvent{});
+			} }
+		};
 		
+		toolbar.setHeight(30);
+	}
+	
+	void AssetBrowser::newAssetPopup() {
+		if (ImGui::BeginPopupModal("New Asset", NULL, ImGuiWindowFlags_NoTitleBar)) {
+			static AssetType type = AssetType::none;
+			if (ImGui::BeginCombo("Type", toString(type).data())) {
+				for (int i = 0; i < (std::size_t)AssetType::itemCount; ++i) {
+					auto const t = (AssetType)(1 << i);
+					bool const selected = type == t;
+					if (ImGui::Selectable(toString(t).data(), selected)) {
+						type = t;
+					}
+					if (selected) {
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				
+				ImGui::EndCombo();
+			}
+			static char nameBuffer[256]{};
+			ImGui::InputText("Name", nameBuffer, std::size(nameBuffer));
+			
+			if (ImGui::Button("Cancel")) {
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Create")) {
+				assetManager->create(type, nameBuffer, current);
+				refresh();
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
 	}
 	
 	void AssetBrowser::openAsset(bloom::AssetHandle handle) {
@@ -296,7 +368,11 @@ namespace poppy {
 			return;
 		}
 		
-		toolbar();
+		newAssetPopup();
+		
+		toolbar.display();
+		ImGui::SetCursorPos((float2)ImGui::GetCursorPos() + float2(0, GImGui->Style.WindowPadding.y));
+		ImGui::Separator();
 		dirView.display();
 	}
 	
@@ -311,97 +387,102 @@ namespace poppy {
 	static bool toolbarButton(char const* label, float height) {
 		return ImGui::Button(label, toolbarButtonSize(height, label));
 	}
-	
-	void AssetBrowser::toolbar() {
-		float const toolbarSize = 30;
-		{
-			auto const size = toolbarButtonSize(toolbarSize);
-			
-			ImGui::PushFont((ImFont*)IconConfig::font(16));
-			bool const goUp = ImGui::Button(IconConfig::unicodeStr("up-big").data(), size);
-			ImGui::PopFont();
-			if (goUp)
-			{
-				// go up
-			}
-		}
-		
-		ImGui::SameLine();
-		withFont(FontWeight::bold, FontStyle::roman, [&]{
-			if (toolbarButton("Import...", toolbarSize)) {
-				bloom::showOpenFilePanel([this](std::string filepath) {
-					import(filepath);
-				});
-			}
-		});
-		
-		
-		
-		ImGui::SameLine();
-		{
-			if (toolbarButton("Refresh", toolbarSize)) {
-				refresh();
-			}
-		}
-		
-		ImGui::SameLine();
-		{
-			if (toolbarButton("New Asset...", toolbarSize)) {
-				ImGui::OpenPopup("New Asset");
-			}
-			
-				
-			if (ImGui::BeginPopupModal("New Asset", NULL, ImGuiWindowFlags_NoTitleBar)) {
-				static AssetType type = AssetType::none;
-				if (ImGui::BeginCombo("Type", toString(type).data())) {
-					for (int i = 0; i < (std::size_t)AssetType::itemCount; ++i) {
-						auto const t = (AssetType)(1 << i);
-						bool const selected = type == t;
-						if (ImGui::Selectable(toString(t).data(), selected)) {
-							type = t;
-						}
-						if (selected) {
-							ImGui::SetItemDefaultFocus();
-						}
-					}
-					
-					ImGui::EndCombo();
-				}
-				static char nameBuffer[256]{};
-				ImGui::InputText("Name", nameBuffer, std::size(nameBuffer));
-				
-				if (ImGui::Button("Cancel")) {
-					ImGui::CloseCurrentPopup();
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("Create")) {
-					assetManager->create(type, nameBuffer, current);
-					refresh();
-					ImGui::CloseCurrentPopup();
-				}
-				ImGui::EndPopup();
-			}
-		}
-		ImGui::SameLine();
-		ImGui::Spacing();
-		ImGui::SameLine();
-		{
-			if (toolbarButton("Create Default Material", toolbarSize)) {
-				assetManager->create(AssetType::material, "Default Material", current);
-				refresh();
-			}
-		}
-		ImGui::SameLine();
-		{
-			if (toolbarButton("Reload Scripts", toolbarSize)) {
-				auto& scriptEngine = Application::get().scriptEngine();
-				assetManager->loadScripts(scriptEngine);
-				Application::get().publishEvent(ScriptLoadEvent{});
-			}
-		}
-		
-		ImGui::Separator();
-	}
+//	
+//	void AssetBrowser::displayToolbar() {
+//		float const toolbarSize = 30;
+//		
+//		
+//		
+//		return;
+//		
+//		{
+//			auto const size = toolbarButtonSize(toolbarSize);
+//			
+//			ImGui::PushFont((ImFont*)IconConfig::font(16));
+//			bool const goUp = ImGui::Button(IconConfig::unicodeStr("up-big").data(), size);
+//			ImGui::PopFont();
+//			if (goUp)
+//			{
+//				// go up
+//			}
+//		}
+//		
+//		ImGui::SameLine();
+//		withFont(FontWeight::bold, FontStyle::roman, [&]{
+//			if (toolbarButton("Import...", toolbarSize)) {
+//				bloom::showOpenFilePanel([this](std::string filepath) {
+//					import(filepath);
+//				});
+//			}
+//		});
+//		
+//		
+//		
+//		ImGui::SameLine();
+//		{
+//			if (toolbarButton("Refresh", toolbarSize)) {
+//				refresh();
+//			}
+//		}
+//		
+//		ImGui::SameLine();
+//		{
+//			if (toolbarButton("New Asset...", toolbarSize)) {
+//				ImGui::OpenPopup("New Asset");
+//			}
+//			
+//				
+//			if (ImGui::BeginPopupModal("New Asset", NULL, ImGuiWindowFlags_NoTitleBar)) {
+//				static AssetType type = AssetType::none;
+//				if (ImGui::BeginCombo("Type", toString(type).data())) {
+//					for (int i = 0; i < (std::size_t)AssetType::itemCount; ++i) {
+//						auto const t = (AssetType)(1 << i);
+//						bool const selected = type == t;
+//						if (ImGui::Selectable(toString(t).data(), selected)) {
+//							type = t;
+//						}
+//						if (selected) {
+//							ImGui::SetItemDefaultFocus();
+//						}
+//					}
+//					
+//					ImGui::EndCombo();
+//				}
+//				static char nameBuffer[256]{};
+//				ImGui::InputText("Name", nameBuffer, std::size(nameBuffer));
+//				
+//				if (ImGui::Button("Cancel")) {
+//					ImGui::CloseCurrentPopup();
+//				}
+//				ImGui::SameLine();
+//				if (ImGui::Button("Create")) {
+//					assetManager->create(type, nameBuffer, current);
+//					refresh();
+//					ImGui::CloseCurrentPopup();
+//				}
+//				ImGui::EndPopup();
+//			}
+//		}
+//		ImGui::SameLine();
+//		ImGui::Spacing();
+//		ImGui::SameLine();
+//		{
+//			if (toolbarButton("Create Default Material", toolbarSize)) {
+//				assetManager->create(AssetType::material, "Default Material", current);
+//				refresh();
+//			}
+//		}
+//		ImGui::SameLine();
+//		{
+//			if (toolbarButton("Reload Scripts", toolbarSize)) {
+//				auto& scriptEngine = Application::get().scriptEngine();
+//				assetManager->loadScripts(scriptEngine);
+//				Application::get().publishEvent(ScriptLoadEvent{});
+//			}
+//		}
+//		
+//		ImGui::Separator();
+//	}
 		
 	/// MARK: -
 	void AssetBrowser::import(std::filesystem::path source) {

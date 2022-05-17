@@ -1,0 +1,33 @@
+#pragma once
+
+#include <utl/functional.hpp>
+
+namespace poppy {
+
+    class Dockspace {
+    public:
+		void display();
+		
+	private:
+		void dockspace();
+		void mainWindow();
+		
+		void dockBuilder(unsigned, int);
+		
+		void submitMasterDockspace();
+		void submitChildDockspace();
+		
+		void pane(char const* id);
+		
+		void toolbar();
+		
+		
+		
+    private:
+		float toolbarHeight = 50;
+		float minWindowWidth = 250;
+		
+		bool firstFrame = true;
+    };
+
+}

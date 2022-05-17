@@ -70,6 +70,8 @@ namespace poppy {
 		mtl::float2 padding = 5;
 		
 	private:
+		void doInit();
+		void doShutdown();
 		void doDisplay();
 		
 	private:

@@ -45,7 +45,45 @@ namespace {
 namespace poppy {
 	
 	Editor::Editor() {
-	
+		dockspace.setLeftToolbar({
+			ToolbarIconButton{
+				"menu",
+				[this]{ poppyLog("Menu"); }
+			},
+			ToolbarSpacer{},
+			ToolbarIconButton{
+				[this]{ return sceneSystem().isSimulating() ? "stop" : "play"; },
+				[this]{ return !!sceneSystem().getScene(); },
+				[this]{ sceneSystem().isSimulating() ? stopSimulation() : startSimulation(); }
+			}
+		});
+		
+		
+		dockspace.setCenterToolbar({
+			ToolbarIconButton{
+				"plus",
+				[]{ poppyLog("Some Button Pressed"); }
+			},
+			
+			
+			ToolbarSpacer{},
+			ToolbarIconButton{
+				"cog-alt",
+				[]{ poppyLog("Another Button Pressed"); }
+			}
+		});
+		
+		dockspace.setRightToolbar({
+			ToolbarIconButton{
+				"bank",
+				[this]{ poppyLog("Libraries"); }
+			},
+			ToolbarSpacer{},
+			ToolbarIconButton{
+				"attention",
+				[this]{ poppyLog("Attention"); }
+			},
+		});
 	}
 	
 	void Editor::init() {
@@ -69,7 +107,7 @@ namespace poppy {
 	void Editor::shutdown() {
 		SaveStyleColors(settings["ImGui Style Colors"]);
 		for (auto& panel: panels) {
-			panel->shutdown();
+			panel->doShutdown();
 			settings[yamlSanitize(panel->uniqueName())] = panel->settings;
 		}
 		saveSettingsToINI();
@@ -120,10 +158,15 @@ namespace poppy {
 	}
 	
 	void Editor::frame() {
+		ImGui::PushStyleVar(ImGuiStyleVar_TabRounding, 0.0f);
+		utl::scope_guard popFlags = []{
+			ImGui::PopStyleVar();
+		};
+		
 		menuBar();
 		
 		dockspace.display();
-		
+
 		for (auto p = panels.begin(); p < panels.end();) {
 			auto& panel = *p;
 			panel->doDisplay();
@@ -191,7 +234,7 @@ namespace poppy {
 	void Editor::createPanel(auto&&... args) {
 		auto panel = Panel::create<T>(UTL_FORWARD(args)...);
 		panel->settings = settings[yamlSanitize(panel->uniqueName())];
-		panel->init();
+		panel->doInit();
 		panels.push_back(std::move(panel));
 	}
 	

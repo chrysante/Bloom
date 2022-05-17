@@ -2,6 +2,11 @@
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+#include <mtl/mtl.hpp>
+#include <utl/scope_guard.hpp>
+#include <utl/stack.hpp>
+#include <set>
+#include <unordered_set>
 
 #include "Editor.hpp"
 
@@ -10,57 +15,175 @@
 #include "Bloom/Scene/SceneSystem.hpp"
 
 using namespace bloom;
+using namespace mtl::short_types;
+
+static constexpr auto MainWindowID = "__MainWindow__";
+static constexpr auto MainDockspaceID = "__MainWindow_Dockspace__";
+static constexpr auto ToolbarID = "__Toolbar__";
 
 namespace poppy {
     
+	template <typename T>
+	static void makeUnique(utl::vector<T>& v) {
+		auto const last = std::unique(v.begin(), v.end());
+		v.resize(last - v.begin());
+	}
+	
+	static void withWindowSizeConstraints(mtl::float2 minSize, auto&& block) {
+		ImGuiStyle& style = ImGui::GetStyle();
+		utl::scope_guard restore = [&, oldSize = style.WindowMinSize] {
+			style.WindowMinSize = oldSize;
+		};
+		
+		style.WindowMinSize = minSize;
+		block();
+	}
+	
+	Dockspace::Dockspace() {
+		
+	}
+	
 	void Dockspace::display() {
 		dockspace();
-		toolbar();
+		displayToolbar();
+	}
+	
+	void Dockspace::setLeftToolbar(Toolbar tb) {
+		tb.setHeight(40);
+		toolbars[0] = std::move(tb);
+	}
+	
+	void Dockspace::setCenterToolbar(Toolbar tb) {
+		tb.setHeight(40);
+		toolbars[1] = std::move(tb);
+	}
+	
+	void Dockspace::setRightToolbar(Toolbar tb) {
+		tb.setHeight(40);
+		toolbars[2] = std::move(tb);
 	}
 	
 	void Dockspace::dockspace() {
-		ImGuiViewport* viewport = ImGui::GetMainViewport();
-		auto nextWindowPos = viewport->Pos;
-		auto nextWindowSize = viewport->Size;
-#if 1
-		nextWindowPos.y += toolbarHeight;
-		nextWindowSize.y -= toolbarHeight;
-#endif
-		ImGui::SetNextWindowPos(nextWindowPos);
-		ImGui::SetNextWindowSize(nextWindowSize);
+		mainWindow();
+	}
+	
+	void Dockspace::mainWindow() {
+		ImGuiViewport* const viewport = ImGui::GetMainViewport();
+		auto const windowPosition = float2(viewport->Pos) + float2(0, toolbars[0].getHeight());
+		auto const windowSize = float2(viewport->Size) - float2(0, toolbars[0].getHeight());
+		
+		ImGui::SetNextWindowPos(windowPosition);
+		ImGui::SetNextWindowSize(windowSize);
 		ImGui::SetNextWindowViewport(viewport->ID);
-		ImGuiWindowFlags window_flags = 0
-			| ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking
-			| ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse
-			| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
-			| ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
+		
+		ImGuiWindowFlags windowFlags = 0;
+		windowFlags |= ImGuiWindowFlags_MenuBar;
+		windowFlags |= ImGuiWindowFlags_NoTitleBar;
+		windowFlags |= ImGuiWindowFlags_NoResize;
+		windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+		windowFlags |= ImGuiWindowFlags_NoDocking;
+		windowFlags |= ImGuiWindowFlags_NoCollapse;
+		windowFlags |= ImGuiWindowFlags_NoMove;
+		windowFlags |= ImGuiWindowFlags_NoNavFocus;
+		
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-		ImGui::Begin("Master DockSpace", NULL, window_flags);
-		ImGuiID dockMain = ImGui::GetID("MyDockspace");
-
-	//	ImGuiIO& io = ImGui::GetIO();
-		ImGuiStyle& style = ImGui::GetStyle();
-		auto const winSizeSaved = style.WindowMinSize.x;
-		style.WindowMinSize.x = 250;
+		ImGui::Begin(MainWindowID, nullptr, windowFlags);
 		
-		int dsFlags = 0;
-		dsFlags |= ImGuiDockNodeFlags_NoWindowMenuButton;
-		dsFlags |= ImGuiDockNodeFlags_NoCloseButton;
-		ImGui::DockSpace(dockMain, /* size arg */ {}, dsFlags);
-		style.WindowMinSize.x = winSizeSaved;
+		withWindowSizeConstraints(minWindowSize, [&]{
+			submitMasterDockspace();
+		});
+		
 		ImGui::End();
 		ImGui::PopStyleVar(3);
 	}
 	
-	void Dockspace::toolbar() {
-		ImGuiViewport* viewport = ImGui::GetMainViewport();
+	void Dockspace::submitMasterDockspace() {
+		ImGuiDockNodeFlags flags = 0;
+		flags |= ImGuiDockNodeFlags_NoWindowMenuButton;
+		flags |= ImGuiDockNodeFlags_NoCloseButton;
 		
-		ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x,
-									   viewport->Pos.y + ImGui::FindWindowByName("Master DockSpace")->MenuBarHeight()));
-		ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, toolbarHeight));
+		ImGuiID const dockID = ImGui::GetID(MainDockspaceID);
+		mainDockID = dockID;
+		
+		ImGui::DockSpace(dockID, /* size arg */ {}, flags);
+	}
+	
+	utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
+		utl::vector<mtl::rectangle<int>> const potentialRects = [this]{
+			ImGuiDockNode const* const main = ImGui::DockBuilderGetNode(mainDockID);
+			poppyAssert(main);
+			
+			utl::stack<ImGuiDockNode const*> stack;
+			stack.push(main);
+			
+			utl::vector<mtl::rectangle<int>> result;
+			while (stack) {
+				auto* node = stack.pop();
+				if ((int)node->Pos.y == (int)main->Pos.y &&
+					node->IsVisible &&
+					node != main &&
+					(int2)node->Size != (int2)main->Size)
+				{
+					result.push_back({ node->Pos, node->Size });
+				}
+				
+				if (!node->IsLeafNode()) {
+					stack.push(node->ChildNodes[0]);
+					stack.push(node->ChildNodes[1]);
+				}
+			}
+			return result;
+		}();
+		
+		return [&potentialRects]() -> utl::small_vector<int, 2> {
+			utl::vector<int> positions;
+	
+			for (auto rect: potentialRects) {
+				positions.push_back(rect.lower_bound().x);
+				positions.push_back(rect.upper_bound().x);
+			}
+			
+			std::sort(positions.begin(), positions.end());
+			makeUnique(positions);
+			
+			positions.erase(positions.begin());
+			positions.erase(positions.end() - 1);
+			
+			for (int i = 0; auto& p: positions) {
+				if (i++ % 2 == 0) {
+					p += 1;
+				}
+				else {
+					p -= 1;
+				}
+			}
+			
+			makeUnique(positions);
+			
+			switch (positions.size()) {
+				case 0:
+					return {};
+				case 1:
+					return { positions.front() };
+				default:
+					return { positions.front(), positions.back() };
+			}
+		}();
+	}
+	
+	template <std::invocable Block>
+	static void toolbarWindow(char const* id, float posX, float2 const size, Block&& block) {
+		ImGuiViewport* const viewport = ImGui::GetMainViewport();
+		
+		float2 const position = {
+			posX,
+			viewport->Pos.y + ImGui::FindWindowByName(MainWindowID)->MenuBarHeight()
+		};
+		
+		ImGui::SetNextWindowPos(position);
+		ImGui::SetNextWindowSize(size);
 		ImGui::SetNextWindowViewport(viewport->ID);
 
 		ImGuiWindowFlags window_flags = 0
@@ -73,35 +196,139 @@ namespace poppy {
 			;
 		
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, GImGui->Style.Colors[ImGuiCol_TitleBg]);
-		ImGui::Begin("TOOLBAR", NULL, window_flags);
-		ImGui::PopStyleColor();
-		ImGui::PopStyleVar();
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 
-		auto& sceneSystem = Application::get().sceneSystem();
-		bool const isSimulating = sceneSystem.isSimulating();
+		ImGui::Begin(id, NULL, window_flags);
+
+		ImGui::PopStyleVar(2);
 		
-		
-		
-		ImGui::BeginDisabled(sceneSystem.getScene() == nullptr);
-		auto const buttonLabel = !isSimulating ? IconConfig::unicodeStr("play") : IconConfig::unicodeStr("stop");
-		ImGui::PushFont((ImFont*)IconConfig::font(16));
-		bool const playStop = ImGui::Button(buttonLabel.data(), ImVec2(37, 37));
-		ImGui::PopFont();
-		if (playStop) {
-			auto& editor = Editor::get();
-			!isSimulating ? editor.startSimulation() : editor.stopSimulation();
-		}
-		
-		ImGui::EndDisabled();
-		
-		ImGui::SameLine();
-		if (ImGui::Button("Some Other Button", ImVec2(0, 37))) {
-			
-		}
-		ImGui::Separator();
+		block();
 		
 		ImGui::End();
 	}
+	
+	static void drawSeparator(float positionX) {
+		auto* const window = ImGui::GetCurrentWindow();
+		auto* const drawList = window->DrawList;
+		
+		drawList->AddLine(float2(positionX - 1, window->Pos.y),
+						  float2(positionX - 1, window->Pos.y + window->Size.y - 1),
+						  ImGui::ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_Separator]));
+		drawList->AddLine(float2(positionX, window->Pos.y),
+						  float2(positionX, window->Pos.y + window->Size.y - 1),
+						  ImGui::ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_Separator]));
+	}
+	
+	void Dockspace::displayToolbar() {
+		float const height = toolbars[0].getHeight();
+		
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		
+		
+		auto const spacing = getToolbarSpacing();
+		poppyAssert(spacing.size() <= 2);
+
+		toolbarWindow("toolbar", 0,
+					  { viewport->Size.x, height },
+					  [&]{
+			
+			float2 const padding = GImGui->Style.WindowPadding;
+			
+			switch (spacing.size()) {
+				case 0: {
+					float const t0Width = toolbars[0].getWidthWithoutSpacers();
+					float const t2Width = toolbars[2].getWidthWithoutSpacers();
+					ImGui::SetCursorPos(padding);
+					toolbars[0].display(t0Width);
+					ImGui::SetCursorPos(ImVec2(padding.x + t0Width, padding.y));
+					toolbars[1].display(viewport->Size.x - t0Width - t2Width - 2 * padding.x);
+					ImGui::SetCursorPos(ImVec2(viewport->Size.x - t2Width - padding.x, padding.y));
+					toolbars[2].display(t2Width);
+					
+					break;
+				}
+				case 1: {
+					float const spacer = spacing[0];
+					float const position[2] = {
+						0, spacer
+					};
+					
+					float const width[2] = {
+						spacer,
+						viewport->Size.x - spacer
+					};
+					
+					if (spacer >= viewport->Size.x / 2) {
+						// first section is big
+						
+						// 1. section
+						float const t0Width = toolbars[0].getWidthWithoutSpacers();
+						ImGui::SetCursorPos(ImVec2(position[0] + padding.x, padding.y));
+						toolbars[0].display(t0Width);
+						ImGui::SetCursorPos(ImVec2(position[0] + padding.x + t0Width, padding.y));
+						toolbars[1].display(width[0] - t0Width - 2 * padding.x);
+						
+						// 2. section
+						ImGui::SetCursorPos(ImVec2(position[1] + padding.x, padding.y));
+						toolbars[2].display(width[1] - 2 * padding.x);
+					}
+					else {
+						// second section is big
+						
+						// 1. section
+						ImGui::SetCursorPos(ImVec2(position[0] + padding.x, padding.y));
+						toolbars[0].display(width[0] - 2 * padding.x);
+						
+						// 2. section
+						float const t2Width = toolbars[2].getWidthWithoutSpacers();
+						ImGui::SetCursorPos(ImVec2(position[1] + padding.x, padding.y));
+						toolbars[1].display(width[1] - t2Width - 2 * padding.x);
+						ImGui::SetCursorPos(ImVec2(viewport->Size.x - padding.x - t2Width, padding.y));
+						toolbars[2].display(t2Width);
+					}
+					
+					drawSeparator(spacer);
+					
+					break;
+				}
+					
+				case 2: {
+					float const position[3] = {
+						0, (float)spacing[0], (float)spacing[1]
+					};
+					
+					float const width[3] = {
+						(float)spacing[0],
+						(float)(spacing[1] - spacing[0]),
+						viewport->Size.x - spacing[1]
+					};
+					
+					for (std::size_t i = 0; i < 3; ++i) {
+						ImGui::SetCursorPos(ImVec2(position[i] + padding.x, padding.y));
+						toolbars[i].display(width[i] - 2 * padding.x);
+					}
+					
+					drawSeparator(spacing[0]);
+					drawSeparator(spacing[1]);
+					
+					break;
+				}
+
+				default:
+					poppyDebugbreak();
+					break;
+			}
+			
+			// bottom separator
+			auto* const window = ImGui::GetCurrentWindow();
+			auto* const drawList = window->DrawList;
+			drawList->AddLine(float2(0,              window->Pos.y + window->Size.y - 1),
+							  float2(window->Size.x, window->Pos.y + window->Size.y - 1),
+							  ImGui::ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_Separator]));
+		});
+		
+		
+	}
 
 }
+

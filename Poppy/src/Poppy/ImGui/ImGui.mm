@@ -90,7 +90,7 @@ namespace poppy {
 			IconConfig::initFromFile("Icons/IconConfig.json");
 			auto glyphs = IconConfig::glyphs();
 			glyphs.push_back(0); // null terminator
-			for (int size: { 128, 64, 48, 32, 24, 16 }) {
+			for (int size: { 64, 48, 32, 24, 16 }) {
 				IconConfig::addFont(size, loadFont("Icons/Icon.ttf", size, glyphs.data()));
 			}
 			poppyLog(trace, "Icon Font loaded");

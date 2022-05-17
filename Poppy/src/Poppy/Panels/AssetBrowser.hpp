@@ -4,6 +4,8 @@
 
 #include "Bloom/Assets/Asset.hpp"
 
+#include "Poppy/Toolbar.hpp"
+
 #include <filesystem>
 #include <mtl/mtl.hpp>
 
@@ -61,7 +63,9 @@ namespace poppy {
 		void shutdown() override;
 		void display() override;
 		
-		void toolbar();
+//		void displayToolbar();
+		
+		void newAssetPopup();
 		
 		void import(std::filesystem::path);
 	
@@ -74,6 +78,7 @@ namespace poppy {
 		bloom::AssetManager* assetManager = nullptr;
 		std::filesystem::path current; // absolute path
 		DirectoryView dirView;
+		Toolbar toolbar;
 	};
 	
 }

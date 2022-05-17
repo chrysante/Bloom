@@ -43,6 +43,14 @@ namespace poppy {
 		ImGui::PopStyleVar();
 	}
 	
+	void Panel::doInit() {
+		this->init();
+	}
+	
+	void Panel::doShutdown() {
+		this->shutdown();
+	}
+	
 	mtl::float2 Panel::windowSpaceToViewSpace(mtl::float2 position) const {
 		return position - _viewPosition;
 	}

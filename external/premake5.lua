@@ -17,8 +17,6 @@ sysincludedirs {
 systemversion ("latest")
 
 include "Catch2"
-include "GLFW"
-include "assimp"
 include "utility"
 include "imgui"
 include "yaml-cpp"

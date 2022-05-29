@@ -4,3 +4,9 @@
 [submodule "external/minizip"]
 	path = external/minizip
 	url = https://github.com/zlib-ng/minizip-ng
+[submodule "external/assimp"]
+	path = external/assimp
+	url = https://github.com/assimp/assimp.git
+[submodule "external/glfw"]
+	path = external/glfw
+	url = https://github.com/glfw/glfw.git

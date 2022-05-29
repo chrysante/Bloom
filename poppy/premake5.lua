@@ -28,7 +28,6 @@ links {
     "Utility",
     "imgui",
     "YAML",
-    "glfw"
 }
 
 filter "system:macosx"

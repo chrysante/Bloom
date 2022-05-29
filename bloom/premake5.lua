@@ -23,8 +23,8 @@ removefiles { "src/Bloom/platform/**" }
 links { 
     "Utility",
     "YAML",
-    "assimp",
-    "glfw"
+    "assimpd",
+    "glfw3"
 }
 
 

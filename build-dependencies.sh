@@ -1,10 +1,31 @@
 #run ./configure first!
 
+./configure.sh
+
+#externals/glfw ## has no premake5 script
+cmake --build Build/int/glfw
+cmake --build Build/int/minizip
+cmake --build Build/int/assimp
+
+cp Build/int/glfw/src/Debug/libglfw3.a Build/Bin/Debug/
+cp Build/int/glfw/src/Debug/libglfw3.a Build/Bin/Checked/
+cp Build/int/glfw/src/Debug/libglfw3.a Build/Bin/Release/
+
+cp Build/int/minizip/Debug/libminizip.a Build/Bin/Debug/
+cp Build/int/minizip/Debug/libminizip.a Build/Bin/Checked/
+cp Build/int/minizip/Debug/libminizip.a Build/Bin/Release/
+
+cp Build/int/assimp/bin/Debug/**.dylib Build/Bin/Debug/
+cp Build/int/assimp/bin/Debug/**.dylib Build/Bin/Checked/
+cp Build/int/assimp/bin/Debug/**.dylib Build/Bin/Release/
+
+
 #externals/minizip ## has no premake5 script
 cmake --build Build/int/minizip
 cp Build/int/minizip/libminizip.a Build/Bin/Debug/
 cp Build/int/minizip/libminizip.a Build/Bin/Checked/
 cp Build/int/minizip/libminizip.a Build/Bin/Release/
+
 
 
 

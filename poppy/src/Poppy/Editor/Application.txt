@@ -1,0 +1,202 @@
+#include "Application.hpp"
+
+using namespace bloom;
+using namespace mtl::short_types;
+
+#include "Bloom/GPU/HardwareDevice.hpp"
+#include "Poppy/Core/Debug.hpp"
+#include "Bloom/Core/Autorelease.hpp"
+
+namespace poppy {
+	
+	
+	struct Uniforms {
+		float time;
+	};
+
+	
+	static void doRenderWindow(HardwareDevice& device, Window& window,
+							   BufferView vertexBuffer,
+							   BufferView indexBuffer,
+							   BufferView uniformBuffer,
+							   RenderPipelineView pipeline,
+							   float time)
+	{
+		poppyLog("Window Size: {}", window.size());
+		poppyLog("Framebuffer Size: {}", window.swapchain().size());
+		
+		BLOOM_AUTORELEASE_BEGIN
+		window.update();
+		
+		Uniforms uniforms;
+		uniforms.time = time;
+		device.fillManagedBuffer(uniformBuffer, &uniforms, sizeof(uniforms));
+		
+		auto& swapchain = window.swapchain();
+		
+		std::unique_ptr ctx = device.createRenderContext();
+		
+		std::unique_ptr backbuffer = swapchain.nextBackbuffer();
+		
+		RenderPassDescription rpDesc;
+		ColorAttachment ca;
+		
+		ca.texture = backbuffer->texture();
+		ca.loadAction = LoadAction::clear;
+		ca.storeAction = StoreAction::store;
+		ca.clearColor = { 1, 0.5, 0, 1 };
+		
+		rpDesc.colorAttachments.push_back(ca);
+		rpDesc.renderTargetSize = window.size();
+		
+		ctx->begin(rpDesc);
+		
+		ctx->setPipeline(pipeline);
+		ctx->setVertexBuffer(vertexBuffer, 0);
+		ctx->setVertexBuffer(uniformBuffer, 1);
+		
+		DrawDescription drawDesc;
+		drawDesc.indexBuffer = indexBuffer;
+		drawDesc.indexType = IndexType::uint32;
+		drawDesc.indexCount = 3;
+		
+		ctx->draw(drawDesc);
+		
+		ctx->present(*backbuffer);
+		ctx->end();
+		
+		device.submit(*ctx);
+		
+		BLOOM_AUTORELEASE_END
+	}
+	
+	Application::Application(CommandLineArgs args):
+		_cmdLineArgs(args)
+	{
+		
+	}
+	
+	void Application::init() {
+		coreApp.init();
+		
+		bloom::Window::initWindowSystem();
+		
+		{
+			WindowDescription windowDesc;
+			windowDesc.size = 100;
+			windowDesc.title = "Hello";
+			std::unique_ptr window = std::make_unique<Window>(windowDesc);
+			
+			window->onInput([this, window = window.get()](InputEvent const& e) {
+				e.dispatch<InputEventType::leftMouseDown>([&](MouseDownEvent const& event) {
+					if (window->isFullscreen()) {
+						window->makeWindowed();
+					}
+					else {
+						window->makeFullscreen();
+					}
+				});
+				e.dispatch<InputEventType::rightMouseDown>([&](MouseDownEvent const& event) {
+					window->minimize();
+				});
+			});
+			
+			window->createDefaultSwapchain(coreApp.device());
+			
+			_windows.push_back(std::move(window));
+		}
+	}
+	
+	void Application::shutdown() {
+		
+		
+		coreApp.shutdown();
+	}
+	
+	void Application::run() {
+		init();
+		
+		auto& device = coreApp.device();
+		
+		float const vertexData[] = {
+			-0.5, -0.5,
+			 0.5, -0.5,
+			 0.0,  0.5
+		};
+		
+		uint32_t const indexData[] = {
+			0, 1, 2
+		};
+		
+		auto const beginTime = std::chrono::high_resolution_clock::now();
+		
+		BufferDescription bufferDesc{};
+		bufferDesc.size = sizeof(vertexData);
+		bufferDesc.data = vertexData;
+		bufferDesc.storageMode = StorageMode::Shared;
+		
+		auto vertexBuffer = coreApp.device().createBuffer(bufferDesc);
+		bufferDesc.size = sizeof(indexData);
+		bufferDesc.data = indexData;
+		auto indexBuffer = coreApp.device().createBuffer(bufferDesc);
+		
+		bufferDesc.size = sizeof(Uniforms);
+		bufferDesc.data = nullptr;
+		bufferDesc.storageMode = StorageMode::Managed;
+		auto uniformBuffer = coreApp.device().createBuffer(bufferDesc);
+		
+		
+		RenderPipelineDescription pipelineDesc{};
+		ColorAttachmentDescription caDesc{};
+		
+		caDesc.pixelFormat = PixelFormat::BGRA8Unorm;
+		pipelineDesc.colorAttachments.push_back(caDesc);
+		
+		pipelineDesc.vertexFunction = coreApp.device().createFunction("vertexShader");
+		pipelineDesc.fragmentFunction = coreApp.device().createFunction("fragmentShader");
+		
+		auto pipeline = device.createRenderPipeline(pipelineDesc);
+		
+		auto renderWindow = [&](Window& window) {
+			auto const now = std::chrono::high_resolution_clock::now();
+			float const time = (now - beginTime).count() / 1'000'000'000.0f / 2;
+			doRenderWindow(device, window,
+						   vertexBuffer,
+						   indexBuffer,
+						   uniformBuffer,
+						   pipeline,
+						   ((int)time) % 2 == 0 ? std::floor(time) : time);
+		};
+		
+		auto& firstWindow = *_windows.front();
+		firstWindow.onMove([&](int2 position){
+			renderWindow(firstWindow);
+		});
+		firstWindow.onResize([&](int2 size){
+			renderWindow(firstWindow);
+		});
+		
+		while (!_windows.empty()) {
+			Window::pollEvents();
+			
+			for (auto itr = _windows.begin(); itr != _windows.end();) {
+				if ((*itr)->shouldClose()) {
+					itr = _windows.erase(itr);
+				}
+				else {
+					++itr;
+				}
+			}
+			
+			for (auto& window: _windows) {
+				renderWindow(*window);
+			}
+			
+			
+			_currentFrame.counter += 1;
+			
+		}
+		shutdown();
+	}
+	
+}

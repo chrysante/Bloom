@@ -1,0 +1,23 @@
+#pragma once
+
+#include "Bloom/Scene/SceneRenderer.hpp"
+#include "Bloom/Scene/Entity.hpp"
+#include "Bloom/Graphics/Renderer.hpp"
+
+namespace poppy {
+	
+	class SelectionContext;
+	
+	class EditorSceneRenderer: public bloom::SceneRenderer {
+	public:
+		using bloom::SceneRenderer::SceneRenderer;
+		
+		void submitSelection(SelectionContext const&);
+		
+		void submitShadowCascadeViz(bloom::EntityHandle);
+		
+		void drawDebugInfo(bloom::EditorFramebuffer&, bloom::DebugDrawOptions const&);
+		void drawSelection(bloom::EditorFramebuffer&);
+	};
+	
+}

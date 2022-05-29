@@ -1,0 +1,6 @@
+[submodule "external/utility"]
+	path = external/utility
+	url = https://github.com/chrysante/Utility
+[submodule "external/minizip"]
+	path = external/minizip
+	url = https://github.com/zlib-ng/minizip-ng

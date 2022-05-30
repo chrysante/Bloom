@@ -111,6 +111,7 @@ fragment MainPassFragmentData mainPassFS(MainPassData                     in    
 		lightAcc += data.albedo * data.ao * light.common.color * light.common.intensity;
 	}
 	
+	// Emissive
 	lightAcc += materialParams.emissive * materialParams.emissiveIntensity;
 	
 	MainPassFragmentData result;

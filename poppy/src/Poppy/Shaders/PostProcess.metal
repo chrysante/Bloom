@@ -41,10 +41,31 @@ kernel void postprocess(PostProcessParameters device const& params  [[ buffer(0)
 	float2 const uv = float2(position) / (destSize - 1);
 	
 	float3 color = rawColor.read(position).rgb;
-	color += params.bloom.intensity * readBloomTexture(bloomTex, uv, params.bloom.scale);
 	
-	float3 const toneMapped = ACESFilm(color);
-//	float3 const toneMapped = reinhard(color);
+	// Bloom
+	if (params.bloom.enabled) {
+		float3 const bloomValue = readBloomTexture(bloomTex, uv, params.bloom.scale);
+		if (params.bloom.physicallyCorrect) {
+			color = mix(color, bloomValue, params.bloom.contribution);
+		}
+		else {
+			color += params.bloom.intensity * bloomValue;
+		}
+	}
+	
+	// Tonemapping
+	float3 toneMapped;
+	switch (params.tonemapping) {
+		case ToneMapping::ACES:
+			toneMapped = ACESFilm(color);
+			break;
+		case ToneMapping::reinhard:
+			toneMapped = reinhard(color);
+			break;
+		default:
+			toneMapped = color;
+			break;
+	}
 	
 	// gamma correction
 	float3 const corrected = pow(toneMapped, 1.0 / 2.2);

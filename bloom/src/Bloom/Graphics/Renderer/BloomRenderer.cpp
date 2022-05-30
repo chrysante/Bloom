@@ -59,6 +59,10 @@ namespace bloom {
 							   TextureView rawColor,
 							   BufferView renderParameters,
 							   mtl::uint2 const framebufferSize) {
+		if (!settings.enabled) {
+			return;
+		}
+		
 		std::unique_ptr const _ctx = commandQueue.createComputeContext();
 		auto& ctx = *_ctx;
 
@@ -129,10 +133,13 @@ namespace bloom {
 			2 * settings.knee,
 			0.25 / settings.knee
 		};
+		
+		params.enabled = settings.enabled;
+		params.physicallyCorrect = settings.physicallyCorrect;
 		params.threshold = settings.threshold;
 		params.scale = settings.diffusion;
 		params.clamp = settings.clamp;
-//		bloomParams.contribution = settings.contribution;
+		params.contribution = settings.contribution;
 		return params;
 	}
 	

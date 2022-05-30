@@ -42,22 +42,44 @@ namespace poppy {
 		}
 		
 		using namespace propertiesView;
+		if (beginSection("Postprocessing")) {
+			beginProperty("Tone Mapping"); fullWidth();
+			char const* const items[] = { "ACES", "reinhard" };
+			ImGui::Combo("##tone-mapping", (int*)&mRenderer->mToneMapping,
+						 items, 2);
+			endSection();
+		}
+		
 		if (beginSection("Bloom/Veil")) {
 			/* Bloom Settings */ {
 				auto params = mRenderer->bloomRenderer.getParameters();
 				bool edit = false;
-				beginProperty("Intensity"); fullWidth();
-				edit |= ImGui::SliderFloat("##intensity", &params.intensity, 0, 10);
-				beginProperty("Threshold"); fullWidth();
-				edit |= ImGui::SliderFloat("##threshold", &params.threshold, 0, 10);
-				beginProperty("Soft Knee"); fullWidth();
-				edit |= ImGui::SliderFloat("##knee", &params.knee, 0, 1);
-				beginProperty("Clamp"); fullWidth();
-				edit |= ImGui::DragFloat("##clamp", &params.clamp, 0.1);
-				beginProperty("Diffusion"); fullWidth();
-				edit |= ImGui::SliderFloat("##diffusion", &params.diffusion, 0, 10);
-//				beginProperty("Contribution"); fullWidth();
-//				ImGui::SliderFloat("##contribution", &params.contribution, 0, 1);
+				
+				beginProperty("Enabled");
+				edit |= ImGui::Checkbox("##enabled", &params.enabled);
+				if (params.enabled) {
+					beginProperty("Physically Correct");
+					edit |= ImGui::Checkbox("##physically-correct", &params.physicallyCorrect);
+					if (!params.physicallyCorrect) {
+						beginProperty("Intensity"); fullWidth();
+						edit |= ImGui::SliderFloat("##intensity", &params.intensity, 0, 10);
+						beginProperty("Threshold"); fullWidth();
+						edit |= ImGui::SliderFloat("##threshold", &params.threshold, 0, 10);
+						beginProperty("Soft Knee"); fullWidth();
+						edit |= ImGui::SliderFloat("##knee", &params.knee, 0, 1);
+					}
+					
+					beginProperty("Clamp"); fullWidth();
+					edit |= ImGui::DragFloat("##clamp", &params.clamp, 0.1, 0, FLT_MAX);
+					beginProperty("Diffusion"); fullWidth();
+					edit |= ImGui::SliderFloat("##diffusion", &params.diffusion, 0, 10);
+					
+					if (params.physicallyCorrect) {
+						beginProperty("Contribution"); fullWidth();
+						edit |= ImGui::SliderFloat("##contribution", &params.contribution, 0, 1);
+					}
+				}
+				
 				if (edit) {
 					mRenderer->bloomRenderer.setParameters(params);
 				}

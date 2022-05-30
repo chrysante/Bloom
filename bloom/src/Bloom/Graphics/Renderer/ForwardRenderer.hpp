@@ -130,6 +130,8 @@ namespace bloom {
 		BloomRenderer bloomRenderer;
 		FWCPUSceneData scene;
 		FWRenderData renderObjects;
+		
+		ToneMapping mToneMapping = ToneMapping::ACES;
 	};
 	
 }

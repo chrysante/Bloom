@@ -14,11 +14,14 @@ namespace bloom {
 	class CommandQueue;
 	
 	struct BloomRenderParameters {
+		bool enabled = true;
+		bool physicallyCorrect = true;
 		float intensity = 1;
 		float threshold = 1;
 		float knee      = 0.1;
 		float clamp     = 100;
 		float diffusion = 1;
+		float contribution = 0.1;
 	};
 	
 	class BLOOM_API BloomRenderer {

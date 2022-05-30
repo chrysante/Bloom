@@ -419,7 +419,7 @@ namespace poppy{
 		header("Framebuffer");
 		if (beginSection()) {
 			beginProperty("Slot");
-			if (ImGui::BeginCombo("##shadow-caster", toString(params.framebufferSlot).data(), ImGuiComboFlags_NoArrowButton)) {
+			if (ImGui::BeginCombo("##framebuffer-slot", toString(params.framebufferSlot).data(), ImGuiComboFlags_NoArrowButton)) {
 				enumCombo(params.framebufferSlot);
 				ImGui::EndCombo();
 			}
@@ -463,11 +463,12 @@ namespace poppy{
 		auto payload = acceptAssetDragDrop(AssetType::scene);
 		if (payload) {
 			AssetHandle const handle = *payload;
-			auto scene = assetManager().get(handle);
+			auto asset = assetManager().get(handle);
 			assetManager().makeAvailable(handle, AssetRepresentation::CPU);
 			
-			editor().coreSystems().sceneSystem().unloadAll();
-			editor().coreSystems().sceneSystem().loadScene(as<Scene>(scene));
+			auto& sceneSystem = editor().coreSystems().sceneSystem();
+			sceneSystem.unloadAll();
+			sceneSystem.loadScene(as<Scene>(asset));
 		}
 	}
 	

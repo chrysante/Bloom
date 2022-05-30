@@ -163,7 +163,6 @@ namespace bloom {
 		
 		auto& weakAsset = itr->second.theAsset;
 		
-		
 		if (auto const asset = weakAsset.lock()) {
 			bloomAssert(handle == asset->handle());
 			return asset;
@@ -359,13 +358,13 @@ namespace bloom {
 		bloomAssert((bool)ref);
 		MaterialInstance& inst = utl::down_cast<MaterialInstance&>(*ref);
 		
-		if (test(rep & AssetRepresentation::CPU)) {
+		if (true || test(rep & AssetRepresentation::CPU)) {
 			inst = loadMaterialInstanceFromDisk(ia.handle, ia.diskLocation);
 		}
 		
 		if (test(rep & AssetRepresentation::GPU)) {
-			
-			bloomLog(trace, "Renderer is responsible for uploading material instance data to GPU");
+			makeAvailable(inst.material()->handle(), AssetRepresentation::GPU);
+//			bloomLog(trace, "Renderer is responsible for uploading material instance data to GPU");
 		}
 	}
 	

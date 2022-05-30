@@ -95,13 +95,13 @@ kernel void bloomPrefilter(texture2d<half, access::sample> source [[ texture(0) 
 	float2 const uv = float2(position) / (destSize - 1);
 	float2 const texelSize = 1 / (destSize - 1);
 	
-	half3 const sample = safeHDR(downsampleBox13Tap(source, uv, texelSize).rgb);
+	half3 sample = safeHDR(downsampleBox13Tap(source, uv, texelSize).rgb);
+	sample = min(sample, params.clamp);
 	
-	half3 const clamped = min(sample, params.clamp);
-	
-	half3 const thresholded = quadraticThreshold(clamped, (half)params.threshold, (half3)params.curve);
-	
-	dest.write(half4(half3(thresholded), 1), position);
+	if (!params.physicallyCorrect) {
+		sample = quadraticThreshold(sample, (half)params.threshold, (half3)params.curve);
+	}
+	dest.write(half4(sample, 1), position);
 }
 
 
@@ -118,15 +118,6 @@ kernel void bloomDownsample(texture2d<half, access::sample> source [[ texture(0)
 	dest.write(value, position);
 }
 
-static half4 combine(half4 upsampled, half4 big) {
-	return upsampled + big;
-}
-
-static half4 combine(half4 upsampled, half4 big, float alpha) {
-	return mix(upsampled, big, alpha);
-}
-
-
 kernel void bloomUpsample(texture2d<half, access::sample> sourceSmall [[ texture(0) ]],
 						  texture2d<half, access::read>   sourceBig   [[ texture(1) ]],
 						  texture2d<half, access::write>  dest        [[ texture(2) ]],
@@ -141,7 +132,11 @@ kernel void bloomUpsample(texture2d<half, access::sample> sourceSmall [[ texture
 	half4 const upsampledValue = upsampleTent(sourceSmall, uv, texelSize, params.scale);
 	half4 const big = sourceBig.read(position);
 	
-//	dest.write(combine(upsampledValue, big, params.contribution), position);
-	dest.write(combine(upsampledValue, big), position);
+	if (params.physicallyCorrect) {
+		dest.write(mix(big, upsampledValue, params.contribution), position);
+	}
+	else {
+		dest.write(upsampledValue + big, position);
+	}
 }
 

@@ -33,6 +33,8 @@ namespace bloom {
 	};
 	
 	struct BloomParameters {
+		bool enabled = true;
+		bool physicallyCorrect = true;
 		metal::float3 curve;
 		float contribution;
 		float intensity;
@@ -41,8 +43,13 @@ namespace bloom {
 		float clamp;
 	};
 	
+	enum class ToneMapping {
+		ACES, reinhard
+	};
+	
 	struct PostProcessParameters {
 		BloomParameters bloom;
+		ToneMapping tonemapping;
 	};
 	
 	struct DebugDrawData {

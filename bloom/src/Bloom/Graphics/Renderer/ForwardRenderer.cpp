@@ -333,6 +333,7 @@ namespace bloom {
 				  scene.shadows.numCascades.end(),
 				  std::begin(result.shadowData.numCascades));
 		
+		result.postprocess.tonemapping = mToneMapping;
 		result.postprocess.bloom = bloomRenderer.makeShaderParameters();
 		
 		return result;
@@ -348,6 +349,7 @@ namespace bloom {
 		caDesc.texture = framebuffer.rawColor;
 		caDesc.clearColor = mtl::colors<>::black;
 		caDesc.loadAction = LoadAction::clear;
+		caDesc.loadAction = LoadAction::dontCare;
 		desc.colorAttachments.push_back(caDesc);
 		
 		RenderPassDepthAttachmentDescription dDesc{};
@@ -483,14 +485,11 @@ namespace bloom {
 		ctx.setTexture(framebuffer.rawColor, 1);
 		ctx.setTexture(framebuffer.bloom.upsampleMips.front(), 2);
 		
-
 		uint2 const gridSize = framebuffer.size;
-		
 		
 		auto const threadGroupWidth = renderObjects.postprocessPipeline.threadExecutionWidth;
 		auto const threadGroupHeight = renderObjects.postprocessPipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth;
 		mtl::uint2 const threadGroupSize = { threadGroupWidth, threadGroupHeight };
-		
 		
 		ctx.dispatchThreads(gridSize, threadGroupSize);
 		

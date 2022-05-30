@@ -18,18 +18,21 @@ namespace bloom {
 	
 	/// MARK: - AssetType
 	enum class AssetType: unsigned {
-		none = 0,
-		staticMesh = 1 << 0,
+		none         = 0,
+		
+		staticMesh   = 1 << 0,
 		skeletalMesh = 1 << 1, // not supported yet...
-		mesh = staticMesh | skeletalMesh,
+		mesh         = staticMesh | skeletalMesh,
 		
-		material = 1 << 2,
+		material     = 1 << 2,
+		materialInstance
+					 = 1 << 3,
 		
-		scene = 1 << 3,
+		scene        = 1 << 4,
 		
-		script = 1 << 4,
+		script       = 1 << 5,
 		
-		itemCount = 5
+		itemCount    = 6
 	};
 	UTL_ENUM_OPERATORS(AssetType);
 	
@@ -37,6 +40,7 @@ namespace bloom {
 		invalid = 0,
 		bmesh,
 		bmat,
+		bmatinst,
 		bscene,
 		chai
 	};
@@ -109,6 +113,7 @@ namespace bloom {
 	
 	class StaticMesh;
 	class Material;
+	class MaterialInstance;
 	class Scene;
 	class Script;
 	
@@ -118,6 +123,8 @@ namespace bloom {
 				return f(utl::tag<StaticMesh>{});
 			case AssetType::material:
 				return f(utl::tag<Material>{});
+			case AssetType::materialInstance:
+				return f(utl::tag<MaterialInstance>{});
 			case AssetType::scene:
 				return f(utl::tag<Scene>{});
 			case AssetType::script:

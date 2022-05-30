@@ -11,6 +11,14 @@ constexpr sampler bilinSampler(coord::normalized,
 							   address::clamp_to_zero,
 							   filter::linear);
 
+static half3 safeHDR(half3 color) {
+	return min(color, HALF_MAX);
+}
+
+static half4 safeHDR(half4 color) {
+	return min(color, HALF_MAX);
+}
+
 
 static half4 downsampleBox13Tap(texture2d<half, access::sample> tex,
 								float2 uv,
@@ -63,16 +71,17 @@ half4 bloom::upsampleTent(texture2d<half, access::sample> tex, float2 uv, float2
 
 // Quadratic color thresholding
 // curve = (threshold - knee, knee * 2, 0.25 / knee)
-static float3 quadraticThreshold(float3 color, float threshold, float3 curve) {
+template <typename T>
+static vec<T, 3> quadraticThreshold(vec<T, 3> color, T threshold, vec<T, 3> curve) {
 	// Pixel brightness
-	float const br = max(max(color.r, color.g), color.b);
+	T const br = max(max(color.r, color.g), color.b);
 
 	// Under-threshold part
-	float rq = clamp(br - curve.x, 0.0, curve.y);
+	T rq = clamp(br - curve.x, T(0), curve.y);
 	rq = curve.z * rq * rq;
 
 	// Combine and apply the brightness response curve
-	color *= max(rq, br - threshold) / max(br, 1e-4);
+	color *= max(rq, br - threshold) / max(br, T(1e-4));
 
 	return color;
 }
@@ -86,9 +95,11 @@ kernel void bloomPrefilter(texture2d<half, access::sample> source [[ texture(0) 
 	float2 const uv = float2(position) / (destSize - 1);
 	float2 const texelSize = 1 / (destSize - 1);
 	
-	half4 const sample = downsampleBox13Tap(source, uv, texelSize);
+	half3 const sample = safeHDR(downsampleBox13Tap(source, uv, texelSize).rgb);
 	
-	float3 const thresholded = quadraticThreshold(float3(sample.rgb), params.threshold, params.curve);
+	half3 const clamped = min(sample, params.clamp);
+	
+	half3 const thresholded = quadraticThreshold(clamped, (half)params.threshold, (half3)params.curve);
 	
 	dest.write(half4(half3(thresholded), 1), position);
 }

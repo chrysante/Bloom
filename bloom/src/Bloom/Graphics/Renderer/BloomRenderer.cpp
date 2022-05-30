@@ -83,7 +83,7 @@ namespace bloom {
 		}
 		
 		// all bloom shaders want this
-		ctx.setBuffer(renderParameters, 0, offsetof(ForwardRendererParameters, postprocess.bloom));
+		ctx.setBuffer(renderParameters, 0, offsetof(RendererParameters, postprocess.bloom));
 		
 		// prefilter pass (including first downsampling
 		ctx.setPipeline(prefilterPipeline);
@@ -131,6 +131,7 @@ namespace bloom {
 		};
 		params.threshold = settings.threshold;
 		params.scale = settings.diffusion;
+		params.clamp = settings.clamp;
 //		bloomParams.contribution = settings.contribution;
 		return params;
 	}

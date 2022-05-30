@@ -110,7 +110,7 @@ namespace poppy {
 	}
 	
 	void EditorRenderer::submit(Reference<StaticMeshRenderer> mesh,
-				Reference<Material> material,
+				Reference<MaterialInstance> material,
 				mtl::float4x4 const& transform) {
 		mRenderer->submit(std::move(mesh), std::move(material), transform);
 	}
@@ -192,7 +192,7 @@ namespace poppy {
 		auto& renderer = utl::down_cast<ForwardRenderer&>(*mRenderer);
 		
 		// Vertex buffers
-		ctx.setVertexBuffer(renderer.renderObjects.sceneDataBuffer, 0);
+		ctx.setVertexBuffer(renderer.renderObjects.parameterBuffer, 0, offsetof(RendererParameters, scene));
 		ctx.setVertexBuffer(selectedTransformsBuffer, 2);
 		
 		ctx.setPipeline(selectedPipeline);
@@ -247,7 +247,7 @@ namespace poppy {
 		
 		ctx.setPipeline(compositionPipeline);
 		
-		ctx.setFragmentBuffer(renderer.renderObjects.sceneDataBuffer, 0);
+		ctx.setFragmentBuffer(renderer.renderObjects.parameterBuffer, 0, offsetof(RendererParameters, scene));
 		ctx.setFragmentBuffer(editorDrawDataBuffer, 1);
 		ctx.setFragmentTexture(fwFramebuffer.postProcessed, 0);
 		ctx.setFragmentTexture(fwFramebuffer.depth, 1);

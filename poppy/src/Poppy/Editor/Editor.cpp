@@ -84,6 +84,21 @@ namespace poppy {
 		return result;
 	}
 	
+	void Editor::openView(std::string name, utl::function<void(View&)> completion) {
+		auto const entry = ViewRegistry::get(name);
+		if (!entry) {
+			poppyLog(warning, "Could not find View '{}'", name);
+			return;
+		}
+		
+		dispatch(DispatchToken::nextFrame, CustomCommand([=]{
+			auto& view = createView(*entry, *getWindows().front());
+			if (completion) {
+				completion(view);
+			}
+		}));
+	}
+	
 	/// MARK: Init
 	void Editor::init() {
 		auto editorRenderer = std::make_unique<EditorRenderer>(makeReciever(), coreSystems().getRenderer());
@@ -160,13 +175,13 @@ namespace poppy {
 		}
 		
 		if (ImGui::BeginMenu("Views")) {
-			ViewRegistry::forEach([&](std::string_view name, auto const& factory) {
+			ViewRegistry::forEach([&](std::string_view name, auto const& entry) {
+				auto const [desc, factory, _] = entry;
+				if (!desc.persistent) {
+					return;
+				}
 				if (ImGui::MenuItem(name.data())) {
-					auto view = factory();
-					view->desc.pub.name = std::string(name);
-					populateView(*view, *getWindows().front());
-					view->doInit();
-					views.push_back(std::move(view));
+					createView(entry, *getWindows().front());
 				}
 			});
 			
@@ -287,7 +302,20 @@ namespace poppy {
 		return libraryDir() / "Poppy/settings.ini";
 	}
 	
-	void Editor::populateView(View& view, Window& window) {
+	View& Editor::createView(ViewRegistry::Entry const& entry, Window& window) {
+		poppyAssert((bool)entry.factory);
+		auto view = entry.factory();
+		
+		view->mRegisterDescription = entry.description;
+		view->desc.pub._name_DONT_CHANGE_ME = entry.name;
+		populateView(*view, window);
+		view->doInit();
+		
+		views.push_back(std::move(view));
+		return *views.back();
+	}
+	
+	void Editor::populateView(View& view, bloom::Window& window) {
 		auto& desc = view.desc;
 		desc.editor = this;
 		desc.window = &window;
@@ -311,9 +339,10 @@ namespace poppy {
 	}
 	
 	void Editor::saveAll() {
-		for (auto& scene: utl::transform_range(coreSystems().sceneSystem().scenes(), utl::deref)) {
-			coreSystems().assetManager().saveToDisk(scene.handle());
-		}
+		coreSystems().assetManager().saveAll();
+//		for (auto& scene: utl::transform_range(coreSystems().sceneSystem().scenes(), utl::deref)) {
+//			coreSystems().assetManager().saveToDisk(scene.handle());
+//		}
 	}
 	
 }

@@ -13,32 +13,32 @@
 
 namespace bloom {
 	
-	EntityID Scene::createEmptyEntity() {
-		return createEmptyEntity(EntityID{});
+	EntityHandle Scene::createEmptyEntity() {
+		return createEmptyEntity(EntityHandle{});
 	}
 	
-	EntityID Scene::createEmptyEntity(EntityID hint) {
-		EntityID const entity = EntityID(_registry.create(hint.value()));
+	EntityHandle Scene::createEmptyEntity(EntityID hint) {
+		EntityHandle const entity = EntityHandle(_registry.create(hint.value()), this);
 		return entity;
 	}
 	
-	EntityID Scene::createEntity(std::string_view name) {
-		EntityID const entity = EntityID(_registry.create());
-		addComponent(entity, Transform{});
-		addComponent(entity, TransformMatrixComponent{});
-		addComponent(entity, TagComponent{ std::string(name) });
-		addComponent(entity, HierarchyComponent{});
+	EntityHandle Scene::createEntity(std::string_view name) {
+		EntityHandle const entity(_registry.create(), this);
+		entity.add(Transform{});
+		entity.add(TransformMatrixComponent{});
+		entity.add(TagComponent{ std::string(name) });
+		entity.add(HierarchyComponent{});
 
-		return entity;
+		return { entity, this };
 	}
 	
-	EntityID Scene::cloneEntity(EntityID from) {
-		EntityID const result = createEmptyEntity();
+	EntityHandle Scene::cloneEntity(EntityID from) {
+		EntityHandle const result = createEmptyEntity();
 		
 		forEachComponent([&]<typename C>(utl::tag<C>) {
 			if (hasComponent<C>(from)) {
 				C const& c = getComponent<C>(from);
-				addComponent(result, c);
+				result.add(c);
 			}
 		});
 		

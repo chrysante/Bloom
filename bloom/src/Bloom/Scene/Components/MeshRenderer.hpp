@@ -2,7 +2,7 @@
 
 #include "ComponentBase.hpp"
 
-#include "Bloom/Graphics/Material/Material.hpp"
+#include "Bloom/Graphics/Material/MaterialInstance.hpp"
 #include "Bloom/Graphics/StaticMesh.hpp"
 
 namespace bloom {
@@ -12,7 +12,7 @@ namespace bloom {
 	struct BLOOM_API MeshRendererComponent {
 		BLOOM_REGISTER_COMPONENT("Mesh Renderer");
 		
-		Reference<Material> material;
+		Reference<MaterialInstance> materialInstance;
 		Reference<StaticMesh> mesh;
 		
 		YAML::Node serialize() const;

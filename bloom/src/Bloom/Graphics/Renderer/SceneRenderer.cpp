@@ -68,11 +68,11 @@ namespace bloom {
 		/* submit meshes */ {
 			auto view = scene.view<TransformMatrixComponent const, MeshRendererComponent const>();
 			view.each([&](auto const id, TransformMatrixComponent const& transform, MeshRendererComponent const& meshRenderer) {
-				if (!meshRenderer.mesh || !meshRenderer.material) {
+				if (!meshRenderer.mesh || !meshRenderer.materialInstance || !meshRenderer.materialInstance->material()) {
 					return;
 				}
 				renderer().submit(meshRenderer.mesh->getRenderer(),
-								  meshRenderer.material,
+								  meshRenderer.materialInstance,
 								  transform.matrix);
 			});
 		}

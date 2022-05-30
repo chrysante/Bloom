@@ -16,11 +16,6 @@ namespace bloom {
 		using Asset::Asset;
 		Material(Asset asset): Asset(std::move(asset)) {}
 		
-//		utl::UUID assetID() const { return _id; }
-		
-//	private:
-//		utl::UUID _id;
-		
 		RenderPipelineHandle mainPass;
 		RenderPipelineHandle outlinePass;
 		TriangleCullMode cullMode = TriangleCullMode::back;

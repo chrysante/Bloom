@@ -1,6 +1,7 @@
 #include <metal_stdlib>
-#include "Bloom/Graphics/Renderer/SceneRenderData.hpp"
-#include "Bloom/Graphics/MaterialProperties.hpp"
+#include "Bloom/Graphics/Renderer/ShaderParameters.hpp"
+#include "Bloom/Graphics/Material/MaterialParameters.hpp"
+#include "Bloom/Graphics/MaterialProperties.hpp" // not really useful
 #include "Bloom/Graphics/Vertex.hpp"
 
 #include "PBRShader.h"
@@ -18,10 +19,8 @@ struct MainPassData {
 };
 
 vertex MainPassData mainPassVS(SceneRenderData device const&  scene     [[ buffer(0) ]],
-							   
 							   Vertex3D device const*         vertices  [[ buffer(1) ]],
 							   float4x4 device const&         transform [[ buffer(2) ]],
-							   
 							   uint const                     vertexID  [[ vertex_id ]])
 {
 	Vertex3D const v = vertices[vertexID];
@@ -37,14 +36,6 @@ vertex MainPassData mainPassVS(SceneRenderData device const&  scene     [[ buffe
 	result.positionWS = vertexPositionWS.xyz;
 	result.color      = v.color.rgb;
 	
-	
-//	if (vertexID < 8) {
-//		result.positionCS = testPositions[vertexID];
-//	}
-//	else {
-//		result.positionCS = float4(0, 0, 0, 1);
-//	}
-		
 	return result;
 }
 
@@ -52,19 +43,21 @@ struct MainPassFragmentData {
 	float4 color [[ color(0) ]];
 };
 
-fragment MainPassFragmentData mainPassFS(MainPassData                   in                   [[ stage_in   ]],
-										 SceneRenderData device const&  scene                [[ buffer(0)  ]],
-										 ShadowRenderData device const& shadowData           [[ buffer(1)  ]],
-										 float4x4 device const*         lightSpaceTransforms [[ buffer(2)  ]],
-										 texture2d_array<float>         shadowMaps           [[ texture(0) ]],
-										 sampler                        shadowMapSampler     [[ sampler(0) ]])
+fragment MainPassFragmentData mainPassFS(MainPassData                     in                   [[ stage_in   ]],
+										 RendererParameters device const& params               [[ buffer(0)  ]],
+										 float4x4 device const*           lightSpaceTransforms [[ buffer(1)  ]],
+										 MaterialParameters device const& materialParams       [[ buffer(2)  ]],
+										 texture2d_array<float>           shadowMaps           [[ texture(0) ]],
+										 sampler                          shadowMapSampler     [[ sampler(0) ]])
 {
+	SceneRenderData device const&  scene = params.scene;
+	ShadowRenderData device const& shadowData = params.shadowData;
 	
 	// Material Properties
 	PBRData const data {
-		.albedo    = float3(.8, .8, .8),
-		.metallic  = 1,
-		.roughness = 0.5,
+		.albedo    = materialParams.baseColor,
+		.metallic  = materialParams.metallic,
+		.roughness = materialParams.roughness,
 		.ao        = 1
 	};
 
@@ -117,6 +110,8 @@ fragment MainPassFragmentData mainPassFS(MainPassData                   in      
 		SkyLight const light = scene.skyLights[i];
 		lightAcc += data.albedo * data.ao * light.common.color * light.common.intensity;
 	}
+	
+	lightAcc += materialParams.emissive * materialParams.emissiveIntensity;
 	
 	MainPassFragmentData result;
 

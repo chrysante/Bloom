@@ -2,6 +2,7 @@
 #define UTL_DEFER_MACROS
 
 #include "AssetBrowser.hpp"
+#include "MaterialInstanceViewer.hpp"
 
 #include "Bloom/Application/Application.hpp"
 #include "Bloom/Application/ResourceUtil.hpp"
@@ -29,7 +30,7 @@ using namespace mtl::short_types;
 
 namespace poppy {
 	
-	POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser");
+	POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser", {});
 	
 	AssetBrowser::AssetBrowser():
 		dirView(this)
@@ -185,13 +186,28 @@ namespace poppy {
 	
 	void AssetBrowser::openAsset(bloom::AssetHandle handle) {
 		switch (handle.type()) {
+			case AssetType::materialInstance: {
+				editor().openView("Material Instance Viewer", [=](View& view){
+					auto* const pMatInstViewer = dynamic_cast<MaterialInstanceViewer*>(&view);
+					if (!pMatInstViewer) {
+						bloomDebugbreak("What?");
+						return;
+					}
+					auto& matInstViewer = *pMatInstViewer;
+					
+					auto materialInstance = as<MaterialInstance>(assetManager->get(handle));
+					
+					matInstViewer.setMaterialInstance(std::move(materialInstance));
+				});
+				
+				break;
+			}
 			case AssetType::scene: {
 				auto scene = as<Scene>(assetManager->get(handle));
 				assetManager->makeAvailable(handle, AssetRepresentation::CPU);
 				auto& sceneSystem = editor().coreSystems().sceneSystem();
 				sceneSystem.unloadAll();
 				sceneSystem.loadScene(std::move(scene));
-//				Editor::get().setScene(scene);
 				break;
 			}
 			case AssetType::script: {

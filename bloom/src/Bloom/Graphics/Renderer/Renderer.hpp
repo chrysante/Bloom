@@ -13,7 +13,7 @@ namespace bloom {
 	class CommandQueue;
 	
 	class StaticMeshRenderer;
-	class Material;
+	class MaterialInstance;
 	
 	class BLOOM_API Framebuffer {
 	public:
@@ -40,7 +40,7 @@ namespace bloom {
 		virtual void endScene() = 0;
 		virtual void draw(Framebuffer&, CommandQueue&) = 0;
 		
-		virtual void submit(Reference<StaticMeshRenderer>, Reference<Material>, mtl::float4x4 const& transform) {};
+		virtual void submit(Reference<StaticMeshRenderer>, Reference<MaterialInstance>, mtl::float4x4 const& transform) {};
 		virtual void submit(PointLight const&) {};
 		virtual void submit(SpotLight const&) {};
 		virtual void submit(DirectionalLight const&) {};

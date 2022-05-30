@@ -15,7 +15,7 @@ using namespace mtl::short_types;
 
 namespace poppy {
 	
-	POPPY_REGISTER_VIEW(RendererDebuggerView, "Renderer Debugger");
+	POPPY_REGISTER_VIEW(RendererDebuggerView, "Renderer Debugger", {});
 	
 	void RendererDebuggerView::init() {
 		mRenderer = findRenderer();

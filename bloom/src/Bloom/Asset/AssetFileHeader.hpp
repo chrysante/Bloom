@@ -54,6 +54,10 @@ namespace bloom {
 		
 	};
 	
+	struct MaterialInstanceFileHeader {
+		
+	};
+	
 	struct SceneFileHeader {
 		
 	};

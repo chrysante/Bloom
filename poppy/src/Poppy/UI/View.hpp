@@ -1,26 +1,35 @@
 #pragma once
 
+#include "Poppy/Core/Debug.hpp"
+#include "Bloom/Application/MessageSystem.hpp"
+#include "Bloom/Application/InputEvent.hpp"
+
 #include <string>
 #include <mtl/mtl.hpp>
 #include <utl/messenger.hpp>
 #include <utl/hashmap.hpp>
 #include <yaml-cpp/yaml.h>
-
-#include "Poppy/Core/Debug.hpp"
-#include "Bloom/Application/MessageSystem.hpp"
-#include "Bloom/Application/InputEvent.hpp"
+#include <optional>
 
 namespace bloom { class Window; }
 
 namespace poppy {
 	
 	struct ViewDescription {
-		std::string name;
+		std::string const& name() const { return _name_DONT_CHANGE_ME; }
+		std::string _name_DONT_CHANGE_ME;
+		
+		std::string title;
 		
 		mtl::int2 size = { 300, 300 };
 		mtl::float2 padding = -1;
 		
 		int id = -1; // Used to restore serialized Views. -1 means the View will use a new ID.
+	};
+	
+	struct ViewRegisterDescription {
+		bool unique = true;
+		bool persistent = true;
 	};
 	
 	class Editor;
@@ -32,9 +41,6 @@ namespace poppy {
 		friend class Editor;
 		
 	public:
-		/// MARK: Initialization
-		View(std::string title): View(ViewDescription{ title }) {}
-		View(ViewDescription const& = {});
 		virtual ~View() = default;
 		
 		/// MARK: Queries
@@ -49,7 +55,8 @@ namespace poppy {
 		mtl::int2 position() const { return desc.position; }
 		mtl::float2 padding() const { return desc.pub.padding; }
 		
-		std::string_view title() const { return desc.pub.name; }
+		std::string_view name() const { return desc.pub.name(); }
+		std::string_view title() const { return desc.pub.title; }
 		ViewDescription const& description() const { return desc.pub; }
 		
 		mtl::float2 windowSpaceToViewSpace(mtl::float2) const;
@@ -57,6 +64,8 @@ namespace poppy {
 		
 		Editor& editor() const { return *desc.editor; }
 		bloom::Window& window() const { return *desc.window; }
+		
+		ViewRegisterDescription registerDescription() const { return mRegisterDescription; }
 		
 		/// MARK: Modifiers
 		void setFocused();
@@ -66,11 +75,13 @@ namespace poppy {
 		
 		void setPadding(mtl::float2 padding);
 		
+		void setTitle(std::string);
+		
 	private:
 		/// MARK: Virtual Interface
 		virtual void init() {};
 		virtual void shutdown() {};
-		virtual void frame() = 0;
+		virtual void frame() {};
 		virtual void onInput(bloom::InputEvent&) {}
 		virtual YAML::Node serialize() const { return YAML::Node{}; }
 		virtual void deserialize(YAML::Node) {}
@@ -89,8 +100,6 @@ namespace poppy {
 		YAML::Node doSerialize() const;
 		static std::unique_ptr<View> doDeserialize(YAML::Node const&);
 		
-		virtual bool isUnique() const { return false; }
-		
 	private:
 		struct ViewDescPrivate {
 			ViewDescription pub;
@@ -107,42 +116,39 @@ namespace poppy {
 			bool open = true;
 			bool maximized = false;
 		};
-		
 		ViewDescPrivate desc;
-	};
-	
-	class UniqueView: public View {
-		friend class Editor;
-	public:
-		using View::View;
-		
-	private:
-		bool isUnique() const override { return true; }
+		ViewRegisterDescription mRegisterDescription;
 	};
 	
 	class ViewRegistry {
 	public:
 		using Factory = utl::function<std::unique_ptr<View>()>;
 		
-		static void add(std::string name, Factory factory) {
-			auto [_, success] = instance().factories.insert({ name, factory });
+		struct Entry {
+			ViewRegisterDescription description;
+			Factory factory;
+			std::string name;
+		};
+		
+		static void add(std::string name, Entry entry) {
+			auto [_, success] = instance().entries.insert({ name, entry });
 			if (!success) {
 				poppyLog(fatal, "View '{}' is already registered.");
 				poppyDebugfail();
 			}
 		}
 		
-		static Factory getFactory(std::string name) {
-			auto const itr = instance().factories.find(name);
-			if (itr == instance().factories.end()) {
-				return Factory{};
+		static std::optional<Entry> get(std::string name) {
+			auto const itr = instance().entries.find(name);
+			if (itr == instance().entries.end()) {
+				return std::nullopt;
 			}
 			return itr->second;
 		}
 
-		static void forEach(std::invocable<std::string, Factory> auto&& block) {
-			for (auto&& [name, factory]: instance().factories) {
-				block(name, factory);
+		static void forEach(std::invocable<std::string, Entry> auto&& block) {
+			for (auto&& [name, entry]: instance().entries) {
+				block(name, entry);
 			}
 		}
 		
@@ -153,12 +159,18 @@ namespace poppy {
 		}
 		
 	private:
-		utl::hashmap<std::string, Factory> factories;
+		utl::hashmap<std::string, Entry> entries;
 	};
 
-#define POPPY_REGISTER_VIEW(Type, Name)                                       \
-UTL_STATIC_INIT {                                                             \
-	::poppy::ViewRegistry::add(Name, [](){ return std::make_unique<Type>(); }); \
+#define POPPY_REGISTER_VIEW(Type, Name, ...) \
+UTL_STATIC_INIT {                                    \
+	::poppy::ViewRegistry::Entry entry;              \
+	entry.factory = [](){                            \
+		return std::make_unique<Type>();             \
+	};                                               \
+	entry.description = __VA_ARGS__;                 \
+	entry.name = Name;                               \
+	ViewRegistry::add(Name, entry);                  \
 };
 	
 }
@@ -167,7 +179,7 @@ UTL_STATIC_INIT {                                                             \
 #include "Bloom/Core/Serialize.hpp"
 
 BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewDescription,
-						   name,
+						   _name_DONT_CHANGE_ME,
 						   size,
 						   padding,
 						   id);

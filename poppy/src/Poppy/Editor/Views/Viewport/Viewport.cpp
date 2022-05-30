@@ -47,7 +47,7 @@ namespace poppy{
 		return result;
 	}
 	
-	POPPY_REGISTER_VIEW(Viewport, "Viewport");
+	POPPY_REGISTER_VIEW(Viewport, "Viewport", {});
 	
 	Viewport::Viewport(): BasicSceneInspector(this) {
 		toolbar = {
@@ -460,14 +460,15 @@ namespace poppy{
 	}
 	
 	void Viewport::recieveSceneDragDrop() {
-		poppyLog(warning, "Reimplement drag drop");
-//		auto payload = acceptAssetDragDrop(AssetType::scene);
-//		if (payload) {
-//			AssetHandle const handle = *payload;
-//			auto scene = assetManager()->get(handle);
-//			assetManager()->makeAvailable(handle, AssetRepresentation::CPU);
-//			editor().setScene(as<SceneAsset>(scene));
-//		}
+		auto payload = acceptAssetDragDrop(AssetType::scene);
+		if (payload) {
+			AssetHandle const handle = *payload;
+			auto scene = assetManager().get(handle);
+			assetManager().makeAvailable(handle, AssetRepresentation::CPU);
+			
+			editor().coreSystems().sceneSystem().unloadAll();
+			editor().coreSystems().sceneSystem().loadScene(as<Scene>(scene));
+		}
 	}
 	
 	mtl::float3 Viewport::worldSpaceToViewSpace(mtl::float3 const positionWS) {

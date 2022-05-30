@@ -7,6 +7,8 @@
 #include "Bloom/GPU/HardwareDevice.hpp"
 
 #include "Bloom/Graphics/StaticMesh.hpp"
+#include "Bloom/Graphics/Material/Material.hpp"
+#include "Bloom/Graphics/Material/MaterialInstance.hpp"
 #include "Bloom/Script/Script.hpp"
 #include "Bloom/ScriptEngine/ScriptEngine.hpp"
 
@@ -15,22 +17,24 @@
 
 namespace bloom {
 	
-	BLOOM_API std::string_view extension(AssetType type) {
-		switch (type) {
-			case AssetType::staticMesh:
-				return ".bmesh";
-			case AssetType::skeletalMesh:
-				return ".bskeletalMesh";
-			case AssetType::material:
-				return ".bmaterial";
-			case AssetType::scene:
-				return ".bscene";
-				
-			default:
-				return "";
-		}
-	}
-	
+//	BLOOM_API std::string_view extension(AssetType type) {
+//		switch (type) {
+//			case AssetType::staticMesh:
+//				return ".bmesh";
+//			case AssetType::skeletalMesh:
+//				return ".bskeletalMesh";
+//			case AssetType::material:
+//				return ".bmat";
+//			case AssetType::materialInstance:
+//				return ".bmatinst";
+//			case AssetType::scene:
+//				return ".bscene";
+//
+//			default:
+//				return "";
+//		}
+//	}
+
 	AssetManager::~AssetManager() = default;
 	
 	HardwareDevice& AssetManager::device() const { return application().device(); };
@@ -131,7 +135,6 @@ namespace bloom {
 				
 			default:
 				bloomDebugbreak();
-				std::terminate();
 		}
 		
 		flushToDisk(handle);
@@ -206,26 +209,35 @@ namespace bloom {
 		
 		bloomAssert(handle == assetRef->handle());
 		
-		switch (handle.type()) {
-			case AssetType::staticMesh:
-				makeStaticMeshAvailable(itr->second, rep, force);
-				break;
-			
-			case AssetType::material:
-				makeMaterialAvailable(itr->second, rep, force);
-				break;
+		try {
+			switch (handle.type()) {
+				case AssetType::staticMesh:
+					makeStaticMeshAvailable(itr->second, rep, force);
+					break;
 				
-			case AssetType::scene:
-				makeSceneAvailable(itr->second, rep, force);
-				break;
-				
-			case AssetType::script:
-				makeScriptAvailable(itr->second, rep, force);
-				break;
-				
-			default:
-				bloomDebugfail("Unimplemented");
-				break;
+				case AssetType::material:
+					makeMaterialAvailable(itr->second, rep, force);
+					break;
+					
+				case AssetType::materialInstance:
+					makeMaterialInstanceAvailable(itr->second, rep, force);
+					break;
+					
+				case AssetType::scene:
+					makeSceneAvailable(itr->second, rep, force);
+					break;
+					
+				case AssetType::script:
+					makeScriptAvailable(itr->second, rep, force);
+					break;
+					
+				default:
+					bloomDebugfail("Unimplemented");
+					break;
+			}
+		}
+		catch (std::exception const& e) {
+			bloomLog(error, "Failed to make Asset Available: {}", e.what());
 		}
 	}
 	
@@ -236,6 +248,12 @@ namespace bloom {
 	/// MARK: - Save
 	void AssetManager::saveToDisk(AssetHandle handle) {
 		flushToDisk(handle);
+	}
+	
+	void AssetManager::saveAll() {
+		for (auto&& [id, ia]: assets) {
+			saveToDisk(ia.handle);
+		}
 	}
 	
 	/// MARK: - Uncategorized
@@ -321,22 +339,43 @@ namespace bloom {
 	}
 		
 	void AssetManager::makeMaterialAvailable(InternalAsset& ia, AssetRepresentation rep, bool force) {
-		Material& material = utl::down_cast<Material&>(*ia.theAsset.lock().get());
+		auto ref = ia.theAsset.lock();
+		bloomAssert((bool)ref);
+		Material& material = utl::down_cast<Material&>(*ref);
 		
 		if (test(rep & AssetRepresentation::CPU)) {
 			bloomLog(warning, "No CPU Representation for materials yet");
 		}
 		
 		if (test(rep & AssetRepresentation::GPU)) {
-			material = Material::makeDefaultMaterial(device(), static_cast<Asset&>(material));
+			if (!material.mainPass || force) {
+				material = Material::makeDefaultMaterial(device(), static_cast<Asset&>(material));
+			}
+		}
+	}
+	
+	void AssetManager::makeMaterialInstanceAvailable(InternalAsset& ia, AssetRepresentation rep, bool force) {
+		auto ref = ia.theAsset.lock();
+		bloomAssert((bool)ref);
+		MaterialInstance& inst = utl::down_cast<MaterialInstance&>(*ref);
+		
+		if (test(rep & AssetRepresentation::CPU)) {
+			inst = loadMaterialInstanceFromDisk(ia.handle, ia.diskLocation);
+		}
+		
+		if (test(rep & AssetRepresentation::GPU)) {
+			
+			bloomLog(trace, "Renderer is responsible for uploading material instance data to GPU");
 		}
 	}
 	
 	void AssetManager::makeSceneAvailable(InternalAsset& ia, AssetRepresentation rep, bool force) {
-		Scene* scene = utl::down_cast<Scene*>(ia.theAsset.lock().get());
+		auto ref = ia.theAsset.lock();
+		bloomAssert((bool)ref);
+		Scene& scene = utl::down_cast<Scene&>(*ref);
 		
-		if (test(rep & AssetRepresentation::CPU) && (scene->empty() || force)) {
-			*scene = loadSceneFromDisk(ia.handle, ia.diskLocation);
+		if (test(rep & AssetRepresentation::CPU)) {
+			scene = loadSceneFromDisk(ia.handle, ia.diskLocation);
 		}
 		
 		if (test(rep & AssetRepresentation::GPU)) {
@@ -381,6 +420,32 @@ namespace bloom {
 		file.read((char*)result->indices.data(),  meshHeader.indexDataSize);
 		
 		return result;
+	}
+	
+	MaterialInstance AssetManager::loadMaterialInstanceFromDisk(AssetHandle handle, std::filesystem::path source) {
+		bloomExpect(toExtension(source) == FileExtension::bmatinst);
+		source = makeAbsolute(source);
+		std::fstream file(source, std::ios::in | std::ios::binary);
+		handleFileError(file, source);
+		
+		auto const header = readHeader(file);
+		
+		if (header.handle().type() != AssetType::materialInstance) {
+			bloomLog(error, "File was not a Material Instance");
+			bloomDebugbreak();
+			return MaterialInstance(handle, header.name());
+		}
+	
+		auto const materialInstanceHeader = header.customDataAs<MaterialInstanceFileHeader>();
+		(void)materialInstanceHeader;
+		
+		std::stringstream sstr;
+		sstr << file.rdbuf();
+		YAML::Node root = YAML::Load(sstr.str());
+		MaterialInstance inst(handle, header.name());
+		inst.deserialize(root, *this);
+		
+		return inst;
 	}
 	
 	Scene AssetManager::loadSceneFromDisk(AssetHandle handle, std::filesystem::path source) {
@@ -454,6 +519,9 @@ namespace bloom {
 			case AssetType::material:
 				flushMaterialToDisk(handle);
 				break;
+			case AssetType::materialInstance:
+				flushMaterialInstanceToDisk(handle);
+				break;
 			case AssetType::scene:
 				flushSceneToDisk(handle);
 				break;
@@ -473,10 +541,17 @@ namespace bloom {
 		
 		bloomAssert(asset);
 		auto const assetRef = asset->theAsset.lock();
-		bloomAssert(!!assetRef);
+		if (!assetRef) {
+			return;
+		}
 		bloomAssert(assetRef->handle() == handle);
 		
+		
+		
 		auto const& mesh = *utl::down_cast<StaticMesh const*>(assetRef.get())->mData;
+		if (!&mesh) {
+			return;
+		}
 		
 		std::uint64_t const vertexDataSize = mesh.vertices.size() * sizeof(bloom::Vertex3D);
 		std::uint64_t const indexDataSize = mesh.indices.size() * sizeof(uint32_t);
@@ -505,8 +580,6 @@ namespace bloom {
 		bloomAssert(!!assetRef);
 		bloomAssert(assetRef->handle() == handle);
 		
-//		auto const& material = *utl::down_cast<MaterialAsset const*>(assetRef.get())->_meshData;
-		
 		// make header
 		AssetFileHeader const header(handle, FileFormat::binary, asset->name, MaterialFileHeader{});
 		
@@ -521,6 +594,32 @@ namespace bloom {
 		handleFileError(file, dest);
 		
 		file.write((char*)&header, sizeof(AssetFileHeader));
+	}
+	
+	void AssetManager::flushMaterialInstanceToDisk(AssetHandle handle) {
+		InternalAsset const* const ia = find(handle);
+		bloomAssert(ia);
+		auto const asset = ia->theAsset.lock();
+		if (!asset) {
+			return;
+		}
+		bloomAssert(asset->handle() == handle);
+		
+		auto const& inst = utl::down_cast<MaterialInstance const&>(*asset);
+		
+		// make header
+		AssetFileHeader const header(handle, FileFormat::text, ia->name, MaterialInstanceFileHeader{});
+		
+		std::ios::sync_with_stdio(false);
+		
+		auto const dest = makeAbsolute(ia->diskLocation);
+		std::fstream file(dest, std::ios::out | std::ios::trunc | std::ios::binary);
+		handleFileError(file, dest);
+		
+		file.write((char*)&header, sizeof(AssetFileHeader));
+		YAML::Emitter out;
+		out << inst.serialize();
+		file << out.c_str();
 	}
 	
 	void AssetManager::flushSceneToDisk(AssetHandle handle) {
@@ -551,7 +650,9 @@ namespace bloom {
 		auto const* const asset = find(handle);
 		bloomAssert(asset);
 		auto const assetRef = asset->theAsset.lock();
-		bloomAssert(!!assetRef);
+		if (!assetRef) {
+			return;
+		}
 		bloomAssert(assetRef->handle() == handle);
 		
 		auto const& script = utl::down_cast<Script const&>(*assetRef).text;

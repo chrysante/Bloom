@@ -25,9 +25,6 @@ namespace poppy {
 	}
 	
 	/// MARK: Initialization
-	View::View(ViewDescription const& d): desc{ d } {
-		
-	}
 	
 	/// MARK: Queries
 	bool View::focused() const {
@@ -73,6 +70,10 @@ namespace poppy {
 		desc.pub.padding = padding;
 	}
 	
+	void View::setTitle(std::string newTitle) {
+		desc.pub.title = std::move(newTitle);
+	}
+	
 	/// MARK: Convinience Helpers
 	void View::displayEmptyWithReason(std::string_view reason) const {
 		auto const oldCursorPos = ImGui::GetCursorPos();
@@ -81,7 +82,6 @@ namespace poppy {
 		};
 		
 		Font font = Font::UIDefault();
-//		font.size = FontSize::large;
 		font.weight = FontWeight::semibold;
 		
 		withFont(font, [&]{
@@ -98,6 +98,8 @@ namespace poppy {
 		}
 		usedIDs.insert(desc.pub.id);
 		setPadding(desc.pub.padding);
+		
+		desc.pub.title = std::string(name());
 		
 		this->init();
 	}
@@ -125,6 +127,7 @@ namespace poppy {
 			
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
 		}
+		
 		auto& style = ImGui::GetStyle();
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, desc.maximized ? 0 : style.WindowRounding);
 		mtl::float2 const padding = {
@@ -132,9 +135,12 @@ namespace poppy {
 			desc.hasPaddingY ? desc.pub.padding.y : style.WindowPadding.y
 		};
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
-		bool const open = ImGui::Begin((desc.maximized ?
-										desc.pub.name + "_FS" :
-										desc.pub.name).data(),
+		
+		std::string displayTitle = utl::format("{}###{}-{}", title(), name(), id());
+		if (maximized) {
+			displayTitle += "-FS";
+		}
+		bool const open = ImGui::Begin(displayTitle.data(),
 									   &desc.open,
 									   flags);
 		ImGui::PopStyleVar(2);
@@ -175,18 +181,18 @@ namespace poppy {
 				poppyDebugbreak();
 				return nullptr;
 			}
-			
-			auto const factory = ViewRegistry::getFactory(desc.name);
-			if (!factory) {
-				poppyLog(error, "Failed to deserialize View named '{}'", desc.name);
+		
+			auto const entry = ViewRegistry::get(desc.name());
+			if (!entry) {
+				poppyLog(error, "Failed to deserialize View named '{}'", desc.name());
 				return nullptr;
 			}
 			
-			auto result = factory();
+			auto result = entry->factory();
 			ViewDescPrivate privDesc{ desc };
 			result->desc = privDesc;
 			result->deserialize(node["Derived View"]);
-			
+			result->mRegisterDescription = entry->description;
 			return result;
 		}
 		catch (std::exception const& e) {

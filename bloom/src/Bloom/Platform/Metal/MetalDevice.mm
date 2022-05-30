@@ -187,6 +187,17 @@ namespace bloom {
 			bloomLog(error, "Failed to create Pipeline State");
 			bloomDebugbreak();
 		}
+		
+		MTLRenderPipelineReflection* refl = [[MTLRenderPipelineReflection alloc] init];
+		
+//		MTLAutoreleasedRenderPipelineReflection
+		
+		id<MTLRenderPipelineState> ps2 = [device newRenderPipelineStateWithDescriptor: mtlDesc
+																			  options: MTLPipelineOption{}
+																		   reflection: &refl
+																				error: nil];
+//		refl.
+		
 		return RenderPipelineHandle((void*)CFBridgingRetain(pipelineState), MTLDeleter);
 	}
 	

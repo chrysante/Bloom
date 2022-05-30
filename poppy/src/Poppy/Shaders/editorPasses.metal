@@ -2,7 +2,7 @@
 
 #include "PostProcess.h"
 
-#include "Bloom/Graphics/Renderer/SceneRenderData.hpp"
+#include "Bloom/Graphics/Renderer/ShaderParameters.hpp"
 #include "Bloom/Graphics/MaterialProperties.hpp"
 #include "Bloom/Graphics/Vertex.hpp"
 

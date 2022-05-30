@@ -1,14 +1,17 @@
 #pragma once
 
+#include "Asset.hpp"
+#include "AssetFileHeader.hpp"
+
+#include "Bloom/Core/Core.hpp"
+#include "Bloom/Application/CoreSystem.hpp"
+#include "Bloom/Scene/Scene.hpp"
+#include "Bloom/Graphics/Material/Material.hpp"
+#include "Bloom/Graphics/Material/MaterialInstance.hpp"
+
 #include <filesystem>
 #include <utl/vector.hpp>
 #include <utl/hashmap.hpp>
-
-#include "Bloom/Application/CoreSystem.hpp"
-#include "Bloom/Core/Reference.hpp"
-#include "Asset.hpp"
-#include "Bloom/Scene/Scene.hpp"
-#include "AssetFileHeader.hpp"
 #include <future>
 #include <optional>
 #include <span>
@@ -106,7 +109,7 @@ namespace bloom {
 		/// @param handle	Asset to save.
 		void saveToDisk(AssetHandle handle);
 		
-		
+		void saveAll();
 		
 		
 		/// MARK: Uncategorized
@@ -133,12 +136,14 @@ namespace bloom {
 		/// MARK: Make Available
 		void makeStaticMeshAvailable(InternalAsset&, AssetRepresentation rep, bool force);
 		void makeMaterialAvailable(InternalAsset&, AssetRepresentation rep, bool force);
+		void makeMaterialInstanceAvailable(InternalAsset&, AssetRepresentation rep, bool force);
 		void makeSceneAvailable(InternalAsset&, AssetRepresentation rep, bool force);
 		void makeScriptAvailable(InternalAsset&, AssetRepresentation rep, bool force);
 		
 		
 		///MARK: Disk -> Memory
 		Reference<StaticMeshData> readStaticMeshFromDisk(std::filesystem::path source);
+		MaterialInstance loadMaterialInstanceFromDisk(AssetHandle, std::filesystem::path source);
 		Scene loadSceneFromDisk(AssetHandle, std::filesystem::path source);
 		std::string loadTextFromDisk(std::filesystem::path source);
 		
@@ -149,6 +154,7 @@ namespace bloom {
 		void flushToDisk(AssetHandle);
 		void flushStaticMeshToDisk(AssetHandle);
 		void flushMaterialToDisk(AssetHandle);
+		void flushMaterialInstanceToDisk(AssetHandle);
 		void flushSceneToDisk(AssetHandle);
 		void flushScriptToDisk(AssetHandle);
 		

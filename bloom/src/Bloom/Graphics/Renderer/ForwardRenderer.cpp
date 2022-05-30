@@ -2,6 +2,7 @@
 
 #include "Bloom/GPU/HardwareDevice.hpp"
 #include "Bloom/Graphics/Material/Material.hpp"
+#include "Bloom/Graphics/Material/MaterialInstance.hpp"
 #include "Bloom/Graphics/StaticMesh.hpp"
 
 #include <numeric>
@@ -108,11 +109,8 @@ namespace bloom {
 			BufferDescription desc{};
 			desc.storageMode = StorageMode::managed;
 			
-			desc.size = sizeof(SceneRenderData);
-			renderObjects.sceneDataBuffer = device.createBuffer(desc);
-			
-			desc.size = sizeof(ForwardRendererParameters);
-			renderObjects.rendererParameters = device.createBuffer(desc);
+			desc.size = sizeof(RendererParameters);
+			renderObjects.parameterBuffer = device.createBuffer(desc);
 		}
 		{
 			DepthStencilDescription desc{};
@@ -139,10 +137,18 @@ namespace bloom {
 	}
 	
 	static auto const objectOrder = [](auto&& a, auto&& b) {
-		if (a.material == b.material) {
-			return a.mesh < b.mesh;
+		auto& aMatInst = *a.materialInstance;
+		auto* const aMat = aMatInst.material();
+		auto& bMatInst = *b.materialInstance;
+		auto* const bMat = bMatInst.material();
+		
+		if (aMat == bMat) { // sort by material first
+			if (a.materialInstance == b.materialInstance) { // then by instance
+				return a.mesh < b.mesh; // then by mesh
+			}
+			return a.materialInstance < b.materialInstance;
 		}
-		return a.material < b.material;
+		return aMat < bMat;
 	};
 	
 	void ForwardRenderer::endScene() {
@@ -150,44 +156,6 @@ namespace bloom {
 		
 		std::sort(scene.objects.begin(), scene.objects.end(), objectOrder);
 		
-		sceneRenderData.camera = mtl::transpose(scene.camera.viewProjection());
-		sceneRenderData.cameraPosition = scene.camera.position();
-		
-		// Point Lights
-		if (scene.pointLights.size() > 32) {
-			bloomLog(warning, "Can't render more than 32 Point Lights");
-			scene.pointLights.resize(32);
-		}
-		sceneRenderData.numPointLights = scene.pointLights.size();
-		std::copy(scene.pointLights.begin(), scene.pointLights.end(),
-				  sceneRenderData.pointLights);
-		
-		// Spotlights
-		if (scene.spotLights.size() > 32) {
-			bloomLog(warning, "Can't render more than 32 Spot Lights");
-			scene.spotLights.resize(32);
-		}
-		sceneRenderData.numSpotLights = scene.spotLights.size();
-		std::copy(scene.spotLights.begin(), scene.spotLights.end(),
-				  sceneRenderData.spotLights);
-		
-		// Directional Lights
-		if (scene.dirLights.size() > 32) {
-			bloomLog(warning, "Can't render more than 32 Directional Lights");
-			scene.dirLights.resize(32);
-		}
-		sceneRenderData.numDirLights = scene.dirLights.size();
-		std::copy(scene.dirLights.begin(), scene.dirLights.end(),
-				  sceneRenderData.dirLights);
-		
-		// Skylights
-		if (scene.skyLights.size() > 32) {
-			bloomLog(warning, "Can't render more than 32 Sky Lights");
-			scene.skyLights.resize(32);
-		}
-		sceneRenderData.numSkyLights = scene.skyLights.size();
-		std::copy(scene.skyLights.begin(), scene.skyLights.end(),
-				  sceneRenderData.skyLights);
 		
 		/* upload object data */ do {
 			std::size_t const size = scene.objects.size() * sizeof(float4x4);
@@ -205,35 +173,36 @@ namespace bloom {
 									   size);
 		} while (0);
 		
-		/* upload shadow data */ {
-			ShadowRenderData header;
-			header.numShadowCasters = scene.shadows.numShadowCasters;
-			bloomAssert(scene.shadows.numShadowCasters == scene.shadows.numCascades.size());
-			std::copy(scene.shadows.numCascades.begin(),
-					  scene.shadows.numCascades.end(),
-					  std::begin(header.numCascades));
+		/* upload light space transforms */ {
+			// We need to have at least one item in the buffer, otherwise the shader validation will complain about missing buffer bindings
+			std::size_t const size = std::max((std::size_t)1, scene.shadows.lightSpaceTransforms.size()) * sizeof(float4x4);
 			
-			std::size_t const size = sizeof(ShadowRenderData) + std::max(scene.shadows.lightSpaceTransforms.size(), std::size_t{ 1 }) * sizeof(float4x4);
-			
-			if (renderObjects.shadows.dataBuffer.size() < size) {
+			if (renderObjects.shadows.lightSpaceTransforms.size() < size) {
 				BufferDescription desc;
 				desc.size = size;
 				desc.storageMode = StorageMode::managed;
-				renderObjects.shadows.dataBuffer = device().createBuffer(desc);
+				renderObjects.shadows.lightSpaceTransforms = device().createBuffer(desc);
 			}
-			device().fillManagedBuffer(renderObjects.shadows.dataBuffer,
-									   &header,
-									   sizeof header);
-			device().fillManagedBuffer(renderObjects.shadows.dataBuffer,
+			
+			device().fillManagedBuffer(renderObjects.shadows.lightSpaceTransforms,
 									   scene.shadows.lightSpaceTransforms.data(),
-									   scene.shadows.lightSpaceTransforms.size() * sizeof(float4x4),
-									   sizeof header /* offset */);
+									   scene.shadows.lightSpaceTransforms.size() * sizeof(float4x4));
 		}
 	}
 	
-	void ForwardRenderer::submit(Reference<StaticMeshRenderer> mesh, Reference<Material> material, mtl::float4x4 const& transform) {
+	void ForwardRenderer::submit(Reference<StaticMeshRenderer> mesh, Reference<MaterialInstance> matInst, mtl::float4x4 const& transform) {
 		RendererSanitizer::submit();
-		scene.objects.push_back({ mtl::transpose(transform), std::move(material), std::move(mesh) });
+		bloomAssert((bool)matInst);
+		bloomAssert(matInst->material());
+		
+		if (matInst->mDirty) {
+			matInst->mDirty = false;
+			if (matInst->mParameterBuffer.size() < sizeof(MaterialParameters)) {
+				matInst->mParameterBuffer = device().createBuffer({ .size = sizeof(MaterialParameters), .storageMode = StorageMode::managed });
+			}
+			device().fillManagedBuffer(matInst->mParameterBuffer, &matInst->mParameters, sizeof(MaterialParameters));
+		}
+		scene.objects.push_back({ mtl::transpose(transform), std::move(matInst), std::move(mesh) });
 	}
 	
 	void ForwardRenderer::submit(PointLight const& light) {
@@ -296,31 +265,79 @@ namespace bloom {
 	void ForwardRenderer::draw(Framebuffer& fb, CommandQueue& commandQueue) {
 		auto& framebuffer = utl::down_cast<ForwardRendererFramebuffer&>(fb);
 		
-		/* upload scene data buffer */ {
-			// this step is delayed because in endScene() we don't know the size of the framebuffer yet
-			sceneRenderData.screenResolution = framebuffer.size;
-			mDevice->fillManagedBuffer(renderObjects.sceneDataBuffer, &sceneRenderData, sizeof sceneRenderData);
-		}
-		
-		/* upload renderer shader parameters */ {
-			ForwardRendererParameters params{};
-			params.postprocess.bloom = bloomRenderer.makeShaderParameters();
-			device().fillManagedBuffer(renderObjects.rendererParameters,
-									   &params, sizeof params);
+		/* upload parameters */ {
+			RendererParameters const params = makeParameters(fb.size);
+			mDevice->fillManagedBuffer(renderObjects.parameterBuffer, &params, sizeof params);
 		}
 		
 		shadowMapPass(commandQueue);
-		
 		mainPass(framebuffer, commandQueue);
 		
 		bloomRenderer.render(commandQueue,
 							 framebuffer.bloom,
 							 framebuffer.rawColor,
-							 renderObjects.rendererParameters,
+							 renderObjects.parameterBuffer,
 							 framebuffer.size);
 		
 		postprocessPass(framebuffer, commandQueue);
 	}
+	
+	
+	RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
+		RendererParameters result;
+		
+		result.scene.camera = mtl::transpose(scene.camera.viewProjection());
+		result.scene.cameraPosition = scene.camera.position();
+		result.scene.screenResolution = framebufferSize;
+		
+		// Point Lights
+		if (scene.pointLights.size() > 32) {
+			bloomLog(warning, "Can't render more than 32 Point Lights");
+			scene.pointLights.resize(32);
+		}
+		result.scene.numPointLights = scene.pointLights.size();
+		std::copy(scene.pointLights.begin(), scene.pointLights.end(),
+				  result.scene.pointLights);
+		
+		// Spotlights
+		if (scene.spotLights.size() > 32) {
+			bloomLog(warning, "Can't render more than 32 Spot Lights");
+			scene.spotLights.resize(32);
+		}
+		result.scene.numSpotLights = scene.spotLights.size();
+		std::copy(scene.spotLights.begin(), scene.spotLights.end(),
+				  result.scene.spotLights);
+		
+		// Directional Lights
+		if (scene.dirLights.size() > 32) {
+			bloomLog(warning, "Can't render more than 32 Directional Lights");
+			scene.dirLights.resize(32);
+		}
+		result.scene.numDirLights = scene.dirLights.size();
+		std::copy(scene.dirLights.begin(), scene.dirLights.end(),
+				  result.scene.dirLights);
+		
+		// Skylights
+		if (scene.skyLights.size() > 32) {
+			bloomLog(warning, "Can't render more than 32 Sky Lights");
+			scene.skyLights.resize(32);
+		}
+		result.scene.numSkyLights = scene.skyLights.size();
+		std::copy(scene.skyLights.begin(), scene.skyLights.end(),
+				  result.scene.skyLights);
+		
+		
+		result.shadowData.numShadowCasters = scene.shadows.numShadowCasters;
+		bloomAssert(scene.shadows.numShadowCasters == scene.shadows.numCascades.size());
+		std::copy(scene.shadows.numCascades.begin(),
+				  scene.shadows.numCascades.end(),
+				  std::begin(result.shadowData.numCascades));
+		
+		result.postprocess.bloom = bloomRenderer.makeShaderParameters();
+		
+		return result;
+	}
+	
 	
 	void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer, CommandQueue& commandQueue) const {
 		std::unique_ptr _ctx = commandQueue.createRenderContext();
@@ -329,7 +346,7 @@ namespace bloom {
 		RenderPassDescription desc{};
 		RenderPassColorAttachmentDescription caDesc{};
 		caDesc.texture = framebuffer.rawColor;
-		caDesc.clearColor = { 1, 0, 1, 1 };
+		caDesc.clearColor = mtl::colors<>::black;
 		caDesc.loadAction = LoadAction::clear;
 		desc.colorAttachments.push_back(caDesc);
 		
@@ -340,28 +357,35 @@ namespace bloom {
 		ctx.begin(desc);
 		
 		// Vertex buffers
-		ctx.setVertexBuffer(renderObjects.sceneDataBuffer, 0);
+		ctx.setVertexBuffer(renderObjects.parameterBuffer, 0, offsetof(RendererParameters, scene));
 		
 		// Fragment buffers
-		ctx.setFragmentBuffer(renderObjects.sceneDataBuffer, 0);
-		ctx.setFragmentBuffer(renderObjects.shadows.dataBuffer, 1);
-		ctx.setFragmentBuffer(renderObjects.shadows.dataBuffer, 2, sizeof(ShadowRenderData) /* offset */);
+		ctx.setFragmentBuffer(renderObjects.parameterBuffer, 0);
+		ctx.setFragmentBuffer(renderObjects.shadows.lightSpaceTransforms, 1);
+		
 		ctx.setFragmentTexture(renderObjects.shadows.shadowMaps, 0);
 		ctx.setFragmentSampler(renderObjects.shadows.sampler, 0);
 		
-		
 		ctx.setVertexBuffer(renderObjects.transformBuffer, 2);
-		Material* currentMaterial = nullptr;
-		StaticMeshRenderer* currentMesh = nullptr;
+		Material const* currentMaterial = nullptr;
+		MaterialInstance const* currentMaterialInstance = nullptr;
+		StaticMeshRenderer const* currentMesh = nullptr;
 		for (auto&& [index, object]: utl::enumerate(scene.objects)) {
-			if (object.material.get() != currentMaterial) {
-				currentMaterial = object.material.get();
+			if (object.materialInstance->material() != currentMaterial) {
+				currentMaterial = object.materialInstance->material();
 				ctx.setPipeline(currentMaterial->mainPass);
 				ctx.setTriangleCullMode(currentMaterial->cullMode);
 				ctx.setDepthStencil(renderObjects.depthStencil);
 			}
+			
+			if (object.materialInstance.get() != currentMaterialInstance) {
+				ctx.setFragmentBuffer(object.materialInstance->parameterBuffer(), 2);
+				currentMaterialInstance = object.materialInstance.get();
+			}
+			
 			if (object.mesh.get() != currentMesh) {
 				ctx.setVertexBuffer(object.mesh->vertexBuffer(), 1);
+				currentMesh = object.mesh.get();
 			}
 			// object transform
 			ctx.setVertexBufferOffset(2, index * sizeof(float4x4));
@@ -421,10 +445,9 @@ namespace bloom {
 		ctx.setTriangleCullMode(TriangleCullMode::front); /// TODO: temporary
 		ctx.setDepthStencil(renderObjects.depthStencil);
 		
-		ctx.setVertexBuffer(renderObjects.sceneDataBuffer, 0);
+		ctx.setVertexBuffer(renderObjects.parameterBuffer, 0, offsetof(RendererParameters, scene));
 		ctx.setVertexBuffer(renderObjects.transformBuffer, 2);
-		ctx.setVertexBuffer(renderObjects.shadows.dataBuffer, 3,
-							/* offset = */ sizeof(ShadowRenderData) /* <- this is the header of the buffer */);
+		ctx.setVertexBuffer(renderObjects.shadows.lightSpaceTransforms, 3);
 		StaticMeshRenderer* currentMesh = nullptr;
 		for (auto&& [index, object]: utl::enumerate(scene.objects)) {
 			if (object.mesh.get() != currentMesh) {
@@ -455,7 +478,7 @@ namespace bloom {
 
 		ctx.setPipeline(renderObjects.postprocessPipeline);
 
-		ctx.setBuffer(renderObjects.rendererParameters, 0, offsetof(ForwardRendererParameters, postprocess));
+		ctx.setBuffer(renderObjects.parameterBuffer, 0, offsetof(RendererParameters, postprocess));
 		ctx.setTexture(framebuffer.postProcessed, 0); // dest
 		ctx.setTexture(framebuffer.rawColor, 1);
 		ctx.setTexture(framebuffer.bloom.upsampleMips.front(), 2);

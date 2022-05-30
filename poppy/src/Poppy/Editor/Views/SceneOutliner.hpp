@@ -24,6 +24,7 @@ namespace poppy {
 		
 	private:
 		void frame() override;
+		void onInput(bloom::InputEvent&) override;
 		
 		struct TreeNodeDescription {
 			std::size_t id = 0;
@@ -44,20 +45,8 @@ namespace poppy {
 		void setExpanded(bloom::Scene const*, bool);
 		void setExpanded(bloom::ConstEntityHandle, bool);
 		
-		
-		void performUpdates();
-		void performHierarchyUpdate();
-		void deferHierarchyUpdate(bloom::EntityHandle child, bloom::EntityHandle parent);
-		
-		void performDeletion();
-		
 	private:
 		utl::hashset<bloom::ConstEntityHandle> mExpanded;
-		
-		std::pair<bloom::EntityHandle, bloom::EntityHandle> hierarchyUpdate;
-		bool hasHierarchyUpdate = 0;
-		
-		bloom::EntityHandle toDelete;
 	};
 	
 	

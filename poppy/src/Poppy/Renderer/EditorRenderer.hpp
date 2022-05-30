@@ -45,7 +45,7 @@ namespace poppy {
 		void endScene() override;
 		
 		void submit(bloom::Reference<bloom::StaticMeshRenderer>,
-					bloom::Reference<bloom::Material>,
+					bloom::Reference<bloom::MaterialInstance>,
 					mtl::float4x4 const& transform) override;
 		void submitSelected(bloom::Reference<bloom::StaticMeshRenderer>,
 							mtl::float4x4 const& transform);

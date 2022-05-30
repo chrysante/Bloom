@@ -1,5 +1,5 @@
 #include <metal_stdlib>
-#include "Bloom/Graphics/Renderer/SceneRenderData.hpp"
+#include "Bloom/Graphics/Renderer/ShaderParameters.hpp"
 #include "Bloom/Graphics/Vertex.hpp"
 
 using namespace metal;

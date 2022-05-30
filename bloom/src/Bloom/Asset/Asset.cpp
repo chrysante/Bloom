@@ -15,6 +15,9 @@ namespace bloom {
 		if (extension == ".bmat") {
 			return FileExtension::bmat;
 		}
+		if (extension == ".bmatinst") {
+			return FileExtension::bmatinst;
+		}
 		if (extension == ".bscene") {
 			return FileExtension::bscene;
 		}
@@ -49,6 +52,7 @@ namespace bloom {
 			"Static Mesh",
 			"Skeletal Mesh",
 			"Material",
+			"Material Instance",
 			"Scene",
 			"Script"
 		}[utl::log2(i)];
@@ -63,6 +67,9 @@ namespace bloom {
 		}
 		if (str == "Material") {
 			return AssetType::material;
+		}
+		if (str == "Material Instance") {
+			return AssetType::materialInstance;
 		}
 		if (str == "Scene") {
 			return AssetType::scene;
@@ -84,6 +91,7 @@ namespace bloom {
 			".bmesh",
 			".invalid",
 			".bmat",
+			".bmatinst",
 			".bscene",
 			".chai",
 		}[utl::log2(i)];
@@ -95,6 +103,9 @@ namespace bloom {
 				
 			case FileExtension::bmat:
 				return AssetType::material;
+				
+			case FileExtension::bmatinst:
+				return AssetType::materialInstance;
 				
 			case FileExtension::bscene:
 				return AssetType::scene;
@@ -114,6 +125,9 @@ namespace bloom {
 				
 			case FileExtension::bmat:
 				return FileFormat::binary;
+				
+			case FileExtension::bmatinst:
+				return FileFormat::text;
 				
 			case FileExtension::bscene:
 				return FileFormat::text;

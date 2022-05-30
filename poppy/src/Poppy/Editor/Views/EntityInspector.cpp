@@ -23,10 +23,10 @@ using namespace bloom;
 
 namespace poppy {
 	
-	POPPY_REGISTER_VIEW(EntityInspector, "Entity Inspector");
+	POPPY_REGISTER_VIEW(EntityInspector, "Entity Inspector", {});
 	
 	EntityInspector::EntityInspector():
-		View("Entity Inspector"), BasicSceneInspector(this)
+		BasicSceneInspector(this)
 	{
 		
 	}
@@ -121,7 +121,7 @@ namespace poppy {
 				
 				
 				if (comboOpen) {
-					withFont(FontWeight::regular, FontStyle::roman, [&]{
+					withFont(Font::UIDefault(), [&]{
 						auto addComponentButton = [&]<typename Component>(utl::tag<Component>,
 																		  char const* name,
 																		  EntityHandle entity,
@@ -228,8 +228,8 @@ namespace poppy {
 				recieveMeshDragDrop(entity);
 		
 				beginProperty("Material");
-				ImGui::Button(meshRenderer.material ?
-							  assetManager().getName(meshRenderer.material->handle()).data() :
+				ImGui::Button(meshRenderer.materialInstance ?
+							  assetManager().getName(meshRenderer.materialInstance->handle()).data() :
 							  "No material assigned",
 							  { ImGui::GetContentRegionAvail().x, 0 });
 				recieveMaterialDragDrop(entity);
@@ -258,20 +258,20 @@ namespace poppy {
 	
 	void EntityInspector::recieveMaterialDragDrop(bloom::EntityHandle entity) {
 		using namespace bloom;
-		auto const payload = acceptAssetDragDrop(AssetType::material);
+		auto const payload = acceptAssetDragDrop(AssetType::materialInstance);
 		if (!payload) {
 			return;
 		}
 		auto const handle = *payload;
 		poppyLog(trace, "Recieved Asset: {}", assetManager().getName(handle));
 		
-		auto material = as<Material>(assetManager().get(handle));
-		poppyAssert((bool)material);
+		auto materialInstance = as<MaterialInstance>(assetManager().get(handle));
+		poppyAssert((bool)materialInstance);
 		
-		assetManager().makeAvailable(handle, AssetRepresentation::GPU);
+		assetManager().makeAvailable(handle, AssetRepresentation::CPU | AssetRepresentation::GPU);
 			
 		auto& meshRenderer = entity.get<MeshRendererComponent>();
-		meshRenderer.material = std::move(material);
+		meshRenderer.materialInstance = std::move(materialInstance);
 	}
 	
 	void EntityInspector::inspectLight(bloom::EntityHandle entity) {

@@ -18,15 +18,15 @@ namespace bloom {
 	class BLOOM_API Scene: public Asset {
 	public:
 		using Asset::Asset;
-		EntityID createEntity(std::string_view name);
-		EntityID createEmptyEntity();
-		EntityID createEmptyEntity(EntityID hint);
+		EntityHandle createEntity(std::string_view name);
+		EntityHandle createEmptyEntity();
+		EntityHandle createEmptyEntity(EntityID hint);
 		
 		
 		EntityHandle getHandle(EntityID id) { return EntityHandle(id, this); }
 		ConstEntityHandle getHandle(EntityID id) const { return ConstEntityHandle(id, this); }
 		
-		EntityID cloneEntity(EntityID);
+		EntityHandle cloneEntity(EntityID);
 		
 		void deleteEntity(EntityID);
 		

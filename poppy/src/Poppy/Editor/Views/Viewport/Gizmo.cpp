@@ -33,6 +33,10 @@ namespace poppy {
 	{}
 	
 	void Gizmo::setOperation(Operation op) {
+		if (isUsing()) {
+			// Guard here because of a bug in ImGuizmo. We crash when changing operation while using gizmo.
+			return;
+		}
 		_operation = op;
 	}
 	

@@ -15,10 +15,11 @@ cp Build/int/minizip/Debug/libminizip.a Build/Bin/Debug/
 cp Build/int/minizip/Debug/libminizip.a Build/Bin/Checked/
 cp Build/int/minizip/Debug/libminizip.a Build/Bin/Release/
 
+
 cp Build/int/assimp/bin/Debug/**.dylib Build/Bin/Debug/
 cp Build/int/assimp/bin/Debug/**.dylib Build/Bin/Checked/
 cp Build/int/assimp/bin/Debug/**.dylib Build/Bin/Release/
-
+cp Build/int/assimp/include/assimp/** external/assimp/include/assimp/
 
 #externals/minizip ## has no premake5 script
 cmake --build Build/int/minizip

@@ -24,8 +24,6 @@ sysincludedirs {
 targetdir("build/bin/%{cfg.longname}")
 objdir("build/obj/%{cfg.longname}")
 
-systemversion ("latest")
-
 -- platform windows
 filter "system:windows" 
     buildoptions { "/Zc:__cplusplus", "/Zc:preprocessor", "/MP" }

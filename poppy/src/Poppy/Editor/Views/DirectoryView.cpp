@@ -64,7 +64,7 @@ namespace poppy {
 				}
 			}
 
-			// app spacing at the end
+			// add spacing at the end
 			if (cursor.x > 0) {
 				bool const forceLineBreak = true;
 				advanceCursor(forceLineBreak);
@@ -87,6 +87,8 @@ namespace poppy {
 				return "cube";
 			case AssetType::material:
 				return "delicious";
+//			case AssetType::materialInstance:
+//				return "delicious";
 			case AssetType::scene:
 				return "cubes";
 			case AssetType::script:
@@ -115,10 +117,14 @@ namespace poppy {
 		ImGui::PushStyleColor(ImGuiCol_Button, 0);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0x20FFffFF);
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0x20FFffFF);
-		auto const flags = ImGuiButtonFlags_PressedOnDoubleClick;
+		ImGuiButtonFlags flags = 0;
+//		flags |= ImGuiButtonFlags_PressedOnDoubleClick;
+		
 		ImGui::SetCursorPos(localCursor);
 		bool const result = ImGui::ButtonEx(uniqueID.data(), params.itemSize, flags);
 		ImGui::PopStyleColor(3);
+		
+		
 		
 		// popup
 		ImGui::OpenPopupOnItemClick(popupID.data());

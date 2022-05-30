@@ -25,6 +25,7 @@ namespace poppy {
 		SelectionContext& selection() { return mSelection; }
 		
 		utl::vector<View*> getViews();
+		void openView(std::string name, utl::function<void(View&)> completion = nullptr);
 		
 	private:
 		/// Init
@@ -49,11 +50,14 @@ namespace poppy {
 		
 		/// Misc
 		std::filesystem::path settingsFile() const;
+		View& createView(ViewRegistry::Entry const&, bloom::Window&);
 		void populateView(View&, bloom::Window&);
 		void clearClosingViews();
 		
 		///
 		void saveAll();
+		
+		
 		
 	private:
 		ImGuiContext imguiCtx;

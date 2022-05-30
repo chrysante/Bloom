@@ -1,4 +1,5 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
+#define UTL_DEFER_MACROS
 
 #include "SceneOutliner.hpp"
 
@@ -11,20 +12,22 @@
 #include "Bloom/Runtime/SceneSystem.hpp"
 
 #include <utl/vector.hpp>
+#include <utl/stack.hpp>
+#include <utl/scope_guard.hpp>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
-#include <utl/stack.hpp>
+
 
 using namespace bloom;
 using namespace mtl::short_types;
 
 namespace poppy {
 	
-	POPPY_REGISTER_VIEW(SceneOutliner, "Scene Outliner");
+	POPPY_REGISTER_VIEW(SceneOutliner, "Scene Outliner", {});
 	
 	SceneOutliner::SceneOutliner():
-		View("Scene Inspector"), BasicSceneInspector(this)
+		BasicSceneInspector(this)
 	{
 		
 	}
@@ -38,29 +41,17 @@ namespace poppy {
 		for (auto scene: scenes()) {
 			displayScene(*scene);
 		}
-		performUpdates();
 		
-		// Always center this window when appearing
-		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+//		ImGui::InvisibleButton("open-popup-hack", ImGui::GetContentRegionAvail());
+//		ImGui::OpenPopupOnItemClick("SceneOutlinerContextMenu");
+//		if (ImGui::BeginPopup("SceneOutlinerContextMenu")) {
+//
+//			ImGui::EndPopup();
+//		}
+	}
+	
+	void SceneOutliner::onInput(bloom::InputEvent& e) {
 
-		if (ImGui::BeginPopupModal("Hierarchy Error", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-			
-			auto [child, parent] = hierarchyUpdate;
-			if (child) {
-			ImGui::Text("Can't attach \'%s\' to it's descendend \'%s\'. Detach \'%s\' first.",
-						child.get<TagComponent>().name.data(),
-						parent.get<TagComponent>().name.data(),
-						parent.get<TagComponent>().name.data());
-			ImGui::Separator();
-			}
-			ImGui::SetItemDefaultFocus();
-			if (ImGui::Button("Dismiss", ImVec2(120, 0))) {
-				ImGui::CloseCurrentPopup();
-			}
-			
-			ImGui::EndPopup();
-		}
 	}
 	
 	void SceneOutliner::treeNode(TreeNodeDescription const& desc, auto&& block) {
@@ -95,34 +86,63 @@ namespace poppy {
 		desc.name = scene.name();
 		
 		treeNode(desc, [&](bool isExpanded) {
-			ImGui::PushID(desc.id);
-			ImGui::OpenPopupOnItemClick("Context Menu");
-			if (ImGui::BeginPopup("Context Menu")) {
-				if (ImGui::MenuItem("Create Entity")) {
-					scene.createEntity("Entity");
-//					ImGui::CloseCurrentPopup();
+			utl_defer { if (isExpanded) ImGui::TreePop(); };
+			/* Context Menu */ {
+				ImGui::PushID(desc.id);
+				utl_defer { ImGui::PopID(); };
+				ImGui::OpenPopupOnItemClick("Context Menu");
+				if (ImGui::BeginPopup("Context Menu")) {
+					utl_defer { ImGui::EndPopup(); };
+					if (ImGui::BeginMenu("New Entity")) {
+						if (ImGui::MenuItem("Mesh Renderer")) {
+							auto entity = scene.createEntity("Mesh Renderer");
+							entity.add(MeshRendererComponent{});
+						}
+						
+						ImGui::Separator();
+						
+						if (ImGui::MenuItem("Point Light")) {
+							auto entity = scene.createEntity("Point Light");
+							entity.add(PointLightComponent{});
+						}
+						
+						if (ImGui::MenuItem("Spotlight")) {
+							auto entity = scene.createEntity("Spotlight");
+							entity.add(SpotLightComponent{});
+						}
+						
+						if (ImGui::MenuItem("Directional Light")) {
+							auto entity = scene.createEntity("Directional Light");
+							entity.add(DirectionalLightComponent{});
+						}
+						
+						if (ImGui::MenuItem("Sky Light")) {
+							auto entity = scene.createEntity("Sky Light");
+							entity.add(SkyLightComponent{});
+						}
+						
+						ImGui::EndMenu();
+					}
+					
+					
+					
+					
+					
+					if (ImGui::MenuItem("Unload")) {
+						editor().coreSystems().sceneSystem().unloadScene(scene.handle().id());
+						return;
+					}
 				}
-				if (ImGui::MenuItem("Unload")) {
-					editor().coreSystems().sceneSystem().unloadScene(scene.handle().id());
-//					ImGui::CloseCurrentPopup();
-				}
-				ImGui::EndPopup();
 			}
-			ImGui::PopID();
 			
 			setExpanded(&scene, isExpanded);
 			
 			dragDropTarget(EntityHandle(EntityID{}, &scene));
-			
-			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-//				selection().select(e);
-			}
-			
+
 			if (isExpanded) {
 				for (auto id: scene.gatherRoots()) {
 					displayEntity(scene.getHandle(id));
 				}
-				ImGui::TreePop();
 			}
 		});
 	}
@@ -138,16 +158,27 @@ namespace poppy {
 		desc.name = e.get<bloom::TagComponent>().name;
 		
 		treeNode(desc, [&](bool isExpanded) {
-			ImGui::PushID(desc.id);
-			ImGui::OpenPopupOnItemClick("Context Menu");
-			if (ImGui::BeginPopup("Context Menu")) {
-				if (ImGui::MenuItem("Delete Entity")) {
-					toDelete = e;
-					ImGui::CloseCurrentPopup();
+			utl_defer {
+				if (isExpanded)
+					ImGui::TreePop();
+			};
+			
+			/* Context Menu */ {
+				ImGui::PushID(desc.id);
+				utl_defer{ ImGui::PopID(); };
+				ImGui::OpenPopupOnItemClick("Context Menu");
+				if (ImGui::BeginPopup("Context Menu")) {
+					utl_defer { ImGui::EndPopup(); };
+					if (ImGui::MenuItem("Delete Entity")) {
+						dispatch(DispatchToken::nextFrame, CustomCommand([this, e]{
+							e.scene().deleteEntity(e);
+							selection().deselect(e);
+						}));
+						
+						ImGui::CloseCurrentPopup();
+					}
 				}
-				ImGui::EndPopup();
 			}
-			ImGui::PopID();
 			
 			setExpanded(e, isExpanded);
 			
@@ -163,7 +194,6 @@ namespace poppy {
 				for (auto c: children) {
 					displayEntity(e.scene().getHandle(c));
 				}
-				ImGui::TreePop();
 			}
 		});
 	}
@@ -184,7 +214,28 @@ namespace poppy {
 			if (payload && payload->IsDelivery()) {
 				EntityHandle child;
 				std::memcpy(&child, payload->Data, sizeof child);
-				deferHierarchyUpdate(child, parent);
+				
+				dispatch(DispatchToken::nextFrame, CustomCommand([this, child, parent,
+																  window = ImGui::GetCurrentWindow()]{
+					if (&child.scene() != &parent.scene()) {
+						return;
+					}
+					
+					/**
+					 We need to make sure that we don't attach an entity to it's own descendend
+					 */
+					auto& scene = child.scene();
+					if (child && !scene.descendsFrom(parent, child)) {
+						scene.unparent(child);
+						if (parent) {
+							scene.parent(child, parent);
+							setExpanded(parent, true);
+						}
+					}
+					else {
+						poppyLog(warning, "Hierarchy Error");
+					}
+				}));
 			}
 			ImGui::EndDragDropTarget();
 		}
@@ -208,52 +259,6 @@ namespace poppy {
 		}
 		else {
 			mExpanded.erase(entity);
-		}
-	}
-	
-	void SceneOutliner::performUpdates() {
-		performHierarchyUpdate();
-		performDeletion();
-	}
-	
-	void SceneOutliner::performHierarchyUpdate() {
-		if (!hasHierarchyUpdate) {
-			return;
-		}
-		auto [child, parent] = hierarchyUpdate;
-		hasHierarchyUpdate = false;
-		
-		if (&child.scene() != &parent.scene()) {
-			return;
-		}
-		
-		/**
-		 We need to make sure that we don't attach an entity to it's own descendend
-		 */
-		auto& scene = child.scene();
-		if (child && !scene.descendsFrom(parent, child)) {
-			scene.unparent(child);
-			if (parent) {
-				scene.parent(child, parent);
-				setExpanded(parent, true);
-			}
-		}
-		else {
-			ImGui::OpenPopup("Hierarchy Error");
-		}
-	}
-	
-	void SceneOutliner::deferHierarchyUpdate(bloom::EntityHandle child, bloom::EntityHandle parent) {
-		poppyAssert(!hasHierarchyUpdate);
-		hierarchyUpdate = { child, parent };
-		hasHierarchyUpdate = true;
-	}
-	
-	void SceneOutliner::performDeletion() {
-		if (toDelete) {
-			toDelete.scene().deleteEntity(toDelete);
-			selection().deselect(toDelete);
-			toDelete = EntityHandle{};
 		}
 	}
 	

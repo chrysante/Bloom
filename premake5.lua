@@ -48,7 +48,7 @@ include "Poppy"
 -- Externals
 --include "external/glfw"
 include "external/imgui"
---include "external/utility"
+include "external/utility"
 --include "external/yaml-cpp"
 --include "external/assimp"
 function removeDeprecated() 

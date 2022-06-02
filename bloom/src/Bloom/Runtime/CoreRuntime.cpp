@@ -96,8 +96,8 @@ namespace bloom {
 			std::unique_lock lock(mMutex);
 			switch (mState) {
 				case RuntimeState::running:
-					lock.unlock();
 					mTimer.update();
+					lock.unlock();
 					if (mDelegate) {
 						mDelegate->step(Timestep{});
 					}

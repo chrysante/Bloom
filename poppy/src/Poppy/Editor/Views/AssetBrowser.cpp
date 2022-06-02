@@ -30,50 +30,73 @@ using namespace mtl::short_types;
 
 namespace poppy {
 	
+	static std::string toDragDropType(bloom::AssetType type) {
+		return utl::format("DD-Asset-{}", type);
+	}
+
+	std::optional<bloom::AssetHandle> acceptAssetDragDrop(bloom::AssetType type) {
+		using namespace bloom;
+		if (ImGui::BeginDragDropTarget()) {
+			utl::scope_guard endDDTarget = []{
+				ImGui::EndDragDropTarget();
+			};
+			auto* const payload = ImGui::AcceptDragDropPayload(toDragDropType(type).data());
+			
+			if (payload && payload->IsPreview()) {
+				poppyLog(info, "Preview");
+			}
+			if (payload && payload->IsDelivery()) {
+				poppyLog(info, "Delivered");
+				AssetHandle recievedAsset;
+				std::memcpy(&recievedAsset, payload->Data, sizeof recievedAsset);
+				return recievedAsset;
+			}
+		}
+		return std::nullopt;
+	}
+	
 	POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser", {});
 	
 	AssetBrowser::AssetBrowser():
-		dirView(this)
+		dirView()
 	{
 		toolbar = {
-			ToolbarIconButton("up-open").onClick([]{
-				poppyLog("Going Up");
-			}).tooltip("Go Up"),
+			ToolbarIconButton("up-open").onClick([=]{
+				dirView.goUp();
+			}).enabled([=] { return dirView.canGoUp(); }).tooltip("Go Up"),
 			
-			ToolbarIconButton("left-open").onClick([]{
-				poppyLog("Going Back");
-			}).tooltip("Go Back"),
+			ToolbarIconButton("left-open").onClick([=]{
+				dirView.goBack();
+			}).enabled([=] { return dirView.canGoBack(); }).tooltip("Go Back"),
 			
-			ToolbarIconButton("right-open").onClick([]{
-				poppyLog("Going Forward");
-			}).tooltip("Go Forward"),
-		
-			
+			ToolbarIconButton("right-open").onClick([=]{
+				dirView.goForward();
+			}).enabled([=] { return dirView.canGoForward(); }).tooltip("Go Forward"),
 			
 			ToolbarSpacer{},
 			
 			
-			ToolbarIconButton("cw").onClick([this]{
+			ToolbarIconButton("cw").onClick([=]{
 				refreshFilesystem();
 			}).tooltip("Refresh"),
 				
-			ToolbarIconButton("angle-double-down").onClick([this]{
+			ToolbarIconButton("angle-double-down").onClick([=]{
 				OpenPanelDescription desc;
-				showOpenPanel(desc, [this](std::string filepath) {
+				showOpenPanel(desc, [=](std::string filepath) {
 					importAsset(filepath);
 				});
 			}).tooltip("Import..."),
 
-			ToolbarIconButton("plus").onClick([this]{
+			ToolbarIconButton("plus").onClick([=]{
 				ImGui::OpenPopup("New Asset");
 			}).tooltip("Create Asset..."),
 			
-			ToolbarIconButton("delicious").onClick([this]{
+			ToolbarIconButton("delicious").onClick([=]{
 				assetManager->create(AssetType::material, "Default Material", data.currentDir);
 				refreshFilesystem();
 			}).tooltip("Create Default Material"),
 			
-			ToolbarButton("Reload Scripts").onClick([this]{
+			ToolbarButton("Reload Scripts").onClick([=]{
 				auto& scriptEngine = editor().coreSystems().scriptEngine();
 				assetManager->loadScripts(scriptEngine);
 				dispatch(DispatchToken::nextFrame, ScriptLoadEvent{});
@@ -81,22 +104,31 @@ namespace poppy {
 		};
 		
 		toolbar.setHeight(30);
-		
-		setPadding({ -1, 0 });
 	}
 	
 	void AssetBrowser::frame() {
 		bool const active = assetManager && !assetManager->workingDir().empty();
-		disabledIf(!active, [&]{
-			// add x window padding in y direction because y padding has been pushed to 0
-			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0, GImGui->Style.WindowPadding.y));
+//		disabledIf(!active, [&]{
+//			auto& g = *GImGui;
+//			auto& style = g.Style;
+//			auto& window = *g.CurrentWindow;
+//			auto const cp = ImGui::GetCursorPos();
+//			ImGui::SetCursorPos(cp + style.WindowPadding);
+//
+//			toolbar.display(window.Size.x - 2 * style.WindowPadding.x);
+//			ImGui::SetCursorPos(cp + ImVec2(0, toolbar.getHeight() + 2 * style.WindowPadding.y + 1));
+//		});
+//
+//		
+//		// draw separator
+//		auto* window = ImGui::GetCurrentWindow();
+//		auto const yPadding = GImGui->Style.WindowPadding.y;
+//		auto const from = ImGui::GetWindowPos() + ImGui::GetCursorPos() + ImVec2(-yPadding, -1);
+//		auto const to = ImGui::GetWindowPos() + ImGui::GetCursorPos() + ImVec2(ImGui::GetWindowWidth() + 2 * yPadding, -1);
+//		auto* drawList = window->DrawList;
+//		drawList->AddLine(from, to, ImGui::GetColorU32(ImGuiCol_Separator), 2);
 
-			toolbar.display();
-
-			// add x window padding in y direction because y padding has been pushed to 0
-			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0, GImGui->Style.WindowPadding.y + 1));
-		});
-		
+		//
 		if (!assetManager) {
 			displayEmptyWithReason("Asset Manager not loaded");
 			return;
@@ -105,18 +137,20 @@ namespace poppy {
 			displayNoOpenProject();
 			return;
 		}
-		
-		newAssetPopup();
-		
-		// draw separator
-		auto* window = ImGui::GetCurrentWindow();
-		auto const yPadding = GImGui->Style.WindowPadding.y;
-		auto const from = ImGui::GetWindowPos() + ImGui::GetCursorPos() + ImVec2(-yPadding, -1);
-		auto const to = ImGui::GetWindowPos() + ImGui::GetCursorPos() + ImVec2(ImGui::GetWindowWidth() + 2 * yPadding, -1);
-		auto* drawList = window->DrawList;
-		drawList->AddLine(from, to, ImGui::GetColorU32(ImGuiCol_Separator), 2);
+		if (data.projectDir.empty()) {
+			data.projectDir = assetManager->workingDir();
+			data.currentDir = data.projectDir;
+			dirView.openDirectory(data.currentDir);
+		}
+		if (data.currentDir.empty()) {
+			data.currentDir = data.projectDir;
+			dirView.openDirectory(data.currentDir);
+		}
+
 		
 		dirView.display();
+		
+		newAssetPopup();
 	}
 	
 	void AssetBrowser::newAssetPopup() {
@@ -224,8 +258,9 @@ namespace poppy {
 	}
 	
 	void AssetBrowser::init() {
+		setPadding({ 0, 0 });
 		assetManager = &editor().coreSystems().assetManager();
-		dirView.setAssetManager(assetManager);
+		dirView.assignEmitter(editor().makeEmitter());
 		
 		if (!data.projectDir.empty()) {
 			openProject(data.projectDir);
@@ -238,13 +273,15 @@ namespace poppy {
 	}
 	
 	YAML::Node AssetBrowser::serialize() const {
-		YAML::Node node;
-		node = data;
-		return node;
+		YAML::Node root;
+		root["Data"] = data;
+		root["Directory View"] = dirView.serialize();
+		return root;
 	}
 	
-	void AssetBrowser::deserialize(YAML::Node node) {
-		data = node.as<AssetBrowserData>();
+	void AssetBrowser::deserialize(YAML::Node root) {
+		data = root["Data"].as<AssetBrowserData>();
+		dirView.deserialize(root["Directory View"]);
 	}
 	
 	/// MARK: -
@@ -267,6 +304,7 @@ namespace poppy {
 		data.projectDir = path;
 		assetManager->setWorkingDir(path);
 		assetManager->loadScripts(editor().coreSystems().scriptEngine());
+		dirView.setRootDirectory(path);
 		openSubdirectory(path);
 	}
 	
@@ -275,13 +313,13 @@ namespace poppy {
 			return openSubdirectory(assetManager->workingDir() / path);
 		}
 		data.currentDir = path;
-		dirView.assignDirectory(path);
+		dirView.openDirectory(path);
 	}
 	
 	void AssetBrowser::refreshFilesystem() {
 		assetManager->refreshWorkingDir();
 		assetManager->loadScripts(editor().coreSystems().scriptEngine());
-		dirView.assignDirectory(data.currentDir);
+		dirView.openDirectory(data.currentDir);
 	}
 	
 }

@@ -55,6 +55,7 @@ namespace bloom {
 	void MetalComputeContext::dispatchThreads(mtl::usize3 threadsPerGrid,
 											  mtl::usize3 threadsPerThreadgroup)
 	{
+		if (threadsPerGrid.fold(utl::multiplies) == 0) { bloomLog(warning, "Can't dispatch with zero threads per grid. (threadsPerGrid = {})", threadsPerGrid); return; }
 		[commandEncoder dispatchThreads: toMTLSize(threadsPerGrid)
 				  threadsPerThreadgroup: toMTLSize(threadsPerThreadgroup)];
 	}

@@ -54,6 +54,7 @@ namespace bloom {
 		glfwGetWindowContentScale(GLFW_WND, &desc.contentScaleFactor.x, &desc.contentScaleFactor.y);
 		
 		setCallbacks();
+		setCursorMode(desc.cursorMode);
 	}
 	
 	Window::~Window() = default;
@@ -173,6 +174,16 @@ namespace bloom {
 								desc.minSize.y > 0 ? desc.minSize.y : GLFW_DONT_CARE,
 								desc.maxSize.x > 0 ? desc.maxSize.x : GLFW_DONT_CARE,
 								desc.maxSize.y > 0 ? desc.maxSize.y : GLFW_DONT_CARE);
+	}
+	
+	void Window::setCursorMode(CursorMode mode) {
+		desc.cursorMode = mode;
+		glfwSetInputMode(GLFW_WND, GLFW_CURSOR,
+						 mode == CursorMode::normal ?
+						 GLFW_CURSOR_NORMAL :
+						 mode == CursorMode::hidden ?
+						 GLFW_CURSOR_HIDDEN :
+						 GLFW_CURSOR_DISABLED);
 	}
 	
 	void Window::setFocused() {

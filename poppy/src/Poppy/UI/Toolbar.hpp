@@ -4,13 +4,28 @@
 #include <utl/functional.hpp>
 #include <utl/vector.hpp>
 #include <mtl/mtl.hpp>
+#include <imgui/imgui.h>
 
 namespace poppy {
+	
+	template <typename>
+	class ToolbarItemBaseT;
+	
+	class ToolbarItemBase {
+		template <typename>
+		friend class ToolbarItemBaseT;
+		friend class Toolbar;
+		
+	private:
+		utl::function<char const*()> _tooltip;
+		utl::function<bool()> _enabled; // treated as true if null
+		ImGuiButtonFlags _addButtonFlags = 0;
+	};
 
 	template <typename Derived>
-	class ToolbarItemBase {
+	class ToolbarItemBaseT: public ToolbarItemBase {
 	protected:
-		ToolbarItemBase() = default;
+		ToolbarItemBaseT() = default;
 		
 	public:
 		Derived tooltip(char const* text) {
@@ -33,18 +48,18 @@ namespace poppy {
 			return asDerived();
 		}
 		
+		Derived additionalButtonFlags(ImGuiButtonFlags flags) {
+			this->_addButtonFlags = flags;
+			return asDerived();
+		}
+		
 	private:
 		Derived const& asDerived() const {
 			return *static_cast<Derived const*>(this);
 		}
-		
-	private:
-		friend class Toolbar;
-		utl::function<char const*()> _tooltip;
-		utl::function<bool()> _enabled; // treated as true if null
 	};
 	
-	struct ToolbarButton: ToolbarItemBase<ToolbarButton> {
+	struct ToolbarButton: ToolbarItemBaseT<ToolbarButton> {
 		ToolbarButton(std::string label):
 			_label(std::move(label))
 		{}
@@ -62,7 +77,7 @@ namespace poppy {
 		utl::function<void()> _block;
 	};
 	
-	class ToolbarIconButton: public ToolbarItemBase<ToolbarIconButton> {
+	class ToolbarIconButton: public ToolbarItemBaseT<ToolbarIconButton> {
 	public:
 		ToolbarIconButton(char const* icon):
 			_icon([icon]{ return icon; })
@@ -83,7 +98,7 @@ namespace poppy {
 		utl::function<char const*()> _icon;
 	};
 	
-	class ToolbarDropdownMenu: public ToolbarItemBase<ToolbarDropdownMenu> {
+	class ToolbarDropdownMenu: public ToolbarItemBaseT<ToolbarDropdownMenu> {
 	public:
 		ToolbarDropdownMenu();
 		
@@ -135,11 +150,31 @@ namespace poppy {
 		
 	};
 	
+	struct CustomToolbarElement {
+		CustomToolbarElement(utl::function<void(mtl::float2 size)> block):
+			_block(std::move(block))
+		{}
+		CustomToolbarElement width(float width) {
+			_width = width;
+			return *this;
+		}
+		// CustomToolbarElement will behave like a spacer
+		CustomToolbarElement useWidthAvail() {
+			_width = 0;
+			return *this;
+		}
+	private:
+		friend class ToolbarItemUnion;
+		friend class Toolbar;
+		utl::function<void(mtl::float2 size)> _block;
+		float _width = 0;
+	};
+		
 	class ToolbarItemUnion {
 		friend class Toolbar;
 	public:
 		enum struct Type {
-			button, iconButton, dropdownMenu, separator, spacer
+			button, iconButton, dropdownMenu, separator, spacer, customElement
 		};
 		
 		ToolbarItemUnion(ToolbarButton button):
@@ -162,6 +197,10 @@ namespace poppy {
 			item(std::move(spacer))
 		{}
 		
+		ToolbarItemUnion(CustomToolbarElement element):
+			item(std::move(element))
+		{}
+		
 		Type type() const { return (Type)item.index(); }
 		
 	private:
@@ -178,7 +217,8 @@ namespace poppy {
 			ToolbarIconButton,
 			ToolbarDropdownMenu,
 			ToolbarSeparator,
-			ToolbarSpacer
+			ToolbarSpacer,
+			CustomToolbarElement
 		> item;
 		float width = 0;
 	};
@@ -221,14 +261,17 @@ namespace poppy {
 		bool button(char const* label,
 					std::size_t id,
 					mtl::float2 size,
+					ImGuiButtonFlags addFlags,
 					bool enabled = true) const;
 		bool buttonEx(char const* label,
 					  std::size_t id,
 					  mtl::float2 size,
+					  ImGuiButtonFlags addFlags,
 					  bool enabled = true) const;
 		bool iconButton(char const* icon,
 						std::size_t id,
 						mtl::float2 size,
+						ImGuiButtonFlags addFlags,
 						char const* tooltip = nullptr,
 						bool enabled = true) const;
 		bool beginCombo(ToolbarDropdownMenu const&, std::size_t id, mtl::float2 size) const;

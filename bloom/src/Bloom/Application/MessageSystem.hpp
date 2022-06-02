@@ -32,6 +32,7 @@ namespace bloom {
 					break;
 			}
 		}
+		void assignEmitter(Emitter emitter) { *this = std::move(emitter); }
 	};
 	
 	/// MARK: Reciever
@@ -40,6 +41,8 @@ namespace bloom {
 		friend class Messenger;
 		using MyBase = utl::reciever<utl::buffered_messenger>;
 		using MyBase::MyBase;
+		
+		void assignReciever(Reciever reciever) { *this = std::move(reciever); }
 		
 	public:
 		using MyBase::listen;

@@ -167,7 +167,12 @@ namespace poppy {
 				
 				ImGui::SetNextItemWidth(width);
 				dragFloat3Pretty("##position", transform.position.data());
-				
+				if (ImGui::IsItemClicked()) {
+					window().setCursorMode(CursorMode::disabled);
+				}
+				if (ImGui::IsItemDeactivated()) {
+					window().setCursorMode(CursorMode::normal);
+				}
 				beginProperty("Orientation");
 				float3 euler = mtl::to_euler(transform.orientation) * 180;
 				
@@ -454,10 +459,10 @@ namespace poppy {
 	
 	template <>
 	void editDataField(std::string_view id, float* value) {
-		ImGui::PushID(generateUniqueID(id, 0).data());
+		ImGui::PushID(id.data());
 
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-		ImGui::DragFloat(generateUniqueID(id, 1).data(), value);
+		ImGui::DragFloat(id.data(), value);
 		
 		ImGui::PopID();
 	}

@@ -43,9 +43,6 @@ namespace poppy {
 					});
 					
 					width = textSize.x + 6 * GImGui->Style.FramePadding.y;
-//					if (ddMenu._icon) {
-//						width +=
-//					}
 				}
 				else {
 					width = (int)(height * 1.5f);
@@ -60,6 +57,8 @@ namespace poppy {
 				width = 0;
 				break;
 			}
+			case Type::customElement:
+				width = get<Type::customElement>()._width;
 			default:
 				width = 0;
 				break;
@@ -111,8 +110,6 @@ namespace poppy {
 			}
 			displayBlock(block);
 		}
-		
-		ImGui::SetCursorPos(position + float2(0, actualHeight));
 	}
 	
 	void Toolbar::displayBlock(Block const& block) {
@@ -126,7 +123,9 @@ namespace poppy {
 		switch (item.type()) {
 			case ToolbarItemUnion::Type::button: {
 				auto const& buttonData = item.get<ToolbarItemUnion::Type::button>();
-				if (button(buttonData._label.data(), index, { item.width, actualHeight })) {
+				if (button(buttonData._label.data(), index,
+						   { item.width, actualHeight }, buttonData._addButtonFlags))
+				{
 					if (buttonData._block) {
 						buttonData._block();
 					}
@@ -140,6 +139,7 @@ namespace poppy {
 				bool const enabled = buttonData._enabled == nullptr || buttonData._enabled();
 				if (iconButton(buttonData._icon(), index,
 							   { item.width, actualHeight },
+							   buttonData._addButtonFlags,
 							   tooltip,
 							   enabled))
 				{
@@ -162,15 +162,22 @@ namespace poppy {
 				break;
 			}
 				
+			case ToolbarItemUnion::Type::customElement: {
+				auto const& customItem = item.get<ToolbarItemUnion::Type::customElement>();
+				customItem._block(float2(item.width, actualHeight));
+				break;
+			}
+				
 			default:
 				break;
 		}
-		
 		ImGui::SameLine();
 	}
 	
 	/// MARK: Buttons
-	bool Toolbar::buttonEx(char const* label, std::size_t id, mtl::float2 size, bool enabled) const {
+	bool Toolbar::buttonEx(char const* label, std::size_t id, mtl::float2 size,
+						   ImGuiButtonFlags addFlags, bool enabled) const
+	{
 		ImGui::BeginDisabled(!enabled);
 		
 		float4 color = GImGui->Style.Colors[ImGuiCol_Button];
@@ -183,15 +190,18 @@ namespace poppy {
 		ImGui::PushStyleColor(ImGuiCol_Button, color);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colorHovered);
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, colorActive);
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
 		ImGui::PushID((int)id);
-		bool const result = ImGui::Button(label, size);
+		bool const result = ImGui::ButtonEx(label, size, ImGuiButtonFlags_PressedOnDefault_ | addFlags);
 		ImGui::PopID();
+		ImGui::PopStyleVar();
 		ImGui::PopStyleColor(3);
 		ImGui::EndDisabled();
 		return result;
 	}
 	
-	bool Toolbar::button(char const* label, std::size_t id, mtl::float2 size, bool enabled) const {
+	bool Toolbar::button(char const* label, std::size_t id, mtl::float2 size,
+						 ImGuiButtonFlags addFlags, bool enabled) const {
 		return withFont(FontWeight::semibold, FontStyle::roman, [&]{
 			return buttonEx(label, id, size, enabled);
 		});
@@ -200,11 +210,12 @@ namespace poppy {
 	bool Toolbar::iconButton(char const* icon,
 							 std::size_t id,
 							 mtl::float2 size,
+							 ImGuiButtonFlags addFlags,
 							 char const* tooltip,
 							 bool enabled) const
 	{
 		bool const result = withIconFont(IconSize::_16, [&]{
-			return buttonEx(icons.unicodeStr(icon).data(), id, size, enabled);
+			return buttonEx(icons.unicodeStr(icon).data(), id, size, addFlags, enabled);
 		});
 		
 		static float tooltipTimer = 1;
@@ -239,12 +250,14 @@ namespace poppy {
 			pressed = button(menuData._preview().data(),
 							 index,
 							 size,
+							 0,
 							 enabled);
 		}
 		else {
 			pressed = iconButton(menuData._icon ? menuData._icon() : "down-open",
 								 index,
 								 size,
+								 0,
 								 tooltip,
 								 enabled);
 		}
@@ -296,7 +309,9 @@ namespace poppy {
 					++index;
 				};
 				
-				if (item.type() == ToolbarItemUnion::Type::spacer) {
+				bool isSpacer = item.type() == ToolbarItemUnion::Type::spacer;
+				isSpacer |= item.type() == ToolbarItemUnion::Type::customElement && item.get<ToolbarItemUnion::Type::customElement>()._width == 0;
+				if (isSpacer) {
 					blocks.back().itemEndIndex = index + 1;
 					blocks.emplace_back();
 					blocks.back().itemBeginIndex = index + 1;
@@ -337,17 +352,24 @@ namespace poppy {
 		
 		blocks[0].offset = cursor;
 		blocks[0].visible = true;
-		
-		if (blocks.size() == 1) {
-			return;
-		}
+		auto const setBlock0CustomWidth = [&](float width){
+			auto& block0LastElement = items[blocks[0].itemEndIndex - 1];
+			if (block0LastElement.type() == ToolbarItemUnion::Type::customElement && block0LastElement.width == 0) {
+				block0LastElement.width = width;			}
+		};
 		
 		cursor += blocks[0].width;
 		widthAvail -= blocks[0].width;
 		
+		if (blocks.size() == 1) {
+			setBlock0CustomWidth(widthAvail);
+			return;
+		}
+		
 		auto& lastBlock = blocks.back();
 		
 		if (lastBlock.width > widthAvail) {
+			setBlock0CustomWidth(widthAvail);
 			return;
 		}
 		
@@ -358,6 +380,7 @@ namespace poppy {
 		widthAvail -= lastBlock.width;
 		
 		if (blocks.size() == 2) {
+			setBlock0CustomWidth(widthAvail);
 			return;
 		}
 

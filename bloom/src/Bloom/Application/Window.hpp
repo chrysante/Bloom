@@ -19,18 +19,18 @@ namespace bloom {
 	class HardwareDevice;
 	class Application;
 	
-	BLOOM_API void showSaveView(utl::function<void(std::string)> completion);
-	BLOOM_API void showOpenView(utl::function<void(std::string)> completion);
-//	BLOOM_API void showSelectDirectoryView(utl::function<void(std::string)> completion);
+	enum class CursorMode {
+		normal, hidden, disabled
+	};
 	
 	/// MARK: WindowDescription
 	struct WindowDescription {
 		std::string title;
 		mtl::int2 size = 0;
-		
 		mtl::int2 swapchainResizePadding = 100;
-		bool autoResizeSwapchain = true;
 		
+		CursorMode cursorMode = CursorMode::normal;
+		bool autoResizeSwapchain = true;
 		bool fullscreen = false; // ignored for now
 	};
 	
@@ -80,9 +80,11 @@ namespace bloom {
 		std::string_view title() const { return desc.title; }
 		mtl::int2 position() const { return desc.position; }
 		mtl::int2 size() const { return desc.size; }
-		bool focused() const { return desc.focused; }
 		mtl::float2 contentScaleFactor() const { return desc.contentScaleFactor; }
 		
+		CursorMode cursorMode() const { return desc.cursorMode; }
+		
+		bool focused() const { return desc.focused; }
 		bool isFullscreen() const { return desc.fullscreen; }
 		bool isWindowed() const { return !isFullscreen(); }
 		
@@ -95,6 +97,8 @@ namespace bloom {
 		void setSize(mtl::int2);
 		void setMinSize(mtl::int2);
 		void setMaxSize(mtl::int2);
+		void setCursorMode(CursorMode);
+		
 		void setFocused();
 		
 		void show();

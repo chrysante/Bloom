@@ -22,8 +22,6 @@ namespace poppy {
 		std::string title;
 		
 		mtl::int2 size = { 300, 300 };
-		mtl::float2 padding = -1;
-		
 		int id = -1; // Used to restore serialized Views. -1 means the View will use a new ID.
 	};
 	
@@ -53,7 +51,7 @@ namespace poppy {
 		mtl::int2 size() const { return desc.pub.size; }
 		mtl::int2 windowSize() const { return desc.windowSize; }
 		mtl::int2 position() const { return desc.position; }
-		mtl::float2 padding() const { return desc.pub.padding; }
+		mtl::float2 padding() const { return desc.padding; }
 		
 		std::string_view name() const { return desc.pub.name(); }
 		std::string_view title() const { return desc.pub.title; }
@@ -106,6 +104,7 @@ namespace poppy {
 			
 			mtl::int2 position = 0;
 			mtl::int2 windowSize = 0;
+			mtl::float2 padding = -1;
 			
 			void* imguiWindow = nullptr;
 			Editor* editor = nullptr;
@@ -181,5 +180,4 @@ UTL_STATIC_INIT {                                    \
 BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewDescription,
 						   _name_DONT_CHANGE_ME,
 						   size,
-						   padding,
 						   id);

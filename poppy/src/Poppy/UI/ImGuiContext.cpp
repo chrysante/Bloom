@@ -276,22 +276,22 @@ namespace poppy {
 			switch (event.key) {
 				case Key::leftCtrl:
 				case Key::rightCtrl:
-					io.KeyCtrl = down;
+					io.AddKeyEvent(ImGuiKey_ModCtrl, down);
 					break;
 					
 				case Key::leftShift:
 				case Key::rightShift:
-					io.KeyShift = down;
+					io.AddKeyEvent(ImGuiKey_ModShift, down);
 					break;
 					
 				case Key::leftAlt:
 				case Key::rightAlt:
-					io.KeyAlt = down;
+					io.AddKeyEvent(ImGuiKey_ModAlt, down);
 					break;
 					
 				case Key::leftSuper:
 				case Key::rightSuper:
-					io.KeySuper = down;
+					io.AddKeyEvent(ImGuiKey_ModSuper, down);
 					break;
 					
 				default:

@@ -3,9 +3,9 @@
 #include "Poppy/UI/View.hpp"
 
 #include "Bloom/Asset/Asset.hpp"
-#include "Poppy/UI/Toolbar.hpp"
 
-#include "DirectoryView.hpp"
+#include "Poppy/UI/Toolbar.hpp"
+#include "Poppy/UI/DirectoryView.hpp"
 
 #include <filesystem>
 #include <mtl/mtl.hpp>
@@ -14,6 +14,8 @@
 namespace bloom { class AssetManager; }
 
 namespace poppy {
+	
+	std::optional<bloom::AssetHandle> acceptAssetDragDrop(bloom::AssetType);
 	
 	struct AssetBrowserData {
 		std::filesystem::path projectDir; // absolute path

@@ -40,7 +40,7 @@ TEST_CASE("RuntimeSystem") {
 	
 	crt.resume();
 	CHECK(crt.state() == RuntimeState::running);
-	utl::busy_wait([&]{ return del->value == 4; });
+	utl::busy_wait([&]{ return del->value == 2; });
 	
 	crt.stop();
 	CHECK(crt.state() == RuntimeState::inactive);

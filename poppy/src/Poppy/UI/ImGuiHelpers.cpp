@@ -232,101 +232,65 @@ namespace poppy {
 		ImGuiContext& g = *GImGui;
 		auto& style = GetStyle();
 		
-		bool value_changed = false;
-		
-		float const height = CalcTextSize("", NULL, true).y + style.FramePadding.y * 2.0f;
+		float const height = g.FontSize + style.FramePadding.y * 2.0f;
 		
 		BeginGroup();
 		PushID(label);
 		
-		constexpr std::array colors = { ImU32(0xFF1111FFu), ImU32(0xFF00CC00u), ImU32(0xFFFF2222u) };
-		constexpr std::array labels = { "X", "Y", "Z" };
+		std::array const colors = { ImU32(0xFF1111FFu), ImU32(0xFF00CC00u), ImU32(0xFFFF2222u) };
+		char const* const labels = "XYZ";
 		
 		ImVec2 labelButtonSize = { height * 1.5f, height };
 		float const fullWidth = CalcItemWidth();
 		bool const haveLabelButtons = fullWidth / components >= 90;
 		float const itemWidth = fullWidth / components - (haveLabelButtons ? labelButtonSize.x : 0);
 		auto const beginCursor = window->DC.CursorPos;
+		
+		bool value_changed = false;
 		for (int i = 0; i < components; i++) {
 			PushID(i);
 			if (i > 0)
 				SameLine(0, 0);
 			
-			if (haveLabelButtons) {
-				
+			if (haveLabelButtons) { // Draw Label buttons
 				auto const cursorPos = window->DC.CursorPos;
-				if (i == 0) {
-					auto* const dl = window->DrawList;
-					float const rounding = style.FrameRounding;
-					dl->PathLineTo(ImVec2(cursorPos.x + labelButtonSize.x, cursorPos.y));
-					dl->PathLineTo(ImVec2(cursorPos.x + labelButtonSize.x, cursorPos.y + labelButtonSize.y));
-					dl->PathArcToFast(ImVec2(cursorPos.x + rounding, cursorPos.y  + labelButtonSize.y - rounding), rounding, 3, 6);
-					dl->PathArcToFast(ImVec2(cursorPos.x + rounding, cursorPos.y + rounding), rounding, 6, 9);
-					dl->PathFillConvex(colors[i]);
-				}
-				else {
-					window->DrawList->AddRectFilled(cursorPos, cursorPos + labelButtonSize, colors[i]);
-				}
-				
+				window->DrawList->AddRectFilled(cursorPos, cursorPos + labelButtonSize, colors[i],
+												i ==  0 ? style.FrameRounding : 0.0f,
+												i ==  0 ? ImDrawFlags_RoundCornersLeft : ImDrawFlags_None);
+			
 				auto const cp = GetCursorPos();
 				auto const label = labels[i];
-//				withFont(Font::UIDefault().setWeight(FontWeight::black), [&]{
-//					auto const textSize = CalcTextSize(label);
-//					SetCursorPos(cp + ImVec2((labelButtonSize.x - textSize.x) / 2, i == 0 ? (labelButtonSize.y - textSize.y) / 2 : 0));
-//					ImGui::PushStyleColor(ImGuiCol_Text, 0xff000000);
-//					Text("%s", labels[i]);
-//					ImGui::PopStyleColor();
-//					SetCursorPos(cp + ImVec2(labelButtonSize.x, 0));
-//				});
-				
+
 				withFont(Font::UIDefault().setWeight(FontWeight::black), [&]{
-//					auto const label = labels[i];
-					auto const textSize = CalcTextSize(label);
-//					auto const cp = GetCursorPos();
-					SetCursorPos(cp + ImVec2((labelButtonSize.x - textSize.x) / 2, i == 0 ? (labelButtonSize.y - textSize.y) / 2 : 0));
-					ImGui::PushStyleColor(ImGuiCol_Text, 0xFFffFFff);
-					Text("%s", labels[i]);
-					ImGui::PopStyleColor();
+					auto const textSize = CalcTextSize(&labels[i], &labels[i] + 1);
+					SetCursorPos(cp + ImVec2((labelButtonSize.x - textSize.x) / 2,
+											 i == 0 ? (labelButtonSize.y - textSize.y) / 2 : 0));
+					PushStyleColor(ImGuiCol_Text, 0xFFffFFff);
+					TextEx(&labels[i], &labels[i] + 1);
+					PopStyleColor();
 					SetCursorPos(cp + ImVec2(labelButtonSize.x, 0));
 				});
 			}
 			
 			auto const cursorPos = window->DC.CursorPos;
 			
-			ImGui::SetNextItemWidth(itemWidth);
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, 0x0);
-			ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, 0x0);
-			ImGui::PushStyleColor(ImGuiCol_FrameBgActive, 0x0);
-			ImGui::PushStyleColor(ImGuiCol_Border, 0x0);
+			SetNextItemWidth(itemWidth);
+			PushStyleColor(ImGuiCol_FrameBg, 0x0);
+			PushStyleColor(ImGuiCol_FrameBgHovered, 0x0);
+			PushStyleColor(ImGuiCol_FrameBgActive, 0x0);
+			PushStyleColor(ImGuiCol_Border, 0x0);
 			value_changed |= DragFloat("", &v[i], v_speed, v_min, v_max, format, flags);
-			ImGui::PopStyleColor(4);
+			PopStyleColor(4);
 			
 			auto const [hovered, active] = std::tuple{ ImGui::IsItemHovered(), ImGui::IsItemActive() };
-			ImU32 const col = GetColorU32(active ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
-			if (i == 0 && !haveLabelButtons) {
-				auto* const dl = window->DrawList;
-				float const rounding = style.FrameRounding;
-				dl->PathLineTo(ImVec2(cursorPos.x + itemWidth, cursorPos.y));
-				dl->PathLineTo(ImVec2(cursorPos.x + itemWidth, cursorPos.y + labelButtonSize.y));
-				dl->PathArcToFast(ImVec2(cursorPos.x + rounding, cursorPos.y  + height - rounding), rounding, 3, 6);
-				dl->PathArcToFast(ImVec2(cursorPos.x + rounding, cursorPos.y + rounding), rounding, 6, 9);
-				dl->PathFillConvex(col);
-			}
-			else if (i < components - 1) {
-				window->DrawList->AddRectFilled(cursorPos,
-												cursorPos + ImVec2(itemWidth, height),
-												col);
-			}
-			else {
-				auto* const dl = window->DrawList;
-				float const rounding = style.FrameRounding;
-				dl->PathLineTo(cursorPos);
-				dl->PathArcToFast(ImVec2(cursorPos.x + itemWidth - rounding, cursorPos.y + rounding), rounding, 9, 12);
-				dl->PathArcToFast(ImVec2(cursorPos.x + itemWidth - rounding, cursorPos.y + height - rounding), rounding, 0, 3);
-				dl->PathLineTo(ImVec2(cursorPos.x, cursorPos.y + height));
-				dl->PathFillConvex(col);
-			}
+			ImU32 const col = GetColorU32(active ? ImGuiCol_FrameBgActive :
+										  hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
 			
+			float const rounding = i > 0 && i < components - 1 ? 0.0f : style.FrameRounding;
+			auto const flags = i == 0 ? ImDrawFlags_RoundCornersLeft : i == components - 1 ? ImDrawFlags_RoundCornersRight : ImDrawFlags_None;
+			window->DrawList->AddRectFilled(cursorPos,
+											cursorPos + ImVec2(itemWidth, height),
+											col, rounding, flags);
 			
 			PopID();
 		}
@@ -363,35 +327,6 @@ namespace poppy {
 
 		EndGroup();
 		return value_changed;
-	}
-	
-	std::array<char, 64> generateUniqueID(std::string_view name, int id, bool const prepentDoubleHash) {
-		std::array<char, 64> buffer{};
-		char* bufferPtr = buffer.data();
-		/* -0000000 */
-		std::size_t availSize = 56;
-		if (prepentDoubleHash) {
-			bufferPtr[0] = '#';
-			bufferPtr[1] = '#';
-			bufferPtr += 2;
-			availSize -= 2;
-		}
-		
-		std::size_t const nameSize = std::min(name.size(), availSize - 2 * !prepentDoubleHash);
-		
-		std::memcpy(bufferPtr, name.data(), nameSize);
-		bufferPtr += nameSize;
-		availSize -= nameSize;
-		if (!prepentDoubleHash) {
-			bufferPtr[0] = '#';
-			bufferPtr[1] = '#';
-			bufferPtr += 2;
-			availSize -= 2;
-		}
-		poppyAssert(availSize < 56, "Overflow has occured");
-		std::strncpy(bufferPtr, utl::format("-{}", id).data(), 8);
-		
-		return buffer;
 	}
 	
 }

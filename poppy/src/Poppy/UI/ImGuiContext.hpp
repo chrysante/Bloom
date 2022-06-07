@@ -29,6 +29,7 @@ namespace poppy {
 		void init(bloom::Application&, ImGuiContextDescription const&);
 		void shutdown();
 		void newFrame(bloom::Window&);
+		void endFrame();
 		void drawFrame(bloom::HardwareDevice&, bloom::Window&);
 		
 		void onInput(bloom::InputEvent);

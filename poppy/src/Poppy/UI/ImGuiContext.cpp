@@ -216,12 +216,17 @@ namespace poppy {
 		
 		doNewFramePlatform(window);
 		ImGui::NewFrame();
-		
+	
 		fontAtlasReloaded = false;
+	}
+	
+	void ImGuiContext::endFrame() {
+		ImGui::EndFrame();
 	}
 	
 	void ImGuiContext::drawFrame(bloom::HardwareDevice& device, bloom::Window& window) {
 		ImGui::SetCurrentContext(context);
+		ImGui::Render();
 		doDrawFramePlatform(device, window);
 	}
 	

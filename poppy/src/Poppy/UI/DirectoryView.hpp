@@ -4,6 +4,7 @@
 
 #include "Poppy/Core/Common.hpp"
 #include "Poppy/UI/Toolbar.hpp"
+#include "Poppy/UI/Font.hpp"
 
 #include "Bloom/Core/Serialize.hpp"
 #include "Bloom/Application/MessageSystem.hpp"
@@ -42,6 +43,10 @@ namespace poppy {
 			type, name, _count
 		};
 		
+		enum class Layout {
+			columns, table, list, _count
+		};
+		
 	public:
 		DirectoryView();
 		
@@ -71,6 +76,7 @@ namespace poppy {
 	public:
 		struct Description {
 			SortCondition sortCondition = SortCondition::type;
+			Layout layout = Layout::table;
 			bool group = false;
 		};
 		
@@ -90,67 +96,119 @@ namespace poppy {
 			std::size_t activeIndex = (std::size_t)-1;
 		};
 		
-		struct ItemDisplayResult {
-			bool hovered = false;
-			bool held = false;
-			bool selected = false;
-			bool activated = false;
-			bool activatedByDragDrop = false;
+		template <bool IsConst>
+		class EntryHandleEx {
+			using DirectoryType = std::conditional_t<IsConst, Directory const, Directory>;
+			using EntryType = std::conditional_t<IsConst, Entry const, Entry>;
+			template <bool> friend class EntryHandleEx;
+			
+		public:
+			EntryHandleEx() = default;
+			EntryHandleEx(DirectoryType& directory, std::size_t index):
+				mDirectory(&directory), mIndex(index)
+			{}
+			EntryHandleEx(EntryHandleEx<false> rhs):
+				mDirectory(rhs.mDirectory), mIndex(rhs.mIndex)
+			{}
+			
+			DirectoryType& directory() const { return *mDirectory; }
+			std::size_t index() const { return mIndex; }
+			EntryType& get() const { return directory()[index()]; }
+			EntryType* operator->() const { return &get(); }
+			
+		private:
+			DirectoryType* mDirectory = nullptr;
+			std::size_t mIndex = 0;
 		};
 		
+		using EntryHandle = EntryHandleEx<false>;
+		using ConstEntryHandle = EntryHandleEx<true>;
+		
+		struct ItemButtonState {
+			bool hovered             : 1 = false;
+			bool held                : 1 = false;
+			bool selected            : 1 = false;
+			bool activated           : 1 = false;
+			bool activatedByDragDrop : 1 = false;
+		};
+		
+		struct SelectionDragState {
+			mtl::float2 beginPosition = 0;
+			std::size_t directoryIndex = -1;
+		};
+		
+		/// MARK: Addressbar
 		void addressbar(mtl::float2 size);
 		void drawAddressbarButton(std::size_t index, mtl::float2 position, mtl::float2 size, uint32_t color, std::string_view label) const;
 		void addressbarPopup(bool open, std::size_t directoryLineIndex, mtl::float2 position);
 		bool addressbarPopupMenuItem(std::filesystem::directory_entry const&);
 		
+		/// MARK: Item View Generic
 		std::size_t displayGroup(Directory&,
 								 std::size_t beginIndex,
-								 void (DirectoryView::*)(std::span<Entry>, std::size_t));
-		
-		void itemPopup(std::size_t index, Entry&, DirectoryItemDescription const&);
-		void itemRenameField(std::size_t index, Entry&, mtl::float2 position, float width);
-		void itemDragSource(Entry const&, std::invocable<Entry> auto&& drawFn);
-		void itemDragTarget(Entry const&);
-		utl::small_vector<char> makeDragdropPayloadFromSelection() const;
+								 utl::function<void(std::size_t, std::size_t)> cb);
+		ItemButtonState displayItem(mtl::rectangle<float> const& bb,
+									mtl::rectangle<float> const& labelBB,
+									mtl::rectangle<float> const& iconBB,
+									TextAlign,
+									EntryHandle,
+									int addFrameDrawFlags = 0);
+		void drawItem(mtl::rectangle<float> const& bb,
+					  mtl::rectangle<float> const& labelBB,
+					  mtl::rectangle<float> const& iconBB,
+					  TextAlign,
+					  std::string_view label,
+					  std::string_view icon,
+					  void const* image,
+					  bool renaming = false) const;
+		void drawItemFrame(mtl::rectangle<float> const& bb,
+						   std::uint32_t color,
+						   int addDrawFlags = 0) const;
+		void itemPopup(EntryHandle, DirectoryItemDescription const&);
+		void itemRenameField(std::size_t index, EntryHandle, mtl::float2 position, float width);
+		void handleItemButtonState(ItemButtonState, EntryHandle);
+		void itemDragSource(ConstEntryHandle, std::invocable<Entry, mtl::float2> auto&& drawFn);
+		void itemDragTarget(Directory&);
+		void itemDragTarget(ConstEntryHandle);
+		void itemDragTargetEx(std::filesystem::path const&);
+		utl::small_vector<char> makeDragdropPayloadFromSelection(Directory const&) const;
 		utl::small_vector<std::filesystem::path> unloadDragdropPayload(char const* data, std::size_t size) const;
+		utl::small_vector<std::string_view> peekDragdropPayload(char const* data, std::size_t size) const;
 		
-		/// MARK: TableView
+		/// MARK: Column View
+		void displayColumnView();
+		void displayColumn(Directory&, std::size_t directoryIndex);
+		void displayPreviewColumn();
+		ItemButtonState displayColumnViewItem(EntryHandle);
+		
+		/// MARK: Table View
 		void displayTableView();
-		void displayTable(std::span<Entry>, std::size_t beginIndex = 0);
-		ItemDisplayResult displayTableViewItem(float width,
-											   std::size_t index,
-											   Entry&);
-		void drawTableViewLabelAndIcon(mtl::float2 position,
-									   mtl::float2 size,
-									   mtl::float2 sizeNoLabel,
-									   std::string_view label,
-									   std::string_view icon,
-									   void const* image,
-									   bool renaming = false) const;
+		void displayTable(Directory&, std::size_t beginIndex, std::size_t endIndex);
+		ItemButtonState displayTableViewItem(float width, EntryHandle);
 		
 		/// MARK: Background
-		void displayBackground();
-		void backgroundContextMenu();
-		void beginDragSelection();
-		void updateDragSelection();
+		void displayBackground(Directory&);
+		void backgroundContextMenu(Directory&);
+		void beginDragSelection(Directory&);
+		void updateDragSelection(Directory&);
 		
 		/// MARK: Logic
 		bool setDirectory(std::filesystem::path);
 		void scanDirectory(Directory&, auto const& selectionBackup) const;
-		void scanDirectoryLine(bool preserveSelection = true);
-		void renameEntry(Entry&, std::string newName);
-		void renameEntry(Entry const&, std::string newName);
-		void moveEntry(Entry, std::filesystem::path to);
-		void deleteEntry(Entry);
-		void newFolder();
+		void scanDirectoryLine(std::filesystem::path leafDirectory, bool preserveSelection = true);
+		void renameEntry(ConstEntryHandle, std::string newName);
+		void renameEntry(EntryHandle, std::string newName);
+		void moveElement(std::filesystem::path element, std::filesystem::path to);
+		void deleteElement(std::filesystem::path element);
+		void newFolder(Directory&);
 		void gotoNextFrame(std::filesystem::path const&);
 		
 		/// MARK: Selection
-		void clearSelection();
-		void select(std::size_t index);
-		void selectEx(auto&&, bool clear = true);
-		void updateSelectionRect(mtl::rectangle<float> const&);
-		void applySelectionRect(mtl::rectangle<float> const&);
+		void clearSelection(Directory&);
+		void select(EntryHandle);
+		void selectEx(Directory&, auto&&, bool clear = true);
+		void updateSelectionRect(Directory&, mtl::rectangle<float> const&);
+		void applySelectionRect(Directory&, mtl::rectangle<float> const&);
 		
 		///
 		auto const& currDir() const { return directoryLine.back(); }
@@ -170,7 +228,7 @@ namespace poppy {
 		FilesystemHistory history;
 		
 		/// Selection
-		std::optional<mtl::float2> selectionDragBegin;
+		std::optional<SelectionDragState> selectionDragState;
 		
 		std::array<char, 256> renameBuffer{};
 	};
@@ -180,4 +238,5 @@ namespace poppy {
 
 BLOOM_MAKE_TEXT_SERIALIZER(poppy::DirectoryView::Description,
 						   sortCondition,
+						   layout,
 						   group);

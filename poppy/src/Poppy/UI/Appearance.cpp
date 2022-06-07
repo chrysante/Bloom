@@ -17,8 +17,6 @@ static void applyStyle(poppy::Style const& style) {
 	
 	auto* const colors = imguiStyle.Colors;
 	
-	constexpr mtl::float4 clear = 0;
-	
 	colors[ImGuiCol_Text]         = style.colors.text;
 	colors[ImGuiCol_TextDisabled] = style.colors.textDisabled;
 	
@@ -27,7 +25,7 @@ static void applyStyle(poppy::Style const& style) {
 	colors[ImGuiCol_PopupBg]  = style.colors.popupBG;
 	
 	colors[ImGuiCol_Border]       = style.colors.border;
-	colors[ImGuiCol_BorderShadow] = clear;
+	colors[ImGuiCol_BorderShadow] = mtl::colors<>::clear;
 	
 	colors[ImGuiCol_FrameBg]        = style.colors.controlFrame;
 	colors[ImGuiCol_FrameBgHovered] = style.colors.controlFrameHovered;
@@ -38,7 +36,7 @@ static void applyStyle(poppy::Style const& style) {
 	colors[ImGuiCol_TitleBgCollapsed] = style.colors.windowTitleBar;
 	colors[ImGuiCol_MenuBarBg]        = style.colors.menubarBG;
 	
-	colors[ImGuiCol_ScrollbarBg]          = clear;
+	colors[ImGuiCol_ScrollbarBg]          = mtl::colors<>::clear;
 	colors[ImGuiCol_ScrollbarGrab]        = style.colors.scrollbar;
 	colors[ImGuiCol_ScrollbarGrabHovered] = style.colors.scrollbar;
 	colors[ImGuiCol_ScrollbarGrabActive]  = style.colors.scrollbar;
@@ -60,9 +58,12 @@ static void applyStyle(poppy::Style const& style) {
 	colors[ImGuiCol_SeparatorHovered] = style.colors.separator;
 	colors[ImGuiCol_SeparatorActive]  = style.colors.separator;
 	
-	colors[ImGuiCol_ResizeGrip]        = clear;
-	colors[ImGuiCol_ResizeGripHovered] = clear;
-	colors[ImGuiCol_ResizeGripActive]  = clear;
+	colors[ImGuiCol_TableBorderLight]  = style.colors.separator;
+	colors[ImGuiCol_TableBorderStrong]  = mtl::colors<>::green;
+	
+	colors[ImGuiCol_ResizeGrip]        = mtl::colors<>::clear;
+	colors[ImGuiCol_ResizeGripHovered] = mtl::colors<>::clear;
+	colors[ImGuiCol_ResizeGripActive]  = mtl::colors<>::clear;
 	
 	colors[ImGuiCol_Tab]                = style.colors.tab;
 	colors[ImGuiCol_TabActive]          = style.colors.tabActive;

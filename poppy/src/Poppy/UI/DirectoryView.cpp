@@ -23,7 +23,15 @@ using namespace bloom;
 using namespace mtl::short_types;
 
 namespace poppy {
-    
+
+	static std::string toString(DirectoryView::Layout layout) {
+		return std::array{
+			"Columns",
+			"Table",
+			"List"
+		}[utl::to_underlying(layout)];
+	}
+	
 	/// MARK: Default Delegate
 	DirectoryItemDescription DirectoryViewDelegate::makeItemDescription(std::filesystem::directory_entry const& entry) const {
 		DirectoryItemDescription desc;
@@ -62,6 +70,10 @@ namespace poppy {
 				addressbar(size);
 			}),
 			
+			ToolbarDropdownMenu().content([=]{
+				enumCombo(desc.layout);
+			}).tooltip("Layout"),
+			
 			ToolbarIconButton("cw").onClick([=]{
 				rescan();
 			}).tooltip("Rescan")
@@ -93,14 +105,21 @@ namespace poppy {
 			drawList->AddLine(from, to, ImGui::GetColorU32(ImGuiCol_Separator), 2);
 		}
 		
-		ImGui::BeginChild("directory-view");
-	
-		displayTableView();
+		switch (desc.layout) {
+			case Layout::columns:
+				displayColumnView();
+				break;
+			case Layout::table:
+				displayTableView();
+				break;
+			case Layout::list:
+				// nothing here yet
+				break;
+			default:
+				poppyDebugbreak();
+				break;
+		}
 		
-		displayBackground();
-		
-		ImGui::EndChild();
-	
 		history.displayDebugger();
 	}
 	
@@ -142,9 +161,9 @@ namespace poppy {
 	
 	void DirectoryView::rescan() {
 		try {
-			scanDirectoryLine();
+			scanDirectoryLine(currentDirectory());
 		}
-		catch (std::filesystem::filesystem_error const&) {
+		catch (std::exception const&) {
 			auto current = currentDirectory();
 			while (!std::filesystem::exists(current)) {
 				current = current.parent_path();
@@ -189,10 +208,14 @@ namespace poppy {
 	
 	void DirectoryView::setSortCondition(SortCondition condition) {
 		desc.sortCondition = condition;
-		scanDirectoryLine();
+		scanDirectoryLine(currentDirectory());
 	}
 	
 	/// MARK: Private
+	///
+	///
+	///
+	/// MARK: Addressbar
 	///
 	///
 	void DirectoryView::addressbar(mtl::float2 size) {
@@ -261,7 +284,7 @@ namespace poppy {
 				gotoNextFrame(currentPath);
 			}
 			
-			itemDragTarget(Entry{ std::filesystem::directory_entry(directory.path) });
+			itemDragTarget(directory);
 			
 			auto const popupPosition = pos + ImVec2(index == 0 ? 0 : style.FramePadding.x, buttonSize.y);
 			addressbarPopup(rightMousePressed, index, popupPosition);
@@ -419,7 +442,10 @@ namespace poppy {
 		poppyExpect(entry.is_directory());
 		using namespace std::filesystem;
 		auto const dirItr = directory_iterator(entry.path());
-		bool const hasSubdirectories = dirItr != directory_iterator();
+		bool const hasSubdirectories = [&]{
+			for (auto& entry: dirItr) { if (entry.is_directory() && !utl::is_hidden(entry.path())) { return true; }}
+			return false;
+		}();
  
 		if (!hasSubdirectories) {
 			if (ImGui::MenuItem(entry.path().filename().c_str())) {
@@ -450,34 +476,36 @@ namespace poppy {
 		}
 		return result;
 	}
-	
+	/// MARK: Item View Generic
+	///
+	///
 	static void displayHeader(std::string_view label, float width = 0) {
-		bool const noHeader = ImGui::GetCursorPosY() == 0;
-		if (noHeader) {
-			ImGui::PushStyleColor(ImGuiCol_Separator, 0x0);
-		}
-		if (width > 0) {
-			ImGui::SetNextItemWidth(width);
-		}
-		ImGui::Separator();
-		if (noHeader) {
-			ImGui::PopStyleColor();
-		}
+		auto& g = *GImGui;
+		auto& window = *ImGui::GetCurrentWindow();
+		auto& parentWindow = *window.ParentWindow;
+		auto& drawlist = *window.DrawList;
+		
+		ImVec2 const pos = window.DC.CursorPos - ImVec2(0, 1);
+		float const height = g.FontSize + 2 * g.Style.FramePadding.x;
+		ImVec2 const size(window.Size.x, height);
+		
+		ImGui::ItemSize(size);
+		drawlist.PushClipRect(window.Pos, window.Pos + ImVec2(parentWindow.Size.x, window.Size.y));
+		
+		mtl::float4 color = ImGui::GetStyleColorVec4(ImGuiCol_FrameBg);
+		color.alpha *= 0.333;
+		drawlist.AddRectFilled(pos + ImVec2(-10, 0), pos + size + ImVec2(20, 0), ImGui::ColorConvertFloat4ToU32(color));
+		drawlist.AddRect(pos + ImVec2(-10, 0), pos + size + ImVec2(20, 0), ImGui::GetColorU32(ImGuiCol_Separator));
 		withFont(Font::UIDefault().setWeight(FontWeight::semibold), [&]{
-			disabledIf(true, [&]{
-				ImGui::SetCursorPosX(GImGui->Style.WindowPadding.x);
-				ImGui::TextEx(label.data(), label.data() + label.size());
-			});
+			drawlist.AddText(pos + g.Style.FramePadding, ImGui::GetColorU32(ImGuiCol_TextDisabled), label.data(), label.data() + label.size());
 		});
-		if (width > 0) {
-			ImGui::SetNextItemWidth(width);
-		}
-		ImGui::Separator();
+		
+		drawlist.PopClipRect();
 	}
 	
 	std::size_t DirectoryView::displayGroup(Directory& directory,
 											std::size_t index,
-											void (DirectoryView::*callback)(std::span<Entry>, std::size_t))
+											utl::function<void(std::size_t, std::size_t)> cb)
 	{
 		std::filesystem::path const ext = directory[index].path().extension();
 		auto const firstLetter = std::toupper(directory[index].path().filename().c_str()[0]);
@@ -496,37 +524,214 @@ namespace poppy {
 		for (; index < directory.size() && !breakCondition(); ++index);
 		
 		displayHeader(headerLabel);
-		(this->*callback)({ directory.begin() + beginIndex, directory.begin() + index }, beginIndex);
+		cb(beginIndex, index);
 		
 		return index;
 	}
 	
-	void DirectoryView::itemPopup(std::size_t index, Entry& entry, DirectoryItemDescription const& desc) {
+	auto DirectoryView::displayItem(mtl::rectangle<float> const& itemBB,
+									mtl::rectangle<float> const& labelBB,
+									mtl::rectangle<float> const& iconBB,
+									TextAlign textAlign,
+									EntryHandle entry,
+									int addFrameDrawFlags)
+		-> DirectoryView::ItemButtonState
+	{
+		entry->bb = itemBB;
+		
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		if (window->SkipItems)
+			return {};
+
+		ImGui::PushID(robin_hood::hash<std::size_t>{}(entry.index())); // lol, hash collisions otherwise
+		utl_defer { ImGui::PopID(); };
+		
+		poppyAssert(delegate != nullptr);
+		DirectoryItemDescription const itemDesc = delegate->makeItemDescription(entry.get());
+		
+		auto& g = *GImGui;
+		auto& style = g.Style;
+		
+		/// Button
+		auto const buttonState = [&]{
+			ImRect const bb = !entry->renaming ? ImRect(itemBB.lower_bound(), itemBB.upper_bound()) : ImRect(iconBB.lower_bound(), iconBB.upper_bound());
+			const ImGuiID id = window->GetID("item-button");
+			
+			ItemButtonState buttonState{};
+			ImGui::ItemSize(itemBB.size(), style.FramePadding.y);
+			if (!ImGui::ItemAdd(bb, id)) {
+				return buttonState;
+			}
+			bool hoveredOut, heldOut;
+			auto buttonFlags = ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_PressedOnDragDropHold | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnRelease;
+			bool const buttonActive = ImGui::ButtonBehavior(bb, id, &hoveredOut, &heldOut, buttonFlags);
+			buttonState.hovered = hoveredOut;
+			buttonState.held = heldOut;
+			
+			buttonState.hovered &= !g.DragDropActive || entry->is_directory();
+			if (!buttonActive) {
+				return buttonState;
+			}
+			if (!entry->selected || ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
+				buttonState.selected = g.IO.MouseClicked[ImGuiMouseButton_Left];
+			}
+			else {
+				buttonState.selected = g.IO.MouseReleased[ImGuiMouseButton_Left];
+			}
+			buttonState.activated = g.IO.MouseClickedCount[ImGuiMouseButton_Left] == 2;
+			buttonState.activatedByDragDrop = !g.IO.MouseReleased[ImGuiMouseButton_Left] && !buttonState.selected && !buttonState.activated;
+			return buttonState;
+		}();
+		
+		itemDragSource(entry, [&](Entry const& entry, mtl::float2 position) {
+			// Preview Drawing Code
+			ImGui::SetCursorPos((ImVec2)position - ImGui::GetWindowPos());
+			ImGui::ItemSize(itemBB.size(), style.FramePadding.y);
+			auto const ddItemDesc = delegate->makeItemDescription(entry);
+			
+			mtl::rectangle<float> const localItemBB(position, itemBB.size());
+			mtl::rectangle<float> const localLabelBB(position - itemBB.lower_bound() + labelBB.lower_bound(), labelBB.size());
+			mtl::rectangle<float> const localIconBB(position - itemBB.lower_bound() + iconBB.lower_bound(), iconBB.size());
+			drawItemFrame(localItemBB, ImGui::GetColorU32(ImGuiCol_Header));
+			drawItem(localItemBB, localLabelBB, localIconBB, textAlign,
+					 ddItemDesc.label,
+					 ddItemDesc.iconName.data(),
+					 ddItemDesc.displayImage);
+		});
+		
+		itemDragTarget(entry);
+		
+		
+		if (bool const selected = entry->displaySelected(); // Draw Frame
+			buttonState.hovered || selected)
+		{
+			auto const color = ImGui::GetColorU32(selected && buttonState.hovered ? ImGuiCol_HeaderHovered :
+												  selected ? ImGuiCol_Header :
+												  ImGuiCol_FrameBgHovered);
+			drawItemFrame(itemBB, color, addFrameDrawFlags);
+		}
+		
+		
+		if (entry->renaming) {
+			itemRenameField(entry.index(), entry,
+							(ImVec2)labelBB.lower_bound() + window->Scroll - window->Pos,
+							itemBB.size().x);
+		}
+		
+		drawItem(itemBB, labelBB, iconBB, textAlign,
+				 itemDesc.label,
+				 itemDesc.iconName.data(),
+				 itemDesc.displayImage,
+				 entry->renaming);
+		
+		itemPopup(entry, itemDesc);
+		
+		return buttonState;
+	}
+	
+	void DirectoryView::drawItem(mtl::rectangle<float> const& bb,
+								 mtl::rectangle<float> const& labelBB,
+								 mtl::rectangle<float> const& iconBB,
+								 TextAlign align,
+								 std::string_view label,
+								 std::string_view icon,
+								 void const* image,
+								 bool renaming) const
+	{
+		auto const iconSize = IconSize::_64;
+		
+		auto& g = *GImGui;
+		auto& window = *g.CurrentWindow;
+		
+		[&]{
+			auto const* const iconFont = icons.font(iconSize);
+			if (!iconFont) { return; }
+			float const size = iconBB.size().fold(utl::min);
+			
+			auto const iconText = icons.unicodeStr(std::string(icon));
+			char const* const textBegin = iconText.data();
+			char const* const textEnd = textBegin + strnlen(textBegin, iconText.size());
+			float2 const iconTextSize = iconFont->CalcTextSizeA(size, FLT_MAX, -1, textBegin, textEnd, NULL);
+			float2 const iconPosition = iconBB.lower_bound() + (iconBB.size() - iconTextSize) / 2;
+			auto const iconColor = ImGui::GetColorU32(ImGuiCol_Text);
+			window.DrawList->AddText(iconFont, size, iconPosition, iconColor, textBegin, textEnd);
+		}();
+		
+		if (renaming) {
+			return;
+		}
+		
+		// Label
+		auto const calcLabelPos = [&labelBB, align](float2 labelSize) {
+			switch (align) {
+				case TextAlign::left:
+					return labelBB.lower_bound();
+				case TextAlign::center:
+					return labelBB.lower_bound() + float2((labelBB.size().x - labelSize.x) / 2, 0);
+				case TextAlign::right:
+					return labelBB.lower_bound() + float2(labelBB.size().x - labelSize.x, 0);
+			}
+		};
+		
+		if (float2 labelSize = ImGui::CalcTextSize(label.data(), label.data() + label.size());
+			labelSize.x <= labelBB.size().x)
+		{
+			window.DrawList->AddText(calcLabelPos(labelSize), ImGui::GetColorU32(ImGuiCol_Text),
+									 label.data(), label.data() + label.size());
+		}
+		else {
+			std::size_t endPos = label.size();
+			while (endPos > 0 && ImGui::CalcTextSize(label.data(), label.data() + endPos).x > labelBB.size().x) {
+				--endPos;
+			}
+			std::string labelStr(label.data(), label.data() + endPos);
+			for (auto&& [i, c]: utl::enumerate(utl::reverse(labelStr))) {
+				if (i == 3) { break; }
+				c = '.';
+			}
+			labelSize = ImGui::CalcTextSize(labelStr.data(), labelStr.data() + labelStr.size());
+			window.DrawList->AddText(calcLabelPos(labelSize), ImGui::GetColorU32(ImGuiCol_Text),
+									 labelStr.data(), labelStr.data() + labelStr.size());
+		}
+		return;
+	}
+	
+	void DirectoryView::drawItemFrame(mtl::rectangle<float> const& bb,
+									  std::uint32_t color,
+									  int addDrawFlags) const
+	{
+		GImGui->CurrentWindow->DrawList->AddRectFilled(bb.lower_bound(), bb.upper_bound(),
+													   color, GImGui->Style.FrameRounding, ImGuiDragDropFlags_None | addDrawFlags);
+	}
+	
+	void DirectoryView::itemPopup(EntryHandle entry, DirectoryItemDescription const& desc) {
 		auto const popupID = utl::format("item-popup-{}", index);
 		ImGui::OpenPopupOnItemClick(popupID.data());
 		if (ImGui::BeginPopup(popupID.data())) {
-			if (!entry.selected) select(index);
 			utl_defer{ ImGui::EndPopup(); };
+			if (!entry->selected) {
+				select(entry);
+			}
 			if (ImGui::MenuItem("Open")) {
 				
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Rename")) {
-				entry.renaming = 2;
+				entry->renaming = 2;
 			}
 			if (ImGui::MenuItem("Delete")) {
-				deleteEntry(entry);
+				deleteElement(entry->path());
 			}
 		}
 	}
 	
-	void DirectoryView::itemRenameField(std::size_t index, Entry& entry, mtl::float2 position, float width) {
+	void DirectoryView::itemRenameField(std::size_t index, EntryHandle entry, mtl::float2 position, float width) {
 		auto& g = *GImGui;
 		auto& style = g.Style;
 		
-		if (entry.renaming == 2) {
+		if (entry->renaming == 2) {
 			std::strncpy(renameBuffer.data(),
-						 entry.path().filename().string().data(),
+						 entry->path().filename().string().data(),
 						 std::size(renameBuffer) - 1);
 		}
 		
@@ -544,28 +749,46 @@ namespace poppy {
 		ImGui::SetCursorPos(cpSave - ImVec2(0, style.ItemSpacing.y));
 
 		
-		if (entry.renaming == 2) {
+		if (entry->renaming == 2) {
 			ImGui::SetKeyboardFocusHere(-1);
 			ImGui::SetItemDefaultFocus();
-			entry.renaming = 1;
+			entry->renaming = 1;
 		}
 		else if (!ImGui::IsWindowFocused()) {
 			renameEntry(entry, renameBuffer.data());
 		}
 	}
 	
-	template <std::invocable<DirectoryView::Entry> F>
-	void DirectoryView::itemDragSource(Entry const& entry, F&& drawFn) {
-		auto& g = *GImGui;
-		auto& style = g.Style;
+	void DirectoryView::handleItemButtonState(ItemButtonState state, EntryHandle entry) {
+		if (state.selected) {
+			select(entry);
+		}
 		
+		if (entry->is_directory() && (state.activated || state.activatedByDragDrop)) {
+			if (state.activatedByDragDrop) {
+				auto* const payload = ImGui::GetDragDropPayload();
+				if (!payload) { return; }
+				if (payload->DataType != FileDragDropType) { return; }
+				std::filesystem::path const path = (char const*)payload->Data;
+				if (path == entry->path()) {
+					return;
+				}
+			}
+			gotoNextFrame(entry->path());
+			return;
+		}
+	}
+	
+	template <std::invocable<DirectoryView::Entry, mtl::float2> F>
+	void DirectoryView::itemDragSource(ConstEntryHandle entry, F&& drawFn) {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0,0});
 		ImGui::PushStyleVar(ImGuiStyleVar_PopupBorderSize, 0);
-		ImGui::PushStyleColor(ImGuiCol_PopupBg, style.Colors[ImGuiCol_Header]);
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, 0x0);
 		if (ImGui::BeginDragDropSource()) {
 			bool const havePayload = ImGui::GetDragDropPayload() && ImGui::GetDragDropPayload()->Data;
 			if (!havePayload) {
-				auto const payload = makeDragdropPayloadFromSelection();
+				auto const payload = makeDragdropPayloadFromSelection(entry.directory());
+				poppyAssert(!payload.empty());
 				ImGui::SetDragDropPayload(FileDragDropType.data(),
 										  payload.data(), payload.size(),
 										  ImGuiCond_Once);
@@ -574,10 +797,12 @@ namespace poppy {
 			if (auto const* const payload = ImGui::GetDragDropPayload();
 				payload && payload->DataType == FileDragDropType)
 			{
-				auto const path = std::filesystem::path((char const*)payload->Data);
-				auto const entry = Entry{ std::filesystem::directory_entry(path) };
-				
-				drawFn(entry);
+				auto const pos = ImGui::GetCurrentWindow()->DC.CursorPos;
+				auto const paths = peekDragdropPayload((char const*)payload->Data, payload->DataSize);
+				for (auto&& [index, path]: utl::enumerate(paths)) {
+					Entry const entry{ std::filesystem::directory_entry(path) };
+					drawFn(entry, pos + ImVec2(10, 10) * index);
+				}
 			}
 			
 			ImGui::EndDragDropSource();
@@ -586,8 +811,19 @@ namespace poppy {
 		ImGui::PopStyleColor();
 	}
 	
-	void DirectoryView::itemDragTarget(Entry const& targetEntry) {
-		if (!targetEntry.is_directory() || targetEntry.selected || !ImGui::BeginDragDropTarget()) {
+	void DirectoryView::itemDragTarget(Directory& directory) {
+		itemDragTargetEx(directory.path);
+	}
+	
+	void DirectoryView::itemDragTarget(ConstEntryHandle targetEntry) {
+		if (!targetEntry->is_directory() || targetEntry->selected) {
+			return;
+		}
+		itemDragTargetEx(targetEntry->path());
+	}
+	
+	void DirectoryView::itemDragTargetEx(std::filesystem::path const& target) {
+		if (!ImGui::BeginDragDropTarget()) {
 			return;
 		}
 		utl_defer { ImGui::EndDragDropTarget(); };
@@ -597,23 +833,24 @@ namespace poppy {
 		}
 		auto const paths = unloadDragdropPayload((char const*)payload->Data, payload->DataSize);
 		for (auto&& path: paths) {
-			if (!path.has_parent_path() || path.parent_path() == targetEntry.path()) {
+			if (!path.has_parent_path() || path.parent_path() == target) {
 				continue;
 			}
-			moveEntry(Entry{ std::filesystem::directory_entry(path) }, targetEntry.path());
+			moveElement(path, target);
 		}
 	}
 	
-	utl::small_vector<char> DirectoryView::makeDragdropPayloadFromSelection() const {
+	utl::small_vector<char> DirectoryView::makeDragdropPayloadFromSelection(Directory const& directory) const {
 		utl::small_vector<std::string> selectedPaths;
 		utl::small_vector<std::uint32_t> selectedIndices;
 		std::size_t totalBufferSize = 0;
-		for (auto&& [index, entry]: utl::enumerate(currDir())) {
-			if (entry.selected) {
-				selectedIndices.push_back(index);
-				auto& string = selectedPaths.push_back(entry.path().string());
-				totalBufferSize += string.size() + 1;
+		for (auto&& [index, entry]: utl::enumerate(directory)) {
+			if (!entry.selected) {
+				continue;
 			}
+			selectedIndices.push_back(index);
+			auto& string = selectedPaths.push_back(entry.path().string());
+			totalBufferSize += string.size() + 1;
 		}
 		utl::small_vector<char> result(totalBufferSize, utl::no_init);
 		for (char* buffer = result.data(); auto& path: selectedPaths) {
@@ -635,27 +872,150 @@ namespace poppy {
 		return result;
 	}
 	
-	/// MARK: TableView
+	utl::small_vector<std::string_view> DirectoryView::peekDragdropPayload(char const* data, std::size_t size) const {
+		utl::small_vector<std::string_view> result;
+		std::size_t begin = 0, end = 0;
+		for (; end < size; ++end) {
+			if (data[end] == 0) {
+				result.push_back(std::string_view(&data[begin], end - begin));
+				begin = end + 1;
+			}
+		}
+		return result;
+	}
+	
+	/// MARK: Column View
+	///
+	///
+	void DirectoryView::displayColumnView() {
+		auto& g = *GImGui;
+		auto& style = g.Style; (void)style;
+		
+		auto& window = *ImGui::GetCurrentWindow();
+		float2 const tableSize = { 0, window.Size.y - ImGui::GetCursorPosY() - 1 };
+		
+		ImGuiTableFlags tableFlags = 0;
+		tableFlags |= ImGuiTableFlags_Resizable;
+		tableFlags |= ImGuiTableFlags_ScrollX;
+		tableFlags |= ImGuiTableFlags_SizingFixedFit;
+		
+		ImGui::SetCursorPosX(1);
+		ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 0, 0 }); utl_defer { ImGui::PopStyleVar(); };
+		if (!ImGui::BeginTable("column-view", directoryLine.size() + 1, tableFlags, tableSize)) {
+			return;
+		}
+		utl_defer { ImGui::EndTable(); };
+		
+		// Setup
+		for (auto&& [index, directory]: utl::enumerate(directoryLine)) {
+			ImGui::TableSetupColumn(directory.path.c_str(), ImGuiTableColumnFlags_WidthFixed, 120, window.GetID(directory.path.c_str()));
+		}
+		ImGui::TableSetupColumn("preview-column", ImGuiTableColumnFlags_WidthFixed, 120, window.GetID("preview-column"));
+		
+		// Display
+		for (auto&& [index, directory]: utl::enumerate(directoryLine)) {
+			ImGui::TableNextColumn();
+			displayColumn(directory, index);
+		}
+		ImGui::TableNextColumn();
+		displayPreviewColumn();
+	}
+	
+	void DirectoryView::displayColumn(Directory& directory, std::size_t index) {
+		
+		ImGui::PushID(index); utl_defer { ImGui::PopID(); };
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+		ImGui::BeginChild("column", { 0, 0 /* to prevent mini scroll y */ }); utl_defer { ImGui::EndChild(); };
+		ImGui::PopStyleVar();
+		
+		auto& g = *GImGui;
+		auto& style = g.Style;
+		
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + style.WindowPadding.y);
+		for (auto&& [index, entry]: utl::enumerate(directory)) {
+			displayColumnViewItem(EntryHandle(directory, index));
+		}
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + style.WindowPadding.y);
+		
+		displayBackground(directory);
+	}
+	
+	void DirectoryView::displayPreviewColumn() {
+		ImGui::BeginChild("preview-column", { 0, -2 /* to prevent mini scroll y */ }); utl_defer { ImGui::EndChild(); };
+		displayEmptyWithReason("No Preview");
+	}
+	
+	DirectoryView::ItemButtonState DirectoryView::displayColumnViewItem(EntryHandle entry) {
+		auto& g = *GImGui;
+		auto& style = g.Style;
+		auto& window = *ImGui::GetCurrentWindow();
+		float const height = g.FontSize + 2 * style.FramePadding.y;
+		float const minWidth = height + 3 * style.FramePadding.x;
+		float const width = std::max(minWidth, window.Size.x - style.WindowPadding.x - style.ScrollbarSize);
+		
+		float2 const itemSize = float2(width, height);
+		float2 const padding = style.FramePadding;
+		float2 const pos = window.DC.CursorPos + ImVec2(style.WindowPadding.x, 0);
+		
+		mtl::rectangle<float> const bb(pos, itemSize);
+		mtl::rectangle<float> const labelBB(pos      + float2(height, 0) +     padding,
+											itemSize - float2(height, 0) - 2 * padding);
+		mtl::rectangle<float> const iconBB(pos + padding,
+										    float2(height, height) - 2 * padding);
+		
+		ImDrawFlags frameDrawFlags = 0;
+		if (entry->selected) {
+			std::size_t const index = entry.index();
+			Directory const& directory = entry.directory();
+			bool const prevSelected = index > 0 && directory[index - 1].displaySelected();
+			bool const nextSelected = index < directory.size() - 1 && directory[index + 1].displaySelected();
+			if (prevSelected) { frameDrawFlags = ImDrawFlags_RoundCornersBottom; }
+			if (nextSelected) { frameDrawFlags = ImDrawFlags_RoundCornersTop; }
+			if (prevSelected && nextSelected) { frameDrawFlags = ImDrawFlags_RoundCornersNone; }
+		}
+		
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * ImVec2(1, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, style.FramePadding + ImVec2(0, 1));
+		utl_defer { ImGui::PopStyleVar(2); };
+		
+		auto const buttonState = displayItem(bb, labelBB, iconBB, TextAlign::left, entry, frameDrawFlags);
+		handleItemButtonState(buttonState, entry);
+		if (buttonState.selected && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			gotoNextFrame(entry->is_directory() ? entry->path() : entry->path().parent_path());
+		}
+		return buttonState;
+	}
+	
+	/// MARK: Table View
+	///
+	///
 	void DirectoryView::displayTableView() {
 		auto& g = *GImGui;
 		auto& style = g.Style; (void)style;
 		
+		ImGui::BeginChild("directory-view"); utl_defer { ImGui::EndChild(); };
 		
 		if (desc.group) {
 			auto& directory = currDir();
 			std::size_t index = 0;
 			while (index < directory.size()) {
-				index = displayGroup(directory, index, &DirectoryView::displayTable);
+				index = displayGroup(directory, index, [&](std::size_t begin, std::size_t end) {
+					displayTable(directory, begin, end);
+				});
 			}
 		}
 		else {
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + style.WindowPadding.y);
-			displayTable(currDir());
+			displayTable(currDir(), 0, currDir().size());
 		}
+		
+		// add a little padding in the bottom
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + style.WindowPadding.y);
+		
+		displayBackground(currDir());
 	}
 	
-	void DirectoryView::displayTable(std::span<Entry> entries, std::size_t beginIndex) {
+	void DirectoryView::displayTable(Directory& directory, std::size_t beginIndex, std::size_t endIndex) {
 		auto& g = *GImGui;
 		auto& style = g.Style;
 		
@@ -668,172 +1028,37 @@ namespace poppy {
 		ImGui::PushID(beginIndex);
 		if (ImGui::BeginTable("directory", columnCount, ImGuiTableFlags_None, tableSize)) {
 			utl_defer { ImGui::EndTable(); };
-			for (auto&& [localIndex, entry]: utl::enumerate(entries)) {
+			for (std::size_t i = beginIndex; i < endIndex; ++i) {
 				ImGui::TableNextColumn();
-				auto const item = displayTableViewItem(itemWidth, beginIndex + localIndex, entry);
-				(void)item;
+				displayTableViewItem(itemWidth, EntryHandle(directory, i));
 			}
 		}
 		ImGui::PopID();
 	}
 	
 	
-	auto DirectoryView::displayTableViewItem(float declWidth, std::size_t index, Entry& entry)
-		-> DirectoryView::ItemDisplayResult
+	auto DirectoryView::displayTableViewItem(float declWidth, EntryHandle entry)
+		-> DirectoryView::ItemButtonState
 	{
-		ImGuiWindow* window = ImGui::GetCurrentWindow();
-		if (window->SkipItems)
-			return {};
-
-		ImGui::PushID(robin_hood::hash<std::size_t>{}(index)); // lol, hash collisions otherwise
-		utl_defer { ImGui::PopID(); };
-		
+		auto& g = *GImGui;
+		auto& style = g.Style;
+		auto& window = *ImGui::GetCurrentWindow();
 		float const width = ImGui::GetContentRegionAvail().x;
-		
-		poppyAssert(delegate != nullptr);
-		DirectoryItemDescription const itemDesc = delegate->makeItemDescription(entry);
-		
-		auto& g = *GImGui;
-		auto& style = g.Style;
-		ImVec2 const itemSizeNoLabel = { width, declWidth * 0.75f };
-		ImVec2 const itemSize = itemSizeNoLabel + ImVec2(0, g.FontSize + 2 * style.FramePadding.y);
-		ImVec2 const pos = window->DC.CursorPos;
-		entry.bb = { pos, itemSize };
-		
-		/// Button
-		auto const result = [&]{
-			ImRect const bb(pos, pos + (entry.renaming ? itemSizeNoLabel : itemSize));
-			const ImGuiID id = window->GetID("item-button");
-			
-			ItemDisplayResult result;
-			ImGui::ItemSize(itemSize, style.FramePadding.y);
-			if (!ImGui::ItemAdd(bb, id)) {
-				return result;
-			}
-			auto buttonFlags = ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_PressedOnDragDropHold | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnRelease;
-			bool const buttonActive = ImGui::ButtonBehavior(bb, id, &result.hovered, &result.held, buttonFlags);
-			if (!buttonActive) {
-				return result;
-			}
-			if (!entry.selected || ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
-				result.selected = g.IO.MouseClicked[ImGuiMouseButton_Left];
-			}
-			else {
-				result.selected = g.IO.MouseReleased[ImGuiMouseButton_Left];
-			}
-			result.activated = g.IO.MouseClickedCount[ImGuiMouseButton_Left] == 2;
-			result.activatedByDragDrop = !result.selected && !result.activated;
-			return result;
-		}();
-		
-		if (result.selected) {
-			select(index);
-		}
-		
-		itemDragSource(entry, [&](Entry const& entry) {
-			auto const pos = ImGui::GetCurrentWindow()->DC.CursorPos;
-			ImGui::ItemSize(itemSize, style.FramePadding.y);
-			auto const ddItemDesc = delegate->makeItemDescription(entry);
-			drawTableViewLabelAndIcon(pos, itemSize, itemSizeNoLabel,
-									  ddItemDesc.label, ddItemDesc.iconName,
-									  ddItemDesc.displayImage);
-		});
-		
-		itemDragTarget(entry);
-		
-		/* Draw Frame */ {
-			bool const selected = entry.displaySelected();
-			if (result.hovered || selected) {
-				auto const color = ImGui::GetColorU32(selected && result.hovered ? ImGuiCol_HeaderHovered :
-													  selected ? ImGuiCol_Header :
-													  ImGuiCol_FrameBgHovered);
-				window->DrawList->AddRectFilled(pos, pos + itemSize,
-												color, style.FrameRounding);
-			}
-		}
-		
-		if (entry.renaming) {
-			itemRenameField(index, entry,
-							pos + window->Scroll + ImVec2(0, itemSizeNoLabel.y) - window->Pos,
-							itemSize.x);
-		}
-		
-		drawTableViewLabelAndIcon(pos, itemSize, itemSizeNoLabel,
-								  itemDesc.label, itemDesc.iconName.data(),
-								  itemDesc.displayImage,
-								  entry.renaming);
-		
-		itemPopup(index, entry, itemDesc);
-		
-		// open folders by drag drop
-		[&]{
-			if (entry.is_directory() && (result.activated || result.activatedByDragDrop)) {
-				if (result.activatedByDragDrop) {
-					auto* const payload = ImGui::GetDragDropPayload();
-					if (!payload) { return; }
-					if (payload->DataType != FileDragDropType) { return; }
-					std::filesystem::path const path = (char const*)payload->Data;
-					if (path == entry.path()) {
-						return;
-					}
-				}
-				gotoNextFrame(entry.path());
-				return;
-			}
-		}();
-		
-		
-		return result;
-	}
 	
-	void DirectoryView::drawTableViewLabelAndIcon(mtl::float2 pos,
-												  mtl::float2 size,
-												  mtl::float2 sizeNoLabel,
-												  std::string_view label,
-												  std::string_view icon,
-												  void const* image,
-												  bool renaming) const
-	{
-		auto const iconSize = IconSize::_32;
-		auto& g = *GImGui;
-		auto& style = g.Style;
-		auto& window = *g.CurrentWindow;
-		float2 const iconSpace = { size.x, size.y - g.FontSize };
-		withIconFont(iconSize, [&]{
-			auto const iconText = icons.unicodeStr(std::string(icon));
-			float2 const iconTextSize = ImGui::CalcTextSize(iconText.data());
-			window.DrawList->AddText(pos + (iconSpace - iconTextSize) / 2, ImGui::GetColorU32(ImGuiCol_Text), iconText.data());
-		});
+		float2 const itemSizeNoLabel = { width, declWidth * 0.75f };
+		float2 const labelSize = float2(width, g.FontSize + 2 * style.FramePadding.y);
+		float2 const itemSize = itemSizeNoLabel + float2(0, labelSize.y);
 		
-		if (renaming) {
-			return;
-		}
+		float2 const padding = style.FramePadding;
 		
-		// Label
-		float2 const labelPos = pos + float2(0, sizeNoLabel.y + style.FramePadding.y);
-		
-		float2 const labelSize = ImGui::CalcTextSize(label.data(), label.data() + label.size());
-		float const labelWidthAvail = size.x - 2 * g.Style.FramePadding.x;
-		if (labelSize.x <= labelWidthAvail) {
-			window.DrawList->AddText(labelPos + float2((size.x - labelSize.x) / 2, 0),
-									 ImGui::GetColorU32(ImGuiCol_Text), label.data(), label.data() + label.size());
-			return;
-		}
-		/* Trim */ {
-			std::size_t endPos = label.size();
-			while (endPos > 0 && ImGui::CalcTextSize(label.data(), label.data() + endPos).x > labelWidthAvail) {
-				--endPos;
-			}
-			std::string labelStr(label.data(), label.data() + endPos);
-			for (auto&& [i, c]: utl::enumerate(utl::reverse(labelStr))) {
-				if (i == 3) { break; }
-				c = '.';
-			}
-			float2 const labelSize = ImGui::CalcTextSize(labelStr.data(), labelStr.data() + labelStr.size());
-			window.DrawList->AddText(labelPos + float2((size.x - labelSize.x) / 2, 0),
-									 ImGui::GetColorU32(ImGuiCol_Text), labelStr.data(), labelStr.data() + labelStr.size());
-		}
-		return;
+		mtl::rectangle<float> const bb(window.DC.CursorPos, itemSize);
+		mtl::rectangle<float> const labelBB(bb.lower_bound() + padding + float2(0, itemSizeNoLabel.y),
+											labelSize - 2 * padding);
+		mtl::rectangle<float> const iconBB(bb.lower_bound() + padding,
+										   itemSizeNoLabel - 2 * padding);
+		auto const buttonState = displayItem(bb, labelBB, iconBB, TextAlign::center, entry);
+		handleItemButtonState(buttonState, entry);
+		return buttonState;
 	}
 	
 	/// MARK: Background
@@ -843,31 +1068,34 @@ namespace poppy {
 		}[utl::to_underlying(condition)];
 	}
 	
-	void DirectoryView::displayBackground() {
+	void DirectoryView::displayBackground(Directory& directory) {
 		auto& g = *GImGui;
 		auto& style = g.Style; (void)style;
 		
 		ImGui::SetCursorPos({ ImGui::GetScrollX(), ImGui::GetScrollY() });
 		if (ImGui::InvisibleButton("background-button", ImGui::GetCursorPos() + ImGui::GetContentRegionAvail())) {
 			if (!ImGui::IsKeyDown(ImGuiKey_ModShift) && !ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
-				clearSelection();
+				clearSelection(directory);
+				if (directory.path != currentDirectory()) {
+					gotoNextFrame(directory.path);
+				}
 			}
 		}
-		itemDragTarget(Entry{ std::filesystem::directory_entry(currentDirectory()) });
+		itemDragTarget(directory);
 		
-		backgroundContextMenu();
+		backgroundContextMenu(directory);
 		if (ImGui::IsItemActivated()) {
-			beginDragSelection();
+			beginDragSelection(directory);
 		}
-		updateDragSelection();
+		updateDragSelection(directory);
 	}
 	
-	void DirectoryView::backgroundContextMenu() {
+	void DirectoryView::backgroundContextMenu(Directory& directory) {
 		ImGui::OpenPopupOnItemClick("Background Popup",
 									ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverExistingPopup);
 		if (ImGui::BeginPopup("Background Popup")) {
 			if (ImGui::MenuItem("New Folder")) {
-				newFolder();
+				newFolder(directory);
 			}
 			if (ImGui::BeginMenu("Sort by")) {
 				bool selected[utl::to_underlying(SortCondition::_count)]{};
@@ -884,21 +1112,26 @@ namespace poppy {
 		}
 	}
 	
-	void DirectoryView::beginDragSelection() {
-		poppyAssert(!selectionDragBegin.has_value());
-		selectionDragBegin = ImGui::GetMousePos();
+	void DirectoryView::beginDragSelection(Directory& directory) {
+		poppyAssert(!selectionDragState.has_value());
+		std::size_t const directoryIndex = &directory - directoryLine.data();
+		selectionDragState = { (float2)ImGui::GetMousePos(), directoryIndex };
 		if (!ImGui::IsKeyDown(ImGuiKey_ModShift) && !ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
-			clearSelection();
+			clearSelection(directory);
 		}
 	}
 	
-	void DirectoryView::updateDragSelection() {
-		if (!selectionDragBegin) {
+	void DirectoryView::updateDragSelection(Directory& directory) {
+		if (!selectionDragState) {
+			return;
+		}
+		std::size_t const directoryIndex = &directory - directoryLine.begin();
+		if (selectionDragState->directoryIndex != directoryIndex) {
 			return;
 		}
 		auto& g = *GImGui;
 		auto& window = *g.CurrentWindow;
-		float2 pos = *selectionDragBegin;
+		float2 pos = selectionDragState->beginPosition;
 		float2 size = ImGui::GetMouseDragDelta();
 		
 		// Normalize
@@ -906,18 +1139,23 @@ namespace poppy {
 		if (size.y < 0) { pos.y += size.y; size.y = -size.y; }
 	
 		if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-			applySelectionRect({ pos, size });
-			selectionDragBegin = std::nullopt;
+			applySelectionRect(directory, { pos, size });
+			selectionDragState = std::nullopt;
 		}
 		else {
-			updateSelectionRect({ pos, size });
+			updateSelectionRect(directory, { pos, size });
 		}
 		
+		ImRect const windowRect = window.Rect();
+		
+		
+		
 		float2 max = pos + size;
-		max = mtl::min(max, (float2)(ImGui::GetWindowPos() + ImGui::GetWindowSize()));
-		pos = mtl::max(pos, (float2)ImGui::GetWindowPos());
+		max = mtl::min(max, (float2)windowRect.Max);
+		pos = mtl::max(pos, (float2)windowRect.Min);
 		float4 rectColor = ImGui::GetStyleColorVec4(ImGuiCol_Header);
 		rectColor.a *= 0.5f;
+		
 		window.DrawList->AddRectFilled(pos, max, ImGui::ColorConvertFloat4ToU32(rectColor));
 		window.DrawList->AddRect(pos, max, ImGui::GetColorU32(ImGuiCol_Border));
 	}
@@ -928,12 +1166,7 @@ namespace poppy {
 			return false;
 		}
 		poppyExpect(target.is_absolute());
-		directoryLine.clear();
-		directoryLine.resize(1); // for now
-		
-		auto& currentDirectory = currDir();
-		currentDirectory.path = target;
-		scanDirectoryLine();
+		scanDirectoryLine(target);
 		return true;
 	}
 	
@@ -976,21 +1209,25 @@ namespace poppy {
 		}
 	}
 	
-	void DirectoryView::scanDirectoryLine(bool const preserveSelection) {
-		auto const& currentDirectory = currDir();
-		poppyAssert(!currentDirectory.path.empty());
-		
+	void DirectoryView::scanDirectoryLine(std::filesystem::path leafDirectory, bool const preserveSelection) {
+		poppyExpect(!leafDirectory.empty());
+		if (!std::filesystem::is_directory(leafDirectory)) {
+			throw std::runtime_error("Path is not a Directory");
+		}
 		utl::hashset<std::string> selectionBackup;
 		
 		if (preserveSelection) {
-			for (auto const& entry: currentDirectory) {
-				if (entry.selected)
-					selectionBackup.insert(entry.path().string());
+			for (auto const& directory: directoryLine) {
+				for (auto const& entry: directory) {
+					if (entry.selected) {
+						selectionBackup.insert(entry.path().string());
+					}
+				}
 			}
 		}
 		
-		utl::vector<std::filesystem::path> dirLinePaths;
-		for (auto current = this->currentDirectory(); current != rootDirPath; current = current.parent_path()) {
+		utl::small_vector<std::filesystem::path, 8> dirLinePaths;
+		for (auto current = leafDirectory; current != rootDirPath; current = current.parent_path()) {
 			dirLinePaths.push_back(current);
 		}
 		dirLinePaths.push_back(rootDirPath);
@@ -1010,60 +1247,62 @@ namespace poppy {
 		}
 	}
 	
-	void DirectoryView::renameEntry(Entry& entry, std::string newName) {
-		renameEntry((Entry const&)entry, std::move(newName));
-		entry.renaming = false;
+	void DirectoryView::renameEntry(EntryHandle entry, std::string newName) {
+		renameEntry(ConstEntryHandle(entry), std::move(newName));
+		entry->renaming = false;
 	}
 	
-	void DirectoryView::renameEntry(Entry const& entry, std::string newName) {
+	void DirectoryView::renameEntry(ConstEntryHandle entry, std::string newName) {
 		renameBuffer = {};
-		if (!entry.renaming) {
+		if (!entry->renaming) {
 			return;
 		}
-		if (newName == entry.path().filename().string()) {
+		if (newName == entry->path().filename().string()) {
 			return;
 		}
 		if (newName.empty()) {
 			return;
 		}
 		try {
-			std::filesystem::rename(entry.path(), entry.path().parent_path() / newName);
+			std::filesystem::rename(entry->path(), entry->path().parent_path() / newName);
 		}
 		catch (std::filesystem::filesystem_error const& e) {
-			poppyLog(error, "Failed to rename file {} to '{}': {}", entry.path(), newName, e.what());
+			poppyLog(error, "Failed to rename file {} to '{}': {}", entry->path(), newName, e.what());
 		}
-		scanDirectoryLine();
+		scanDirectoryLine(currentDirectory());
 	}
 	
-	void DirectoryView::moveEntry(Entry entry, std::filesystem::path to) {
-		if (entry.path().parent_path() == to) { return; }
+	void DirectoryView::moveElement(std::filesystem::path element, std::filesystem::path to) {
+		poppyExpect(std::filesystem::is_directory(to));
+		if (element.parent_path() == to) { return; }
 		dispatch(DispatchToken::nextFrame, CustomCommand([=]{
 			try {
-				std::filesystem::rename(entry.path(), to / entry.path().filename());
-				scanDirectoryLine();
+				std::filesystem::rename(element, to / element.filename());
+				rescan();
 				poppyLog("Moved Entry to {}", to);
 			}
 			catch (std::filesystem::filesystem_error const& e) {
-				poppyLog(error, "Failed to move file {}: {}", entry.path(), e.what());
+				poppyLog(error, "Failed to move file {}: {}", element, e.what());
 			}
 		}));
 	}
 	
-	void DirectoryView::deleteEntry(Entry entry) {
+	void DirectoryView::deleteElement(std::filesystem::path element) {
 		dispatch(DispatchToken::nextFrame, CustomCommand([=]{
-			std::filesystem::remove_all(entry.path());
+			std::filesystem::remove_all(element);
 			rescan();
 		}));
 	}
 	
-	void DirectoryView::newFolder() {
-		dispatch(DispatchToken::nextFrame, CustomCommand([=]{
-			auto const newFolderPath = currentDirectory() / "New Folder";
+	void DirectoryView::newFolder(Directory& directory) {
+		dispatch(DispatchToken::nextFrame, CustomCommand([this, &directory]{
+			auto const newFolderPath = directory.path / "New Folder";
 			std::filesystem::create_directory(newFolderPath);
 			rescan();
-			auto& dir = currDir();
-			auto const itr = std::find_if(dir.begin(), dir.end(), [&](Entry const& entry) { return entry.path() == newFolderPath; });
-			poppyAssert(itr != dir.end());
+			auto const itr = std::find_if(directory.begin(), directory.end(), [&](Entry const& entry) {
+				return entry.path() == newFolderPath;
+			});
+			poppyAssert(itr != directory.end());
 			itr->renaming = 2;
 		}));
 	}
@@ -1079,22 +1318,21 @@ namespace poppy {
 	}
 	
 	/// MARK: Selection
-	void DirectoryView::clearSelection() {
-		for (auto& entry: currDir()) {
+	void DirectoryView::clearSelection(Directory& directory) {
+		for (auto&& [index, entry]: utl::enumerate(directory)) {
 			entry.selected = false;
-			renameEntry(entry, renameBuffer.data());
+			renameEntry(ConstEntryHandle(directory, index), renameBuffer.data());
 		}
 	}
 	
-	void DirectoryView::select(std::size_t index) {
-		auto& entry = currDir()[index];
-		selectEx([&](auto&& cb) {
-			entry.selected = cb(entry.selected);
+	void DirectoryView::select(EntryHandle entry) {
+		selectEx(entry.directory(), [&](auto&& cb) {
+			entry->selected = cb(entry->selected);
 			renameEntry(entry, renameBuffer.data());
 		});
 	}
 
-	void DirectoryView::selectEx(auto&& cb, bool clear) {
+	void DirectoryView::selectEx(Directory& directory, auto&& cb, bool clear) {
 		if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
 			// Union Select
 			cb([](bool current) { return true; });
@@ -1107,13 +1345,13 @@ namespace poppy {
 		}
 		// Default Select
 		if (clear)
-			clearSelection();
+			clearSelection(directory);
 		cb([](bool current) { return true; });
 	}
 	
-	void DirectoryView::updateSelectionRect(mtl::rectangle<float> const& bb) {
-		selectEx([&](auto&& cb) {
-			for (auto& entry: currDir()) {
+	void DirectoryView::updateSelectionRect(Directory& directory, mtl::rectangle<float> const& bb) {
+		selectEx(directory, [&](auto&& cb) {
+			for (auto& entry: directory) {
 				if (mtl::do_intersect(bb, entry.bb)) {
 					entry.selectionCandidate = cb(entry.selected);
 					continue;
@@ -1124,9 +1362,9 @@ namespace poppy {
 		}, false);
 	}
 	
-	void DirectoryView::applySelectionRect(mtl::rectangle<float> const& bb) {
-		selectEx([&](auto&& cb) {
-			for (auto& entry: currDir()) {
+	void DirectoryView::applySelectionRect(Directory& directory, mtl::rectangle<float> const& bb) {
+		selectEx(directory, [&](auto&& cb) {
+			for (auto& entry: directory) {
 				if (mtl::do_intersect(bb, entry.bb)) {
 					entry.selected = cb(entry.selected);
 				}
@@ -1143,3 +1381,4 @@ namespace poppy {
 	}
 	
 }
+

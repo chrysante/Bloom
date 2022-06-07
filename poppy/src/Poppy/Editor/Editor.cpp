@@ -111,7 +111,19 @@ namespace poppy {
 			
 			auto delegate = std::make_unique<EditorWindowDelegate>();
 			delegate->onFrame = [this, delegate = delegate.get()]{
-				imguiCtx.drawFrame(device(), delegate->window());
+				auto& window = delegate->window();
+				clearClosingViews();
+				appearance.update();
+				
+				imguiCtx.newFrame(window);
+				menuBar();
+				dockspace.display();
+				displayViews();
+				debugViews.display();
+				imguiCtx.endFrame();
+//				return;
+				imguiCtx.drawFrame(device(), window);
+				
 			};
 			auto& window = createWindow(windowDesc, std::move(delegate));
 			window.onInput([this](InputEvent const& e) {
@@ -148,18 +160,12 @@ namespace poppy {
 			saveStateToDisk();
 			saveStateDirtyTimer = saveStateInterval;
 		}
-		clearClosingViews();
-		auto const windows = getWindows();
-		if (windows.empty()) {
-			bloomDebugbreak("Can this happen?");
-			return;
-		}
-		appearance.update();
-		imguiCtx.newFrame(*windows.front());
-		menuBar();
-		dockspace.display();
-		displayViews();
-		debugViews.display();
+		
+//		auto const windows = getWindows();
+//		if (windows.empty()) {
+//			bloomDebugbreak("Can this happen?");
+//			return;
+//		}
 	}
 	
 	void Editor::menuBar() {

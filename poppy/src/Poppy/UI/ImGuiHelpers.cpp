@@ -7,6 +7,8 @@
 
 #include "Poppy/Core/Debug.hpp"
 
+using namespace mtl::short_types;
+
 namespace poppy {
 	
 	static bool ViewportButtonBehavior(const ImRect& bb,
@@ -327,6 +329,22 @@ namespace poppy {
 
 		EndGroup();
 		return value_changed;
+	}
+
+	void displayEmptyWithReason(std::string_view reason, Font const& font) {
+		auto const oldCursorPos = ImGui::GetCursorPos();
+		utl::scope_guard reset = [&]{
+			ImGui::SetCursorPos(oldCursorPos);
+		};
+		
+		withFont(font, [&]{
+			ImVec2 const textSize =	ImGui::CalcTextSize(reason.data());
+			ImGui::SetCursorPos({ 0, 0 });
+			ImGui::SetCursorPos((ImGui::GetContentRegionAvail() - textSize) / 2);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+			ImGui::TextEx(reason.data(), reason.data() + reason.size());
+			ImGui::PopStyleColor();
+		});
 	}
 	
 }

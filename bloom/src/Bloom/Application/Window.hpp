@@ -9,10 +9,12 @@
 
 #include <memory>
 #include <string>
+#include <chrono>
+#include <filesystem>
 #include <mtl/mtl.hpp>
 #include <utl/functional.hpp>
 #include <utl/utility.hpp>
-#include <filesystem>
+
 
 namespace bloom {
 
@@ -34,14 +36,14 @@ namespace bloom {
 		bool fullscreen = false; // ignored for now
 	};
 	
+	void initWindowSystem();
+	void pollWindowEvents();
+	void waitWindowEvents();
+
+	
 	/// MARK: Window Class
 	class BLOOM_API Window {
 		friend class Application;
-		
-	public:
-		/// MARK: Statics
-		static void initWindowSystem();
-		static void pollEvents();
 		
 	public:
 		/// MARK: Initialization
@@ -87,9 +89,11 @@ namespace bloom {
 		bool focused() const { return desc.focused; }
 		bool isFullscreen() const { return desc.fullscreen; }
 		bool isWindowed() const { return !isFullscreen(); }
+		bool isVisible() const;
 		
 		bool shouldClose() const;
 		void* nativeHandle();
+		void const* nativeHandle() const;
 		
 		/// MARK: Modifiers
 		void setTitle(std::string);
@@ -142,8 +146,6 @@ namespace bloom {
 		std::unique_ptr<void, Deleter> glfwWindowPtr;
 		std::unique_ptr<Swapchain> theSwapchain;
 		std::unique_ptr<CommandQueue> theCommandQueue;
-		
-		
 		
 		Input userInput;
 		

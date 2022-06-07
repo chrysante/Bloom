@@ -15,11 +15,13 @@
 #include "imgui_impl_osx.h"
 #include "imgui_impl_metal.h"
 
+#include <semaphore>
+
 using namespace bloom;
 using namespace mtl::short_types;
 
 namespace poppy {
-
+	
 	void ImGuiContext::doInitPlatform(bloom::HardwareDevice& device) {
 		// Setup Renderer backend
 		MetalDevice& mtlDevice = utl::down_cast<MetalDevice&>(device);
@@ -33,6 +35,7 @@ namespace poppy {
 	}
 	
 	void ImGuiContext::doDrawFramePlatform(bloom::HardwareDevice&, bloom::Window& window) {
+		
 		MetalCommandQueue& mtlCommandQueue = utl::down_cast<MetalCommandQueue&>(window.commandQueue());
 		
 		id<MTLCommandBuffer> commandBuffer = [mtlCommandQueue.queue commandBuffer];
@@ -40,9 +43,16 @@ namespace poppy {
 		MTLRenderPassDescriptor* renderPassDescriptor = [[MTLRenderPassDescriptor alloc] init];
 		MTLRenderPassColorAttachmentDescriptor* caDesc = [[MTLRenderPassColorAttachmentDescriptor alloc] init];
 		
+		bloom::Timer timer;
 		std::unique_ptr const backbuffer = window.swapchain().nextBackbuffer();
 		
+		poppyLog("doDrawFramePlatform: {}", (timer.update(), timer.timestep().absolute));
+		
 		caDesc.texture = (__bridge id<MTLTexture>)backbuffer->texture().nativeHandle();
+		
+		
+		
+		poppyAssert((caDesc.texture != nil));
 		caDesc.loadAction = MTLLoadActionClear;
 		caDesc.storeAction = MTLStoreActionStore;
 		[renderPassDescriptor.colorAttachments setObject: caDesc
@@ -50,10 +60,10 @@ namespace poppy {
 		
 		ImGui_ImplMetal_NewFrame(renderPassDescriptor);
 		
-		// Rendering
-		ImGui::Render();
-		ImDrawData* drawData = ImGui::GetDrawData();
 		
+
+		// Rendering
+		ImDrawData* drawData = ImGui::GetDrawData();
 		renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 1);
 		id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
 		[renderEncoder pushDebugGroup:@"Dear ImGui rendering"];
@@ -66,6 +76,8 @@ namespace poppy {
 		// Present
 		[commandBuffer presentDrawable: mtlBackbuffer.drawable];
 		[commandBuffer commit];
+		
+		
 	}
 	
 	void ImGuiContext::doShutdownPlatform() {

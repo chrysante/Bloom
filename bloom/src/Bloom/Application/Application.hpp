@@ -88,7 +88,6 @@ namespace bloom {
 		Timer mTimer;
 		
 		std::size_t mFrameCounter = 0;
-		bool skipFrame = false; // used to skip frames on resize and move events to avoid visual glitches
 	};
 	
 }

@@ -3,6 +3,7 @@
 #include "Bloom/Core/Autorelease.hpp"
 #include "Window.hpp"
 
+#include <numeric>
 #include <iostream>
 
 using namespace mtl::short_types;
@@ -91,8 +92,7 @@ namespace bloom {
 	
 		while (!mWindows.empty()) {
 			doFrame();
-			
-			Window::pollEvents();
+			pollWindowEvents();
 			clearClosingWindows();
 		}
 		
@@ -103,7 +103,7 @@ namespace bloom {
 	void Application::doInit() {
 		registerListeners();
 		
-		Window::initWindowSystem();
+		initWindowSystem();
 		
 		mCoreSystems.init();
 		
@@ -127,11 +127,6 @@ namespace bloom {
 	
 	/// MARK: Frame
 	void Application::doFrame() {
-		if (skipFrame) {
-			skipFrame = false;
-			return;
-		}
-		
 		MessageSystem::flush();
 		
 		BLOOM_AUTORELEASE_BEGIN
@@ -151,12 +146,12 @@ namespace bloom {
 		
 		mTimer.update();
 		
-		std::size_t const frameDuration = mTimer.preciseTimestep().delta.count();
-		std::size_t const targetFrameDuration = 16'000'000;
+//		std::size_t const frameDuration = mTimer.preciseTimestep().delta.count();
+//		std::size_t const targetFrameDuration = 16'000'000;
 		
-		if (frameDuration < targetFrameDuration) {
-			std::this_thread::sleep_for(std::chrono::nanoseconds{ targetFrameDuration - frameDuration });
-		}
+//		if (frameDuration < targetFrameDuration) {
+//			std::this_thread::sleep_for(std::chrono::nanoseconds{ targetFrameDuration - frameDuration });
+//		}
 	}
 	
 	void Application::clearClosingWindows() {

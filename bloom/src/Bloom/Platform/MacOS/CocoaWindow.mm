@@ -15,6 +15,11 @@ namespace bloom {
 
 	void* Window::nativeHandle() {
 		return (__bridge void*)glfwGetCocoaWindow((GLFWwindow*)glfwWindowPtr.get());
+		
+	}
+	
+	void const* Window::nativeHandle() const {
+		return utl::as_mutable(*this).nativeHandle();
 	}
 	
 	void Window::setSwapchain(std::unique_ptr<Swapchain> _s) {
@@ -24,6 +29,11 @@ namespace bloom {
 		NSWindow* nsWindow = (__bridge NSWindow*)nativeHandle();
 		nsWindow.contentView.wantsLayer = true;
 		[nsWindow.contentView setLayer:mtlSwapchain.layer];
+	}
+	
+	bool Window::isVisible() const {
+		NSWindow const* nsWindow = (__bridge NSWindow const*)nativeHandle();
+		return [nsWindow isVisible];
 	}
 	
 	void Window::platformInit() {

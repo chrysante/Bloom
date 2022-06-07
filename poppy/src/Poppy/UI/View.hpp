@@ -84,10 +84,6 @@ namespace poppy {
 		virtual YAML::Node serialize() const { return YAML::Node{}; }
 		virtual void deserialize(YAML::Node) {}
 		
-	protected:
-		/// MARK: Convinience Helpers
-		void displayEmptyWithReason(std::string_view reason) const;
-		
 	private:
 		/// MARK: Private
 		void doInit();

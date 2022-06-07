@@ -74,23 +74,6 @@ namespace poppy {
 		desc.pub.title = std::move(newTitle);
 	}
 	
-	/// MARK: Convinience Helpers
-	void View::displayEmptyWithReason(std::string_view reason) const {
-		auto const oldCursorPos = ImGui::GetCursorPos();
-		utl::scope_guard reset = [&]{
-			ImGui::SetCursorPos(oldCursorPos);
-		};
-		
-		Font font = Font::UIDefault();
-		font.weight = FontWeight::semibold;
-		
-		withFont(font, [&]{
-			float2 const textSize =	ImGui::CalcTextSize(reason.data());
-			ImGui::SetCursorPos((size() - textSize) / 2);
-			ImGui::TextDisabled("%s", reason.data());
-		});
-	}
-	
 	/// MARK: Private
 	void View::doInit() {
 		if (desc.pub.id < 0) {

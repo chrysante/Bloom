@@ -29,24 +29,6 @@ using namespace bloom;
 
 namespace poppy{
 	
-	template <typename E>
-	static bool enumCombo(E& e, std::size_t count = (std::size_t)E::_count) {
-		bool result = false;
-		for (auto i: utl::enumerate<E>(count)) {
-			bool const selected = e == i;
-			auto const label = toString(i);
-			bool const pressed = ImGui::Selectable(label.data(), selected, ImGuiSelectableFlags_SpanAvailWidth);
-			if (pressed) {
-				e = i;
-				result = true;
-			}
-			if (selected) {
-				ImGui::SetItemDefaultFocus();
-			}
-		}
-		return result;
-	}
-	
 	POPPY_REGISTER_VIEW(Viewport, "Viewport", {});
 	
 	Viewport::Viewport(): BasicSceneInspector(this) {

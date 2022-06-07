@@ -63,7 +63,8 @@ namespace poppy {
 			IconSize::_16,
 			IconSize::_24,
 			IconSize::_32,
-			IconSize::_48
+			IconSize::_48,
+			IconSize::_64,
 		};
 		
 		fonts.clear();

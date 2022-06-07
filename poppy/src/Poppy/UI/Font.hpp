@@ -82,6 +82,10 @@ namespace poppy {
 		friend bool operator==(Font const&, Font const&) = default;
 	};
 	
+	enum class TextAlign {
+		left, center, right
+	};
+	
 }
 
 template <>

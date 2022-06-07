@@ -16,17 +16,24 @@ namespace bloom {
 	/// MARK: - Statics
 	///
 	///
-	void Window::pollEvents() {
-		glfwPollEvents();
-//		glfwWaitEvents();
-	}
-	
-	void Window::initWindowSystem() {
+	void initWindowSystem() {
 		int const status = glfwInit();
 		if (status != GLFW_TRUE) {
 			bloomLog(fatal, "Failed to initialize GLFW");
 			std::terminate();
 		}
+	}
+	
+	void pollWindowEvents() {
+		glfwPollEvents();
+	}
+	
+	void waitWindowEvents() {
+		glfwWaitEvents();
+	}
+	
+	void waitWindowEvents(std::chrono::nanoseconds timeout) {
+		glfwWaitEventsTimeout(static_cast<double>(timeout.count()) / 1'000'000'000);
 	}
 	
 	/// MARK: - Initialization
@@ -61,7 +68,7 @@ namespace bloom {
 	
 	void Window::createDefaultSwapchain(HardwareDevice& device, std::size_t backbufferCount) {
 		SwapchainDescription swapchainDesc;
-		swapchainDesc.displaySync = true;
+		swapchainDesc.displaySync = false;
 		swapchainDesc.size = size() * contentScaleFactor();
 		swapchainDesc.backBufferCount = backbufferCount;
 		
@@ -69,7 +76,11 @@ namespace bloom {
 		setSwapchain(std::move(swapchain));
 	}
 	
-//	void Window::setSwapchain(std::unique_ptr<Swapchain>); // defined in Platform/.../CocoaWindow.mm
+#if !defined(BLOOM_PLATFORM_APPLE) // defined in Platform/.../CocoaWindow.mm
+	void Window::setSwapchain(std::unique_ptr<Swapchain>) {
+		bloomDebugfail();
+	}
+#endif
 	
 	void Window::setCommandQueue(std::unique_ptr<CommandQueue> queue) {
 		theCommandQueue = std::move(queue);
@@ -130,6 +141,12 @@ namespace bloom {
 	/// MARK: Queries
 	///
 	///
+#if !defined(BLOOM_PLATFORM_APPLE)
+	bool Window::isVisible() const {
+		bloomDebugfail();
+	}
+#endif
+	
 	bool Window::shouldClose() const {
 		return !desc.shallPreventClose && glfwWindowShouldClose(GLFW_WND);
 	}

@@ -1,8 +1,11 @@
 #pragma once
 
 #include <optional>
-#include <mtl/mtl.hpp>
+#include <string>
 #include <filesystem>
+
+#include <mtl/mtl.hpp>
+#include <utl/vector.hpp>
 
 #include "Bloom/Asset/Asset.hpp"
 

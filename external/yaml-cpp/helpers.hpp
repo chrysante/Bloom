@@ -75,17 +75,17 @@ namespace YAML {
 		}
 	};
 
-	/// MARK: utl::UUID
+	/// MARK: utl::uuid
 	template <>
-	struct YAML::convert<utl::UUID> {
-		static Node encode(utl::UUID const& id) {
+	struct YAML::convert<utl::uuid> {
+		static Node encode(utl::uuid const& id) {
 			Node node;
 			node = id.to_string();
 			return node;
 		}
 		 
-		static bool decode(Node const& node, utl::UUID& id) {
-			id = utl::UUID::from_string(node.as<std::string>());
+		static bool decode(Node const& node, utl::uuid& id) {
+			id = utl::uuid::from_string(node.as<std::string>());
 			return true;
 		}
 	};

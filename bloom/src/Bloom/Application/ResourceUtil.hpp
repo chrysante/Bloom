@@ -27,9 +27,10 @@ namespace bloom {
 	BLOOM_API inline void showOpenPanel(OpenPanelDescription const& desc,
 										utl::function<void(std::filesystem::path const&)> completion)
 	{
-		showOpenPanel(desc, [=](utl::vector<std::filesystem::path> const& paths){
-			completion(paths.empty() ? std::filesystem::path{} : paths.front());
-		});
+        utl::function<void(utl::vector<std::filesystem::path> const&)> callback = [=](utl::vector<std::filesystem::path> const& paths){
+            completion(paths.empty() ? std::filesystem::path{} : paths.front());
+        };
+		showOpenPanel(desc, callback);
 	}
 	
 	BLOOM_API std::optional<std::string> readFileText(std::filesystem::path const&);

@@ -73,11 +73,11 @@ namespace poppy {
 				refreshFilesystem();
 			}).tooltip("Create Default Material"),
 			
-			ToolbarButton("Reload Scripts").onClick([this]{
-				auto& scriptEngine = editor().coreSystems().scriptEngine();
-				assetManager->loadScripts(scriptEngine);
-				dispatch(DispatchToken::nextFrame, ScriptLoadEvent{});
-			})
+//			ToolbarButton("Reload Scripts").onClick([this]{
+//				auto& scriptEngine = editor().coreSystems().scriptEngine();
+//				assetManager->loadScripts(scriptEngine);
+//				dispatch(DispatchToken::nextFrame, ScriptLoadEvent{});
+//			})
 		};
 		
 		toolbar.setHeight(30);
@@ -266,7 +266,7 @@ namespace poppy {
 		
 		data.projectDir = path;
 		assetManager->setWorkingDir(path);
-		assetManager->loadScripts(editor().coreSystems().scriptEngine());
+//		assetManager->loadScripts(editor().coreSystems().scriptEngine());
 		openSubdirectory(path);
 	}
 	
@@ -280,7 +280,7 @@ namespace poppy {
 	
 	void AssetBrowser::refreshFilesystem() {
 		assetManager->refreshWorkingDir();
-		assetManager->loadScripts(editor().coreSystems().scriptEngine());
+//		assetManager->loadScripts(editor().coreSystems().scriptEngine());
 		dirView.assignDirectory(data.currentDir);
 	}
 	

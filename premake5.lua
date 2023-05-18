@@ -17,8 +17,8 @@ filter "configurations:Checked or Release"
     defines "NDEBUG"
 filter {}
 
-sysincludedirs {
-    "external", "external/utility"
+externalincludedirs {
+    "external", "external/utility/include"
 }
 
 targetdir("build/bin/%{cfg.longname}")
@@ -46,11 +46,9 @@ include "Bloom/tests.lua"
 include "Poppy"
 
 -- Externals
---include "external/glfw"
 include "external/imgui"
---include "external/utility"
---include "external/yaml-cpp"
---include "external/assimp"
+include "external/utility/lib.lua"
+include "external/yaml-cpp/premake5.lua"
 function removeDeprecated() 
     removefiles "./**-depr.**"
 end

@@ -15,7 +15,7 @@ namespace bloom {
 	void MetalRenderContext::begin(RenderPassDescription const& desc) {
 		MTLRenderPassDescriptor* mtlDesc = [[MTLRenderPassDescriptor alloc] init];
 		
-		for (auto [index, ca]: utl::enumerate(desc.colorAttachments)) {
+		for (size_t index = 0; auto ca: desc.colorAttachments) {
 			MTLRenderPassColorAttachmentDescriptor* colorAttachmentDesc = [[MTLRenderPassColorAttachmentDescriptor alloc] init];
 			colorAttachmentDesc.texture = (__bridge id<MTLTexture>)ca.texture.nativeHandle();
 			float4 const cc = ca.clearColor;
@@ -25,6 +25,7 @@ namespace bloom {
 			
 			[mtlDesc.colorAttachments setObject:colorAttachmentDesc
 							 atIndexedSubscript:index];
+            ++index;
 		}
 		
 		{

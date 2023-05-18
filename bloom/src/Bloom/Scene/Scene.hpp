@@ -37,24 +37,24 @@ namespace bloom {
 		
 		template <ComponentType T>
 		T& getComponent(EntityID entity) {
-			bloomExpect(hasComponent<T>(entity), "ComponentType not present");
+			bloomExpect(hasComponent<T>(entity) && "ComponentType not present");
 			return _registry.get<T>(entity.value());
 		}
 		template <ComponentType T>
 		T const& getComponent(EntityID entity) const {
-			bloomExpect(hasComponent<T>(entity), "ComponentType not present");
+			bloomExpect(hasComponent<T>(entity) && "ComponentType not present");
 			return _registry.get<T>(entity.value());
 		}
 		
 		template <ComponentType T>
 		void addComponent(EntityID entity, T&& component) {
-			bloomExpect(!hasComponent<std::decay_t<T>>(entity), "ComponentType already present");
+			bloomExpect(!hasComponent<std::decay_t<T>>(entity) && "ComponentType already present");
 			_registry.emplace<std::decay_t<T>>(entity.value(), UTL_FORWARD(component));
 		}
 		
 		template <ComponentType T>
 		void removeComponent(EntityID entity) {
-			bloomExpect(hasComponent<T>(entity), "ComponentType not present");
+			bloomExpect(hasComponent<T>(entity) && "ComponentType not present");
 			_registry.remove<T>(entity.value());
 		}
 		

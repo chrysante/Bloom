@@ -7,7 +7,7 @@ includedirs {
     "src"
 }
 
-sysincludedirs {
+externalincludedirs {
     "../external/Metal-cpp",
     "../external/assimp/include",
     "../external/glfw/include",
@@ -21,8 +21,8 @@ files {
 removefiles { "src/Bloom/platform/**" }
 
 links { 
-    "Utility",
     "YAML",
+    "utility",
     "assimpd",
     "glfw3"
 }

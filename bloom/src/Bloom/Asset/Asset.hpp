@@ -5,7 +5,7 @@
 
 #include <filesystem>
 #include <utl/common.hpp>
-#include <utl/UUID.hpp>
+#include <utl/uuid.hpp>
 #include <iosfwd>
 #include <yaml-cpp/yaml.h>
 #include <yaml-cpp/helpers.hpp>
@@ -50,7 +50,7 @@ namespace bloom {
 	
 	bool hasHeader(FileExtension);
 	
-	utl::UUID toUUID(std::string_view);
+	utl::uuid toUUID(std::string_view);
 	
 	BLOOM_API std::string toString(AssetType);
 	BLOOM_API AssetType assetTypeFromString(std::string_view);
@@ -73,13 +73,13 @@ namespace bloom {
 	class BLOOM_API AssetHandle {
 	public:
 		AssetHandle() = default;
-		AssetHandle(AssetType type, utl::UUID id):
+		AssetHandle(AssetType type, utl::uuid id):
 			_type(type),
 			_id(id)
 		{}
 		
 		AssetType type() const { return _type; }
-		utl::UUID id() const { return _id; }
+		utl::uuid id() const { return _id; }
 		
 		
 		static AssetHandle generate(AssetType);
@@ -89,7 +89,7 @@ namespace bloom {
 		
 	private:
 		AssetType _type = AssetType::none;
-		utl::UUID _id;
+		utl::uuid _id;
 	};
 	
 	/// MARK: - Asset
@@ -150,7 +150,7 @@ struct YAML::convert<bloom::AssetHandle> {
 	 
 	static bool decode(Node const& node, bloom::AssetHandle& h) {
 		auto const type = bloom::assetTypeFromString(node["Type"].as<std::string>());
-		auto const id = node["ID"].as<utl::UUID>();
+		auto const id = node["ID"].as<utl::uuid>();
 		h = bloom::AssetHandle(type, id);
 		return true;
 	}

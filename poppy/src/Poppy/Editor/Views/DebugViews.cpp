@@ -29,6 +29,10 @@ namespace poppy {
 			if (ImGui::MenuItem("Style Colors Panel")) {
 				showStylePanel = true;
 			}
+            if (ImGui::MenuItem("Reset style")) {
+                ImGui::StyleColorsDark();
+//                appearance.
+            }
 			ImGui::EndMenu();
 		}
 	}

@@ -57,7 +57,8 @@ namespace bloom {
 		
 		utl::small_vector<Window*> getWindows();
 		auto windows() {
-			return utl::transform_range(mWindows, [](auto&& p) -> auto& { return *p.first.get(); });
+            assert(false);
+			// return utl::transform_range(mWindows, [](auto&& p) -> auto& { return *p.first.get(); });
 		}
 		using MessageSystem::makeReciever;
 		using MessageSystem::makeEmitter;

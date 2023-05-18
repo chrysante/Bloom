@@ -4,6 +4,7 @@
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+#include <utl/strcat.hpp>
 
 #include "Poppy/Core/Debug.hpp"
 
@@ -388,8 +389,8 @@ namespace poppy {
 			bufferPtr += 2;
 			availSize -= 2;
 		}
-		poppyAssert(availSize < 56, "Overflow has occured");
-		std::strncpy(bufferPtr, utl::format("-{}", id).data(), 8);
+		poppyAssert(availSize < 56 && "Overflow has occured");
+		std::strncpy(bufferPtr, utl::strcat("-", id).data(), 8);
 		
 		return buffer;
 	}

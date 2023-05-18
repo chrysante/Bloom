@@ -15,7 +15,7 @@ namespace bloom {
 		setPointers();
 	}
 	
-	void SceneSystem::unloadScene(utl::UUID id) {
+	void SceneSystem::unloadScene(utl::uuid id) {
 		auto const itr = mScenes.find(id);
 		auto* const scene = itr->second.get();
 		if (itr == mScenes.end()) {

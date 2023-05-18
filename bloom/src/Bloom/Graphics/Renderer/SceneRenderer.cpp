@@ -39,8 +39,8 @@ namespace bloom {
 		bloomExpect(mRenderer);
 		renderer().beginScene(camera);
 		
-		for (auto& scene: utl::transform_range(scenes, utl::deref)) {
-			submitScene(scene);
+		for (auto* scene: scenes) {
+			submitScene(*scene);
 		}
 		
 		submitExtra();

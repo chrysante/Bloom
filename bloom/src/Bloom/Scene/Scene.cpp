@@ -215,9 +215,9 @@ namespace bloom {
 				bloomAssert(!!entity.nextSibling);
 				auto const leftSibling = scene->getComponent<HierarchyComponent>(entity.prevSibling);
 				auto const rightSibling = scene->getComponent<HierarchyComponent>(entity.nextSibling);
-				bloomAssert(leftSibling.nextSibling == entityID,
+				bloomAssert(leftSibling.nextSibling == entityID &&
 							"Our left sibling doesn't know about us");
-				bloomAssert(rightSibling.prevSibling == entityID,
+				bloomAssert(rightSibling.prevSibling == entityID &&
 							"Our right sibling doesn't know about us");
 			}
 		});
@@ -373,7 +373,7 @@ namespace bloom {
 		mtl::float4x4 result = 1;
 		
 		while (entity) {
-			bloomAssert(hasComponent<HierarchyComponent>(entity),
+			bloomAssert(hasComponent<HierarchyComponent>(entity) &&
 						"This API is supposed to be used with hierarchical entities");
 			result *= getComponent<Transform>(entity).calculate();
 			entity = getComponent<HierarchyComponent>(entity).parent;

@@ -11,8 +11,8 @@ namespace bloom {
 	class HardwareDevice;
 	class Renderer;
 	class AssetManager;
-	class ScriptEngine;
-	class ScriptSystem;
+	//class ScriptEngine;
+	//class ScriptSystem;
 	class SceneSystem;
 	
 	class CoreRuntime;
@@ -30,9 +30,9 @@ namespace bloom {
 		HardwareDevice& device()       { return *mDevice;       }
 		Renderer&       renderer()     { return *mRenderer;     }
 		AssetManager&   assetManager() { return *mAssetManager; }
-		ScriptEngine&   scriptEngine() { return *mScriptEngine; }
+		//ScriptEngine&   scriptEngine() { return *mScriptEngine; }
 		
-		ScriptSystem&   scriptSystem() { return *mScriptSystem; }
+		//ScriptSystem&   scriptSystem() { return *mScriptSystem; }
 		
 		CoreRuntime&    runtime()      { return *mRuntime;      }
 		SceneSystem&    sceneSystem()  { return *mSceneSystem;  }
@@ -49,9 +49,9 @@ namespace bloom {
 		std::unique_ptr<HardwareDevice> mDevice;
 		std::unique_ptr<Renderer>       mRenderer;
 		std::unique_ptr<AssetManager>   mAssetManager;
-		std::unique_ptr<ScriptEngine>   mScriptEngine;
+		//std::unique_ptr<ScriptEngine>   mScriptEngine;
 		
-		std::unique_ptr<ScriptSystem>   mScriptSystem;
+		//std::unique_ptr<ScriptSystem>   mScriptSystem;
 		std::unique_ptr<CoreRuntime>    mRuntime;
 		std::shared_ptr<SceneSystem>      mSceneSystem;
 	};

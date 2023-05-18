@@ -1,5 +1,6 @@
 #include "ResourceUtil.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 
@@ -20,9 +21,10 @@ namespace bloom {
 		if (!file) {
 			return std::nullopt;
 		}
-		utl::vector<char> buffer(std::istreambuf_iterator<char>(file), {});
+        std::istreambuf_iterator<char> begin(file), end;
+        utl::vector<char> buffer;
+        std::copy(begin, end, std::back_inserter(buffer));
 		return buffer;
 	}
-	
 	
 }

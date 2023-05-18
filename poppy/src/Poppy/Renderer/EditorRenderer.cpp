@@ -200,7 +200,7 @@ namespace poppy {
 		ctx.setDepthStencil(depthStencil);
 		
 		StaticMeshRenderer* currentMesh = nullptr;
-		for (auto&& [index, object]: utl::enumerate(selectedObjects)) {
+        for (size_t index = 0; auto&& object: selectedObjects) {
 			if (object.mesh.get() != currentMesh) {
 				ctx.setVertexBuffer(object.mesh->vertexBuffer(), 1);
 			}
@@ -214,6 +214,7 @@ namespace poppy {
 			desc.indexType = IndexType::uint32;
 			desc.indexBuffer = indexBuffer;
 			ctx.draw(desc);
+            ++index;
 		}
 		ctx.end();
 		

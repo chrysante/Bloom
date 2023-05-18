@@ -1,5 +1,7 @@
 #include "Asset.hpp"
 
+#include <utl/math.hpp>
+
 #include "Bloom/Core/Debug.hpp"
 
 namespace bloom {
@@ -31,20 +33,20 @@ namespace bloom {
 		return ext != FileExtension::chai;
 	}
 	
-	utl::UUID toUUID(std::string_view str) {
+	utl::uuid toUUID(std::string_view str) {
 		char const* const begin = str.data();
 		std::size_t const offset = str.size() / 2;
 		struct { std::size_t first, second; } values = {
 			utl::hash_string(std::string_view(begin, offset)),
 			utl::hash_string(std::string_view(begin + offset, str.size() - offset))
 		};
-		return utl::UUID::construct_from_value(utl::bit_cast<utl::UUID::value_type>(values));
+		return utl::uuid::construct_from_value(utl::bit_cast<utl::uuid::value_type>(values));
 	}
 	
 	/// MARK: - AssetType
 	BLOOM_API std::string toString(AssetType type) {
 		auto const i = utl::to_underlying(type);
-		bloomAssert(std::popcount(i) <= 1, "'type' is a Mask");
+		bloomAssert(std::popcount(i) <= 1 && "'type' is a Mask");
 		if (type == AssetType::none) {
 			return "None";
 		}
@@ -83,7 +85,7 @@ namespace bloom {
 	
 	BLOOM_API std::string toExtension(AssetType type) {
 		auto const i = utl::to_underlying(type);
-		bloomAssert(std::popcount(i) <= 1, "'type' is a Mask");
+		bloomAssert(std::popcount(i) <= 1 && "'type' is a Mask");
 		if (type == AssetType::none) {
 			return std::string{};
 		}
@@ -142,12 +144,12 @@ namespace bloom {
 	
 	/// MARK: - AssetHandle
 	AssetHandle AssetHandle::generate(AssetType type) {
-		return AssetHandle(type, utl::UUID::generate());
+		return AssetHandle(type, utl::uuid::generate());
 	}
 	
 	bool operator==(AssetHandle const& a, AssetHandle const& b) {
 		bool const result = a.id() == b.id();
-		bloomAssert(!result || a.type() == b.type(),
+		bloomAssert(!result || a.type() == b.type() &&
 					"ID is the same but type differs");
 		return result;
 	}

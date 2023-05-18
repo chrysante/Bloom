@@ -45,8 +45,9 @@ namespace bloom {
 				NSArray* urls = [panel URLs];
 				utl::vector<std::filesystem::path> paths;
 				paths.resize(urls.count);
-				for (auto&& [index, path]: utl::enumerate(paths)) {
+                for (size_t index = 0; auto& path: paths) {
 					path = ((NSURL*)[urls objectAtIndex: index]).path.UTF8String;
+                    ++index;
 				}
 				
 				completion(paths);

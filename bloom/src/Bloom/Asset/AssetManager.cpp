@@ -10,10 +10,11 @@
 #include "Bloom/Graphics/Material/Material.hpp"
 #include "Bloom/Graphics/Material/MaterialInstance.hpp"
 #include "Bloom/Script/Script.hpp"
-#include "Bloom/ScriptEngine/ScriptEngine.hpp"
+//#include "Bloom/ScriptEngine/ScriptEngine.hpp"
 
 #include <fstream>
 #include <utl/filesystem_ext.hpp>
+#include <utl/strcat.hpp>
 
 namespace bloom {
 	
@@ -77,7 +78,7 @@ namespace bloom {
 		InternalAsset asset {
 			.theAsset = ref,
 			.name = std::string(name),
-			.diskLocation = dest / utl::format("{}{}", name, toExtension(type)),
+			.diskLocation = dest / utl::strcat(name, toExtension(type)),
 			.handle = handle
 		};
 		assets.insert({ handle.id(), asset });
@@ -261,24 +262,24 @@ namespace bloom {
 	}
 	
 	void AssetManager::loadScripts(ScriptEngine& engine) {
-		_scriptClasses.clear();
-		engine.restoreBaseState();
-		for (auto&& [id, internal]: assets) {
-			if (internal.handle.type() != AssetType::script) {
-				continue;
-			}
-			auto const script = as<Script>(get(internal.handle));
-			makeAvailable(internal.handle, AssetRepresentation::CPU, true);
-			try {
-				engine.eval(script->text);
-				for (auto&& name: script->classes) {
-					_scriptClasses.push_back(name);
-				}
-			}
-			catch (std::exception const& e) {
-				bloomLog(error, "Failed to evaluate script: {}", e.what());
-			}
-		}
+//		_scriptClasses.clear();
+//		engine.restoreBaseState();
+//		for (auto&& [id, internal]: assets) {
+//			if (internal.handle.type() != AssetType::script) {
+//				continue;
+//			}
+//			auto const script = as<Script>(get(internal.handle));
+//			makeAvailable(internal.handle, AssetRepresentation::CPU, true);
+//			try {
+//				engine.eval(script->text);
+//				for (auto&& name: script->classes) {
+//					_scriptClasses.push_back(name);
+//				}
+//			}
+//			catch (std::exception const& e) {
+//				bloomLog(error, "Failed to evaluate script: {}", e.what());
+//			}
+//		}
 	}
 	
 	/// MARK: - Internals
@@ -725,7 +726,7 @@ namespace bloom {
 	{
 		if (!file) {
 			bloomDebugbreak();
-			throw std::runtime_error(utl::format("Failed to open file {}", path));
+			throw std::runtime_error(utl::strcat("Failed to open file ", path));
 		}
 	}
 	

@@ -6,7 +6,7 @@
 
 #include "Bloom/Graphics/Renderer/Renderer.hpp"
 #include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/ScriptEngine/ScriptEngine.hpp"
+//#include "Bloom/ScriptEngine/ScriptEngine.hpp"
 
 #include "Bloom/Runtime/ScriptSystem.hpp"
 
@@ -32,10 +32,10 @@ namespace bloom {
 		mAssetManager = makeCoreSystem<AssetManager>();
 		
 		// ScriptEngine
-		mScriptEngine = makeCoreSystem<ScriptEngine>();
+//		mScriptEngine = makeCoreSystem<ScriptEngine>();
 		
 		// ScriptSystem
-		mScriptSystem = makeCoreSystem<ScriptSystem>(scriptEngine());
+		//mScriptSystem = makeCoreSystem<ScriptSystem>(scriptEngine());
 		
 		// Runtime
 		mRuntime      = makeCoreSystem<CoreRuntime>();

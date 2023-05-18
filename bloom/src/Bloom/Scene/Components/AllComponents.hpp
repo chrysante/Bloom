@@ -20,8 +20,8 @@ namespace bloom {
 		PointLightComponent,
 		SpotLightComponent,
 		DirectionalLightComponent,
-		SkyLightComponent,
-		ScriptComponent
+		SkyLightComponent
+	//	ScriptComponent
 	>;
 
 	template <typename...T>

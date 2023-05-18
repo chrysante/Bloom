@@ -372,7 +372,7 @@ namespace bloom {
 		Material const* currentMaterial = nullptr;
 		MaterialInstance const* currentMaterialInstance = nullptr;
 		StaticMeshRenderer const* currentMesh = nullptr;
-		for (auto&& [index, object]: utl::enumerate(scene.objects)) {
+        for (size_t index = 0; auto&& object: scene.objects) {
 			if (object.materialInstance->material() != currentMaterial) {
 				currentMaterial = object.materialInstance->material();
 				ctx.setPipeline(currentMaterial->mainPass);
@@ -399,6 +399,7 @@ namespace bloom {
 			desc.indexType = IndexType::uint32;
 			desc.indexBuffer = indexBuffer;
 			ctx.draw(desc);
+            ++index;
 		}
 		ctx.end();
 		
@@ -451,7 +452,7 @@ namespace bloom {
 		ctx.setVertexBuffer(renderObjects.transformBuffer, 2);
 		ctx.setVertexBuffer(renderObjects.shadows.lightSpaceTransforms, 3);
 		StaticMeshRenderer* currentMesh = nullptr;
-		for (auto&& [index, object]: utl::enumerate(scene.objects)) {
+        for (size_t index = 0; auto&& object: scene.objects) {
 			if (object.mesh.get() != currentMesh) {
 				currentMesh = object.mesh.get();
 				ctx.setVertexBuffer(currentMesh->vertexBuffer(), 1);
@@ -466,6 +467,7 @@ namespace bloom {
 			desc.indexBuffer = indexBuffer;
 			desc.instanceCount = numShadowMaps;
 			ctx.draw(desc);
+            ++index;
 		}
 		
 		ctx.end();

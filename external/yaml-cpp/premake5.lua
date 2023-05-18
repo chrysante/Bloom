@@ -3,6 +3,8 @@ location "."
 kind "StaticLib"
 language "C++"    
 
+externalincludedirs ".."
+
 files {
     "src/**.h",
     "src/**.hpp",

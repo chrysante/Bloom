@@ -174,7 +174,7 @@ namespace bloom {
 		
 		
 	private:
-		utl::hashmap<utl::UUID, InternalAsset> assets;
+		utl::hashmap<utl::uuid, InternalAsset> assets;
 		std::filesystem::path _workingDir;
 		utl::vector<std::string> _scriptClasses;
 	};

@@ -139,7 +139,8 @@ namespace poppy {
 	
 	std::shared_ptr<bloom::ForwardRendererFramebuffer> RendererDebuggerView::findFramebuffer() const {
 		auto const views = editor().getViews();
-		for (auto* const viewport: utl::transform_range(views, [](View* view) { return dynamic_cast<Viewport*>(view); })) {
+		for (auto* v: views) {
+            auto* viewport = dynamic_cast<Viewport*>(v);
 			if (!viewport) {
 				continue;
 			}

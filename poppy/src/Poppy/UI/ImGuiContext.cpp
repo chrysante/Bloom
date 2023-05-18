@@ -211,7 +211,7 @@ namespace poppy {
 		ImGui::SetCurrentContext(context);
 		ImGuiIO& io = ImGui::GetIO();
 		
-		io.DisplaySize = window.size();
+		io.DisplaySize = (mtl::float2)window.size();
 		io.DisplayFramebufferScale = window.contentScaleFactor();
 		
 		doNewFramePlatform(window);

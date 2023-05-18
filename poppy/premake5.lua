@@ -9,7 +9,7 @@ includedirs {
     "../Bloom/src", -- for now
 }
 
-sysincludedirs {
+externalincludedirs {
     "../external/imgui",  
     "../external/glfw/include",  
 }
@@ -25,7 +25,7 @@ removefiles { "src/Poppy/Platform/**" }
 
 links { 
     "Bloom",
-    "Utility",
+    "utility",
     "imgui",
     "YAML",
 }

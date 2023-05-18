@@ -66,5 +66,27 @@ namespace poppy {
 	}
 	
 	std::array<char, 64> generateUniqueID(std::string_view, int, bool prepentDoubleHash = false);
+
+	template <typename E>
+	bool enumCombo(E& e, std::size_t count = (std::size_t)E::_count) {
+		bool result = false;
+        for (size_t j = 0; j < count; ++j) {
+            E const i = (E)j;
+			bool const selected = e == i;
+			auto const label = toString(i);
+			bool const pressed = ImGui::Selectable(label.data(), selected);
+			//, ImGuiSelectableFlags_SpanAvailWidth);
+			if (pressed) {
+				e = i;
+				result = true;
+			}
+			if (selected) {
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		return result;
+	}
+	
+	void displayEmptyWithReason(std::string_view reason, Font const& = Font::UIDefault().setWeight(FontWeight::semibold));
 	
 }

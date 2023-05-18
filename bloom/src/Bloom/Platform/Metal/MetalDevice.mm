@@ -155,7 +155,7 @@ namespace bloom {
 	RenderPipelineHandle MetalDevice::createRenderPipeline(RenderPipelineDescription const& desc) {
 		MTLRenderPipelineDescriptor* mtlDesc = [[MTLRenderPipelineDescriptor alloc] init];
 		
-		for (auto const& [index, caDesc]: utl::enumerate(desc.colorAttachments)) {
+        for (size_t index = 0; auto const& caDesc: desc.colorAttachments) {
 			MTLRenderPipelineColorAttachmentDescriptor* mtlCADesc = [[MTLRenderPipelineColorAttachmentDescriptor alloc] init];
 			mtlCADesc.pixelFormat = (MTLPixelFormat)caDesc.pixelFormat;
 			mtlCADesc.blendingEnabled = caDesc.blendingEnabled;
@@ -171,6 +171,7 @@ namespace bloom {
 
 			[mtlDesc.colorAttachments setObject: mtlCADesc
 							 atIndexedSubscript: index];
+            ++index;
 		}
 		
 		mtlDesc.depthAttachmentPixelFormat = (MTLPixelFormat)desc.depthAttachmentPixelFormat;

@@ -9,7 +9,7 @@
 #include <mutex>
 #include <span>
 #include <utl/hashmap.hpp>
-#include <utl/UUID.hpp>
+#include <utl/uuid.hpp>
 #include <utl/utility.hpp>
 
 namespace bloom {
@@ -19,7 +19,7 @@ namespace bloom {
 	class BLOOM_API SceneSystem: public CoreSystem, public RuntimeDelegate {
 	public:
 		void loadScene(Reference<Scene>);
-		void unloadScene(utl::UUID id);
+		void unloadScene(utl::uuid id);
 		void unloadAll();
 		std::unique_lock<std::mutex> lock();
 		std::span<Scene* const> scenes() const { return mScenePtrs; }
@@ -39,9 +39,9 @@ namespace bloom {
 	private:
 //		std::mutex writeMutex, readMutex;
 		std::mutex mMutex;
-		utl::hashmap<utl::UUID, Reference<Scene>> mBackupScenes;
-		utl::hashmap<utl::UUID, Reference<Scene>> mSimScenes;
-		utl::hashmap<utl::UUID, Reference<Scene>> mScenes;
+		utl::hashmap<utl::uuid, Reference<Scene>> mBackupScenes;
+		utl::hashmap<utl::uuid, Reference<Scene>> mSimScenes;
+		utl::hashmap<utl::uuid, Reference<Scene>> mScenes;
 		utl::vector<Scene*> mScenePtrs;
 	};
 	

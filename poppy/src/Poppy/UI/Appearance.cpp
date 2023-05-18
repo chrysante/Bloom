@@ -4,7 +4,6 @@
 #include <imgui_internal.h>
 #include <yaml-cpp/yaml.h>
 #include <yaml-cpp/helpers.hpp>
-#include <utl/iterator.hpp>
 #include <span>
 
 #include "SystemAppearance.hpp"

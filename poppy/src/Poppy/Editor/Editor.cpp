@@ -274,6 +274,7 @@ namespace poppy {
 		YAML::Node root = YAML::Load(*text);
 		
 		appearance.deserialize(root["Appearance"]);
+        
 		loadViews(root["Views"]);
 	}
 	

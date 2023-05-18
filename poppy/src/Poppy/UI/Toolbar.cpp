@@ -5,7 +5,7 @@
 
 #include <algorithm>
 #include <numeric>
-#include <utl/UUID.hpp>
+#include <utl/uuid.hpp>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include <utl/scope_guard.hpp>
@@ -18,7 +18,7 @@ using namespace mtl::short_types;
 namespace poppy {
 
 	ToolbarDropdownMenu::ToolbarDropdownMenu():
-		_id(utl::UUID::generate().to_string())
+		_id(utl::uuid::generate().to_string())
 	{}
 	
 	void ToolbarItemUnion::calcWidth(float height) {

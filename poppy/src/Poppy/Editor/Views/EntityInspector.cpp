@@ -64,10 +64,10 @@ namespace poppy {
 			ImGui::Separator();
 		}
 		
-		if (entity.has<ScriptComponent>()) {
-			inspectScript(entity);
-			ImGui::Separator();
-		}
+//		if (entity.has<ScriptComponent>()) {
+//			inspectScript(entity);
+//			ImGui::Separator();
+//		}
 	}
 	
 	void EntityInspector::inspectTag(bloom::EntityHandle entity) {
@@ -141,7 +141,7 @@ namespace poppy {
 						addComponentButton(utl::tag<SpotLightComponent>{},        "Spot Light",        entity, hasLight);
 						addComponentButton(utl::tag<DirectionalLightComponent>{}, "Directional Light", entity, hasLight);
 						addComponentButton(utl::tag<SkyLightComponent>{},         "Sky Light",         entity, hasLight);
-						addComponentButton(utl::tag<ScriptComponent>{},           "Script",            entity);
+//						addComponentButton(utl::tag<ScriptComponent>{},           "Script",            entity);
 					});
 					ImGui::EndCombo();
 				}
@@ -330,7 +330,8 @@ namespace poppy {
 		if (ImGui::BeginCombo("##Light Type",
 							  toString(newType).data()))
 		{
-			for (auto i: utl::enumerate<LightType>()) {
+            for (size_t j = 0; j < (size_t)LightType::_count; ++j) {
+                LightType const i = (LightType)j;
 				bool const selected = newType == i;
 				if (ImGui::Selectable(toString(i).data(), selected)) {
 					newType = i;
@@ -463,51 +464,51 @@ namespace poppy {
 	}
 	
 	void EntityInspector::inspectScript(bloom::EntityHandle entity) {
-		using namespace propertiesView;
-		auto& script = entity.get<ScriptComponent>();
-		
-		if (beginComponentSection<ScriptComponent>("Script", entity)) {
-			disabledIf(isSimulating(), [&]{
-				beginProperty("Class");
-				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-				if (ImGui::BeginCombo("##-script", script.className.data())) {
-					for (auto className: assetManager().scriptClasses()) {
-						bool const selected = script.className == className;
-						if (ImGui::Selectable(className.data(), selected)) {
-							script.className = className;
-							script.object = editor().coreSystems().scriptEngine().instanciateObject(className);
-						}
-						if (selected) {
-							ImGui::SetItemDefaultFocus();
-						}
-					}
-					ImGui::EndCombo();
-				}
-				
-				if (script.object && beginSubSection("Attributes")) {
-					auto fields = script.object->get_attrs();
-					for (auto&& [name, value]: fields) {
-						if (ScriptHelpers::isReserved(name)) {
-							continue;
-						}
-						
-						beginProperty(name.data());
-						
-						if (value.get().type() == typeid(std::shared_ptr<float>)) {
-							editDataField(name, value.get().cast<std::shared_ptr<float>>().get());
-						}
-						else if (value.get().type() == typeid(std::shared_ptr<double>)) {
-							editDataField(name, value.get().cast<std::shared_ptr<double>>().get());
-						}
-						else {
-							editDataField<void>(name, nullptr);
-						}
-					}
-					endSubSection();
-				}
-			});
-			endSection();
-		}
+//		using namespace propertiesView;
+//		auto& script = entity.get<ScriptComponent>();
+//
+//		if (beginComponentSection<ScriptComponent>("Script", entity)) {
+//			disabledIf(isSimulating(), [&]{
+//				beginProperty("Class");
+//				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+//				if (ImGui::BeginCombo("##-script", script.className.data())) {
+//					for (auto className: assetManager().scriptClasses()) {
+//						bool const selected = script.className == className;
+//						if (ImGui::Selectable(className.data(), selected)) {
+//							script.className = className;
+//							script.object = editor().coreSystems().scriptEngine().instanciateObject(className);
+//						}
+//						if (selected) {
+//							ImGui::SetItemDefaultFocus();
+//						}
+//					}
+//					ImGui::EndCombo();
+//				}
+//
+//				if (script.object && beginSubSection("Attributes")) {
+//					auto fields = script.object->get_attrs();
+//					for (auto&& [name, value]: fields) {
+//						if (ScriptHelpers::isReserved(name)) {
+//							continue;
+//						}
+//
+//						beginProperty(name.data());
+//
+//						if (value.get().type() == typeid(std::shared_ptr<float>)) {
+//							editDataField(name, value.get().cast<std::shared_ptr<float>>().get());
+//						}
+//						else if (value.get().type() == typeid(std::shared_ptr<double>)) {
+//							editDataField(name, value.get().cast<std::shared_ptr<double>>().get());
+//						}
+//						else {
+//							editDataField<void>(name, nullptr);
+//						}
+//					}
+//					endSubSection();
+//				}
+//			});
+//			endSection();
+//		}
 	}
 	
 	/// MARK: - Helpers

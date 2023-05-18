@@ -138,7 +138,7 @@ public:
     static void add(std::string name, Entry entry) {
         auto [_, success] = instance().entries.insert({ name, entry });
         if (!success) {
-            poppyLog(fatal, "View '{}' is already registered.");
+            Logger::fatal("View '", name, "' is already registered.");
             BL_DEBUGFAIL();
         }
     }

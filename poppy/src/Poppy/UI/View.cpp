@@ -26,6 +26,7 @@ static int getFreshID() {
 /// MARK: Initialization
 
 /// MARK: Queries
+
 bool View::focused() const { return GImGui->NavWindow == desc.imguiWindow; }
 
 mtl::float2 View::windowSpaceToViewSpace(mtl::float2 position) const {
@@ -37,6 +38,7 @@ mtl::float2 View::viewSpaceToWindowSpace(mtl::float2 position) const {
 }
 
 /// MARK: Modifiers
+
 void View::setFocused() { ImGui::FocusWindow((ImGuiWindow*)desc.imguiWindow); }
 
 void View::maximize() {
@@ -85,6 +87,7 @@ void View::displayEmptyWithReason(std::string_view reason) const {
 }
 
 /// MARK: Private
+
 void View::doInit() {
     if (desc.pub.id < 0) {
         desc.pub.id = getFreshID();
@@ -159,7 +162,7 @@ void View::doOnInput(bloom::InputEvent&) {}
 YAML::Node View::doSerialize() const {
     YAML::Node node;
     node["View Base"]    = desc.pub;
-    node["Derived View"] = this->serialize(); // call to derived
+    node["Derived View"] = this->serialize(); /// Call to derived
     return node;
 }
 
@@ -167,16 +170,16 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
     try {
         ViewDescription const desc = node["View Base"].as<ViewDescription>();
         if (desc.id < 0) {
-            poppyLog(error, "Negative View ID");
+            Logger::error("Negative View ID");
             BL_DEBUGBREAK();
             return nullptr;
         }
 
         auto const entry = ViewRegistry::get(desc.name());
         if (!entry) {
-            poppyLog(error,
-                     "Failed to deserialize View named '{}'",
-                     desc.name());
+            Logger::error("Failed to deserialize View named '",
+                          desc.name(),
+                          "'");
             return nullptr;
         }
 
@@ -188,7 +191,7 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
         return result;
     }
     catch (std::exception const& e) {
-        poppyLog(error, "{}", e.what());
+        Logger::error(e.what());
     }
 
     return nullptr;

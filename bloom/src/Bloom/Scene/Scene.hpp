@@ -18,10 +18,13 @@ class BLOOM_API Scene: public Asset {
 public:
     using Asset::Asset;
     EntityHandle createEntity(std::string_view name);
+
     EntityHandle createEmptyEntity();
+
     EntityHandle createEmptyEntity(EntityID hint);
 
     EntityHandle getHandle(EntityID id) { return EntityHandle(id, this); }
+
     ConstEntityHandle getHandle(EntityID id) const {
         return ConstEntityHandle(id, this);
     }
@@ -40,6 +43,7 @@ public:
         assert(hasComponent<T>(entity) && "ComponentType not present");
         return _registry.get<T>(entity.value());
     }
+
     template <ComponentType T>
     T const& getComponent(EntityID entity) const {
         assert(hasComponent<T>(entity) && "ComponentType not present");
@@ -84,15 +88,19 @@ public:
 
     /// MARK: Serialize
     YAML::Node serialize() const;
+
     void deserialize(YAML::Node const&, AssetManager&);
 
     /// MARK: Hierarchy functionality. Maybe extract this later
     void parent(EntityID child, EntityID parent);
+
     void unparent(EntityID);
 
     // returns true if 'descendend' and 'ancestor' are the same
     bool descendsFrom(EntityID descendend, EntityID ancestor) const;
+
     utl::small_vector<EntityID> gatherRoots() const;
+
     utl::small_vector<EntityID> gatherChildren(EntityID parent) const;
 
     bool isLeaf(EntityID) const;

@@ -11,6 +11,7 @@
 namespace bloom {
 
 BLOOM_API std::filesystem::path resourceDir();
+
 BLOOM_API std::filesystem::path libraryDir();
 
 BLOOM_API void showSavePanel(
@@ -38,6 +39,7 @@ BLOOM_API inline void showOpenPanel(
 }
 
 BLOOM_API std::optional<std::string> readFileText(std::filesystem::path const&);
+
 BLOOM_API std::optional<utl::vector<char>> readFileBinary(
     std::filesystem::path const&);
 

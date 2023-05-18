@@ -29,15 +29,15 @@ POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser", {});
 AssetBrowser::AssetBrowser(): dirView(this) {
     toolbar = {
         ToolbarIconButton("up-open")
-            .onClick([] { poppyLog("Going Up"); })
+            .onClick([] { Logger::trace("Going Up"); })
             .tooltip("Go Up"),
 
         ToolbarIconButton("left-open")
-            .onClick([] { poppyLog("Going Back"); })
+            .onClick([] { Logger::trace("Going Back"); })
             .tooltip("Go Back"),
 
         ToolbarIconButton("right-open")
-            .onClick([] { poppyLog("Going Forward"); })
+            .onClick([] { Logger::trace("Going Forward"); })
             .tooltip("Go Forward"),
 
         ToolbarSpacer{},
@@ -181,7 +181,7 @@ void AssetBrowser::displayNoOpenProject() {
         desc.allowsMultipleSelection = false;
         showOpenPanel(desc, [this](std::filesystem::path const& dir) {
             if (!std::filesystem::exists(dir)) {
-                poppyLog(error, "Directory does not exist: {}", dir);
+                Logger::error("Directory does not exist: ", dir);
             }
             openProject(dir);
         });
@@ -221,7 +221,6 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
         auto const command =
             utl::format("open -a Visual\\ Studio\\ Code.app {}",
                         assetManager->getAbsoluteFilepath(handle));
-
         std::system(command.data());
         break;
     }
@@ -233,7 +232,6 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
 void AssetBrowser::init() {
     assetManager = &editor().coreSystems().assetManager();
     dirView.setAssetManager(assetManager);
-
     if (!data.projectDir.empty()) {
         openProject(data.projectDir);
     }
@@ -263,7 +261,7 @@ void AssetBrowser::importAsset(std::filesystem::path source) {
 
 void AssetBrowser::openProject(std::filesystem::path const& path) {
     if (!path.is_absolute()) {
-        poppyLog(error, "Can't open Project {}");
+        Logger::error("Can't open Project: ", path);
         return;
     }
 

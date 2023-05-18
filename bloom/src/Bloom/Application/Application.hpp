@@ -52,7 +52,7 @@ public:
 
     /// \Returns a reference to the current GPU
     HardwareDevice& device() { return coreSystems().device(); }
-    
+
     CoreSystemManager& coreSystems() { return mCoreSystems; }
 
     Timestep time() const { return mTimer.timestep(); }
@@ -70,14 +70,14 @@ public:
 
 private:
     friend int ::main(int, char const**, char const**);
-    
+
     void run();
     void doInit();
     void registerListeners();
     void doShutdown();
     void doFrame();
     void clearClosingWindows();
-        
+
     CommandLineArgs cmdLineArgs{};
     utl::vector<std::pair<std::unique_ptr<bloom::Window>,
                           std::unique_ptr<bloom::WindowDelegate>>>

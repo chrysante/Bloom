@@ -285,7 +285,7 @@ void EntityInspector::recieveMeshDragDrop(bloom::EntityHandle entity) {
         return;
     }
     auto const handle = *payload;
-    poppyLog(trace, "Recieved Asset: {}", assetManager().getName(handle));
+    Logger::trace("Recieved Asset: ", assetManager().getName(handle));
 
     auto asset = as<StaticMesh>(assetManager().get(handle));
     assert(!!asset);
@@ -303,7 +303,7 @@ void EntityInspector::recieveMaterialDragDrop(bloom::EntityHandle entity) {
         return;
     }
     auto const handle = *payload;
-    poppyLog(trace, "Recieved Asset: {}", assetManager().getName(handle));
+    Logger::trace("Recieved Asset: ", assetManager().getName(handle));
 
     auto materialInstance = as<MaterialInstance>(assetManager().get(handle));
     assert((bool)materialInstance);

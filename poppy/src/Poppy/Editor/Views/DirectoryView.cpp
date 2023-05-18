@@ -27,12 +27,11 @@ std::optional<bloom::AssetHandle> poppy::acceptAssetDragDrop(
         utl::scope_guard endDDTarget = [] { ImGui::EndDragDropTarget(); };
         auto* const payload =
             ImGui::AcceptDragDropPayload(toDragDropType(type).data());
-
         if (payload && payload->IsPreview()) {
-            poppyLog(info, "Preview");
+            Logger::info("Preview");
         }
         if (payload && payload->IsDelivery()) {
-            poppyLog(info, "Delivered");
+            Logger::info("Delivered");
             AssetHandle recievedAsset;
             std::memcpy(&recievedAsset, payload->Data, sizeof recievedAsset);
             return recievedAsset;
@@ -199,9 +198,10 @@ bool DirectoryView::displayItem(std::string_view label,
             renaming     = -1;
             renameBuffer = {};
         }
-        poppyLog("ItemID: {}, FocusID: {}",
-                 ImGui::GetItemID(),
-                 ImGui::GetFocusID());
+        Logger::trace("ItemID: ",
+                      ImGui::GetItemID(),
+                      ", FocusID: ",
+                      ImGui::GetFocusID());
     }
     else {
         localCursor.y += params.itemSize.y - params.labelHeight / 2;

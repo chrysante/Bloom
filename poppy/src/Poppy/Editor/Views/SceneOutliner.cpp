@@ -229,7 +229,7 @@ void SceneOutliner::dragDropTarget(bloom::EntityHandle parent) {
                              }
                          }
                          else {
-                             poppyLog(warning, "Hierarchy Error");
+                             Logger::warn("Hierarchy Error");
                          }
                      }));
         }

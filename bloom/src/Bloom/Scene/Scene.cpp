@@ -237,7 +237,7 @@ BLOOM_API void Scene::deserialize(YAML::Node const& root,
             }
         }
 
-        // sanitize relationship among siblings
+        /// Sanitize relationship among siblings
         if (entity.prevSibling) {
             assert(!!entity.nextSibling);
             auto const leftSibling =
@@ -300,30 +300,25 @@ void Scene::parent(EntityID c, EntityID p) {
 
 void Scene::unparent(EntityID c) {
     auto& child = getComponent<HierarchyComponent>(c);
-
     if (!child.parent) {
         return;
     }
-
     auto& parent       = getComponent<HierarchyComponent>(child.parent);
     auto& leftSibling  = getComponent<HierarchyComponent>(child.prevSibling);
     auto& rightSibling = getComponent<HierarchyComponent>(child.nextSibling);
-
     /// Remove element from circular linked list
     leftSibling.nextSibling  = child.nextSibling;
     rightSibling.prevSibling = child.prevSibling;
-
-    if (c == parent.firstChild) { // adjust begin/end nodes if we were those
+    /// Adjust begin/end nodes if we were those
+    if (c == parent.firstChild) {
         parent.firstChild = child.nextSibling;
     }
     if (c == parent.lastChild) {
         parent.lastChild = child.prevSibling;
     }
-
-    // either both are true or neither is true
+    /// Either both are true or neither is true
     assert(!((parent.firstChild == c) ^ (parent.lastChild == c)));
-
-    // only one element was in the list
+    /// Only one element was in the list
     if (parent.firstChild == c) {
         assert(c == child.prevSibling);
         assert(c == child.nextSibling);
@@ -331,20 +326,15 @@ void Scene::unparent(EntityID c) {
         parent.lastChild  = {};
         parent.firstChild = {};
     }
-
     auto& t = getComponent<Transform>(c);
-
     mtl::float4x4 const parentWorldTransform =
         calculateTransformRelativeToWorld(child.parent);
     mtl::float4x4 const childWorldTransform =
         parentWorldTransform * t.calculate();
-
-    t = Transform::fromMatrix(childWorldTransform);
-
+    t                 = Transform::fromMatrix(childWorldTransform);
     child.parent      = {};
     child.prevSibling = {};
     child.nextSibling = {};
-
 #if BLOOM_DEBUGLEVEL
     sanitizeHierachy(this);
 #endif
@@ -355,10 +345,8 @@ bool Scene::descendsFrom(EntityID descended, EntityID ancestor) const {
         return false;
     }
     assert(hasComponent<HierarchyComponent>(descended));
-    //		assert(hasComponent<HierarchyComponent>(ancestor)); // not
-    // really necessary but here for good measure. Edit: entity may be null
-
-    // walk up the tree until we find our potentil ancestor or the root
+    assert(hasComponent<HierarchyComponent>(ancestor));
+    /// Walk up the tree until we find our potentil ancestor or the root
     do {
         if (descended == ancestor) {
             return true;
@@ -406,13 +394,11 @@ bool Scene::isLeaf(EntityID entity) const {
 
 mtl::float4x4 Scene::calculateTransformRelativeToWorld(EntityID entity) const {
     mtl::float4x4 result = 1;
-
     while (entity) {
         assert(hasComponent<HierarchyComponent>(entity) &&
                "This API is supposed to be used with hierarchical entities");
         result *= getComponent<Transform>(entity).calculate();
         entity = getComponent<HierarchyComponent>(entity).parent;
     }
-
     return result;
 }

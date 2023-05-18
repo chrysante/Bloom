@@ -26,47 +26,49 @@ struct EditorWindowDelegate: public bloom::WindowDelegate {
 };
 
 Editor::Editor(): mSelection(makeReciever()) {
-    dockspace.setLeftToolbar(
-        { ToolbarDropdownMenu().icon([] { return "menu"; }).content([] {
-             ImGui::Text("fndsjsnsaf");
-         }),
-
-          ToolbarSpacer{},
-
-          ToolbarIconButton([this] {
-              return "play";
-              //				return sceneSystem().isSimulating() ? "stop" :
-              //"play";
-          })
-              .onClick([this] {
-                  //				sceneSystem().isSimulating() ?
-                  // stopSimulation() : startSimulation();
+    // clang-format off
+    dockspace.setLeftToolbar({
+        ToolbarDropdownMenu()
+            .icon([] { return "menu"; })
+            .content([] {
+                ImGui::Text("fndsjsnsaf");
+            }),
+        ToolbarSpacer{},
+        ToolbarIconButton([this] {
+            return "play";
+//            return sceneSystem().isSimulating() ? "stop" : "play";
+        })
+            .onClick([this] {
+//                sceneSystem().isSimulating() ? stopSimulation() :
+//                                               startSimulation();
               })
               .enabled([this] {
                   return false;
-                  //				return !!sceneSystem().getScene();
+//                  return !!sceneSystem().getScene();
               }) });
 
-    dockspace.setCenterToolbar({ ToolbarIconButton("plus").onClick(
-                                     [] { poppyLog("Some Button Pressed"); }),
-
-                                 ToolbarIconButton("bank").onClick(
-                                     [] { poppyLog("Some Button Pressed"); }),
-
-                                 ToolbarSpacer{},
-
-                                 ToolbarIconButton("cw")
-                                     .onClick([this] {
-                                         dispatch(DispatchToken::nextFrame,
-                                                  ReloadShadersCommand{});
-                                     })
-                                     .tooltip("Reload Shaders") });
-
-    dockspace.setRightToolbar({ ToolbarIconButton("attention-circled"),
-
-                                ToolbarSpacer{},
-
-                                ToolbarIconButton("menu") });
+    dockspace.setCenterToolbar({
+        ToolbarIconButton("plus").onClick([] {
+            Logger::trace("Some Button Pressed");
+        }),
+        ToolbarIconButton("bank")
+            .onClick([] {
+                Logger::trace("Some Button Pressed");
+            }),
+        ToolbarSpacer{},
+        ToolbarIconButton("cw")
+            .onClick([this] {
+                dispatch(DispatchToken::nextFrame,
+                         ReloadShadersCommand{});
+            })
+            .tooltip("Reload Shaders")
+    });
+    dockspace.setRightToolbar({
+        ToolbarIconButton("attention-circled"),
+        ToolbarSpacer{},
+        ToolbarIconButton("menu")
+    });
+    // clang-format on
 }
 
 utl::vector<View*> Editor::getViews() {
@@ -82,7 +84,7 @@ utl::vector<View*> Editor::getViews() {
 void Editor::openView(std::string name, utl::function<void(View&)> completion) {
     auto const entry = ViewRegistry::get(name);
     if (!entry) {
-        poppyLog(warning, "Could not find View '{}'", name);
+        Logger::warn("Could not find View '", name, "'");
         return;
     }
 
@@ -121,7 +123,7 @@ void Editor::init() {
 
     /* Initialize ImGui */ {
         ImGuiContextDescription desc;
-        desc.iniFilePath = bloom::libraryDir() / "Poppy/imgui.ini";
+        desc.iniFilePath = bloom::libraryDir() / "imgui.ini";
         imguiCtx.init(*this, desc);
     }
 
@@ -131,7 +133,6 @@ void Editor::init() {
 /// MARK: Shutdown
 void Editor::shutdown() {
     saveStateToDisk();
-
     imguiCtx.shutdown();
 }
 
@@ -159,15 +160,14 @@ void Editor::frame() {
 void Editor::menuBar() {
     ImGui::BeginMainMenuBar();
     if (ImGui::BeginMenu("File")) {
-        //			if (ImGui::MenuItem("New Scene...")) {
-        ////				newScene();
-        //			}
+        if (ImGui::MenuItem("New Scene...")) {
+            // newScene();
+        }
         if (ImGui::MenuItem("Save")) {
             saveAll();
         }
         ImGui::EndMenu();
     }
-
     if (ImGui::BeginMenu("Views")) {
         ViewRegistry::forEach([&](std::string_view name, auto const& entry) {
             auto const [desc, factory, _] = entry;
@@ -181,12 +181,10 @@ void Editor::menuBar() {
 
         ImGui::EndMenu();
     }
-
     debugViews.menubar();
-
     if (ImGui::BeginMenu("Profile")) {
         if (ImGui::MenuItem("Profiler")) {
-            //				profileView.open();
+            // profileView.open();
         }
         ImGui::EndMenu();
     }
@@ -210,9 +208,9 @@ void Editor::displayViews() {
 }
 
 /// MARK: Serialization
+
 void Editor::onInput(bloom::InputEvent e) {
     imguiCtx.onInput(e);
-
     e.dispatch<InputEventType::keyUp>([&](KeyEvent event) {
         if (event.key == Key::S && test(event.modifierFlags & ModFlags::super))
         {
@@ -221,11 +219,9 @@ void Editor::onInput(bloom::InputEvent e) {
         }
         return false;
     });
-
     if (e.handled()) {
         return;
     }
-
     auto const focusedView =
         std::find_if(views.begin(), views.end(), [](auto const& v) {
             return v->focused();
@@ -236,7 +232,7 @@ void Editor::onInput(bloom::InputEvent e) {
             return;
         }
     }
-    // give to all unfocused panels
+    /// Give to all unfocused panels
     for (auto& view: views) {
         if (view->focused()) {
             continue;
@@ -251,16 +247,14 @@ void Editor::onInput(bloom::InputEvent e) {
 /// MARK: Serialization
 void Editor::saveStateToDisk() {
     YAML::Node root;
-
     root["Appearance"] = appearance.serialize();
     root["Views"]      = saveViews();
-
     YAML::Emitter out;
     out << root;
     auto const filename = settingsFile();
     std::fstream file(filename, std::ios::out);
     if (!file) {
-        poppyLog(error, "Failed to save to file {}", filename);
+        Logger::error("Failed to save to file: ", filename);
         return;
     }
     file << out.c_str();
@@ -272,9 +266,7 @@ void Editor::loadStateFromDisk() {
         return;
     }
     YAML::Node root = YAML::Load(*text);
-
     appearance.deserialize(root["Appearance"]);
-
     loadViews(root["Views"]);
 }
 
@@ -285,6 +277,7 @@ YAML::Node Editor::saveViews() {
     }
     return node;
 }
+
 void Editor::loadViews(YAML::Node const& node) {
     views.clear();
     for (auto viewData: node) {
@@ -298,8 +291,9 @@ void Editor::loadViews(YAML::Node const& node) {
 }
 
 /// MARK: Misc
+
 std::filesystem::path Editor::settingsFile() const {
-    return libraryDir() / "Poppy/settings.ini";
+    return libraryDir() / "settings.ini";
 }
 
 View& Editor::createView(ViewRegistry::Entry const& entry, Window& window) {
@@ -327,7 +321,6 @@ void Editor::populateView(View& view, bloom::Window& window) {
 void Editor::clearClosingViews() {
     for (auto itr = views.begin(); itr != views.end();) {
         auto& view = *itr;
-
         if (view->shouldClose()) {
             view->doShutdown();
             itr = views.erase(itr);
@@ -340,8 +333,7 @@ void Editor::clearClosingViews() {
 
 void Editor::saveAll() {
     coreSystems().assetManager().saveAll();
-    //		for (auto& scene:
-    // utl::transform_range(coreSystems().sceneSystem().scenes(), utl::deref)) {
-    //			coreSystems().assetManager().saveToDisk(scene.handle());
-    //		}
+    for (auto* scene: coreSystems().sceneSystem().scenes()) {
+        coreSystems().assetManager().saveToDisk(scene->handle());
+    }
 }

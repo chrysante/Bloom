@@ -4,9 +4,6 @@
 
 namespace bloom {
 
-class SceneCamera {
-public:
-private:
-};
+class SceneCamera {};
 
 } // namespace bloom

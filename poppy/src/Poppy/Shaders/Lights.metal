@@ -4,7 +4,8 @@ using namespace metal;
 
 namespace bloom {
 	
-	/// MARK: Lights
+    /// **Lights**
+    
 	float3 calculatePointLight(PBRData pbrData, PointLight light, float3 V, float3 N, float3 worldPosition) {
 		float3 const L = normalize(light.position - worldPosition);
 		float3 const H = normalize(V + L);
@@ -46,14 +47,15 @@ namespace bloom {
 		return PBRLighting(pbrData, radiance, N, V, L, H);
 	}
 	
-	/// MARK: Shadows
-	static bool isInLightFrustum(float3 const projCoords) {
+	/// ** Shadows **
+
+    static bool isInLightFrustum(float3 const projCoords) {
 		bool3 const result = projCoords >= 0 && projCoords <= 1;
 		return result.x && result.y && result.z;
 	}
 
 	static float3 calculateLightProjection(float4 const positionLightSpace) {
-		// perform perspective divide
+		/// Perform perspective divide
 		float3 projCoords = positionLightSpace.xyz / positionLightSpace.w;
 		projCoords.y *= -1;
 		projCoords.xy = projCoords.xy * 0.5 + 0.5;
@@ -69,15 +71,12 @@ namespace bloom {
 		if (!isInLightFrustum(projCoords)) {
 			return 1.0;
 		}
-	
 		float const closestDepth = shadowMap.sample(shadowMapSampler,
 													projCoords.xy,
 													shadowMapIndex).r;
-		
-		// get depth of current fragment from light's perspective
+		/// Get depth of current fragment from light's perspective
 		float const currentDepth = projCoords.z;
 		float shadow = currentDepth > closestDepth  ? 0.0 : 1.0;
-
 		return shadow;
 	}
 
@@ -91,7 +90,6 @@ namespace bloom {
 	{
 		float shadow = 1;
 		for (int j = numCascades - 1; j >= 0; --j) {
-			
 			int const shadowMapIndex = shadowMapOffset + j;
 			float4 const positionLightSpace = lightSpaceTransforms[shadowMapIndex] * worldPosition;
 			float3 const projLightCoords = calculateLightProjection(positionLightSpace);
@@ -128,7 +126,6 @@ namespace bloom {
 		float3 shadowViz = 0.5;
 		for (int j = numCascades - 1; j >= 0; --j) {
 			int const lightMapIndex = shadowMapOffset + j;
-			
 			float4 const positionLightSpace = lightSpaceTransforms[lightMapIndex] * worldPosition;
 			float3 const projLightCoords = calculateLightProjection(positionLightSpace);
 			bool const isInFrustum = isInLightFrustum(projLightCoords);

@@ -33,12 +33,10 @@ Viewport::Viewport(): BasicSceneInspector(this) {
 
         ToolbarSpacer{},
 
-        //			ToolbarDropdownMenu().content([this]{
-        //				enumCombo(drawOptions.mode);
-        //			}).previewValue([this]{
-        //				return toString(drawOptions.mode);
-        //			}),
-
+        ToolbarDropdownMenu().content(
+                                 [this] {
+        enumCombo(drawOptions.mode);
+        }).previewValue([this] { return toString(drawOptions.mode); }),
         ToolbarDropdownMenu()
             .content([this] {
                 auto operation = gizmo.operation();
@@ -77,22 +75,18 @@ Viewport::Viewport(): BasicSceneInspector(this) {
                              window().makeFullscreen();
                          }
                      } });
-        })
-    };
+        }) };
 }
 
 void Viewport::init() {
     setPadding(0);
-
     toolbar.setStyle({
         .height             = 25,
         .buttonAlpha        = 1,
         .buttonAlphaHovered = 1,
         .buttonAlphaActive  = 1,
     });
-
     sceneRenderer.setRenderer(editor().coreSystems().renderer());
-
     gizmo.setInput(window().input());
     overlays.init(this);
 }
@@ -107,7 +101,6 @@ void Viewport::frame() {
     else {
         displayScene();
     }
-
     /* Display toolbar with padding */ {
         float2 const padding = GImGui->Style.WindowPadding;
         ImGui::SetCursorPos(padding);
@@ -122,17 +115,14 @@ void Viewport::frame() {
                                         ImGui::ColorConvertFloat4ToU32(color));
         toolbar.display(size().x - 2 * padding.x);
     }
-
     if (!scenes().empty()) {
         auto const wantsInput =
             detectViewportInput(ImGuiButtonFlags_MouseButtonRight);
         viewportHovered = wantsInput.hovered;
         if (wantsInput.held) {
-#warning Magic Var
             camera.update(Timestep{ 0, 0.166 }, window().input());
         }
     }
-
     if (/*!isSimulating() && */ GImGui->DragDropActive) {
         float const spacing = 6.5;
         ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
@@ -143,7 +133,6 @@ void Viewport::frame() {
         ImGui::PopItemFlag();
         recieveSceneDragDrop();
     }
-
     ImGui::EndChild();
 }
 
@@ -163,7 +152,6 @@ void Viewport::deserialize(YAML::Node node) {
 void* Viewport::selectImage() const {
     auto* const fwFramebuffer =
         dynamic_cast<ForwardRendererFramebuffer*>(framebuffer.get());
-
     if (fwFramebuffer && params.framebufferSlot !=
                              Parameters::FramebufferElements::postprocessed)
     {
@@ -176,15 +164,12 @@ void* Viewport::selectImage() const {
             break;
         }
     }
-
     if (!gameView) {
         return editorFramebuffer->composed.nativeHandle();
     }
-
     if (fwFramebuffer) {
         return fwFramebuffer->postProcessed.nativeHandle();
     }
-
     return nullptr;
 }
 
@@ -194,14 +179,11 @@ void Viewport::displayScene() {
         return;
     }
     drawScene();
-
     void* const image = selectImage();
     if (!image) {
         return;
     }
-
     ImGui::Image(image, ImGui::GetWindowSize());
-
     if (!gameView) {
         overlays.display();
         gizmo.display(camera.camera, selection());
@@ -214,10 +196,8 @@ void Viewport::drawScene() {
     }
     POPPY_PROFILE(frame);
     camera.applyProjection(framebuffer->size);
-
     auto& sceneSystem = editor().coreSystems().sceneSystem();
     sceneSystem.applyTransformHierarchy();
-
     if (gameView) {
         sceneRenderer.draw(sceneSystem.scenes(),
                            camera.camera,
@@ -226,7 +206,6 @@ void Viewport::drawScene() {
     }
     else {
         OverlayDrawDescription desc;
-
         sceneRenderer.drawWithOverlays(sceneSystem.scenes(),
                                        editor().selection(),
                                        camera.camera,
@@ -242,7 +221,6 @@ void Viewport::updateFramebuffer() {
     if (!framebuffer || framebuffer->size != framebufferTargetSize) {
         framebuffer =
             sceneRenderer.renderer().createFramebuffer(framebufferTargetSize);
-
         if (auto* const editorRenderer =
                 dynamic_cast<EditorRenderer*>(&sceneRenderer.renderer()))
         {
@@ -258,23 +236,18 @@ void Viewport::onInput(bloom::InputEvent& event) {
         if (!viewportHovered || gizmo.isHovered() || gameView) {
             return false;
         }
-
         auto const locationInView = windowSpaceToViewSpace(e.locationInWindow);
-
         if (auto const entity = overlays.hitTest(locationInView)) {
             selection().select(entity);
             return true;
         }
-
         if (auto const entity = readEntityID(locationInView)) {
             selection().select(entity);
             return true;
         }
-
         selection().clear();
         return true;
     });
-
     event.dispatch<bloom::InputEventType::keyDown>(
         [&](bloom::KeyEvent const& e) {
         using bloom::Key;
@@ -291,13 +264,10 @@ void Viewport::onInput(bloom::InputEvent& event) {
         case Key::_3:
             gizmo.setOperation(Gizmo::Operation::scale);
             break;
-
         case Key::escape:
             restore();
-
         case Key::G:
             gameView ^= true;
-
         default:
             break;
         }
@@ -312,19 +282,15 @@ void Viewport::debugPanel() {
             }
         });
     };
-
     ImGui::Begin("Viewport Debug");
-
     float4x4 const view = camera.camera.view();
     float4x4 const proj = camera.camera.projection();
-
     withFont(Font::UIDefault().setWeight(FontWeight::semibold),
              [&] { ImGui::Text("View Matrix:"); });
     matrix(view);
     withFont(Font::UIDefault().setWeight(FontWeight::semibold),
              [&] { ImGui::Text("Projection Matrix:"); });
     matrix(proj);
-
     ImGui::End();
 }
 
@@ -358,59 +324,61 @@ void Viewport::dropdownMenu() {
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         ImGui::SliderFloat("##near-clip-plane", &camera.data.nearClip, 0, 1);
 
-        //			beginProperty("Visualize Shadow Cascades");
-        //			if (ImGui::Checkbox("##viz-shadow-cascades",
-        //&drawOptions.visualizeShadowCascades) &&
-        //! drawOptions.lightVizEntity)
-        //			{
-        //				// search for first dir light entity
-        //				for (auto scene: scenes()) {
-        //					for (auto&& [entity, light]:
-        // scene->view<DirectionalLightComponent const>().each()) {
-        // if (light.light.castsShadows) {
-        // drawOptions.lightVizEntity = scene->getHandle(entity);
-        // break;
-        //						}
-        //					}
-        //				}
-        //			}
-
-        //			if (drawOptions.visualizeShadowCascades) {
-        //				EntityID const lightEntity{ drawOptions.lightVizEntityID
-        //};
-        //
-        //				char const* preview = nullptr;
-        //				if (!lightEntity ||
-        //					getLightType(lightEntity) == LightType::none
-        //||
-        //					!scene()->getComponent<DirectionalLightComponent>(lightEntity).light.castsShadows)
-        //				{
-        //					preview = "Select Shadow Caster";
-        //				}
-        //				else {
-        //					preview =
-        // scene()->getComponent<TagComponent>(lightEntity).name.data();
-        //				}
-        //
-        //				beginProperty("Shadow Caster");
-        //				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        //				if (ImGui::BeginCombo("##shadow-caster", preview,
-        // ImGuiComboFlags_NoArrowButton))
-        //				{
-        //					if (scene()) {
-        //						for (auto&& [entity, light, tag]:
-        // scene()->view<DirectionalLightComponent const, TagComponent
-        // const>().each()) { 							if
-        // (light.light.castsShadows
-        // && ImGui::Selectable(tag.name.data())) {
-        // drawOptions.lightVizEntityID = (uint32_t)entity;
-        //							}
-        //						}
-        //					}
-        //					ImGui::EndCombo();
-        //				}
-        //			}
-
+        beginProperty("Visualize Shadow Cascades");
+        if (ImGui::Checkbox("##viz-shadow-cascades",
+                            &drawOptions.visualizeShadowCascades) &&
+            !drawOptions.lightVizEntity)
+        {
+            /// Search for first dir light entity
+            for (auto scene: scenes()) {
+                for (auto&& [entity, light]:
+                     scene->view<DirectionalLightComponent const>().each())
+                {
+                    if (light.light.castsShadows) {
+                        drawOptions.lightVizEntity = scene->getHandle(entity);
+                        break;
+                    }
+                }
+            }
+        }
+        if (drawOptions.visualizeShadowCascades) {
+            auto lightEntity    = drawOptions.lightVizEntity;
+            auto* scene         = &lightEntity.scene();
+            char const* preview = nullptr;
+            if (!lightEntity || getLightType(lightEntity) == LightType::none ||
+                !scene->getComponent<DirectionalLightComponent>(lightEntity)
+                     .light.castsShadows)
+            {
+                preview = "Select Shadow Caster";
+            }
+            else {
+                preview =
+                    scene->getComponent<TagComponent>(lightEntity).name.data();
+            }
+            beginProperty("Shadow Caster");
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::BeginCombo("##shadow-caster",
+                                  preview,
+                                  ImGuiComboFlags_NoArrowButton))
+            {
+                if (scene) {
+                    for (auto&& [entity, light, tag]:
+                         scene
+                             ->view<DirectionalLightComponent const,
+                                    TagComponent const>()
+                             .each())
+                    {
+                        if (light.light.castsShadows &&
+                            ImGui::Selectable(tag.name.data()))
+                        {
+                            drawOptions.lightVizEntity =
+                                ConstEntityHandle(entity, scene);
+                        }
+                    }
+                }
+                ImGui::EndCombo();
+            }
+        }
         endSection();
     }
 

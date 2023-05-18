@@ -34,38 +34,36 @@ struct StyleVars {
     float windowTitleAlign = 0.5;
 };
 
-using UIColor = mtl::float4;
-
 struct StyleColorDescription {
-    UIColor controlFrame;
-    UIColor controlFrameHovered;
-    UIColor controlFrameDown;
+    mtl::float4 controlFrame;
+    mtl::float4 controlFrameHovered;
+    mtl::float4 controlFrameDown;
 
-    UIColor highlightControlFrame;
-    UIColor highlightControlFrameHovered;
-    UIColor highlightControlFrameDown;
+    mtl::float4 highlightControlFrame;
+    mtl::float4 highlightControlFrameHovered;
+    mtl::float4 highlightControlFrameDown;
 
-    UIColor checkMark;
+    mtl::float4 checkMark;
 
-    UIColor tab;
-    UIColor tabActive;
-    UIColor tabUnfocused;
-    UIColor tabUnfocusedActive;
+    mtl::float4 tab;
+    mtl::float4 tabActive;
+    mtl::float4 tabUnfocused;
+    mtl::float4 tabUnfocusedActive;
 
-    UIColor text = { 0, 0, 0, 1 };
-    UIColor textDisabled;
-    UIColor windowBG = { 0, 0, 1, 1 };
-    UIColor popupBG;
-    UIColor menubarBG;
+    mtl::float4 text = { 0, 0, 0, 1 };
+    mtl::float4 textDisabled;
+    mtl::float4 windowBG = { 0, 0, 1, 1 };
+    mtl::float4 popupBG;
+    mtl::float4 menubarBG;
 
-    UIColor border;
+    mtl::float4 border;
 
-    UIColor windowTitleBar;
-    UIColor activeWindowTitleBar;
+    mtl::float4 windowTitleBar;
+    mtl::float4 activeWindowTitleBar;
 
-    UIColor separator;
-    UIColor scrollbar;
-    UIColor dockPreview;
+    mtl::float4 separator;
+    mtl::float4 scrollbar;
+    mtl::float4 dockPreview;
 };
 
 struct StyleColors {

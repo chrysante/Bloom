@@ -145,28 +145,22 @@ void Appearance::deserialize(YAML::Node root) {
     catch (...) {
         Logger::error("Failed to load Appearance");
     }
-
     update();
 }
 
 YAML::Node Appearance::serialize() const {
     YAML::Node root;
-
     root["Light Color Description"] = lightColorDesc;
     root["Dark Color Description"]  = darkColorDesc;
     root["Style Vars"]              = mStyle.vars;
-
     return root;
 }
 
 void Appearance::showInspector(bool* open) {
     ImGui::Begin("Style Editor");
-
-    bool update = false;
-
+    bool update                = false;
     char const* const names[2] = { "Dark", "Light" };
     update |= ImGui::Combo("Style", (int*)&mType, names, 2);
-
     if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None)) {
         if (ImGui::BeginTabItem("Sizes")) {
             ImGui::Text("Borders");
@@ -245,7 +239,7 @@ void Appearance::showInspector(bool* open) {
         }
 
         if (ImGui::BeginTabItem("Colors")) {
-            auto item = [&](char const* name, UIColor& color) -> bool {
+            auto item = [&](char const* name, mtl::float4& color) -> bool {
                 bool const result =
                     ImGui::ColorEdit4(name,
                                       color.data(),

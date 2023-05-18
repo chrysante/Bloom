@@ -448,12 +448,10 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
     if (scene.shadows.numShadowCasters == 0) {
         return;
     }
-
     std::size_t const numShadowMaps =
         std::accumulate(scene.shadows.numCascades.begin(),
                         scene.shadows.numCascades.end(),
                         0);
-
     if (numShadowMaps > scene.shadows.shadowMapArrayLength ||
         scene.shadows.needsNewShadowMaps)
     {
@@ -464,10 +462,8 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
         scene.shadows.shadowMapArrayLength = numShadowMaps;
         scene.shadows.needsNewShadowMaps   = false;
     }
-
     std::unique_ptr _ctx = commandQueue.createRenderContext();
     auto& ctx            = *_ctx;
-
     RenderPassDescription desc{};
     RenderPassDepthAttachmentDescription dDesc{};
     dDesc.texture                = renderObjects.shadows.shadowMaps;
@@ -480,7 +476,6 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
     ctx.setPipeline(renderObjects.shadows.pipeline);
     ctx.setTriangleCullMode(TriangleCullMode::front); /// TODO: temporary
     ctx.setDepthStencil(renderObjects.depthStencil);
-
     ctx.setVertexBuffer(renderObjects.parameterBuffer,
                         0,
                         offsetof(RendererParameters, scene));
@@ -493,9 +488,7 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
             ctx.setVertexBuffer(currentMesh->vertexBuffer(), 1);
         }
         ctx.setVertexBufferOffset(2, index * sizeof(float4x4));
-
         BufferView indexBuffer = object.mesh->indexBuffer();
-
         DrawDescription desc{};
         desc.indexCount    = indexBuffer.size() / 4;
         desc.indexType     = IndexType::uint32;

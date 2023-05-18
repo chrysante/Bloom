@@ -48,9 +48,7 @@ SystemAppearance SystemAppearance::getCurrent() {
 
 SystemAppearance SystemAppearance::get(AppearanceType type) {
     __block SystemAppearance result{};
-    
     result.type = SystemAppearance::getCurrentType();
-    
     [[NSAppearance appearanceNamed:toNSType(type)] performAsCurrentDrawingAppearance:^(){
         result.labelColor                                 = convertColor(NSColor.labelColor);
         result.secondaryLabelColor                        = convertColor(NSColor.secondaryLabelColor);

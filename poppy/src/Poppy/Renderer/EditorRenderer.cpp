@@ -222,7 +222,7 @@ void EditorRenderer::compositionPass(Framebuffer& framebuffer,
                                      EditorFramebuffer& editorFramebuffer,
                                      bloom::CommandQueue& commandQueue,
                                      OverlayDrawDescription const& drawDesc) {
-    /* upload Editor Draw Data */ {
+    /* Upload Editor Draw Data */ {
         EditorDrawData drawData;
         drawData.overlayDrawDesc = drawDesc;
         device().fillManagedBuffer(editorDrawDataBuffer,

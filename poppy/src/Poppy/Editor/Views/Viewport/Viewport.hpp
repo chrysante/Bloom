@@ -57,7 +57,7 @@ public:
         } framebufferSlot = FramebufferElements::postprocessed;
     };
 
-    struct DebugDrawData {
+    struct DebugDrawOptions {
         enum class Mode { lit = 0, wireframe, _count };
         Mode mode = Mode::lit;
 
@@ -71,6 +71,7 @@ public:
     Gizmo gizmo;
 
     Parameters params;
+    DebugDrawOptions drawOptions;
 
     ViewportCameraController camera;
 
@@ -83,7 +84,7 @@ public:
     bool gameView        = false;
 };
 
-inline std::string toString(Viewport::DebugDrawData::Mode mode) {
+inline std::string toString(Viewport::DebugDrawOptions::Mode mode) {
     return std::array{ "Lit", "Wireframe" }[(std::size_t)mode];
 };
 

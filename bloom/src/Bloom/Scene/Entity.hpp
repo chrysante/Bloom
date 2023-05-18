@@ -52,6 +52,7 @@ public:
         : EntityID(rhs), _scene(rhs._scene) {}
 
     SceneT& scene() const { return *_scene; }
+
     EntityID id() const { return *this; }
 
     using EntityID::operator=;

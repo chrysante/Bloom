@@ -15,12 +15,15 @@ class Camera;
 class BLOOM_API SceneRenderer {
 public:
     SceneRenderer() = default;
+
     SceneRenderer(Renderer&);
 
     void setRenderer(Renderer& renderer);
+
     Renderer& renderer() const { return *mRenderer; }
 
     void draw(Scene const&, Camera const&, Framebuffer&, CommandQueue&);
+
     void draw(std::span<Scene const* const>,
               Camera const&,
               Framebuffer&,

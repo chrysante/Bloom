@@ -10,6 +10,11 @@ std::filesystem::path bloom::resourceDir() {
 }
 
 std::filesystem::path bloom::libraryDir() {
+    /// For now we store or config files in the apps resource directory, because
+    /// I just can't figure out how to get permission to write to the ~/Library
+    /// directory
+    return "lib";
+    
     NSError* error;
     NSURL *fileURL =
         [[NSFileManager defaultManager] URLForDirectory: NSLibraryDirectory

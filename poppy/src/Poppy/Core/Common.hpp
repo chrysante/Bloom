@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace poppy {
-	
-	using WChar = std::uint16_t;
-	
+
+using WChar = std::uint16_t;
+
 }

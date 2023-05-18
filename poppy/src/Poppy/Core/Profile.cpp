@@ -1,8 +1,8 @@
-#include "Profile.hpp"
+#include "Poppy/Core/Profile.hpp"
 
 namespace poppy {
-	
-	bloom::Profile Profilers::frame;
-	bloom::Profile Profilers::init;
-	
-}
+
+bloom::Profile Profilers::frame;
+bloom::Profile Profilers::init;
+
+} // namespace poppy

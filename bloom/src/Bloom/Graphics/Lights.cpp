@@ -1,9 +1,3 @@
-#include "Lights.hpp"
+#include "Bloom/Graphics/Lights.hpp"
 
-
-
-namespace bloom {
-	
-
-	
-}
+namespace bloom {}

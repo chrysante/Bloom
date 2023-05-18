@@ -2,14 +2,15 @@
 
 #ifdef BLOOM_PLATFORM_APPLE
 
-#define BLOOM_AUTORELEASE_BEGIN ::bloom::autoreleased([&]{
-#define BLOOM_AUTORELEASE_END   });
+// clang-format off
+#define BLOOM_AUTORELEASE_BEGIN ::bloom::autoreleased([&] {
+#define BLOOM_AUTORELEASE_END  });
+// clang-format on
 
 #else
 
 #define BLOOM_AUTORELEASE_BEGIN
-#define BLOOM_AUTORELEASE_END   
-
+#define BLOOM_AUTORELEASE_END
 
 #endif
 
@@ -18,10 +19,9 @@
 #include <utl/functional.hpp>
 
 namespace bloom {
-	
-	void BLOOM_API autoreleased(utl::function<void()> const&);
-	
-}
 
+void BLOOM_API autoreleased(utl::function<void()> const&);
+
+}
 
 #endif

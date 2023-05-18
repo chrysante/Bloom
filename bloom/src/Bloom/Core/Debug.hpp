@@ -14,19 +14,9 @@
 #define BLOOM_LOGLEVEL 1
 #endif
 
-#define bloomAssert(...) \
-    assert(__VA_ARGS__)
-#define bloomExpect(...) \
-    assert(__VA_ARGS__)
-#define bloomEnsure(...) \
-    assert(__VA_ARGS__)
-#define bloomDebugbreak(msg) \
-	__builtin_debugtrap()
-#define bloomDebugfail(msg) \
-    __builtin_trap()
-#define bloomBoundsCheck(index, lower, upper) \
-    assert(index >= lower && index < upper)
+#define BL_DEBUGBREAK(msg) __builtin_debugtrap()
+#define BL_DEBUGFAIL(msg)  __builtin_trap()
 
-#define bloomLog(...)
+#define BL_LOG(...)
 
 #endif // BLOOM_CPP

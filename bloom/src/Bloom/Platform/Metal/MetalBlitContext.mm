@@ -1,16 +1,13 @@
-#include "MetalBlitContext.h"
+#include "Bloom/Platform/Metal/MetalBlitContext.h"
 
-namespace bloom {
+using namespace bloom;
 	
-	MetalBlitContext::MetalBlitContext(id<MTLCommandBuffer> commandBuffer):
-		commandBuffer(commandBuffer)
-	{
-		
-	}
-	
-	void MetalBlitContext::commit() {
-		
-		
-	}
-	
+MetalBlitContext::MetalBlitContext(id<MTLCommandBuffer> commandBuffer):
+    commandBuffer(commandBuffer)
+{
+    
+}
+
+void MetalBlitContext::commit() {
+    
 }

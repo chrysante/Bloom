@@ -3,9 +3,9 @@
 #include "EditorWindowDelegate.hpp"
 
 #include "Editor.hpp"
+#include "Poppy/Core/Debug.hpp"
 #include "Poppy/UI/ImGuiContext.hpp"
 #include "Poppy/UI/ImGuiHelpers.hpp"
-#include "Poppy/Core/Debug.hpp"
 
 #include "Bloom/Core.hpp"
 #include "Bloom/GPU.hpp"
@@ -100,7 +100,5 @@ namespace poppy {
 	}
 	
 }
-
-
 
 #endif

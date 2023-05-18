@@ -3,12 +3,10 @@
 #include <mtl/mtl.hpp>
 
 namespace bloom {
-	
-	class SceneCamera {
-	public:
-		
-	private:
-		
-	};
 
-}
+class SceneCamera {
+public:
+private:
+};
+
+} // namespace bloom

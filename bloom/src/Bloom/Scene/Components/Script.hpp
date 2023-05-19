@@ -1,8 +1,6 @@
 #pragma once
 
-#include <optional>
-
-#include <mtl/mtl.hpp>
+#include <scatha/Sema/Fwd.h>
 
 #include "Bloom/Core/Serialize.hpp"
 #include "Bloom/Scene/Components/ComponentBase.hpp"
@@ -12,7 +10,8 @@ namespace bloom {
 struct ScriptComponent {
     BLOOM_REGISTER_COMPONENT("Script");
 
-    int dummy;
+    scatha::sema::StructureType const* classType = nullptr;
+    void* object                                 = nullptr;
 };
 
 } // namespace bloom

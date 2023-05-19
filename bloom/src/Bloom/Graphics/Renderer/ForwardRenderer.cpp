@@ -370,7 +370,6 @@ void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
     caDesc.texture    = framebuffer.rawColor;
     caDesc.clearColor = mtl::colors<>::black;
     caDesc.loadAction = LoadAction::clear;
-    caDesc.loadAction = LoadAction::dontCare;
     desc.colorAttachments.push_back(caDesc);
 
     RenderPassDepthAttachmentDescription dDesc{};
@@ -431,8 +430,8 @@ void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
 }
 
 static TextureHandle createShadowMaps(HardwareDevice& device,
-                                      int totalShadowMaps,
-                                      int2 resolution) {
+                                      size_t totalShadowMaps,
+                                      ulong2 resolution) {
     TextureDescription desc;
     desc.type        = TextureType::texture2DArray;
     desc.size        = usize3(resolution, 1);

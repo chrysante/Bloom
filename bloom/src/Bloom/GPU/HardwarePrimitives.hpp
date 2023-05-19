@@ -324,7 +324,6 @@ struct BLOOM_API TextureDescription {
     std::size_t arrayLength      = 1;
     StorageMode storageMode      = StorageMode::GPUOnly;
     TextureUsage usage           = TextureUsage::shaderRead;
-    ;
 };
 
 class BLOOM_API TextureHandle: public HardwareResourceHandle {

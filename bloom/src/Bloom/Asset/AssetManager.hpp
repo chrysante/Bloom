@@ -5,6 +5,7 @@
 #include <optional>
 #include <span>
 
+#include <scatha/Runtime/Program.h>
 #include <utl/hashmap.hpp>
 #include <utl/vector.hpp>
 
@@ -21,7 +22,6 @@ namespace bloom {
 class HardwareDevice;
 class StaticMeshData;
 class StaticMesh;
-class ScriptEngine;
 
 class BLOOM_API AssetManager: public CoreSystem {
 public:
@@ -132,10 +132,10 @@ public:
     /// MARK: Uncategorized
     // path can be relative or absolute
     AssetHandle getHandleFromFile(std::filesystem::path path) const;
-    void loadScripts(ScriptEngine&);
-    std::span<std::string const> scriptClasses() const {
-        return _scriptClasses;
-    }
+
+    void loadScripts();
+
+    scatha::Program* getProgram() const { return program.get(); }
 
 private:
     struct InternalAsset {
@@ -209,7 +209,7 @@ private:
 private:
     utl::hashmap<utl::uuid, InternalAsset> assets;
     std::filesystem::path _workingDir;
-    utl::vector<std::string> _scriptClasses;
+    std::unique_ptr<scatha::Program> program;
 };
 
 } // namespace bloom

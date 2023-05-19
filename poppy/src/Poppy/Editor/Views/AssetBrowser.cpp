@@ -12,7 +12,6 @@
 #include "Bloom/Asset/AssetManager.hpp"
 #include "Bloom/Runtime/SceneSystem.hpp"
 #include "Bloom/Scene/Components/Script.hpp"
-#include "Bloom/ScriptEngine/ScriptEngine.hpp"
 #include "Poppy/Core/Debug.hpp"
 #include "Poppy/Editor/Editor.hpp"
 #include "Poppy/Editor/Views/AssetBrowser.hpp"
@@ -27,9 +26,12 @@ using namespace poppy;
 POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser", {});
 
 AssetBrowser::AssetBrowser(): dirView(this) {
+    // clang-format off
     toolbar = {
         ToolbarIconButton("up-open")
-            .onClick([] { Logger::trace("Going Up"); })
+            .onClick([] {
+                Logger::trace("Going Up");
+            })
             .tooltip("Go Up"),
 
         ToolbarIconButton("left-open")
@@ -68,17 +70,13 @@ AssetBrowser::AssetBrowser(): dirView(this) {
             })
             .tooltip("Create Default Material"),
 
-        //			ToolbarButton("Reload Scripts").onClick([this]{
-        //				auto& scriptEngine =
-        // editor().coreSystems().scriptEngine();
-        //				assetManager->loadScripts(scriptEngine);
-        //				dispatch(DispatchToken::nextFrame,
-        // ScriptLoadEvent{});
-        //			})
-    };
-
+        ToolbarButton("Reload Scripts")
+            .onClick([this] {
+                assetManager->loadScripts();
+                dispatch(DispatchToken::nextFrame, bloom::ScriptReloadEvent{});
+            })
+    }; // clang-format on
     toolbar.setHeight(30);
-
     setPadding({ -1, 0 });
 }
 

@@ -2,6 +2,7 @@
 
 #include <fstream>
 
+#include <scatha/Runtime/Compiler.h>
 #include <utl/filesystem_ext.hpp>
 #include <utl/strcat.hpp>
 
@@ -223,27 +224,19 @@ AssetHandle AssetManager::getHandleFromFile(std::filesystem::path path) const {
     return readHeader(path).handle();
 }
 
-void AssetManager::loadScripts(ScriptEngine& engine) {
-#if 0
-    _scriptClasses.clear();
-    engine.restoreBaseState();
+void AssetManager::loadScripts() {
+    dispatch(DispatchToken::now, ScriptsWillLoadEvent{});
+    scatha::Compiler compiler;
     for (auto&& [id, internal]: assets) {
         if (internal.handle.type() != AssetType::script) {
             continue;
         }
         auto const script = as<Script>(get(internal.handle));
         makeAvailable(internal.handle, AssetRepresentation::CPU, true);
-        try {
-            engine.eval(script->text);
-            for (auto&& name: script->classes) {
-                _scriptClasses.push_back(name);
-            }
-        }
-        catch (std::exception const& e) {
-            Logger::error( "Failed to evaluate script: ", e.what());
-        }
+        compiler.addSource(script->text);
     }
-#endif
+    program = compiler.compile();
+    dispatch(DispatchToken::now, ScriptsDidLoadEvent{});
 }
 
 /// MARK: - Internals
@@ -622,8 +615,6 @@ void AssetManager::importStaticMesh(StaticMesh* meshOut,
                                     std::filesystem::path source) const {
     assert(source.has_filename());
     assert(source.has_extension());
-
-    // import
     MeshImporter importer;
     meshOut->mData = allocateRef<StaticMeshData>(importer.import(source));
 }

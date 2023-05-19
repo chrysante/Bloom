@@ -12,7 +12,7 @@
 
 namespace bloom {
 
-// maybe move this somewhere else
+/// Maybe move this somewhere else
 static float baseWorldScale() { return 100; }
 
 bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {

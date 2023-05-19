@@ -56,13 +56,19 @@ protected:
 
 public:
     std::span<bloom::Scene* const> scenes() const;
+
     SelectionContext& selection() const;
+
     bloom::AssetManager& assetManager() const;
+
     bool isSimulating() const;
 
     bool hasLightComponent(bloom::EntityHandle) const;
+
     LightType getLightType(bloom::EntityHandle) const;
+
     bloom::LightCommon getLightCommon(LightType, bloom::EntityHandle) const;
+
     void removeLightComponent(LightType, bloom::EntityHandle);
 
 private:

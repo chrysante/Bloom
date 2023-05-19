@@ -4,6 +4,7 @@
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+#include <mtl/mtl.hpp>
 #include <utl/strcat.hpp>
 
 #include "Poppy/Core/Debug.hpp"

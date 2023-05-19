@@ -1,16 +1,16 @@
-#include "Asset.hpp"
+#include "Bloom/Asset/Asset.hpp"
 
 #include <utl/math.hpp>
 
 #include "Bloom/Core/Debug.hpp"
 
-namespace bloom {
+using namespace bloom;
 
-FileExtension toExtension(std::filesystem::path const& path) {
+FileExtension bloom::toExtension(std::filesystem::path const& path) {
     return toExtension(std::string_view(path.extension().string()));
 }
 
-FileExtension toExtension(std::string_view extension) {
+FileExtension bloom::toExtension(std::string_view extension) {
     if (extension == ".bmesh") {
         return FileExtension::bmesh;
     }
@@ -23,15 +23,15 @@ FileExtension toExtension(std::string_view extension) {
     if (extension == ".bscene") {
         return FileExtension::bscene;
     }
-    if (extension == ".chai") {
+    if (extension == ".sc") {
         return FileExtension::chai;
     }
     return FileExtension::invalid;
 }
 
-bool hasHeader(FileExtension ext) { return ext != FileExtension::chai; }
+bool bloom::hasHeader(FileExtension ext) { return ext != FileExtension::chai; }
 
-utl::uuid toUUID(std::string_view str) {
+utl::uuid bloom::toUUID(std::string_view str) {
     char const* const begin  = str.data();
     std::size_t const offset = str.size() / 2;
     struct {
@@ -44,7 +44,7 @@ utl::uuid toUUID(std::string_view str) {
 }
 
 /// MARK: - AssetType
-BLOOM_API std::string toString(AssetType type) {
+BLOOM_API std::string bloom::toString(AssetType type) {
     auto const i = utl::to_underlying(type);
     assert(std::popcount(i) <= 1 && "'type' is a Mask");
     if (type == AssetType::none) {
@@ -56,7 +56,7 @@ BLOOM_API std::string toString(AssetType type) {
     }[utl::log2(i)];
 }
 
-BLOOM_API AssetType assetTypeFromString(std::string_view str) {
+BLOOM_API AssetType bloom::assetTypeFromString(std::string_view str) {
     if (str == "Static Mesh") {
         return AssetType::staticMesh;
     }
@@ -75,11 +75,11 @@ BLOOM_API AssetType assetTypeFromString(std::string_view str) {
     return AssetType::none;
 }
 
-BLOOM_API std::ostream& operator<<(std::ostream& str, AssetType type) {
+BLOOM_API std::ostream& bloom::operator<<(std::ostream& str, AssetType type) {
     return str << toString(type);
 }
 
-BLOOM_API std::string toExtension(AssetType type) {
+BLOOM_API std::string bloom::toExtension(AssetType type) {
     auto const i = utl::to_underlying(type);
     assert(std::popcount(i) <= 1 && "'type' is a Mask");
     if (type == AssetType::none) {
@@ -89,7 +89,7 @@ BLOOM_API std::string toExtension(AssetType type) {
         ".bmesh", ".invalid", ".bmat", ".bmatinst", ".bscene", ".chai",
     }[utl::log2(i)];
 }
-BLOOM_API AssetType toAssetType(FileExtension ext) {
+BLOOM_API AssetType bloom::toAssetType(FileExtension ext) {
     switch (ext) {
     case FileExtension::bmesh:
         return AssetType::staticMesh;
@@ -111,7 +111,7 @@ BLOOM_API AssetType toAssetType(FileExtension ext) {
     }
 }
 
-BLOOM_API FileFormat toFileFormat(FileExtension ext) {
+BLOOM_API FileFormat bloom::toFileFormat(FileExtension ext) {
     switch (ext) {
     case FileExtension::bmesh:
         return FileFormat::binary;
@@ -138,7 +138,7 @@ AssetHandle AssetHandle::generate(AssetType type) {
     return AssetHandle(type, utl::uuid::generate());
 }
 
-bool operator==(AssetHandle const& a, AssetHandle const& b) {
+bool bloom::operator==(AssetHandle const& a, AssetHandle const& b) {
     bool const result = a.id() == b.id();
     assert(!result ||
            a.type() == b.type() && "ID is the same but type differs");
@@ -146,5 +146,3 @@ bool operator==(AssetHandle const& a, AssetHandle const& b) {
 }
 
 AssetHandle::operator bool() const { return !utl::is_null(id()); }
-
-} // namespace bloom

@@ -122,6 +122,12 @@ auto dispatchAssetType(AssetType type, auto&& f) {
     }
 }
 
+/// Kind of misplaced here but we'll go with it for now
+
+struct BLOOM_API ScriptReloadEvent {};
+struct BLOOM_API ScriptsWillLoadEvent {};
+struct BLOOM_API ScriptsDidLoadEvent {};
+
 } // namespace bloom
 
 template <>

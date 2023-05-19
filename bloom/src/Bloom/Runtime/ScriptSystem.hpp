@@ -2,12 +2,13 @@
 
 #include <memory>
 
+#include <scatha/Sema/Fwd.h>
+
 #include "Bloom/Application/CoreSystem.hpp"
 #include "Bloom/Core/Time.hpp"
+#include "Bloom/Scene/Components/Script.hpp"
 
 namespace bloom {
-
-struct ScriptLoadEvent {};
 
 class BLOOM_API ScriptSystem: public CoreSystem {
 public:
@@ -25,12 +26,14 @@ public:
 
     void onSceneRender();
 
+    void* instantiateObject(scatha::sema::StructureType const* classType);
+
 private:
-    void onScriptReload();
-
-    void forEach(auto&& fn);
-
     struct Impl;
+
+    void scriptsWillLoad();
+    void scriptsDidLoad();
+    void forEach(auto&& fn);
 
     std::unique_ptr<Impl> impl;
 };

@@ -13,6 +13,13 @@ configurations {
 function addScatha() 
     filter "configurations:Debug"
     libdirs "../external/scatha/build/bin/Debug"
+    externalincludedirs { 
+        "../external/scatha/include", 
+        "../external/scatha/runtime/include", 
+        "../external/scatha/external/APMath/include", 
+        "../external/scatha/external/range-v3/include", 
+        "../external/scatha/external/utility/include", 
+    }
     filter {}
     links { 
         "libscatha.dylib",

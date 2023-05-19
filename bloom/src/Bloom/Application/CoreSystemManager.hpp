@@ -11,12 +11,9 @@ class Application;
 class HardwareDevice;
 class Renderer;
 class AssetManager;
-// class ScriptEngine;
-// class ScriptSystem;
 class SceneSystem;
-
+class ScriptSystem;
 class CoreRuntime;
-class SceneSystem;
 class CoreSystem;
 
 class BLOOM_API CoreSystemManager {
@@ -39,6 +36,8 @@ public:
 
     SceneSystem& sceneSystem() { return *mSceneSystem; }
 
+    ScriptSystem& scriptSystem() { return *mScriptSystem; }
+
     [[nodiscard]] std::unique_ptr<Renderer> getRenderer();
 
     void setRenderer(std::unique_ptr<Renderer> renderer);
@@ -53,6 +52,7 @@ private:
     std::unique_ptr<AssetManager> mAssetManager;
     std::unique_ptr<CoreRuntime> mRuntime;
     std::shared_ptr<SceneSystem> mSceneSystem;
+    std::shared_ptr<ScriptSystem> mScriptSystem;
 };
 
 } // namespace bloom

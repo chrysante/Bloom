@@ -11,7 +11,6 @@ externalincludedirs {
     "../external/Metal-cpp",
     "../external/assimp/include",
     "../external/glfw/include",
-    "../external/scatha/include",
 }
 
 files { 

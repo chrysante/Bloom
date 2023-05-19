@@ -21,6 +21,8 @@ void CoreSystemManager::init() {
     mAssetManager = makeCoreSystem<AssetManager>();
     mRuntime      = makeCoreSystem<CoreRuntime>();
     mSceneSystem  = makeCoreSystem<SceneSystem>();
+    mScriptSystem = makeCoreSystem<ScriptSystem>();
+    mScriptSystem->init();
     mRuntime->setDelegate(mSceneSystem);
 }
 

@@ -5,9 +5,12 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include <mtl/mtl.hpp>
+#include <scatha/Sema/Entity.h>
+#include <scatha/Sema/SymbolTable.h>
 #include <utl/typeinfo.hpp>
 
 #include "Bloom/Asset/AssetManager.hpp"
+#include "Bloom/Runtime/ScriptSystem.hpp"
 #include "Bloom/Scene/Scene.hpp"
 #include "Poppy/Core/Debug.hpp"
 #include "Poppy/Editor/Editor.hpp"
@@ -32,36 +35,30 @@ void EntityInspector::frame() {
     bloom::EntityHandle const entity = selection().empty() ?
                                            bloom::EntityHandle{} :
                                            *selection().entities().begin();
-
     if (!entity) {
         displayEmptyWithReason("No Entity selected");
         return;
     }
-
     if (entity.has<TagComponent>()) {
         inspectTag(entity);
         ImGui::Separator();
     }
-
     if (entity.has<Transform>()) {
         inspectTransform(entity);
         ImGui::Separator();
     }
-
     if (entity.has<MeshRendererComponent>()) {
         inspectMesh(entity);
         ImGui::Separator();
     }
-
     if (hasLightComponent(entity)) {
         inspectLight(entity);
         ImGui::Separator();
     }
-
-    //		if (entity.has<ScriptComponent>()) {
-    //			inspectScript(entity);
-    //			ImGui::Separator();
-    //		}
+    if (entity.has<ScriptComponent>()) {
+        inspectScript(entity);
+        ImGui::Separator();
+    }
 }
 
 void EntityInspector::inspectTag(bloom::EntityHandle entity) {
@@ -81,7 +78,6 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
             float2(ImGui::CalcTextSize("Add Component")) +
             float2(4, 2) * framePadding;
 
-        // name field
         float2 const nameTextSize = { windowSize.x - addButtonSize.x -
                                           spacing.x,
                                       windowSize.y };
@@ -110,7 +106,7 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
                 2;
         }
 
-        // 'add' button
+        /// "Add Component" button
         disabledIf(isSimulating(), [&] {
             ImGui::SetCursorPos({ nameTextSize.x + spacing.x, 0 });
 
@@ -165,8 +161,9 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
                                        "Sky Light",
                                        entity,
                                        hasLight);
-                    //						addComponentButton(utl::tag<ScriptComponent>{},
-                    //"Script",            entity);
+                    addComponentButton(utl::tag<ScriptComponent>{},
+                                       "Script",
+                                       entity);
                 });
                 ImGui::EndCombo();
             }
@@ -521,54 +518,66 @@ void editDataField(std::string_view id, float* value) {
 }
 
 void EntityInspector::inspectScript(bloom::EntityHandle entity) {
-    //		using namespace propertiesView;
-    //		auto& script = entity.get<ScriptComponent>();
-    //
-    //		if (beginComponentSection<ScriptComponent>("Script", entity)) {
-    //			disabledIf(isSimulating(), [&]{
-    //				beginProperty("Class");
-    //				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    //				if (ImGui::BeginCombo("##-script", script.className.data()))
-    //{ 					for (auto className: assetManager().scriptClasses())
-    //{ bool const selected = script.className == className; if
-    //(ImGui::Selectable(className.data(),
-    // selected)) { 							script.className = className;
-    // script.object =
-    // editor().coreSystems().scriptEngine().instanciateObject(className);
-    //						}
-    //						if (selected) {
-    //							ImGui::SetItemDefaultFocus();
-    //						}
-    //					}
-    //					ImGui::EndCombo();
-    //				}
-    //
-    //				if (script.object && beginSubSection("Attributes"))
-    //{ 					auto fields = script.object->get_attrs();
-    // for (auto&& [name, value]: fields) { 						if
-    // (ScriptHelpers::isReserved(name)) { 							continue;
-    //						}
-    //
-    //						beginProperty(name.data());
-    //
-    //						if (value.get().type() ==
-    // typeid(std::shared_ptr<float>)) { editDataField(name,
-    // value.get().cast<std::shared_ptr<float>>().get());
-    //						}
-    //						else if (value.get().type() ==
-    // typeid(std::shared_ptr<double>)) { editDataField(name,
-    // value.get().cast<std::shared_ptr<double>>().get());
-    //						}
-    //						else {
-    //							editDataField<void>(name,
-    // nullptr);
-    //						}
-    //					}
-    //					endSubSection();
-    //				}
-    //			});
-    //			endSection();
-    //		}
+    using namespace propertiesView;
+
+    auto& scriptSystem = editor().coreSystems().scriptSystem();
+    auto* program      = assetManager().getProgram();
+    if (!program) {
+        return;
+    }
+    auto& symTable = program->symbolTable();
+    auto& script   = entity.get<ScriptComponent>();
+
+    if (beginComponentSection<ScriptComponent>("Script", entity)) {
+        disabledIf(isSimulating(), [&] {
+            beginProperty("Class");
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            auto name = script.classType ? script.classType->name().data() : "";
+            if (ImGui::BeginCombo("##-script", name)) {
+                for (auto* classType: symTable.structDependencyOrder()) {
+                    bool const selected = classType == script.classType;
+                    if (ImGui::Selectable(classType->name().data(), selected)) {
+                        script.classType = classType;
+                        script.object =
+                            scriptSystem.instantiateObject(classType);
+                    }
+                    if (selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            if (script.object && beginSubSection("Attributes")) {
+                auto members = script.classType->memberVariables();
+                for (auto* var: members) {
+                    beginProperty(var->name().data());
+
+                    // clang-format off
+                    visit(*var->type()->base(), utl::overload{
+                        [&](scatha::sema::FloatType const& type) {
+                            auto name = var->name();
+                            auto* data = (char*)script.object + var->offset();
+                            switch (type.bitwidth()) {
+                            case 32:
+                                editDataField(name, (float*)data);
+                                break;
+                            case 64:
+                                editDataField(name, (double*)data);
+                                break;
+                            default:
+                                assert(false);
+                            }
+                        },
+                        [&](scatha::sema::ObjectType const& type) {
+                            /// Unimplemented
+                        }
+                    }); // clang-format on
+                }
+                endSubSection();
+            }
+        });
+        endSection();
+    }
 }
 
 /// MARK: - Helpers

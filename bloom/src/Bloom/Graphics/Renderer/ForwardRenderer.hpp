@@ -27,6 +27,7 @@ struct BLOOM_API ForwardRendererDebugFramebuffer: ForwardRendererFramebuffer {
 };
 
 namespace {
+
 UTL_SOA_TYPE(SceneRenderObject,
              (mtl::float4x4, transform),
              (Reference<MaterialInstance>, materialInstance),
@@ -45,9 +46,9 @@ struct FWCPUSceneData {
         utl::small_vector<int> numCascades;
         utl::vector<mtl::float4x4> lightSpaceTransforms;
 
-        int numShadowCasters;
-        int shadowMapArrayLength       = 0;
-        mtl::uint2 shadowMapResolution = 512;
+        size_t numShadowCasters;
+        size_t shadowMapArrayLength    = 0;
+        mtl::uint2 shadowMapResolution = 1024;
         bool needsNewShadowMaps        = true;
     } shadows;
 

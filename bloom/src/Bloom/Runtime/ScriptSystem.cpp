@@ -1,8 +1,13 @@
 #include "Bloom/Runtime/ScriptSystem.hpp"
 
+#include <scatha/Runtime.h>
+#include <scatha/Sema/Entity.h>
+#include <scatha/Sema/SymbolTable.h>
+#include <utl/scope_guard.hpp>
 #include <utl/strcat.hpp>
 
 #include "Bloom/Application/Application.hpp"
+#include "Bloom/Asset/AssetManager.hpp"
 #include "Bloom/Runtime/SceneSystem.hpp"
 #include "Bloom/Scene/Components/Script.hpp"
 #include "Bloom/Scene/Components/Transform.hpp"
@@ -11,14 +16,18 @@
 
 using namespace bloom;
 
-struct ScriptSystem::Impl {};
+struct ScriptSystem::Impl {
+    scatha::Program program;
+    utl::hashmap<scatha::sema::StructureType const*, std::string> typenameMap;
+};
 
 ScriptSystem::ScriptSystem(): impl(std::make_unique<Impl>()) {}
 
 ScriptSystem::~ScriptSystem() = default;
 
 void ScriptSystem::init() {
-    listen([this](ScriptLoadEvent) { this->onScriptReload(); });
+    listen([this](ScriptsWillLoadEvent) { this->scriptsWillLoad(); });
+    listen([this](ScriptsDidLoadEvent) { this->scriptsDidLoad(); });
 }
 
 void ScriptSystem::onSceneConstruction() {
@@ -51,17 +60,57 @@ void ScriptSystem::onSceneRender() {
     });
 }
 
-void ScriptSystem::onScriptReload() {
-    auto& sceneSystem = application().coreSystems().sceneSystem();
+void ScriptSystem::scriptsWillLoad() {
+    impl->typenameMap.clear();
+    auto& assetManager = application().coreSystems().assetManager();
+    auto* program      = assetManager.getProgram();
+    if (!program) {
+        return;
+    }
+    auto& sym = program->symbolTable();
+    for (auto* type: sym.structDependencyOrder()) {
+        impl->typenameMap[type] = std::string(type->name());
+    }
+}
+
+void ScriptSystem::scriptsDidLoad() {
+    auto& scriptSystem = application().coreSystems().scriptSystem();
+    auto& assetManager = application().coreSystems().assetManager();
+    auto* program      = assetManager.getProgram();
+    if (!program) {
+        return;
+    }
+    auto& sym = program->symbolTable();
+    utl::hashmap<scatha::sema::StructureType const*,
+                 scatha::sema::StructureType const*>
+        typemap;
+    for (auto [type, name]: impl->typenameMap) {
+        auto* newType = sym.lookup<scatha::sema::StructureType>(name);
+        typemap[type] = newType;
+    }
+    forEach([&](ScriptComponent& script) {
+        auto* oldType    = script.classType;
+        auto* newType    = typemap[oldType];
+        script.classType = newType;
+        if (!oldType || !newType) {
+            script.object = nullptr;
+            return;
+        }
+        if (newType->size() != script.classType->size()) {
+            script.object = scriptSystem.instantiateObject(newType);
+        }
+    });
+}
+
+void* ScriptSystem::instantiateObject(
+    scatha::sema::StructureType const* classType) {
+    assert(classType);
+    return malloc(classType->size());
 }
 
 void ScriptSystem::forEach(auto&& fn) {
-#if 0
     auto& sceneSystem = application().coreSystems().sceneSystem();
     for (auto* scene: sceneSystem.scenes()) {
-        scene->view<ScriptComponent>().each([&](auto const id, ScriptComponent& script) {
-            fn(script);
-        });
+        scene->view<ScriptComponent>().each(fn);
     }
-#endif
 }

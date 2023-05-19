@@ -61,7 +61,6 @@ Scene Scene::copy() {
         auto const fromHandle = this->getHandle(fromID);
         EntityID const toID   = result.createEmptyEntity(fromID);
         auto const toHandle   = result.getHandle(toID);
-
         idMap.insert({ fromID, toID });
         forEachComponent([&]<typename C>(utl::tag<C>) {
             if (fromHandle.has<C>()) {
@@ -70,7 +69,7 @@ Scene Scene::copy() {
         });
     });
 
-    // copy hierarchy
+    /// Copy hierarchy
     for (auto [from, to]: idMap) {
         if (from == to) {
             continue;
@@ -182,7 +181,7 @@ BLOOM_API YAML::Node Scene::serialize() const {
 BLOOM_API void Scene::deserialize(YAML::Node const& root,
                                   AssetManager& assetManager) {
     if (!root.IsSequence()) {
-        BL_LOG(info, "Failed to deserialize Scene: Scene is empty.");
+        Logger::info("Failed to deserialize Scene: Scene is empty.");
         return;
     }
 
@@ -196,7 +195,7 @@ BLOOM_API void Scene::deserialize(YAML::Node const& root,
     auto view = scene->view<HierarchyComponent>();
     view.each([&](auto const e, HierarchyComponent entity) {
         EntityID const entityID = e;
-        // sanitize child -> parent relationship
+        /// Sanitize child -> parent relationship
         if (entity.parent) {
             EntityID const parentID    = entity.parent;
             auto const parentsChildren = scene->gatherChildren(parentID);
@@ -204,19 +203,23 @@ BLOOM_API void Scene::deserialize(YAML::Node const& root,
                           parentsChildren.end(),
                           entityID) == parentsChildren.end())
             {
-                BL_LOG(fatal,
-                       "Entity {0} [{1}] thinks Entity {2} [{3}] is its "
-                       "parent but "
-                       "{2} doesn't know about it.",
-                       entityID,
-                       scene->getComponent<TagComponent>(entityID).name,
-                       parentID,
-                       scene->getComponent<TagComponent>(parentID).name);
+                Logger::fatal("Entity ",
+                              entityID,
+                              " [",
+                              scene->getComponent<TagComponent>(entityID).name,
+                              "] thinks Entity ",
+                              parentID,
+                              " [",
+                              scene->getComponent<TagComponent>(parentID).name,
+                              "] is its "
+                              "parent but ",
+                              parentID,
+                              " doesn't know about it.");
                 BL_DEBUGBREAK();
             }
         }
 
-        // sanitize parent -> children relationship
+        /// Sanitize parent -> children relationship
         if (entity.firstChild) {
             assert(!!entity.lastChild);
             auto const ourChildren = scene->gatherChildren(entityID);
@@ -224,14 +227,17 @@ BLOOM_API void Scene::deserialize(YAML::Node const& root,
                 auto const child =
                     scene->getComponent<HierarchyComponent>(childID);
                 if (child.parent != entityID) {
-                    BL_LOG(fatal,
-                           "Entity {0} [{1}] thinks it's a parent but "
-                           "supposed child "
-                           "{0} [{1}] doesn't know about it.",
-                           entityID,
-                           scene->getComponent<TagComponent>(entityID).name,
-                           childID,
-                           scene->getComponent<TagComponent>(childID).name);
+                    Logger::fatal(
+                        "Entity ",
+                        entityID,
+                        " [",
+                        scene->getComponent<TagComponent>(entityID).name,
+                        "] thinks it's a parent but "
+                        "supposed child ",
+                        entityID,
+                        " [",
+                        scene->getComponent<TagComponent>(entityID).name,
+                        "] doesn't know about it.");
                     BL_DEBUGBREAK();
                 }
             }

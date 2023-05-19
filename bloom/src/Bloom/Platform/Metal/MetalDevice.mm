@@ -182,7 +182,7 @@ RenderPipelineHandle MetalDevice::createRenderPipeline(RenderPipelineDescription
     
     id<MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor: mtlDesc error: nil];
     if (!pipelineState) {
-        BL_LOG(error, "Failed to create Pipeline State");
+        Logger::error( "Failed to create Pipeline State");
         BL_DEBUGBREAK();
     }
     return RenderPipelineHandle((void*)CFBridgingRetain(pipelineState), MTLDeleter);
@@ -193,7 +193,7 @@ ComputePipelineHandle MetalDevice::createComputePipeline(ComputePipelineDescript
                                                                                       error:nil];
     
     if (!pipelineState) {
-        BL_LOG(error, "Failed to create Pipeline State");
+        Logger::error( "Failed to create Pipeline State");
         BL_DEBUGBREAK();
     }
     auto result = ComputePipelineHandle((void*)CFBridgingRetain(pipelineState), MTLDeleter);

@@ -8,14 +8,18 @@ namespace bloom {
 enum class DispatchToken { nextFrame, now };
 
 namespace dispatchTokens {
+
 constexpr DispatchToken nextFrame = DispatchToken::nextFrame;
-constexpr DispatchToken now       = DispatchToken::now;
+
+constexpr DispatchToken now = DispatchToken::now;
+
 }; // namespace dispatchTokens
 
-/// MARK: Emitter
 class Emitter: private utl::emitter<utl::buffered_messenger> {
     friend class Messenger;
+
     using MyBase = utl::emitter<utl::buffered_messenger>;
+
     using MyBase::MyBase;
 
 public:
@@ -32,23 +36,24 @@ public:
     }
 };
 
-/// MARK: Reciever
 class Reciever: private utl::reciever<utl::buffered_messenger> {
 public:
     friend class Messenger;
+
     using MyBase = utl::reciever<utl::buffered_messenger>;
+
     using MyBase::MyBase;
 
 public:
     using MyBase::listen;
 };
 
-/// MARK: MessageSystem
 class MessageSystem {
 public:
     MessageSystem(): m(std::make_unique<utl::buffered_messenger>()) {}
 
     Emitter makeEmitter() { return Emitter(m); }
+
     Reciever makeReciever() { return Reciever(m); }
 
     void flush() { m->flush(); }

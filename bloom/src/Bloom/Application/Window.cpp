@@ -24,7 +24,7 @@ void Window::pollEvents() {
 void Window::initWindowSystem() {
     int const status = glfwInit();
     if (status != GLFW_TRUE) {
-        BL_LOG(fatal, "Failed to initialize GLFW");
+        Logger::fatal("Failed to initialize GLFW");
         std::terminate();
     }
 }

@@ -17,6 +17,7 @@ namespace bloom {
 class BLOOM_API Scene: public Asset {
 public:
     using Asset::Asset;
+
     EntityHandle createEntity(std::string_view name);
 
     EntityHandle createEmptyEntity();

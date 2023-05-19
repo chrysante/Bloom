@@ -30,6 +30,8 @@ links {
     "YAML",
 }
 
+addScatha()
+
 filter "system:macosx"
     -- common mac stuff
     files {
@@ -57,7 +59,7 @@ filter "system:macosx"
     postbuildcommands {
         "mkdir -p %{cfg.targetdir}/Poppy.app/Contents/Resources",
         "mkdir -p %{cfg.targetdir}/Poppy.app/Contents/Frameworks",
-        "{COPY} %{prj.location}/Resource/** %{cfg.targetdir}/Poppy.app/Contents/Resources", -- resources
+        "{COPY} %{prj.location}/Resource/** %{cfg.targetdir}/Poppy.app/Contents/Resources",
         "{COPY} %{cfg.targetdir}/**.dylib %{cfg.targetdir}/Poppy.app/Contents/Frameworks"
     }
 

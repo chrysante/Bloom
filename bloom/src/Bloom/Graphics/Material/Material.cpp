@@ -13,21 +13,24 @@ Material Material::makeDefaultMaterial(HardwareDevice& device, Asset base) {
     // Main Pass
     ca.pixelFormat = PixelFormat::RGBA32Float;
     desc.colorAttachments.push_back(ca);
-
-    desc.vertexFunction   = device.createFunction("mainPassVS");
-    desc.fragmentFunction = device.createFunction("mainPassFS");
-
+    desc.vertexFunction             = device.createFunction("mainPassVS");
+    desc.fragmentFunction           = device.createFunction("mainPassFS");
     desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
-
-    material.mainPass = device.createRenderPipeline(desc);
-
+    material.mainPass               = device.createRenderPipeline(desc);
+#if 0
+    // Editor Pass
+    ca.pixelFormat = PixelFormat::RGBA32Float;
+    desc.colorAttachments.push_back(ca);
+    desc.vertexFunction   = device.createFunction("editorPassVS");
+    desc.fragmentFunction = device.createFunction("editorPassFS");
+    desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
+    material.editorPass = device.createRenderPipeline(desc);
+#endif
     // Outline Pass
     desc.colorAttachments[0].pixelFormat = PixelFormat::R8Unorm;
-
     desc.vertexFunction   = device.createFunction("outlinePassVS");
     desc.fragmentFunction = device.createFunction("outlinePassFS");
-
-    material.outlinePass = device.createRenderPipeline(desc);
+    material.outlinePass  = device.createRenderPipeline(desc);
 
     return material;
 }

@@ -154,7 +154,7 @@ void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
               selectedObjects.end(),
               selectedObjectsOrder);
 
-    /* upload selected Transforms */ {
+    /* Upload transforms of selected entities */ {
         std::size_t const targetBufferSize =
             selectedObjects.size() * sizeof(float4x4);
         if (selectedTransformsBuffer.size() < targetBufferSize) {

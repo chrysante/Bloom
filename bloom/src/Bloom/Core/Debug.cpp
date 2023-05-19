@@ -1,8 +1,8 @@
-#include "Poppy/Core/Debug.hpp"
+#include "Bloom/Core/Debug.hpp"
 
 #include <iostream>
 
-using namespace poppy;
+using namespace bloom;
 
 void Logger::logImpl(Level level, std::string_view msg) {
     auto& str = std::cout;

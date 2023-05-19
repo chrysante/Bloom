@@ -10,7 +10,7 @@ void SceneSystem::loadScene(Reference<Scene> scene) {
     auto const [_, success] =
         mScenes.insert({ scene->handle().id(), std::move(scene) });
     if (!success) {
-        BL_LOG(error, "Failed to load scene. Scene is already loaded.");
+        Logger::error("Failed to load scene. Scene is already loaded.");
         return;
     }
     setPointers();
@@ -20,7 +20,7 @@ void SceneSystem::unloadScene(utl::uuid id) {
     auto const itr    = mScenes.find(id);
     auto* const scene = itr->second.get();
     if (itr == mScenes.end()) {
-        BL_LOG(error, "Failed to unload scene. Scene was not loaded.");
+        Logger::error("Failed to unload scene. Scene was not loaded.");
         return;
     }
     mScenes.erase(itr);

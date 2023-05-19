@@ -10,6 +10,16 @@ configurations {
     "Release"
 }
 
+function addScatha() 
+    filter "configurations:Debug"
+    libdirs "../external/scatha/build/bin/Debug"
+    filter {}
+    links { 
+        "libscatha.dylib",
+        "runtime"
+    }
+end
+
 filter "configurations:Debug" 
     symbols "On"
 filter "configurations:Checked or Release"

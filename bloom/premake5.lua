@@ -11,6 +11,7 @@ externalincludedirs {
     "../external/Metal-cpp",
     "../external/assimp/include",
     "../external/glfw/include",
+    "../external/scatha/include",
 }
 
 files { 
@@ -24,9 +25,10 @@ links {
     "YAML",
     "utility",
     "assimpd",
-    "glfw3"
+    "glfw3",
 }
 
+addScatha()
 
 filter  "system:macosx"
     files {

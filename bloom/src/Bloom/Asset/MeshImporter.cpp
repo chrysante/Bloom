@@ -36,7 +36,11 @@ bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
                                         aiProcess_JoinIdenticalVertices |
                                         aiProcess_FlipWindingOrder);
         auto* const scene = importer.GetScene();
-        BL_LOG("File {} contains {} mesh(es)", path, scene->mNumMeshes);
+        Logger::trace("File ",
+                      path,
+                      " contains ",
+                      scene->mNumMeshes,
+                      " mesh(es)");
         assert(scene->mNumMeshes);
 
         auto* const mesh = scene->mMeshes[0];

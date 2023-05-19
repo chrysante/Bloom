@@ -19,7 +19,7 @@ enum class AssetType : unsigned {
     none = 0,
 
     staticMesh   = 1 << 0,
-    skeletalMesh = 1 << 1, // not supported yet...
+    skeletalMesh = 1 << 1, /// Not supported yet...
     mesh         = staticMesh | skeletalMesh,
 
     material         = 1 << 2,
@@ -31,6 +31,7 @@ enum class AssetType : unsigned {
 
     itemCount = 6
 };
+
 UTL_ENUM_OPERATORS(AssetType);
 
 enum class FileExtension { invalid = 0, bmesh, bmat, bmatinst, bscene, chai };
@@ -94,7 +95,13 @@ class StaticMesh;
 class Material;
 class MaterialInstance;
 class Scene;
-class Script;
+
+class Script: public Asset {
+public:
+    using Asset::Asset;
+
+    std::string text;
+};
 
 auto dispatchAssetType(AssetType type, auto&& f) {
     switch (type) {

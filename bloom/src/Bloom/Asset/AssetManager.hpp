@@ -1,20 +1,20 @@
 #pragma once
 
-#include "Asset.hpp"
-#include "AssetFileHeader.hpp"
-
-#include "Bloom/Application/CoreSystem.hpp"
-#include "Bloom/Core/Core.hpp"
-#include "Bloom/Graphics/Material/Material.hpp"
-#include "Bloom/Graphics/Material/MaterialInstance.hpp"
-#include "Bloom/Scene/Scene.hpp"
-
 #include <filesystem>
 #include <future>
 #include <optional>
 #include <span>
+
 #include <utl/hashmap.hpp>
 #include <utl/vector.hpp>
+
+#include "Bloom/Application/CoreSystem.hpp"
+#include "Bloom/Asset/Asset.hpp"
+#include "Bloom/Asset/AssetFileHeader.hpp"
+#include "Bloom/Core/Core.hpp"
+#include "Bloom/Graphics/Material/Material.hpp"
+#include "Bloom/Graphics/Material/MaterialInstance.hpp"
+#include "Bloom/Scene/Scene.hpp"
 
 namespace bloom {
 

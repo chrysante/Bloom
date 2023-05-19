@@ -17,6 +17,7 @@ public:
     Material(Asset asset): Asset(std::move(asset)) {}
 
     RenderPipelineHandle mainPass;
+    RenderPipelineHandle editorPass;
     RenderPipelineHandle outlinePass;
     TriangleCullMode cullMode = TriangleCullMode::back;
     void* functionTable;

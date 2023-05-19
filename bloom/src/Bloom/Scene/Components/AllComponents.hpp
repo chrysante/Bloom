@@ -11,20 +11,21 @@
 
 namespace bloom {
 
-using ComponentList = std::tuple<TagComponent,
-                                 Transform,
-                                 TransformMatrixComponent,
-                                 HierarchyComponent,
-                                 MeshRendererComponent,
-                                 PointLightComponent,
-                                 SpotLightComponent,
-                                 DirectionalLightComponent,
-                                 SkyLightComponent
-                                 //	ScriptComponent
-                                 >;
+using ComponentList =
+    std::tuple<TagComponent,
+               Transform,
+               TransformMatrixComponent,
+               HierarchyComponent,
+               //                                 ScriptComponent,
+               MeshRendererComponent,
+               PointLightComponent,
+               SpotLightComponent,
+               DirectionalLightComponent,
+               SkyLightComponent>;
 
 template <typename... T>
 struct Except: std::tuple<T...> {};
+
 template <typename... T>
 constexpr auto except = Except<T...>{};
 

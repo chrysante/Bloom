@@ -310,7 +310,7 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
 
     // Point Lights
     if (scene.pointLights.size() > 32) {
-        BL_LOG(warning, "Can't render more than 32 Point Lights");
+        Logger::warn("Can't render more than 32 Point Lights");
         scene.pointLights.resize(32);
     }
     result.scene.numPointLights = scene.pointLights.size();
@@ -320,7 +320,7 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
 
     // Spotlights
     if (scene.spotLights.size() > 32) {
-        BL_LOG(warning, "Can't render more than 32 Spot Lights");
+        Logger::warn("Can't render more than 32 Spot Lights");
         scene.spotLights.resize(32);
     }
     result.scene.numSpotLights = scene.spotLights.size();
@@ -330,7 +330,7 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
 
     // Directional Lights
     if (scene.dirLights.size() > 32) {
-        BL_LOG(warning, "Can't render more than 32 Directional Lights");
+        Logger::warn("Can't render more than 32 Directional Lights");
         scene.dirLights.resize(32);
     }
     result.scene.numDirLights = scene.dirLights.size();
@@ -340,7 +340,7 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
 
     // Skylights
     if (scene.skyLights.size() > 32) {
-        BL_LOG(warning, "Can't render more than 32 Sky Lights");
+        Logger::warn("Can't render more than 32 Sky Lights");
         scene.skyLights.resize(32);
     }
     result.scene.numSkyLights = scene.skyLights.size();

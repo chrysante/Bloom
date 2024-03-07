@@ -18,10 +18,10 @@ BLOOM_API void showSavePanel(
     utl::function<void(std::filesystem::path const&)> completion);
 
 struct OpenPanelDescription {
-    bool resolvesAliases         = true;
-    bool canChooseDirectories    = false;
+    bool resolvesAliases = true;
+    bool canChooseDirectories = false;
     bool allowsMultipleSelection = false;
-    bool canChooseFiles          = true;
+    bool canChooseFiles = true;
 };
 
 BLOOM_API void showOpenPanel(

@@ -63,7 +63,7 @@ void EntityInspector::frame() {
 
 void EntityInspector::inspectTag(bloom::EntityHandle entity) {
     using namespace bloom;
-    auto& tag                   = entity.get<TagComponent>();
+    auto& tag = entity.get<TagComponent>();
     std::string_view const name = tag.name;
 
     float2 const framePadding = GImGui->Style.FramePadding;
@@ -78,9 +78,9 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
             float2(ImGui::CalcTextSize("Add Component")) +
             float2(4, 2) * framePadding;
 
-        float2 const nameTextSize = { windowSize.x - addButtonSize.x -
-                                          spacing.x,
-                                      windowSize.y };
+        float2 const nameTextSize = {
+            windowSize.x - addButtonSize.x - spacing.x, windowSize.y
+        };
 
         if (editingNameState && !isSimulating()) {
             char buffer[256]{};
@@ -100,8 +100,7 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
             ImGui::Text("%s", name.data());
             ImGui::SetCursorPos({});
             editingNameState =
-                ImGui::InvisibleButton("activate-name-input",
-                                       nameTextSize,
+                ImGui::InvisibleButton("activate-name-input", nameTextSize,
                                        ImGuiButtonFlags_PressedOnDoubleClick) *
                 2;
         }
@@ -120,8 +119,7 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
                                 float2(2, 1) * framePadding);
             ImGui::SetNextItemWidth(addButtonSize.x);
             bool const comboOpen =
-                ImGui::BeginCombo("##-add-component",
-                                  "Add Component",
+                ImGui::BeginCombo("##-add-component", "Add Component",
                                   ImGuiComboFlags_NoArrowButton);
             ImGui::PopStyleColor(2);
             ImGui::PopStyleVar();
@@ -143,26 +141,16 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
                     };
                     bool const hasLight = hasLightComponent(entity);
                     addComponentButton(utl::tag<MeshRendererComponent>{},
-                                       "Mesh Renderer",
-                                       entity);
+                                       "Mesh Renderer", entity);
                     addComponentButton(utl::tag<PointLightComponent>{},
-                                       "Point Light",
-                                       entity,
-                                       hasLight);
+                                       "Point Light", entity, hasLight);
                     addComponentButton(utl::tag<SpotLightComponent>{},
-                                       "Spot Light",
-                                       entity,
-                                       hasLight);
+                                       "Spot Light", entity, hasLight);
                     addComponentButton(utl::tag<DirectionalLightComponent>{},
-                                       "Directional Light",
-                                       entity,
-                                       hasLight);
+                                       "Directional Light", entity, hasLight);
                     addComponentButton(utl::tag<SkyLightComponent>{},
-                                       "Sky Light",
-                                       entity,
-                                       hasLight);
-                    addComponentButton(utl::tag<ScriptComponent>{},
-                                       "Script",
+                                       "Sky Light", entity, hasLight);
+                    addComponentButton(utl::tag<ScriptComponent>{}, "Script",
                                        entity);
                 });
                 ImGui::EndCombo();
@@ -290,7 +278,7 @@ void EntityInspector::recieveMeshDragDrop(bloom::EntityHandle entity) {
     assetManager().makeAvailable(handle, AssetRepresentation::GPU);
 
     auto& meshRenderer = entity.get<MeshRendererComponent>();
-    meshRenderer.mesh  = std::move(asset);
+    meshRenderer.mesh = std::move(asset);
 }
 
 void EntityInspector::recieveMaterialDragDrop(bloom::EntityHandle entity) {
@@ -305,11 +293,10 @@ void EntityInspector::recieveMaterialDragDrop(bloom::EntityHandle entity) {
     auto materialInstance = as<MaterialInstance>(assetManager().get(handle));
     assert((bool)materialInstance);
 
-    assetManager().makeAvailable(handle,
-                                 AssetRepresentation::CPU |
-                                     AssetRepresentation::GPU);
+    assetManager().makeAvailable(handle, AssetRepresentation::CPU |
+                                             AssetRepresentation::GPU);
 
-    auto& meshRenderer            = entity.get<MeshRendererComponent>();
+    auto& meshRenderer = entity.get<MeshRendererComponent>();
     meshRenderer.materialInstance = std::move(materialInstance);
 }
 
@@ -373,7 +360,7 @@ void EntityInspector::inspectLightType(LightType& type,
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     if (ImGui::BeginCombo("##Light Type", toString(newType).data())) {
         for (size_t j = 0; j < (size_t)LightType::_count; ++j) {
-            LightType const i   = (LightType)j;
+            LightType const i = (LightType)j;
             bool const selected = newType == i;
             if (ImGui::Selectable(toString(i).data(), selected)) {
                 newType = i;
@@ -398,8 +385,7 @@ void EntityInspector::inspectLightCommon(bloom::LightCommon& light,
                                          LightType type) {
     using namespace propertiesView;
     beginProperty("Color");
-    ImGui::ColorEdit3("##light-color",
-                      light.color.data(),
+    ImGui::ColorEdit3("##light-color", light.color.data(),
                       ImGuiColorEditFlags_NoInputs |
                           ImGuiColorEditFlags_NoLabel |
                           ImGuiColorEditFlags_Float |
@@ -433,7 +419,7 @@ void EntityInspector::inspectSpotLight(bloom::SpotLight& light) {
     float const inner = light.innerCutoff;
     float const outer = light.outerCutoff;
 
-    float angle   = (inner + outer) / 2;
+    float angle = (inner + outer) / 2;
     float falloff = (outer - inner) / 2;
 
     beginProperty("Angle");
@@ -464,10 +450,7 @@ void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
 
     beginProperty("Shadow Z Distance");
     fullWidth();
-    ImGui::DragFloat("shadow-distance-z",
-                     &light.shadowDistanceZ,
-                     1,
-                     0,
+    ImGui::DragFloat("shadow-distance-z", &light.shadowDistanceZ, 1, 0,
                      FLT_MAX);
 
     beginProperty("Number Of Cascades");
@@ -479,23 +462,17 @@ void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
     beginProperty("Cascade Distribution Exponent");
     fullWidth();
     ImGui::SliderFloat("cascade-distribution-exponent",
-                       &light.cascadeDistributionExponent,
-                       1,
-                       4);
+                       &light.cascadeDistributionExponent, 1, 4);
 
     beginProperty("Cascade Transition Fraction");
     fullWidth();
     ImGui::SliderFloat("cascade-transition-fraction",
-                       &light.cascadeTransitionFraction,
-                       0,
-                       1);
+                       &light.cascadeTransitionFraction, 0, 1);
 
     beginProperty("Distance Fadeout Fraction");
     fullWidth();
     ImGui::SliderFloat("shadow-distance-fadeout-fraction",
-                       &light.shadowDistanceFadeoutFraction,
-                       0,
-                       1);
+                       &light.shadowDistanceFadeoutFraction, 0, 1);
 }
 
 void EntityInspector::inspectSkyLight(bloom::SkyLight& light) {
@@ -521,12 +498,12 @@ void EntityInspector::inspectScript(bloom::EntityHandle entity) {
     using namespace propertiesView;
 
     auto& scriptSystem = editor().coreSystems().scriptSystem();
-    auto* program      = assetManager().getProgram();
+    auto* program = assetManager().getProgram();
     if (!program) {
         return;
     }
     auto& symTable = program->symbolTable();
-    auto& script   = entity.get<ScriptComponent>();
+    auto& script = entity.get<ScriptComponent>();
 
     if (beginComponentSection<ScriptComponent>("Script", entity)) {
         disabledIf(isSimulating(), [&] {
@@ -622,8 +599,8 @@ bool EntityInspector::beginGenericSection(std::string_view name,
         // 'Delete' Button
         return withFont(FontWeight::semibold, FontStyle::roman, [&] {
             return disabledIf(isSimulating(), [&] {
-                bool result            = true;
-                float2 const textSize  = ImGui::CalcTextSize("Delete");
+                bool result = true;
+                float2 const textSize = ImGui::CalcTextSize("Delete");
                 float2 const buttonPos = {
                     cursorPos.x + ImGui::GetContentRegionAvail().x - textSize.x,
                     cursorPos.y
@@ -641,9 +618,9 @@ bool EntityInspector::beginGenericSection(std::string_view name,
                     GImGui->Style.Colors[ImGuiCol_TextDisabled];
                 float4 const hightlightColor =
                     (float4(GImGui->Style.Colors[ImGuiCol_Text]) + color) / 2;
-                ImGui::PushStyleColor(ImGuiCol_Text,
-                                      ImGui::IsItemHovered() ? hightlightColor :
-                                                               color);
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::IsItemHovered() ?
+                                                         hightlightColor :
+                                                         color);
                 ImGui::SetCursorPos(buttonPos);
                 ImGui::Text("Delete");
                 ImGui::PopStyleColor();

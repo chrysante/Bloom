@@ -157,20 +157,17 @@ private:
     }
 
 private:
-    std::variant<ToolbarButton,
-                 ToolbarIconButton,
-                 ToolbarDropdownMenu,
-                 ToolbarSeparator,
-                 ToolbarSpacer>
+    std::variant<ToolbarButton, ToolbarIconButton, ToolbarDropdownMenu,
+                 ToolbarSeparator, ToolbarSpacer>
         item;
     float width = 0;
 };
 
 struct ToolbarStyle {
-    float height             = 40;
-    float buttonAlpha        = 0;
+    float height = 40;
+    float buttonAlpha = 0;
     float buttonAlphaHovered = 0.5;
-    float buttonAlphaActive  = 0.5;
+    float buttonAlphaActive = 0.5;
 };
 
 class Toolbar {
@@ -191,31 +188,23 @@ public:
 
 private:
     struct Block {
-        float width                = 0;
-        float offset               = 0;
+        float width = 0;
+        float offset = 0;
         std::size_t itemBeginIndex = 0;
-        std::size_t itemEndIndex   = 0;
+        std::size_t itemEndIndex = 0;
         bool visible;
     };
 
     void displayBlock(Block const&);
     void displayItem(ToolbarItemUnion const&, std::size_t index);
 
-    bool button(char const* label,
-                std::size_t id,
-                mtl::float2 size,
+    bool button(char const* label, std::size_t id, mtl::float2 size,
                 bool enabled = true) const;
-    bool buttonEx(char const* label,
-                  std::size_t id,
-                  mtl::float2 size,
+    bool buttonEx(char const* label, std::size_t id, mtl::float2 size,
                   bool enabled = true) const;
-    bool iconButton(char const* icon,
-                    std::size_t id,
-                    mtl::float2 size,
-                    char const* tooltip = nullptr,
-                    bool enabled        = true) const;
-    bool beginCombo(ToolbarDropdownMenu const&,
-                    std::size_t id,
+    bool iconButton(char const* icon, std::size_t id, mtl::float2 size,
+                    char const* tooltip = nullptr, bool enabled = true) const;
+    bool beginCombo(ToolbarDropdownMenu const&, std::size_t id,
                     mtl::float2 size) const;
 
     // called once after adding items

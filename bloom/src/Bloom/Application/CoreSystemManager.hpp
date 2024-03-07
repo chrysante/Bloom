@@ -1,8 +1,9 @@
-#pragma once
-
-#include "Bloom/Core/Core.hpp"
+#ifndef BLOOM_APPLICATION_CORESYSTEMMANAGER_H
+#define BLOOM_APPLICATION_CORESYSTEMMANAGER_H
 
 #include <memory>
+
+#include "Bloom/Core/Core.hpp"
 
 namespace bloom {
 
@@ -16,9 +17,11 @@ class ScriptSystem;
 class CoreRuntime;
 class CoreSystem;
 
+/// "Container" type for all core systems
 class BLOOM_API CoreSystemManager {
 public:
-    CoreSystemManager(Application*);
+    /// Construct with reference to the running application
+    CoreSystemManager(Application* app);
 
     ~CoreSystemManager();
 
@@ -56,3 +59,5 @@ private:
 };
 
 } // namespace bloom
+
+#endif // BLOOM_APPLICATION_CORESYSTEMMANAGER_H

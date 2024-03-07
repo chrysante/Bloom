@@ -25,8 +25,7 @@ void propertiesView::header(std::string_view name, Font const& font) {
 
 bool propertiesView::beginSection() {
     bool const open =
-        ImGui::BeginTable("Property Table",
-                          2,
+        ImGui::BeginTable("Property Table", 2,
                           ImGuiTableFlags_Resizable |
                               ImGuiTableFlags_NoBordersInBodyUntilResize);
     if (open) {
@@ -56,10 +55,10 @@ void propertiesView::beginProperty(std::string_view label, Font const& font) {
     ImGui::TableSetColumnIndex(0);
 
     withFont(font, [&] {
-        auto& style           = ImGui::GetStyle();
-        auto const textSize   = ImGui::CalcTextSize(label.data());
+        auto& style = ImGui::GetStyle();
+        auto const textSize = ImGui::CalcTextSize(label.data());
         auto const availWidth = ImGui::GetContentRegionAvail().x;
-        float const cpY       = ImGui::GetCursorPosY();
+        float const cpY = ImGui::GetCursorPosY();
         float const cpX =
             std::max(style.WindowPadding.x, availWidth - textSize.x);
 

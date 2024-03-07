@@ -24,9 +24,7 @@ public:
 
     void draw(Scene const&, Camera const&, Framebuffer&, CommandQueue&);
 
-    void draw(std::span<Scene const* const>,
-              Camera const&,
-              Framebuffer&,
+    void draw(std::span<Scene const* const>, Camera const&, Framebuffer&,
               CommandQueue&);
 
 protected:

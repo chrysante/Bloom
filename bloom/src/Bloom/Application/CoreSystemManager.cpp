@@ -12,15 +12,15 @@ using namespace bloom;
 
 CoreSystemManager::CoreSystemManager(Application* app): mApp(app) {}
 
-CoreSystemManager::~CoreSystemManager() {}
+CoreSystemManager::~CoreSystemManager() = default;
 
 void CoreSystemManager::init() {
-    mDevice   = HardwareDevice::create(RenderAPI::metal);
+    mDevice = HardwareDevice::create(RenderAPI::Metal);
     mRenderer = createForwardRenderer(*mApp);
     mRenderer->init(device());
     mAssetManager = makeCoreSystem<AssetManager>();
-    mRuntime      = makeCoreSystem<CoreRuntime>();
-    mSceneSystem  = makeCoreSystem<SceneSystem>();
+    mRuntime = makeCoreSystem<CoreRuntime>();
+    mSceneSystem = makeCoreSystem<SceneSystem>();
     mScriptSystem = makeCoreSystem<ScriptSystem>();
     mScriptSystem->init();
     mRuntime->setDelegate(mSceneSystem);
@@ -40,7 +40,7 @@ template <typename SystemType>
 std::unique_ptr<SystemType> CoreSystemManager::makeCoreSystem(auto&&... args) {
     auto system = std::make_unique<SystemType>(UTL_FORWARD(args)...);
     system->Emitter::operator=(mApp->makeEmitter());
-    system->Reciever::operator=(mApp->makeReciever());
+    system->Receiver::operator=(mApp->makeReciever());
     system->mApp = mApp;
     return system;
 }

@@ -11,8 +11,7 @@
 using namespace bloom;
 using namespace poppy;
 
-POPPY_REGISTER_VIEW(MaterialInstanceViewer,
-                    "Material Instance Viewer",
+POPPY_REGISTER_VIEW(MaterialInstanceViewer, "Material Instance Viewer",
                     { .persistent = false, .unique = false });
 
 void MaterialInstanceViewer::frame() {
@@ -20,15 +19,15 @@ void MaterialInstanceViewer::frame() {
         displayEmptyWithReason("No Material Instance opened");
         return;
     }
-    auto materialName =
-        inst->material() ? inst->material()->name() : "No Material Assigned";
+    auto materialName = inst->material() ? inst->material()->name() :
+                                           "No Material Assigned";
     ImGui::Button(materialName.data(),
                   { ImGui::GetContentRegionAvail().x, 30 });
     if (auto const assetHandle =
             acceptAssetDragDrop(bloom::AssetType::material))
     {
         auto& assetManager = editor().coreSystems().assetManager();
-        auto mat           = as<Material>(assetManager.get(*assetHandle));
+        auto mat = as<Material>(assetManager.get(*assetHandle));
         assetManager.makeAvailable(*assetHandle, AssetRepresentation::GPU);
         inst->setMaterial(std::move(mat));
         assetManager.saveToDisk(inst->handle());
@@ -41,8 +40,7 @@ void MaterialInstanceViewer::frame() {
     header("Parameters");
     if (beginSection()) {
         beginProperty("Base Color");
-        edited |= ImGui::ColorEdit3("##base-color",
-                                    params.baseColor.data(),
+        edited |= ImGui::ColorEdit3("##base-color", params.baseColor.data(),
                                     ImGuiColorEditFlags_NoInputs |
                                         ImGuiColorEditFlags_NoLabel |
                                         ImGuiColorEditFlags_Float |
@@ -56,8 +54,7 @@ void MaterialInstanceViewer::frame() {
         edited |= ImGui::SliderFloat("##roughness", &params.roughness, 0, 1);
 
         beginProperty("Emissive");
-        edited |= ImGui::ColorEdit3("##emissive",
-                                    params.emissive.data(),
+        edited |= ImGui::ColorEdit3("##emissive", params.emissive.data(),
                                     ImGuiColorEditFlags_NoInputs |
                                         ImGuiColorEditFlags_NoLabel |
                                         ImGuiColorEditFlags_Float |
@@ -66,8 +63,7 @@ void MaterialInstanceViewer::frame() {
         beginProperty("Emissive Intensity");
         fullWidth();
         edited |= ImGui::DragFloat("##emissive-intensity",
-                                   &params.emissiveIntensity,
-                                   .1);
+                                   &params.emissiveIntensity, .1);
 
         endSection();
     }

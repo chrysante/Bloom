@@ -21,8 +21,7 @@ std::ostream& operator<<(std::ostream& str, InputEventType e) {
 }
 
 InputEvent bloom::inputEventFromGLFWMouseButton(Input const& input,
-                                                int buttonCode,
-                                                int action,
+                                                int buttonCode, int action,
                                                 int mods) {
     auto const [type, button] = [&] {
         switch (buttonCode) {
@@ -30,31 +29,31 @@ InputEvent bloom::inputEventFromGLFWMouseButton(Input const& input,
             return std::pair{ action == GLFW_PRESS ?
                                   InputEventType::leftMouseDown :
                                   InputEventType::leftMouseUp,
-                              MouseButton::left };
+                              MouseButton::Left };
         case GLFW_MOUSE_BUTTON_RIGHT:
             return std::pair{ action == GLFW_PRESS ?
                                   InputEventType::rightMouseDown :
                                   InputEventType::rightMouseUp,
-                              MouseButton::right };
+                              MouseButton::Right };
         case GLFW_MOUSE_BUTTON_MIDDLE:
             return std::pair{ action == GLFW_PRESS ?
                                   InputEventType::otherMouseDown :
                                   InputEventType::otherMouseUp,
-                              MouseButton::other };
+                              MouseButton::Other };
 
         default:
-            return std::pair{ InputEventType::none, MouseButton::none };
+            return std::pair{ InputEventType::none, MouseButton::None };
         }
     }();
 
     MouseEvent event;
-    event.modifierFlags    = input.modFlags();
+    event.modifierFlags = input.modFlags();
     event.locationInWindow = input.mousePosition();
 
     switch (action) {
     case GLFW_PRESS: {
         MouseDownEvent downEvent{ event };
-        downEvent.button     = button;
+        downEvent.button = button;
         downEvent.clickCount = 1; // TODO: get correct click count
         return InputEvent(type, downEvent);
     }
@@ -69,26 +68,25 @@ InputEvent bloom::inputEventFromGLFWMouseButton(Input const& input,
     }
 }
 
-InputEvent bloom::inputEventFromGLFWCursorPos(Input const& input,
-                                              double xpos,
+InputEvent bloom::inputEventFromGLFWCursorPos(Input const& input, double xpos,
                                               double ypos) {
     MouseMoveEvent event;
-    event.modifierFlags    = input.modFlags();
+    event.modifierFlags = input.modFlags();
     event.locationInWindow = input.mousePosition();
-    event.offset           = input.mouseOffset();
+    event.offset = input.mouseOffset();
 
     MouseDragEvent dragEvent{ event };
 
-    if (input.mouseDown(MouseButton::left)) {
-        dragEvent.button = MouseButton::left;
+    if (input.mouseDown(MouseButton::Left)) {
+        dragEvent.button = MouseButton::Left;
         return InputEvent(InputEventType::leftMouseDragged, dragEvent);
     }
-    else if (input.mouseDown(MouseButton::right)) {
-        dragEvent.button = MouseButton::right;
+    else if (input.mouseDown(MouseButton::Right)) {
+        dragEvent.button = MouseButton::Right;
         return InputEvent(InputEventType::rightMouseDragged, dragEvent);
     }
-    else if (input.mouseDown(MouseButton::other)) {
-        dragEvent.button = MouseButton::other;
+    else if (input.mouseDown(MouseButton::Other)) {
+        dragEvent.button = MouseButton::Other;
         return InputEvent(InputEventType::otherMouseDragged, dragEvent);
     }
     else {
@@ -96,23 +94,23 @@ InputEvent bloom::inputEventFromGLFWCursorPos(Input const& input,
     }
 }
 
-InputEvent bloom::inputEventFromGLFWScroll(Input const& input,
-                                           double xoffset,
+InputEvent bloom::inputEventFromGLFWScroll(Input const& input, double xoffset,
                                            double yoffset) {
     ScrollEvent event;
-    event.modifierFlags    = input.modFlags();
+    event.modifierFlags = input.modFlags();
     event.locationInWindow = input.mousePosition();
-    event.offset           = { xoffset, yoffset };
+    event.offset = { xoffset, yoffset };
     return InputEvent(InputEventType::scrollWheel, event);
 }
 
-InputEvent bloom::inputEventFromGLFWKey(
-    Input const& input, int keyCode, int /* scancode */, int action, int mods) {
+InputEvent bloom::inputEventFromGLFWKey(Input const& input, int keyCode,
+                                        int /* scancode */, int action,
+                                        int mods) {
     Key key = keyFromGLFW(keyCode);
     KeyEvent event;
     event.modifierFlags = input.modFlags();
-    event.repeat        = input.keyDownRepeatCount(key); // TODO: Fix this
-    event.key           = key;
+    event.repeat = input.keyDownRepeatCount(key); // TODO: Fix this
+    event.key = key;
 
     switch (action) {
     case GLFW_PRESS:

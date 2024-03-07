@@ -1,5 +1,7 @@
 #include "Bloom/Graphics/Renderer/BloomRenderer.hpp"
 
+#include <utl/utility.hpp>
+
 #include "Bloom/GPU/CommandQueue.hpp"
 #include "Bloom/GPU/HardwareDevice.hpp"
 
@@ -10,56 +12,49 @@ void BloomRenderer::init(HardwareDevice& device) {
     ComputePipelineDescription desc;
 
     desc.computeFunction = device.createFunction("bloomDownsample");
-    downsamplePipeline   = device.createComputePipeline(desc);
+    downsamplePipeline = device.createComputePipeline(desc);
 
     desc.computeFunction = device.createFunction("bloomUpsample");
-    upsamplePipeline     = device.createComputePipeline(desc);
+    upsamplePipeline = device.createComputePipeline(desc);
 
     desc.computeFunction = device.createFunction("bloomPrefilter");
-    prefilterPipeline    = device.createComputePipeline(desc);
+    prefilterPipeline = device.createComputePipeline(desc);
 }
 
 void BloomRenderer::populateFramebuffer(HardwareDevice& device,
                                         BloomFramebuffer& framebuffer,
                                         mtl::usize2 size) const {
     TextureDescription desc;
-    desc.size             = { size / 2, 1 };
-    desc.type             = TextureType::texture2D;
+    desc.size = { size / 2, 1 };
+    desc.type = TextureType::texture2D;
     desc.mipmapLevelCount = BloomFramebuffer::numDSMipLevels;
-    desc.storageMode      = StorageMode::GPUOnly;
-    desc.usage       = TextureUsage::shaderRead | TextureUsage::shaderWrite;
+    desc.storageMode = StorageMode::GPUOnly;
+    desc.usage = TextureUsage::shaderRead | TextureUsage::shaderWrite;
     desc.pixelFormat = PixelFormat::RG11B10Float;
 
     framebuffer.downsample = device.createTexture(desc);
 
     desc.mipmapLevelCount = BloomFramebuffer::numUSMipLevels;
-    framebuffer.upsample  = device.createTexture(desc);
+    framebuffer.upsample = device.createTexture(desc);
 
     for (int i = 0; i < BloomFramebuffer::numDSMipLevels; ++i) {
         framebuffer.downsampleMips[i] =
             device.createSharedTextureView(framebuffer.downsample,
                                            TextureType::texture2D,
-                                           PixelFormat::RG11B10Float,
-                                           i,
-                                           1,
-                                           0,
+                                           PixelFormat::RG11B10Float, i, 1, 0,
                                            1);
     }
     for (int i = 0; i < BloomFramebuffer::numUSMipLevels; ++i) {
         framebuffer.upsampleMips[i] =
             device.createSharedTextureView(framebuffer.upsample,
                                            TextureType::texture2D,
-                                           PixelFormat::RG11B10Float,
-                                           i,
-                                           1,
-                                           0,
+                                           PixelFormat::RG11B10Float, i, 1, 0,
                                            1);
     }
 }
 
 void BloomRenderer::render(CommandQueue& commandQueue,
-                           BloomFramebuffer& framebuffer,
-                           TextureView rawColor,
+                           BloomFramebuffer& framebuffer, TextureView rawColor,
                            BufferView renderParameters,
                            mtl::uint2 const framebufferSize) {
     if (!settings.enabled) {
@@ -67,14 +62,17 @@ void BloomRenderer::render(CommandQueue& commandQueue,
     }
 
     std::unique_ptr const _ctx = commandQueue.createComputeContext();
-    auto& ctx                  = *_ctx;
+    auto& ctx = *_ctx;
 
     ctx.begin();
 
-    auto const threadGroupWidth = downsamplePipeline.threadExecutionWidth;
-    auto const threadGroupHeight =
+    auto threadGroupWidth = downsamplePipeline.threadExecutionWidth;
+    auto threadGroupHeight =
         downsamplePipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth;
-    mtl::uint2 const threadGroupSize = { threadGroupWidth, threadGroupHeight };
+    mtl::uint2 const threadGroupSize = {
+        utl::narrow_cast<uint32_t>(threadGroupWidth),
+        utl::narrow_cast<uint32_t>(threadGroupHeight)
+    };
 
     constexpr int numDSMips = BloomFramebuffer::numDSMipLevels;
     constexpr int numUSMips = BloomFramebuffer::numUSMipLevels;
@@ -90,8 +88,7 @@ void BloomRenderer::render(CommandQueue& commandQueue,
     }
 
     // all bloom shaders want this
-    ctx.setBuffer(renderParameters,
-                  0,
+    ctx.setBuffer(renderParameters, 0,
                   offsetof(RendererParameters, postprocess.bloom));
 
     // prefilter pass (including first downsampling
@@ -133,16 +130,15 @@ BloomParameters BloomRenderer::makeShaderParameters() const {
     BloomParameters params{};
 
     params.intensity = settings.intensity;
-    params.curve     = { settings.threshold - settings.knee,
-                         2 * settings.knee,
-                         0.25 / settings.knee };
+    params.curve = { settings.threshold - settings.knee, 2 * settings.knee,
+                     0.25 / settings.knee };
 
-    params.enabled           = settings.enabled;
+    params.enabled = settings.enabled;
     params.physicallyCorrect = settings.physicallyCorrect;
-    params.threshold         = settings.threshold;
-    params.scale             = settings.diffusion;
-    params.clamp             = settings.clamp;
-    params.contribution      = settings.contribution;
+    params.threshold = settings.threshold;
+    params.scale = settings.diffusion;
+    params.clamp = settings.clamp;
+    params.contribution = settings.contribution;
     return params;
 }
 

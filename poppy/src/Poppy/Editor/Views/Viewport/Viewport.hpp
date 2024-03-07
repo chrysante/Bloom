@@ -81,7 +81,7 @@ public:
     EditorSceneRenderer sceneRenderer;
 
     bool viewportHovered = false;
-    bool gameView        = false;
+    bool gameView = false;
 };
 
 inline std::string toString(Viewport::DebugDrawOptions::Mode mode) {

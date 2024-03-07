@@ -29,17 +29,13 @@ bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
 
     {
         Assimp::Importer importer;
-        importer.ReadFileFromMemory(data.data(),
-                                    data.size(),
+        importer.ReadFileFromMemory(data.data(), data.size(),
                                     aiProcess_Triangulate |
                                         aiProcess_CalcTangentSpace |
                                         aiProcess_JoinIdenticalVertices |
                                         aiProcess_FlipWindingOrder);
         auto* const scene = importer.GetScene();
-        Logger::trace("File ",
-                      path,
-                      " contains ",
-                      scene->mNumMeshes,
+        Logger::trace("File ", path, " contains ", scene->mNumMeshes,
                       " mesh(es)");
         assert(scene->mNumMeshes);
 
@@ -48,9 +44,9 @@ bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
 
         auto* const position = mesh->mVertices;
         assert(position);
-        auto* const normal  = mesh->mNormals;
+        auto* const normal = mesh->mNormals;
         auto* const tangent = mesh->mTangents;
-        auto* const color   = mesh->mColors[0];
+        auto* const color = mesh->mColors[0];
         std::array const uv = { mesh->mTextureCoords[0],
                                 mesh->mTextureCoords[1],
                                 mesh->mTextureCoords[2],
@@ -62,18 +58,15 @@ bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
             for (std::size_t i = 0; i < vertexCount; ++i) {
                 auto& v = result.vertices[i];
                 if (position)
-                    v.position =
-                        baseWorldScale() * mtl::float3{ position[i].x,
-                                                        position[i].y,
-                                                        position[i].z };
+                    v.position = baseWorldScale() *
+                                 mtl::float3{ position[i].x, position[i].y,
+                                              position[i].z };
                 if (normal)
                     v.normal = { normal[i].x, normal[i].y, normal[i].z };
                 if (tangent)
                     v.tangent = { tangent[i].x, tangent[i].y, tangent[i].z };
                 if (color)
-                    v.color = { color[i].r,
-                                color[i].g,
-                                color[i].b,
+                    v.color = { color[i].r, color[i].g, color[i].b,
                                 color[i].a };
                 for (int j = 0; j < 4; ++j) {
                     if (uv[j])
@@ -82,7 +75,7 @@ bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
             }
         }
         {
-            std::size_t const faceCount  = mesh->mNumFaces;
+            std::size_t const faceCount = mesh->mNumFaces;
             std::size_t const indexCount = faceCount * 3;
             result.indices.resize(indexCount);
             auto* const face = mesh->mFaces;

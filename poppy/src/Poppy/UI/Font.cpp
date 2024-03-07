@@ -38,8 +38,7 @@ void FontMap::loadFonts(ImFontAtlas& atlas, float scaleFactor) {
     }
 }
 
-ImFont* FontMap::loadFont(Font const& font,
-                          ImFontAtlas& atlas,
+ImFont* FontMap::loadFont(Font const& font, ImFontAtlas& atlas,
                           float scaleFactor) {
     if (font.monospaced && (int)font.weight < (int)FontWeight::light) {
         return nullptr;
@@ -48,17 +47,12 @@ ImFont* FontMap::loadFont(Font const& font,
         return nullptr;
     }
     std::string const name = utl::strcat(font.monospaced ? "SFMono" : "SFPro",
-                                         "-",
-                                         toString(font.weight),
-                                         "-",
-                                         toString(font.style),
-                                         ".ttf");
+                                         "-", toString(font.weight), "-",
+                                         toString(font.style), ".ttf");
     auto const path = bloom::resourceDir() / "Font" / name;
     auto* const imguiFontPtr =
-        atlas.AddFontFromFileTTF(path.c_str(),
-                                 (int)font.size * scaleFactor,
-                                 nullptr,
-                                 nullptr);
+        atlas.AddFontFromFileTTF(path.c_str(), (int)font.size * scaleFactor,
+                                 nullptr, nullptr);
     assert(imguiFontPtr);
     return imguiFontPtr;
 }
@@ -67,7 +61,7 @@ ImFont* FontMap::get(Font const& index) {
     assert((int)index.size > 0);
     auto const [itr, inserted] = fonts.insert({ index, nullptr });
     if (inserted) {
-        dispatch(DispatchToken::nextFrame, ReloadFontAtlasCommand{});
+        dispatch(DispatchToken::NextFrame, ReloadFontAtlasCommand{});
     }
     return itr->second;
 }

@@ -98,7 +98,7 @@ private:
     SceneT* _scene = nullptr;
 };
 
-using EntityHandle      = EntityHandleEx<false>;
+using EntityHandle = EntityHandleEx<false>;
 using ConstEntityHandle = EntityHandleEx<true>;
 
 } // namespace bloom

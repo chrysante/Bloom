@@ -90,91 +90,91 @@ static ImGuiKey toImGuiKeyCode(Key key) {
     case Key::K:
         return ImGuiKey_K;
 
-    case Key::apostrophe:
+    case Key::Apostrophe:
         return ImGuiKey_Apostrophe;
-    case Key::equal:
+    case Key::Equal:
         return ImGuiKey_Equal;
-    case Key::minus:
+    case Key::Minus:
         return ImGuiKey_Minus;
-    case Key::leftBracket:
+    case Key::LeftBracket:
         return ImGuiKey_LeftBracket;
-    case Key::rightBracket:
+    case Key::RightBracket:
         return ImGuiKey_RightBracket;
-    case Key::semicolon:
+    case Key::Semicolon:
         return ImGuiKey_Semicolon;
-    case Key::backslash:
+    case Key::Backslash:
         return ImGuiKey_Backslash;
-    case Key::comma:
+    case Key::Comma:
         return ImGuiKey_Comma;
-    case Key::slash:
+    case Key::Slash:
         return ImGuiKey_Slash;
-    case Key::period:
+    case Key::Period:
         return ImGuiKey_Period;
-    case Key::graveAccent:
+    case Key::GraveAccent:
         return ImGuiKey_GraveAccent;
-    case Key::keypadDecimal:
+    case Key::KeypadDecimal:
         return ImGuiKey_KeypadDecimal;
-    case Key::keypadMultiply:
+    case Key::KeypadMultiply:
         return ImGuiKey_KeypadMultiply;
-    case Key::keypadAdd:
+    case Key::KeypadAdd:
         return ImGuiKey_KeypadAdd;
-    case Key::numLock:
+    case Key::NumLock:
         return ImGuiKey_NumLock;
-    case Key::keypadDivide:
+    case Key::KeypadDivide:
         return ImGuiKey_KeypadDivide;
-    case Key::keypadEnter:
+    case Key::KeypadEnter:
         return ImGuiKey_KeypadEnter;
-    case Key::keypadSubtract:
+    case Key::KeypadSubtract:
         return ImGuiKey_KeypadSubtract;
-    case Key::keypadEqual:
+    case Key::KeypadEqual:
         return ImGuiKey_KeypadEqual;
-    case Key::keypad0:
+    case Key::Keypad0:
         return ImGuiKey_Keypad0;
-    case Key::keypad1:
+    case Key::Keypad1:
         return ImGuiKey_Keypad1;
-    case Key::keypad2:
+    case Key::Keypad2:
         return ImGuiKey_Keypad2;
-    case Key::keypad3:
+    case Key::Keypad3:
         return ImGuiKey_Keypad3;
-    case Key::keypad4:
+    case Key::Keypad4:
         return ImGuiKey_Keypad4;
-    case Key::keypad5:
+    case Key::Keypad5:
         return ImGuiKey_Keypad5;
-    case Key::keypad6:
+    case Key::Keypad6:
         return ImGuiKey_Keypad6;
-    case Key::keypad7:
+    case Key::Keypad7:
         return ImGuiKey_Keypad7;
-    case Key::keypad8:
+    case Key::Keypad8:
         return ImGuiKey_Keypad8;
-    case Key::keypad9:
+    case Key::Keypad9:
         return ImGuiKey_Keypad9;
-    case Key::enter:
+    case Key::Enter:
         return ImGuiKey_Enter;
-    case Key::tab:
+    case Key::Tab:
         return ImGuiKey_Tab;
-    case Key::space:
+    case Key::Space:
         return ImGuiKey_Space;
-    case Key::backspace:
+    case Key::Backspace:
         return ImGuiKey_Backspace;
-    case Key::escape:
+    case Key::Escape:
         return ImGuiKey_Escape;
-    case Key::capsLock:
+    case Key::CapsLock:
         return ImGuiKey_CapsLock;
-    case Key::leftCtrl:
+    case Key::LeftCtrl:
         return ImGuiKey_LeftCtrl;
-    case Key::leftShift:
+    case Key::LeftShift:
         return ImGuiKey_LeftShift;
-    case Key::leftAlt:
+    case Key::LeftAlt:
         return ImGuiKey_LeftAlt;
-    case Key::leftSuper:
+    case Key::LeftSuper:
         return ImGuiKey_LeftSuper;
-    case Key::rightCtrl:
+    case Key::RightCtrl:
         return ImGuiKey_RightCtrl;
-    case Key::rightShift:
+    case Key::RightShift:
         return ImGuiKey_RightShift;
-    case Key::rightAlt:
+    case Key::RightAlt:
         return ImGuiKey_RightAlt;
-    case Key::rightSuper:
+    case Key::RightSuper:
         return ImGuiKey_RightSuper;
 
     case Key::F1:
@@ -202,29 +202,29 @@ static ImGuiKey toImGuiKeyCode(Key key) {
     case Key::F12:
         return ImGuiKey_F12;
 
-    case Key::printScreen:
+    case Key::PrintScreen:
         return ImGuiKey_PrintScreen;
-    case Key::menu:
+    case Key::Menu:
         return ImGuiKey_Menu;
-    case Key::insert:
+    case Key::Insert:
         return ImGuiKey_Insert;
-    case Key::home:
+    case Key::Home:
         return ImGuiKey_Home;
-    case Key::end:
+    case Key::End:
         return ImGuiKey_End;
-    case Key::pageUp:
+    case Key::PageUp:
         return ImGuiKey_PageUp;
-    case Key::pageDown:
+    case Key::PageDown:
         return ImGuiKey_PageDown;
-    case Key::delete_:
+    case Key::Delete:
         return ImGuiKey_Delete;
-    case Key::leftArrow:
+    case Key::LeftArrow:
         return ImGuiKey_LeftArrow;
-    case Key::rightArrow:
+    case Key::RightArrow:
         return ImGuiKey_RightArrow;
-    case Key::downArrow:
+    case Key::DownArrow:
         return ImGuiKey_DownArrow;
-    case Key::upArrow:
+    case Key::UpArrow:
         return ImGuiKey_UpArrow;
 
     default:
@@ -240,8 +240,8 @@ void poppy::ImGuiContext::init(bloom::Application& application,
                                ImGuiContextDescription const& ds) {
     mApplication = &application;
     auto& device = application.device();
-    desc         = ds;
-    this->bloom::Reciever::operator=(application.makeReciever());
+    desc = ds;
+    this->bloom::Receiver::operator=(application.makeReciever());
 
     IMGUI_CHECKVERSION();
 
@@ -249,9 +249,9 @@ void poppy::ImGuiContext::init(bloom::Application& application,
 
     fonts.init(application);
     loadFonts(device, scaleFactor);
-    context                     = ImGui::CreateContext(sFontAtlas);
+    context = ImGui::CreateContext(sFontAtlas);
     context->IO.FontGlobalScale = 1.0 / scaleFactor;
-    context->IO.FontDefault     = fonts.get(Font::UIDefault());
+    context->IO.FontDefault = fonts.get(Font::UIDefault());
 
     ImGui::SetCurrentContext(context);
 
@@ -285,8 +285,7 @@ void poppy::ImGuiContext::loadFonts(bloom::HardwareDevice& device,
 
     sFontAtlas->Clear();
 
-    icons.load(*sFontAtlas,
-               scaleFactor,
+    icons.load(*sFontAtlas, scaleFactor,
                resourceDir() / "Icons/IconsConfig.json",
                resourceDir() / "Icons/Icons.ttf");
     fonts.loadFonts(*sFontAtlas, scaleFactor);
@@ -315,7 +314,7 @@ void poppy::ImGuiContext::newFrame(bloom::Window& window) {
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
 
-    io.DisplaySize             = (mtl::float2)window.size();
+    io.DisplaySize = (mtl::float2)window.size();
     io.DisplayFramebufferScale = window.contentScaleFactor();
 
     doNewFramePlatform(window);
@@ -372,27 +371,27 @@ void poppy::ImGuiContext::onInput(bloom::InputEvent e) {
         //				return true;
 
         ImGuiKey const key = toImGuiKeyCode(event.key);
-        bool const down    = e.type() == InputEventType::keyDown;
+        bool const down = e.type() == InputEventType::keyDown;
 
         // Set Modifiers
         switch (event.key) {
-        case Key::leftCtrl:
-        case Key::rightCtrl:
+        case Key::LeftCtrl:
+        case Key::RightCtrl:
             io.KeyCtrl = down;
             break;
 
-        case Key::leftShift:
-        case Key::rightShift:
+        case Key::LeftShift:
+        case Key::RightShift:
             io.KeyShift = down;
             break;
 
-        case Key::leftAlt:
-        case Key::rightAlt:
+        case Key::LeftAlt:
+        case Key::RightAlt:
             io.KeyAlt = down;
             break;
 
-        case Key::leftSuper:
-        case Key::rightSuper:
+        case Key::LeftSuper:
+        case Key::RightSuper:
             io.KeySuper = down;
             break;
 

@@ -17,7 +17,7 @@ using namespace bloom;
 using namespace mtl::short_types;
 using namespace poppy;
 
-static constexpr auto MainWindowID    = "__MainWindow__";
+static constexpr auto MainWindowID = "__MainWindow__";
 static constexpr auto MainDockspaceID = "__MainWindow_Dockspace__";
 
 template <typename T>
@@ -27,7 +27,7 @@ static void makeUnique(utl::vector<T>& v) {
 }
 
 static void withWindowSizeConstraints(mtl::float2 minSize, auto&& block) {
-    ImGuiStyle& style        = ImGui::GetStyle();
+    ImGuiStyle& style = ImGui::GetStyle();
     utl::scope_guard restore = [&, oldSize = style.WindowMinSize] {
         style.WindowMinSize = oldSize;
     };
@@ -107,7 +107,7 @@ void Dockspace::submitMasterDockspace() {
     flags |= ImGuiDockNodeFlags_NoCloseButton;
 
     ImGuiID const dockID = ImGui::GetID(MainDockspaceID);
-    mainDockID           = dockID;
+    mainDockID = dockID;
 
     ImGui::DockSpace(dockID, /* size arg */ {}, flags);
 }
@@ -174,9 +174,7 @@ utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
 }
 
 template <std::invocable Block>
-static void toolbarWindow(char const* id,
-                          float posX,
-                          float2 const size,
+static void toolbarWindow(char const* id, float posX, float2 const size,
                           Block&& block) {
     ImGuiViewport* const viewport = ImGui::GetMainViewport();
 
@@ -218,7 +216,7 @@ static void toolbarWindow(char const* id,
 }
 
 static void drawSeparator(float positionX) {
-    auto* const window   = ImGui::GetCurrentWindow();
+    auto* const window = ImGui::GetCurrentWindow();
     auto* const drawList = window->DrawList;
 
     drawList->AddLine(float2(positionX - 1, window->Pos.y),
@@ -236,7 +234,7 @@ void Dockspace::displayToolbar() {
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
 
-    auto spacing      = getToolbarSpacing();
+    auto spacing = getToolbarSpacing();
     float const width = viewport->Size.x;
     switch (spacing.size()) {
 
@@ -284,7 +282,7 @@ void Dockspace::displayToolbar() {
         }
 
         // bottom separator
-        auto* const window   = ImGui::GetCurrentWindow();
+        auto* const window = ImGui::GetCurrentWindow();
         auto* const drawList = window->DrawList;
         drawList->AddLine(float2(0, window->Pos.y + window->Size.y - 1),
                           float2(window->Size.x,
@@ -296,7 +294,7 @@ void Dockspace::displayToolbar() {
 
 void Dockspace::toolbarLayoutOne(utl::small_vector<int, 2> spacing) {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
-    float2 const padding    = GImGui->Style.WindowPadding;
+    float2 const padding = GImGui->Style.WindowPadding;
 
     float const t0Width = toolbars[0].getWidthWithoutSpacers();
     float const t2Width = toolbars[2].getWidthWithoutSpacers();
@@ -311,9 +309,9 @@ void Dockspace::toolbarLayoutOne(utl::small_vector<int, 2> spacing) {
 
 void Dockspace::toolbarLayoutTwo(utl::small_vector<int, 2> spacing) {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
-    float2 const padding    = GImGui->Style.WindowPadding;
+    float2 const padding = GImGui->Style.WindowPadding;
 
-    float const spacer      = spacing[0];
+    float const spacer = spacing[0];
     float const position[2] = { 0, spacer };
 
     float const width[2] = { spacer, viewport->Size.x - spacer };
@@ -354,7 +352,7 @@ void Dockspace::toolbarLayoutTwo(utl::small_vector<int, 2> spacing) {
 
 void Dockspace::toolbarLayoutThree(utl::small_vector<int, 2> spacing) {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
-    float2 const padding    = GImGui->Style.WindowPadding;
+    float2 const padding = GImGui->Style.WindowPadding;
 
     float const position[3] = { 0, (float)spacing[0], (float)spacing[1] };
 

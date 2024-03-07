@@ -43,9 +43,9 @@ private:
     bloom::Input const* _input = nullptr;
 
     Operation _operation = Operation::translate;
-    Space _space[3]      = { Space::world, Space::world, Space::local };
-    bool _hovered        = false;
-    bool _using          = false;
+    Space _space[3] = { Space::world, Space::world, Space::local };
+    bool _hovered = false;
+    bool _using = false;
 };
 
 std::string toString(Gizmo::Operation);

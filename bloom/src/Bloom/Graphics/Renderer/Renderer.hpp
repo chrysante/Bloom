@@ -19,7 +19,7 @@ class MaterialInstance;
 class BLOOM_API Framebuffer {
 public:
     Framebuffer(Framebuffer const&) = delete;
-    virtual ~Framebuffer()          = default;
+    virtual ~Framebuffer() = default;
 
     mtl::int2 size = 0;
 
@@ -27,9 +27,9 @@ protected:
     Framebuffer() = default;
 };
 
-class BLOOM_API Renderer: protected Reciever {
+class BLOOM_API Renderer: protected Receiver {
 public:
-    explicit Renderer(Reciever reciever): Reciever(std::move(reciever)) {}
+    explicit Renderer(Receiver reciever): Receiver(std::move(reciever)) {}
     virtual ~Renderer() = default;
 
     virtual void init(HardwareDevice&){};
@@ -38,8 +38,8 @@ public:
     virtual std::unique_ptr<Framebuffer> createDebugFramebuffer(
         mtl::int2 size) const = 0;
 
-    virtual void beginScene(Camera const&)         = 0;
-    virtual void endScene()                        = 0;
+    virtual void beginScene(Camera const&) = 0;
+    virtual void endScene() = 0;
     virtual void draw(Framebuffer&, CommandQueue&) = 0;
 
     virtual void submit(Reference<StaticMeshRenderer>,

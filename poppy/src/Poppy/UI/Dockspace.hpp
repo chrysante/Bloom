@@ -35,7 +35,7 @@ private:
     std::array<Toolbar, 3> toolbars;
 
     std::size_t spacingCount = 0;
-    unsigned mainDockID      = 0;
+    unsigned mainDockID = 0;
 };
 
 } // namespace poppy

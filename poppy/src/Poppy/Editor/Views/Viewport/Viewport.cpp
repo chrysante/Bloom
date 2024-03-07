@@ -33,58 +33,57 @@ Viewport::Viewport(): BasicSceneInspector(this) {
 
         ToolbarSpacer{},
 
-        ToolbarDropdownMenu().content(
-                                 [this] {
+        ToolbarDropdownMenu().content([this] {
         enumCombo(drawOptions.mode);
-        }).previewValue([this] { return toString(drawOptions.mode); }),
+    }).previewValue([this] { return toString(drawOptions.mode); }),
         ToolbarDropdownMenu()
             .content([this] {
-                auto operation = gizmo.operation();
-                if (enumCombo(operation)) {
-                    gizmo.setOperation(operation);
-                }
-            })
-            .previewValue([this] { return toString(gizmo.operation()); }),
+        auto operation = gizmo.operation();
+        if (enumCombo(operation)) {
+            gizmo.setOperation(operation);
+        }
+    }).previewValue([this] { return toString(gizmo.operation()); }),
 
         ToolbarDropdownMenu()
             .content([this] {
-                auto space = gizmo.space();
-                if (enumCombo(space)) {
-                    gizmo.setSpace(space);
-                }
-            })
-            .previewValue([this] { return toString(gizmo.space()); }),
+        auto space = gizmo.space();
+        if (enumCombo(space)) {
+            gizmo.setSpace(space);
+        }
+    }).previewValue([this] { return toString(gizmo.space()); }),
 
         ToolbarDropdownMenu()
-            .content([this] { enumCombo(camera.data.projection); })
-            .previewValue([this] { return toString(camera.data.projection); }),
+            .content([this] {
+        enumCombo(camera.data.projection);
+    }).previewValue([this] { return toString(camera.data.projection); }),
 
         ToolbarSpacer{},
 
         ToolbarIconButton([this] {
-            return maximized() ? "resize-small" : "resize-full";
-        }).onClick([this] {
-            bool const isMaximized = maximized();
-            dispatch(DispatchToken::nextFrame, CustomCommand{ [=] {
-                         if (isMaximized) {
-                             restore();
-                             window().makeWindowed();
-                         }
-                         else {
-                             maximize();
-                             window().makeFullscreen();
-                         }
-                     } });
-        }) };
+        return maximized() ? "resize-small" : "resize-full";
+    }).onClick([this] {
+        bool const isMaximized = maximized();
+        dispatch(DispatchToken::NextFrame, [=] {
+            if (isMaximized) {
+                restore();
+                window().makeWindowed();
+            }
+            else {
+                maximize();
+                window().makeFullscreen();
+            }
+        });
+    })
+    };
 }
 
 void Viewport::init() {
     setPadding(0);
     toolbar.setStyle({
-        .height             = 25,
-        .buttonAlpha        = 1,
+        .height = 25,
+        .buttonAlpha = 1,
         .buttonAlphaHovered = 1,
-        .buttonAlphaActive  = 1,
+        .buttonAlphaActive = 1,
     });
     sceneRenderer.setRenderer(editor().coreSystems().renderer());
     gizmo.setInput(window().input());
@@ -105,8 +104,8 @@ void Viewport::frame() {
         float2 const padding = GImGui->Style.WindowPadding;
         ImGui::SetCursorPos(padding);
         auto* const window = ImGui::GetCurrentWindow();
-        auto color         = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
-        color.w            = 0.5;
+        auto color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+        color.w = 0.5;
         window->DrawList->AddRectFilled(window->Pos,
                                         (float2)window->Pos +
                                             float2{ window->Size.x,
@@ -139,7 +138,7 @@ void Viewport::frame() {
 YAML::Node Viewport::serialize() const {
     YAML::Node node;
     node["Parameters"] = params;
-    node["Camera"]     = camera;
+    node["Camera"] = camera;
     return node;
 }
 
@@ -199,19 +198,14 @@ void Viewport::drawScene() {
     auto& sceneSystem = editor().coreSystems().sceneSystem();
     sceneSystem.applyTransformHierarchy();
     if (gameView) {
-        sceneRenderer.draw(sceneSystem.scenes(),
-                           camera.camera,
-                           *framebuffer,
+        sceneRenderer.draw(sceneSystem.scenes(), camera.camera, *framebuffer,
                            window().commandQueue());
     }
     else {
         OverlayDrawDescription desc;
         sceneRenderer.drawWithOverlays(sceneSystem.scenes(),
-                                       editor().selection(),
-                                       camera.camera,
-                                       desc,
-                                       *framebuffer,
-                                       *editorFramebuffer,
+                                       editor().selection(), camera.camera,
+                                       desc, *framebuffer, *editorFramebuffer,
                                        window().commandQueue());
     }
 }
@@ -252,7 +246,7 @@ void Viewport::onInput(bloom::InputEvent& event) {
         [&](bloom::KeyEvent const& e) {
         using bloom::Key;
         switch (e.key) {
-        case Key::tab:
+        case Key::Tab:
             gizmo.cycleSpace();
             break;
         case Key::_1:
@@ -264,7 +258,7 @@ void Viewport::onInput(bloom::InputEvent& event) {
         case Key::_3:
             gizmo.setOperation(Gizmo::Operation::scale);
             break;
-        case Key::escape:
+        case Key::Escape:
             restore();
         case Key::G:
             gameView ^= true;
@@ -315,9 +309,7 @@ void Viewport::dropdownMenu() {
 
         beginProperty("Field Of View");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        ImGui::SliderFloat("##field-of-view",
-                           &camera.data.fieldOfView,
-                           30,
+        ImGui::SliderFloat("##field-of-view", &camera.data.fieldOfView, 30,
                            180);
 
         beginProperty("Near Clip Plane");
@@ -342,8 +334,8 @@ void Viewport::dropdownMenu() {
             }
         }
         if (drawOptions.visualizeShadowCascades) {
-            auto lightEntity    = drawOptions.lightVizEntity;
-            auto* scene         = &lightEntity.scene();
+            auto lightEntity = drawOptions.lightVizEntity;
+            auto* scene = &lightEntity.scene();
             char const* preview = nullptr;
             if (!lightEntity || getLightType(lightEntity) == LightType::none ||
                 !scene->getComponent<DirectionalLightComponent>(lightEntity)
@@ -357,8 +349,7 @@ void Viewport::dropdownMenu() {
             }
             beginProperty("Shadow Caster");
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            if (ImGui::BeginCombo("##shadow-caster",
-                                  preview,
+            if (ImGui::BeginCombo("##shadow-caster", preview,
                                   ImGuiComboFlags_NoArrowButton))
             {
                 if (scene) {
@@ -436,7 +427,7 @@ void Viewport::recieveSceneDragDrop() {
     auto payload = acceptAssetDragDrop(AssetType::scene);
     if (payload) {
         AssetHandle const handle = *payload;
-        auto asset               = assetManager().get(handle);
+        auto asset = assetManager().get(handle);
         assetManager().makeAvailable(handle, AssetRepresentation::CPU);
 
         auto& sceneSystem = editor().coreSystems().sceneSystem();
@@ -447,12 +438,12 @@ void Viewport::recieveSceneDragDrop() {
 
 mtl::float3 Viewport::worldSpaceToViewSpace(mtl::float3 const positionWS) {
     auto const viewProj = camera.camera.viewProjection();
-    auto const tmp      = viewProj * mtl::float4(positionWS, 1);
-    auto const ndc      = tmp.xyz / tmp.w;
+    auto const tmp = viewProj * mtl::float4(positionWS, 1);
+    auto const ndc = tmp.xyz / tmp.w;
 
     auto posVS = ndc.xy;
 
-    posVS   = (posVS + 1) / 2;
+    posVS = (posVS + 1) / 2;
     posVS.y = 1 - posVS.y;
     posVS *= this->size();
     return { posVS, ndc.z };
@@ -465,8 +456,8 @@ mtl::float3 Viewport::worldSpaceToWindowSpace(mtl::float3 position) {
 
 mtl::float2 Viewport::worldSpaceDirToViewSpace(mtl::float3 const positionWS) {
     auto const viewProj = camera.camera.viewProjection();
-    auto const tmp      = viewProj * mtl::float4(positionWS, 0);
-    auto const ndc      = tmp.xyz / tmp.w;
+    auto const tmp = viewProj * mtl::float4(positionWS, 0);
+    auto const ndc = tmp.xyz / tmp.w;
 
     auto dirVS = ndc.xy;
 

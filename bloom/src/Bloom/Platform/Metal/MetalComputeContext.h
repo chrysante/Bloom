@@ -15,14 +15,11 @@ public:
 
     void setPipeline(ComputePipelineView) override;
 
-    void setBuffer(BufferView,
-                   std::size_t index,
+    void setBuffer(BufferView, std::size_t index,
                    std::size_t offset = 0) override;
     void setBufferOffset(std::size_t index, std::size_t offset) override;
     void setSampler(SamplerView, std::size_t index) override;
-    void setSampler(SamplerView,
-                    float lodMinClamp,
-                    float lodMaxClamp,
+    void setSampler(SamplerView, float lodMinClamp, float lodMaxClamp,
                     std::size_t index) override;
     void setTexture(TextureView, std::size_t index) override;
 

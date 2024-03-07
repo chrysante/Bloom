@@ -1,30 +1,35 @@
-#pragma once
-
-#include "Bloom/Core/Base.hpp"
+#ifndef BLOOM_APPLICATION_INPUT_H
+#define BLOOM_APPLICATION_INPUT_H
 
 #include <array>
 
 #include <mtl/mtl.hpp>
 #include <utl/common.hpp>
 
+#include "Bloom/Core/Base.hpp"
+#include "Bloom/Core/EnumCount.hpp"
+
 namespace bloom {
 
+/// Flags type to indicate if modifier keys are pressed
 enum class ModFlags : unsigned {
-    none     = 0u,
-    capsLock = 1u << 0, // Set if Caps Lock key is pressed.
-    shift    = 1u << 1, // Set if Shift key is pressed.
-    control  = 1u << 2, // Set if Control key is pressed.
-    alt      = 1u << 3, // Set if Alt key is pressed.
-    super    = 1u << 4, // Set if Command key is pressed.
-    numLock  = 1u << 5, // Set if numLock ...
+    None = 0u,
+    CapsLock = 1u << 0, /// Set if caps lock key is pressed.
+    Shift = 1u << 1,    /// Set if shift key is pressed.
+    Control = 1u << 2,  /// Set if control key is pressed.
+    Alt = 1u << 3,      /// Set if alt key is pressed.
+    Super = 1u << 4,    /// Set if command key is pressed.
+    NumLock = 1u << 5,  /// Set if numLock key is pressed.
 };
 
 UTL_ENUM_OPERATORS(ModFlags);
 
-ModFlags modFlagsFromGLFW(int);
+/// Translates GLFW modifier flags to `bloom::ModFlags`
+ModFlags modFlagsFromGLFW(int glfwModFlags);
 
+/// All known keyboard keys
 enum class BLOOM_API Key {
-    none = 0,
+    None = 0,
     A,
     S,
     D,
@@ -61,49 +66,49 @@ enum class BLOOM_API Key {
     _8,
     _9,
     _0,
-    equal,
-    minus,
-    rightBracket,
-    leftBracket,
-    apostrophe,
-    semicolon,
-    backslash,
-    comma,
-    slash,
-    period,
-    graveAccent,
-    keypadDecimal,
-    keypadMultiply,
-    keypadAdd,
-    numLock,
-    keypadDivide,
-    keypadEnter,
-    keypadSubtract,
-    keypadEqual,
-    keypad0,
-    keypad1,
-    keypad2,
-    keypad3,
-    keypad4,
-    keypad5,
-    keypad6,
-    keypad7,
-    keypad8,
-    keypad9,
-    enter,
-    tab,
-    space,
-    backspace,
-    escape,
-    capsLock,
-    leftCtrl,
-    leftShift,
-    leftAlt,
-    leftSuper,
-    rightCtrl,
-    rightShift,
-    rightAlt,
-    rightSuper,
+    Equal,
+    Minus,
+    RightBracket,
+    LeftBracket,
+    Apostrophe,
+    Semicolon,
+    Backslash,
+    Comma,
+    Slash,
+    Period,
+    GraveAccent,
+    KeypadDecimal,
+    KeypadMultiply,
+    KeypadAdd,
+    NumLock,
+    KeypadDivide,
+    KeypadEnter,
+    KeypadSubtract,
+    KeypadEqual,
+    Keypad0,
+    Keypad1,
+    Keypad2,
+    Keypad3,
+    Keypad4,
+    Keypad5,
+    Keypad6,
+    Keypad7,
+    Keypad8,
+    Keypad9,
+    Enter,
+    Tab,
+    Space,
+    Backspace,
+    Escape,
+    CapsLock,
+    LeftCtrl,
+    LeftShift,
+    LeftAlt,
+    LeftSuper,
+    RightCtrl,
+    RightShift,
+    RightAlt,
+    RightSuper,
     F1,
     F2,
     F3,
@@ -116,29 +121,30 @@ enum class BLOOM_API Key {
     F10,
     F11,
     F12,
-    printScreen,
-    menu,
-    insert,
-    home,
-    pageUp,
-    delete_,
-    end,
-    pageDown,
-    leftArrow,
-    rightArrow,
-    downArrow,
-    upArrow,
-    _count
+    PrintScreen,
+    Menu,
+    Insert,
+    Home,
+    PageUp,
+    Delete,
+    End,
+    PageDown,
+    LeftArrow,
+    RightArrow,
+    DownArrow,
+    UpArrow,
+    LAST = UpArrow
 };
 
+/// Translates GLFW key IDs to `bloom::Key`
 Key keyFromGLFW(int);
 
 enum struct BLOOM_API MouseButton {
-    none  = -1,
-    left  = 0,
-    right = 1,
-    other = 2,
-    _count
+    None = -1,
+    Left = 0,
+    Right = 1,
+    Other = 2,
+    LAST = Other
 };
 
 MouseButton mouseButtonFromGLFW(int);
@@ -169,12 +175,14 @@ private:
     }
 
 private:
-    ModFlags _modFlags         = ModFlags::none;
+    ModFlags _modFlags = ModFlags::None;
     mtl::float2 _mousePosition = 0;
-    mtl::float2 _mouseOffset   = 0;
-    mtl::float2 _scrollOffset  = 0;
-    std::array<int, (std::size_t)Key::_count> _keys{};
-    std::array<int, (std::size_t)MouseButton::_count> _mouseButtons{};
+    mtl::float2 _mouseOffset = 0;
+    mtl::float2 _scrollOffset = 0;
+    std::array<int, EnumCount<Key>> _keys{};
+    std::array<int, EnumCount<MouseButton>> _mouseButtons{};
 };
 
 } // namespace bloom
+
+#endif // BLOOM_APPLICATION_INPUT_H

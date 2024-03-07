@@ -91,14 +91,7 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_6);                                           \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_9(Type,                                \
-                                          _0,                                  \
-                                          _1,                                  \
-                                          _2,                                  \
-                                          _3,                                  \
-                                          _4,                                  \
-                                          _5,                                  \
-                                          _6,                                  \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_9(Type, _0, _1, _2, _3, _4, _5, _6,    \
                                           _7)                                  \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
@@ -111,16 +104,8 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_7);                                           \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_10(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8)                                 \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_10(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8)                             \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -133,17 +118,8 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_8);                                           \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_11(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9)                                 \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_11(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9)                         \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -157,18 +133,8 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_9);                                           \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_12(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_12(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10)                    \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -183,19 +149,8 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_10);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_13(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_13(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11)               \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -211,20 +166,8 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_11);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_14(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_14(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12)          \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -241,21 +184,8 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_12);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_15(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_15(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13)     \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -273,21 +203,8 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_13);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_16(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_16(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
                                            _14)                                \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
@@ -307,23 +224,9 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_14);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_17(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
-                                           _14,                                \
-                                           _15)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_17(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
+                                           _14, _15)                           \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -343,24 +246,9 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_15);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_18(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
-                                           _14,                                \
-                                           _15,                                \
-                                           _16)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_18(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
+                                           _14, _15, _16)                      \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -381,25 +269,9 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_16);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_19(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
-                                           _14,                                \
-                                           _15,                                \
-                                           _16,                                \
-                                           _17)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_19(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
+                                           _14, _15, _16, _17)                 \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -421,26 +293,9 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_17);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_20(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
-                                           _14,                                \
-                                           _15,                                \
-                                           _16,                                \
-                                           _17,                                \
-                                           _18)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_20(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
+                                           _14, _15, _16, _17, _18)            \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -463,27 +318,9 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_18);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_21(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
-                                           _14,                                \
-                                           _15,                                \
-                                           _16,                                \
-                                           _17,                                \
-                                           _18,                                \
-                                           _19)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_21(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
+                                           _14, _15, _16, _17, _18, _19)       \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -507,28 +344,9 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_19);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_22(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
-                                           _14,                                \
-                                           _15,                                \
-                                           _16,                                \
-                                           _17,                                \
-                                           _18,                                \
-                                           _19,                                \
-                                           _20)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_22(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
+                                           _14, _15, _16, _17, _18, _19, _20)  \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -553,28 +371,9 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_20);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_23(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
-                                           _14,                                \
-                                           _15,                                \
-                                           _16,                                \
-                                           _17,                                \
-                                           _18,                                \
-                                           _19,                                \
-                                           _20,                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_23(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
+                                           _14, _15, _16, _17, _18, _19, _20,  \
                                            _21)                                \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
@@ -601,30 +400,10 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_21);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_24(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
-                                           _14,                                \
-                                           _15,                                \
-                                           _16,                                \
-                                           _17,                                \
-                                           _18,                                \
-                                           _19,                                \
-                                           _20,                                \
-                                           _21,                                \
-                                           _22)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_24(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
+                                           _14, _15, _16, _17, _18, _19, _20,  \
+                                           _21, _22)                           \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -651,31 +430,10 @@
     _BLOOM_TEXT_SERIALIZE_FIELD(_22);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_SERIALIZER_25(Type,                               \
-                                           _0,                                 \
-                                           _1,                                 \
-                                           _2,                                 \
-                                           _3,                                 \
-                                           _4,                                 \
-                                           _5,                                 \
-                                           _6,                                 \
-                                           _7,                                 \
-                                           _8,                                 \
-                                           _9,                                 \
-                                           _10,                                \
-                                           _11,                                \
-                                           _12,                                \
-                                           _13,                                \
-                                           _14,                                \
-                                           _15,                                \
-                                           _16,                                \
-                                           _17,                                \
-                                           _18,                                \
-                                           _19,                                \
-                                           _20,                                \
-                                           _21,                                \
-                                           _22,                                \
-                                           _23)                                \
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_25(Type, _0, _1, _2, _3, _4, _5, _6,   \
+                                           _7, _8, _9, _10, _11, _12, _13,     \
+                                           _14, _15, _16, _17, _18, _19, _20,  \
+                                           _21, _22, _23)                      \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
     _BLOOM_TEXT_SERIALIZE_FIELD(_0);                                           \
     _BLOOM_TEXT_SERIALIZE_FIELD(_1);                                           \
@@ -762,14 +520,7 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_6);                                         \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_9(Type,                              \
-                                            _0,                                \
-                                            _1,                                \
-                                            _2,                                \
-                                            _3,                                \
-                                            _4,                                \
-                                            _5,                                \
-                                            _6,                                \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_9(Type, _0, _1, _2, _3, _4, _5, _6,  \
                                             _7)                                \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
@@ -782,16 +533,8 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_7);                                         \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_10(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8)                               \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_10(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8)                           \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -804,17 +547,8 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_8);                                         \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_11(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9)                               \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_11(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9)                       \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -828,18 +562,8 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_9);                                         \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_12(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_12(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10)                  \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -854,19 +578,8 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_10);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_13(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_13(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11)             \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -882,20 +595,8 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_11);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_14(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_14(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12)        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -912,21 +613,8 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_12);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_15(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_15(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13)   \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -944,21 +632,8 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_13);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_16(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_16(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
                                              _14)                              \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
@@ -978,23 +653,9 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_14);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_17(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
-                                             _14,                              \
-                                             _15)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_17(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
+                                             _14, _15)                         \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -1014,24 +675,9 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_15);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_18(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
-                                             _14,                              \
-                                             _15,                              \
-                                             _16)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_18(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
+                                             _14, _15, _16)                    \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -1052,25 +698,9 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_16);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_19(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
-                                             _14,                              \
-                                             _15,                              \
-                                             _16,                              \
-                                             _17)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_19(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
+                                             _14, _15, _16, _17)               \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -1092,26 +722,9 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_17);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_20(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
-                                             _14,                              \
-                                             _15,                              \
-                                             _16,                              \
-                                             _17,                              \
-                                             _18)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_20(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
+                                             _14, _15, _16, _17, _18)          \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -1134,27 +747,9 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_18);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_21(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
-                                             _14,                              \
-                                             _15,                              \
-                                             _16,                              \
-                                             _17,                              \
-                                             _18,                              \
-                                             _19)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_21(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
+                                             _14, _15, _16, _17, _18, _19)     \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -1178,27 +773,9 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_19);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_22(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
-                                             _14,                              \
-                                             _15,                              \
-                                             _16,                              \
-                                             _17,                              \
-                                             _18,                              \
-                                             _19,                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_22(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
+                                             _14, _15, _16, _17, _18, _19,     \
                                              _20)                              \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
@@ -1224,29 +801,10 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_20);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_23(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
-                                             _14,                              \
-                                             _15,                              \
-                                             _16,                              \
-                                             _17,                              \
-                                             _18,                              \
-                                             _19,                              \
-                                             _20,                              \
-                                             _21)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_23(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
+                                             _14, _15, _16, _17, _18, _19,     \
+                                             _20, _21)                         \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -1272,30 +830,10 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_21);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_24(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
-                                             _14,                              \
-                                             _15,                              \
-                                             _16,                              \
-                                             _17,                              \
-                                             _18,                              \
-                                             _19,                              \
-                                             _20,                              \
-                                             _21,                              \
-                                             _22)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_24(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
+                                             _14, _15, _16, _17, _18, _19,     \
+                                             _20, _21, _22)                    \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \
@@ -1322,31 +860,10 @@
     _BLOOM_TEXT_DESERIALIZE_FIELD(_22);                                        \
     _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER_25(Type,                             \
-                                             _0,                               \
-                                             _1,                               \
-                                             _2,                               \
-                                             _3,                               \
-                                             _4,                               \
-                                             _5,                               \
-                                             _6,                               \
-                                             _7,                               \
-                                             _8,                               \
-                                             _9,                               \
-                                             _10,                              \
-                                             _11,                              \
-                                             _12,                              \
-                                             _13,                              \
-                                             _14,                              \
-                                             _15,                              \
-                                             _16,                              \
-                                             _17,                              \
-                                             _18,                              \
-                                             _19,                              \
-                                             _20,                              \
-                                             _21,                              \
-                                             _22,                              \
-                                             _23)                              \
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_25(Type, _0, _1, _2, _3, _4, _5, _6, \
+                                             _7, _8, _9, _10, _11, _12, _13,   \
+                                             _14, _15, _16, _17, _18, _19,     \
+                                             _20, _21, _22, _23)               \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_0);                                         \
     _BLOOM_TEXT_DESERIALIZE_FIELD(_1);                                         \

@@ -17,7 +17,9 @@ using namespace bloom;
 using namespace mtl::short_types;
 using namespace poppy;
 
-Application* bloom::createApplication() { return new poppy::Editor(); }
+std::unique_ptr<Application> bloom::createApplication() {
+    return std::make_unique<poppy::Editor>();
+}
 
 struct EditorWindowDelegate: public bloom::WindowDelegate {
     void frame() override { onFrame(); }
@@ -58,7 +60,7 @@ Editor::Editor(): mSelection(makeReciever()) {
         ToolbarSpacer{},
         ToolbarIconButton("cw")
             .onClick([this] {
-                dispatch(DispatchToken::nextFrame,
+                dispatch(DispatchToken::NextFrame,
                          ReloadShadersCommand{});
             })
             .tooltip("Reload Shaders")
@@ -74,9 +76,7 @@ Editor::Editor(): mSelection(makeReciever()) {
 utl::vector<View*> Editor::getViews() {
     utl::vector<View*> result;
     result.reserve(views.size());
-    std::transform(views.begin(),
-                   views.end(),
-                   std::back_inserter(result),
+    std::transform(views.begin(), views.end(), std::back_inserter(result),
                    [](auto&& v) { return v.get(); });
     return result;
 }
@@ -88,12 +88,12 @@ void Editor::openView(std::string name, utl::function<void(View&)> completion) {
         return;
     }
 
-    dispatch(DispatchToken::nextFrame, CustomCommand([=] {
-                 auto& view = createView(*entry, *getWindows().front());
-                 if (completion) {
-                     completion(view);
-                 }
-             }));
+    dispatch(DispatchToken::NextFrame, [=] {
+        auto& view = createView(*entry, *getWindows().front());
+        if (completion) {
+            completion(view);
+        }
+    });
 }
 
 /// MARK: Init
@@ -108,7 +108,7 @@ void Editor::init() {
         WindowDescription windowDesc;
         windowDesc.size = { 1200, 800 };
 
-        auto delegate     = std::make_unique<EditorWindowDelegate>();
+        auto delegate = std::make_unique<EditorWindowDelegate>();
         delegate->onFrame = [this, delegate = delegate.get()] {
             imguiCtx.drawFrame(device(), delegate->window());
         };
@@ -193,8 +193,7 @@ void Editor::menuBar() {
 }
 
 void Editor::displayViews() {
-    if (auto const itr = std::find_if(views.begin(),
-                                      views.end(),
+    if (auto const itr = std::find_if(views.begin(), views.end(),
                                       [](auto&& v) { return v->maximized(); });
         itr != views.end())
     {
@@ -212,7 +211,7 @@ void Editor::displayViews() {
 void Editor::onInput(bloom::InputEvent e) {
     imguiCtx.onInput(e);
     e.dispatch<InputEventType::keyUp>([&](KeyEvent event) {
-        if (event.key == Key::S && test(event.modifierFlags & ModFlags::super))
+        if (event.key == Key::S && test(event.modifierFlags & ModFlags::Super))
         {
             saveAll();
             return true;
@@ -223,9 +222,8 @@ void Editor::onInput(bloom::InputEvent e) {
         return;
     }
     auto const focusedView =
-        std::find_if(views.begin(), views.end(), [](auto const& v) {
-            return v->focused();
-        });
+        std::find_if(views.begin(), views.end(),
+                     [](auto const& v) { return v->focused(); });
     if (focusedView != views.end()) {
         (**focusedView).onInput(e);
         if (e.handled()) {
@@ -248,7 +246,7 @@ void Editor::onInput(bloom::InputEvent e) {
 void Editor::saveStateToDisk() {
     YAML::Node root;
     root["Appearance"] = appearance.serialize();
-    root["Views"]      = saveViews();
+    root["Views"] = saveViews();
     YAML::Emitter out;
     out << root;
     auto const filename = settingsFile();
@@ -293,14 +291,14 @@ void Editor::loadViews(YAML::Node const& node) {
 /// MARK: Misc
 
 std::filesystem::path Editor::settingsFile() const {
-    return libraryDir() / "settings.ini";
+    return libraryDir() / "Poppy.settings";
 }
 
 View& Editor::createView(ViewRegistry::Entry const& entry, Window& window) {
     assert((bool)entry.factory);
     auto view = entry.factory();
 
-    view->mRegisterDescription          = entry.description;
+    view->mRegisterDescription = entry.description;
     view->desc.pub._name_DONT_CHANGE_ME = entry.name;
     populateView(*view, window);
     view->doInit();
@@ -310,12 +308,12 @@ View& Editor::createView(ViewRegistry::Entry const& entry, Window& window) {
 }
 
 void Editor::populateView(View& view, bloom::Window& window) {
-    auto& desc  = view.desc;
+    auto& desc = view.desc;
     desc.editor = this;
     desc.window = &window;
 
     view.Emitter::operator=(makeEmitter());
-    view.Reciever::operator=(makeReciever());
+    view.Receiver::operator=(makeReciever());
 }
 
 void Editor::clearClosingViews() {

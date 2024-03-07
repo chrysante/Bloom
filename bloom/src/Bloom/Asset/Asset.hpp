@@ -18,11 +18,11 @@ enum class FileFormat { binary, text };
 enum class AssetType : unsigned {
     none = 0,
 
-    staticMesh   = 1 << 0,
+    staticMesh = 1 << 0,
     skeletalMesh = 1 << 1, /// Not supported yet...
-    mesh         = staticMesh | skeletalMesh,
+    mesh = staticMesh | skeletalMesh,
 
-    material         = 1 << 2,
+    material = 1 << 2,
     materialInstance = 1 << 3,
 
     scene = 1 << 4,
@@ -124,7 +124,6 @@ auto dispatchAssetType(AssetType type, auto&& f) {
 
 /// Kind of misplaced here but we'll go with it for now
 
-struct BLOOM_API ScriptReloadEvent {};
 struct BLOOM_API ScriptsWillLoadEvent {};
 struct BLOOM_API ScriptsDidLoadEvent {};
 
@@ -135,7 +134,7 @@ struct YAML::convert<bloom::AssetHandle> {
     static Node encode(bloom::AssetHandle const& h) {
         Node node;
         node["Type"] = std::string(toString(h.type()));
-        node["ID"]   = h.id();
+        node["ID"] = h.id();
         return node;
     }
 
@@ -143,7 +142,7 @@ struct YAML::convert<bloom::AssetHandle> {
         auto const type =
             bloom::assetTypeFromString(node["Type"].as<std::string>());
         auto const id = node["ID"].as<utl::uuid>();
-        h             = bloom::AssetHandle(type, id);
+        h = bloom::AssetHandle(type, id);
         return true;
     }
 };

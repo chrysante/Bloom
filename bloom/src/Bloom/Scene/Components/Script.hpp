@@ -11,7 +11,7 @@ struct ScriptComponent {
     BLOOM_REGISTER_COMPONENT("Script");
 
     scatha::sema::StructureType const* classType = nullptr;
-    void* object                                 = nullptr;
+    void* object = nullptr;
 };
 
 } // namespace bloom

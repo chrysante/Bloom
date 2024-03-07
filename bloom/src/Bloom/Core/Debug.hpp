@@ -26,12 +26,12 @@ class BLOOM_API Logger {
     enum class Level { Trace, Info, Debug, Warning, Error, Fatal };
 
 public:
-    static void trace(auto const&... args) { log(Level::Warning, args...); }
-    static void info(auto const&... args) { log(Level::Warning, args...); }
-    static void debug(auto const&... args) { log(Level::Warning, args...); }
+    static void trace(auto const&... args) { log(Level::Trace, args...); }
+    static void info(auto const&... args) { log(Level::Info, args...); }
+    static void debug(auto const&... args) { log(Level::Debug, args...); }
     static void warn(auto const&... args) { log(Level::Warning, args...); }
-    static void error(auto const&... args) { log(Level::Warning, args...); }
-    static void fatal(auto const&... args) { log(Level::Warning, args...); }
+    static void error(auto const&... args) { log(Level::Error, args...); }
+    static void fatal(auto const&... args) { log(Level::Fatal, args...); }
 
 private:
     static void log(Level level, auto const&... args) {

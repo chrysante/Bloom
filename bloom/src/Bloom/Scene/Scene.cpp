@@ -59,8 +59,8 @@ Scene Scene::copy() {
     Scene result(handle(), std::string(name()));
     _registry.each([&](EntityID fromID) {
         auto const fromHandle = this->getHandle(fromID);
-        EntityID const toID   = result.createEmptyEntity(fromID);
-        auto const toHandle   = result.getHandle(toID);
+        EntityID const toID = result.createEmptyEntity(fromID);
+        auto const toHandle = result.getHandle(toID);
         idMap.insert({ fromID, toID });
         forEachComponent([&]<typename C>(utl::tag<C>) {
             if (fromHandle.has<C>()) {
@@ -76,10 +76,10 @@ Scene Scene::copy() {
         }
         BL_DEBUGBREAK("Probably not going to happen");
         auto fromHandle = this->getHandle(from);
-        auto toHandle   = result.getHandle(to);
+        auto toHandle = result.getHandle(to);
         if (toHandle.has<HierarchyComponent>()) {
             auto const& fromHierarchy = fromHandle.get<HierarchyComponent>();
-            auto& toHierarchy         = toHandle.get<HierarchyComponent>();
+            auto& toHierarchy = toHandle.get<HierarchyComponent>();
 
             if (fromHierarchy.parent) {
                 toHierarchy.parent = idMap[fromHierarchy.parent];
@@ -104,16 +104,14 @@ Scene Scene::copy() {
 
 /// MARK: Serialize
 template <typename T>
-static void serializeComponent(YAML::Node& node,
-                               ConstEntityHandle entity,
+static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
                                utl::tag<T>) {
     if (entity.has<T>()) {
         node[T::staticName()] = entity.get<T>();
     }
 }
 
-static void serializeComponent(YAML::Node& node,
-                               ConstEntityHandle entity,
+static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
                                utl::tag<MeshRendererComponent>) {
     if (entity.has<MeshRendererComponent>()) {
         node[MeshRendererComponent::staticName()] =
@@ -122,18 +120,15 @@ static void serializeComponent(YAML::Node& node,
 }
 
 template <typename T>
-static void deserializeComponent(YAML::Node const& node,
-                                 EntityHandle entity,
-                                 AssetManager& assetManager,
-                                 utl::tag<T>) {
+static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
+                                 AssetManager& assetManager, utl::tag<T>) {
     YAML::Node componentNode = node[T::staticName()];
     if (componentNode.IsDefined()) {
         entity.add(componentNode.as<T>());
     }
 }
 
-static void deserializeComponent(YAML::Node const& node,
-                                 EntityHandle entity,
+static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
                                  AssetManager& assetManager,
                                  utl::tag<MeshRendererComponent>) {
     if (YAML::Node componentNode = node[MeshRendererComponent::staticName()];
@@ -147,7 +142,7 @@ static void deserializeComponent(YAML::Node const& node,
 
 static YAML::Node serializeEntity(Scene const& scene, EntityID id) {
     YAML::Node node;
-    node["ID"]  = id.raw();
+    node["ID"] = id.raw();
     auto entity = scene.getHandle(id);
     forEachComponent(except<TransformMatrixComponent>,
                      [&]<typename T>(utl::tag<T>) {
@@ -156,12 +151,11 @@ static YAML::Node serializeEntity(Scene const& scene, EntityID id) {
     return node;
 }
 
-static void deserializeEntity(YAML::Node const& node,
-                              Scene& scene,
+static void deserializeEntity(YAML::Node const& node, Scene& scene,
                               AssetManager& assetManager) {
     EntityID const reference(node["ID"].as<EntityID::RawType>());
     EntityID const id = scene.createEmptyEntity(reference);
-    auto entity       = scene.getHandle(id);
+    auto entity = scene.getHandle(id);
     entity.add(TransformMatrixComponent{});
     assert(reference == entity);
     forEachComponent(except<TransformMatrixComponent>,
@@ -197,24 +191,18 @@ BLOOM_API void Scene::deserialize(YAML::Node const& root,
         EntityID const entityID = e;
         /// Sanitize child -> parent relationship
         if (entity.parent) {
-            EntityID const parentID    = entity.parent;
+            EntityID const parentID = entity.parent;
             auto const parentsChildren = scene->gatherChildren(parentID);
-            if (std::find(parentsChildren.begin(),
-                          parentsChildren.end(),
+            if (std::find(parentsChildren.begin(), parentsChildren.end(),
                           entityID) == parentsChildren.end())
             {
-                Logger::fatal("Entity ",
-                              entityID,
-                              " [",
+                Logger::fatal("Entity ", entityID, " [",
                               scene->getComponent<TagComponent>(entityID).name,
-                              "] thinks Entity ",
-                              parentID,
-                              " [",
+                              "] thinks Entity ", parentID, " [",
                               scene->getComponent<TagComponent>(parentID).name,
                               "] is its "
                               "parent but ",
-                              parentID,
-                              " doesn't know about it.");
+                              parentID, " doesn't know about it.");
                 BL_DEBUGBREAK();
             }
         }
@@ -228,14 +216,11 @@ BLOOM_API void Scene::deserialize(YAML::Node const& root,
                     scene->getComponent<HierarchyComponent>(childID);
                 if (child.parent != entityID) {
                     Logger::fatal(
-                        "Entity ",
-                        entityID,
-                        " [",
+                        "Entity ", entityID, " [",
                         scene->getComponent<TagComponent>(entityID).name,
                         "] thinks it's a parent but "
                         "supposed child ",
-                        entityID,
-                        " [",
+                        entityID, " [",
                         scene->getComponent<TagComponent>(entityID).name,
                         "] doesn't know about it.");
                     BL_DEBUGBREAK();
@@ -259,7 +244,7 @@ BLOOM_API void Scene::deserialize(YAML::Node const& root,
 }
 
 void Scene::parent(EntityID c, EntityID p) {
-    HierarchyComponent& parent   = getComponent<HierarchyComponent>(p);
+    HierarchyComponent& parent = getComponent<HierarchyComponent>(p);
     HierarchyComponent& newChild = getComponent<HierarchyComponent>(c);
     assert(!newChild.parent);
 
@@ -267,14 +252,14 @@ void Scene::parent(EntityID c, EntityID p) {
 
     if (!parent.firstChild) { // case parent has no children yet
         assert(!parent.lastChild);
-        parent.firstChild    = c;
-        parent.lastChild     = c;
+        parent.firstChild = c;
+        parent.lastChild = c;
         newChild.prevSibling = c;
         newChild.nextSibling = c;
     }
     else { // parent already has children
         EntityID const listBegin = parent.firstChild;
-        EntityID const listEnd   = parent.lastChild;
+        EntityID const listEnd = parent.lastChild;
 
         HierarchyComponent& leftChild =
             getComponent<HierarchyComponent>(listBegin);
@@ -282,7 +267,7 @@ void Scene::parent(EntityID c, EntityID p) {
             getComponent<HierarchyComponent>(listEnd);
 
         rightChild.nextSibling = c;
-        leftChild.prevSibling  = c;
+        leftChild.prevSibling = c;
 
         newChild.prevSibling = listEnd;
         newChild.nextSibling = listBegin;
@@ -309,11 +294,11 @@ void Scene::unparent(EntityID c) {
     if (!child.parent) {
         return;
     }
-    auto& parent       = getComponent<HierarchyComponent>(child.parent);
-    auto& leftSibling  = getComponent<HierarchyComponent>(child.prevSibling);
+    auto& parent = getComponent<HierarchyComponent>(child.parent);
+    auto& leftSibling = getComponent<HierarchyComponent>(child.prevSibling);
     auto& rightSibling = getComponent<HierarchyComponent>(child.nextSibling);
     /// Remove element from circular linked list
-    leftSibling.nextSibling  = child.nextSibling;
+    leftSibling.nextSibling = child.nextSibling;
     rightSibling.prevSibling = child.prevSibling;
     /// Adjust begin/end nodes if we were those
     if (c == parent.firstChild) {
@@ -329,7 +314,7 @@ void Scene::unparent(EntityID c) {
         assert(c == child.prevSibling);
         assert(c == child.nextSibling);
 
-        parent.lastChild  = {};
+        parent.lastChild = {};
         parent.firstChild = {};
     }
     auto& t = getComponent<Transform>(c);
@@ -337,8 +322,8 @@ void Scene::unparent(EntityID c) {
         calculateTransformRelativeToWorld(child.parent);
     mtl::float4x4 const childWorldTransform =
         parentWorldTransform * t.calculate();
-    t                 = Transform::fromMatrix(childWorldTransform);
-    child.parent      = {};
+    t = Transform::fromMatrix(childWorldTransform);
+    child.parent = {};
     child.prevSibling = {};
     child.nextSibling = {};
 #if BLOOM_DEBUGLEVEL
@@ -377,8 +362,8 @@ utl::small_vector<EntityID> Scene::gatherChildren(EntityID parent) const {
         return {};
     }
     auto const& hierarchy = getComponent<HierarchyComponent>(parent);
-    auto current          = hierarchy.firstChild;
-    auto const end        = hierarchy.lastChild;
+    auto current = hierarchy.firstChild;
+    auto const end = hierarchy.lastChild;
 
     utl::small_vector<EntityID> children;
     while (current) {

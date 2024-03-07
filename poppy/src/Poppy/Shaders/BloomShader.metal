@@ -19,7 +19,6 @@ static half4 safeHDR(half4 color) {
 	return min(color, HALF_MAX);
 }
 
-
 static half4 downsampleBox13Tap(texture2d<half, access::sample> tex,
 								float2 uv,
 								float2 texelSize)

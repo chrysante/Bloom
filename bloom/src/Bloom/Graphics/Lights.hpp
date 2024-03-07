@@ -26,18 +26,18 @@ struct SpotLight {
 };
 
 struct DirectionalLight {
-    LightCommon common;                           // 16 bytes
+    LightCommon common; // 16 bytes
 
-    metal::packed_float3 direction;               //
-    bool castsShadows;                            //
-    int16_t numCascades = 1;                      // 16 bytes
+    metal::packed_float3 direction; //
+    bool castsShadows;              //
+    int16_t numCascades = 1;        // 16 bytes
 
-    float shadowDistance = 500;                   // dedim
+    float shadowDistance = 500; // dedim
 
-    float shadowDistanceZ               = 10'000; //
-    float cascadeDistributionExponent   = 2;      //
-    float cascadeTransitionFraction     = 0.05;   //
-    float shadowDistanceFadeoutFraction = 0.05;   // 16 bytes
+    float shadowDistanceZ = 10'000;             //
+    float cascadeDistributionExponent = 2;      //
+    float cascadeTransitionFraction = 0.05;     //
+    float shadowDistanceFadeoutFraction = 0.05; // 16 bytes
 };
 
 struct SkyLight {
@@ -52,21 +52,11 @@ struct SkyLight {
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::LightCommon, color, intensity);
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::PointLight, common, position, radius);
-BLOOM_MAKE_TEXT_SERIALIZER(bloom::SpotLight,
-                           common,
-                           position,
-                           direction,
-                           innerCutoff,
-                           outerCutoff,
-                           radius);
-BLOOM_MAKE_TEXT_SERIALIZER(bloom::DirectionalLight,
-                           common,
-                           direction,
-                           castsShadows,
-                           numCascades,
-                           shadowDistance,
-                           shadowDistanceZ,
-                           cascadeDistributionExponent,
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::SpotLight, common, position, direction,
+                           innerCutoff, outerCutoff, radius);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::DirectionalLight, common, direction,
+                           castsShadows, numCascades, shadowDistance,
+                           shadowDistanceZ, cascadeDistributionExponent,
                            cascadeTransitionFraction,
                            shadowDistanceFadeoutFraction);
 

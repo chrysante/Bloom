@@ -29,9 +29,9 @@ private:
 
     struct TreeNodeDescription {
         std::size_t id = 0;
-        bool selected  = false;
-        bool expanded  = false;
-        bool isLeaf    = true;
+        bool selected = false;
+        bool expanded = false;
+        bool isLeaf = true;
         std::string_view name;
     };
     void treeNode(TreeNodeDescription const&, auto&& block);

@@ -26,7 +26,7 @@ struct ViewDescription {
 
     std::string title;
 
-    mtl::int2 size      = { 300, 300 };
+    mtl::int2 size = { 300, 300 };
     mtl::float2 padding = -1;
 
     int id = -1; // Used to restore serialized Views. -1 means the View will use
@@ -34,13 +34,13 @@ struct ViewDescription {
 };
 
 struct ViewRegisterDescription {
-    bool unique     = true;
+    bool unique = true;
     bool persistent = true;
 };
 
 class Editor;
 
-class View: protected bloom::Emitter, protected bloom::Reciever {
+class View: protected bloom::Emitter, protected bloom::Receiver {
     friend class Editor;
 
 public:
@@ -109,17 +109,17 @@ private:
     struct ViewDescPrivate {
         ViewDescription pub;
 
-        mtl::int2 position   = 0;
+        mtl::int2 position = 0;
         mtl::int2 windowSize = 0;
 
-        void* imguiWindow     = nullptr;
-        Editor* editor        = nullptr;
+        void* imguiWindow = nullptr;
+        Editor* editor = nullptr;
         bloom::Window* window = nullptr;
 
         bool hasPaddingX = false;
         bool hasPaddingY = false;
-        bool open        = true;
-        bool maximized   = false;
+        bool open = true;
+        bool maximized = false;
     };
     ViewDescPrivate desc;
     ViewRegisterDescription mRegisterDescription;
@@ -170,9 +170,9 @@ private:
 #define POPPY_REGISTER_VIEW(Type, Name, ...)                                   \
     UTL_STATIC_INIT {                                                          \
         ::poppy::ViewRegistry::Entry entry;                                    \
-        entry.factory     = []() { return std::make_unique<Type>(); };         \
+        entry.factory = []() { return std::make_unique<Type>(); };             \
         entry.description = __VA_ARGS__;                                       \
-        entry.name        = Name;                                              \
+        entry.name = Name;                                                     \
         ViewRegistry::add(Name, entry);                                        \
     };
 
@@ -180,5 +180,5 @@ private:
 
 #include "Bloom/Core/Serialize.hpp"
 
-BLOOM_MAKE_TEXT_SERIALIZER(
-    poppy::ViewDescription, _name_DONT_CHANGE_ME, size, padding, id);
+BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewDescription, _name_DONT_CHANGE_ME, size,
+                           padding, id);

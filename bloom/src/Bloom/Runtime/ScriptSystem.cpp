@@ -63,7 +63,7 @@ void ScriptSystem::onSceneRender() {
 void ScriptSystem::scriptsWillLoad() {
     impl->typenameMap.clear();
     auto& assetManager = application().coreSystems().assetManager();
-    auto* program      = assetManager.getProgram();
+    auto* program = assetManager.getProgram();
     if (!program) {
         return;
     }
@@ -76,7 +76,7 @@ void ScriptSystem::scriptsWillLoad() {
 void ScriptSystem::scriptsDidLoad() {
     auto& scriptSystem = application().coreSystems().scriptSystem();
     auto& assetManager = application().coreSystems().assetManager();
-    auto* program      = assetManager.getProgram();
+    auto* program = assetManager.getProgram();
     if (!program) {
         return;
     }
@@ -89,8 +89,8 @@ void ScriptSystem::scriptsDidLoad() {
         typemap[type] = newType;
     }
     forEach([&](ScriptComponent& script) {
-        auto* oldType    = script.classType;
-        auto* newType    = typemap[oldType];
+        auto* oldType = script.classType;
+        auto* newType = typemap[oldType];
         script.classType = newType;
         if (!oldType || !newType) {
             script.object = nullptr;

@@ -46,16 +46,16 @@ void AssetManager::refreshWorkingDir(bool forceOverrides) {
         }
         readAssetMetaData(entry.path(), forceOverrides);
     }
+    compileScripts();
 }
 
 /// MARK: - Create
-Reference<Asset> AssetManager::create(AssetType type,
-                                      std::string_view name,
+Reference<Asset> AssetManager::create(AssetType type, std::string_view name,
                                       std::filesystem::path dest) {
-    auto const handle          = AssetHandle::generate(type);
+    auto const handle = AssetHandle::generate(type);
     Reference<Asset> const ref = allocateAsset(handle, std::string(name));
     InternalAsset asset{ .theAsset = ref,
-                         .name     = std::string(name),
+                         .name = std::string(name),
                          .diskLocation =
                              dest / utl::strcat(name, toExtension(type)),
                          .handle = handle };
@@ -68,12 +68,12 @@ Reference<Asset> AssetManager::create(AssetType type,
 AssetHandle AssetManager::import(std::filesystem::path source,
                                  std::filesystem::path dest) {
     std::string const name = source.filename().replace_extension();
-    AssetType const type   = getImportType(source.extension().string());
+    AssetType const type = getImportType(source.extension().string());
     if (type != AssetType::staticMesh) {
         Logger::error("Failed to import resource ", source);
         return {};
     }
-    auto const diskLocation      = dest / (name + toExtension(type));
+    auto const diskLocation = dest / (name + toExtension(type));
     auto const [asset, assetRef] = [&]() {
         if (std::filesystem::exists(diskLocation)) {
             auto const handle = readHeader(diskLocation).handle();
@@ -81,20 +81,19 @@ AssetHandle AssetManager::import(std::filesystem::path source,
             assert(asset);
             auto assetRef = asset->theAsset.lock();
             if (!assetRef) {
-                assetRef        = allocateAsset(handle, name);
+                assetRef = allocateAsset(handle, name);
                 asset->theAsset = assetRef;
             }
             return std::tuple<InternalAsset&, Reference<Asset>>{ *asset,
                                                                  assetRef };
         }
         else {
-            auto const handle   = AssetHandle::generate(type);
+            auto const handle = AssetHandle::generate(type);
             auto const assetRef = allocateAsset(handle, name);
             auto [itr, success] = assets.insert(
-                { handle.id(),
-                  InternalAsset{ .theAsset     = assetRef,
-                                 .name         = name,
-                                 .diskLocation = diskLocation } });
+                { handle.id(), InternalAsset{ .theAsset = assetRef,
+                                              .name = name,
+                                              .diskLocation = diskLocation } });
             return std::tuple<InternalAsset&, Reference<Asset>>{ itr->second,
                                                                  assetRef };
         }
@@ -135,7 +134,7 @@ Reference<Asset> AssetManager::get(AssetHandle handle) {
         return asset;
     }
     auto const asset = allocateAsset(handle, itr->second.name);
-    weakAsset        = asset;
+    weakAsset = asset;
     return asset;
 }
 
@@ -160,8 +159,7 @@ std::filesystem::path AssetManager::getRelativeFilepath(
     return std::filesystem::path{};
 }
 
-void AssetManager::makeAvailable(AssetHandle handle,
-                                 AssetRepresentation rep,
+void AssetManager::makeAvailable(AssetHandle handle, AssetRepresentation rep,
                                  bool force) {
     auto const itr = assets.find(handle.id());
     if (itr == assets.end()) {
@@ -224,8 +222,8 @@ AssetHandle AssetManager::getHandleFromFile(std::filesystem::path path) const {
     return readHeader(path).handle();
 }
 
-void AssetManager::loadScripts() {
-    dispatch(DispatchToken::now, ScriptsWillLoadEvent{});
+void AssetManager::compileScripts() {
+    dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
     scatha::Compiler compiler;
     for (auto&& [id, internal]: assets) {
         if (internal.handle.type() != AssetType::script) {
@@ -236,7 +234,7 @@ void AssetManager::loadScripts() {
         compiler.addSource(script->text);
     }
     program = compiler.compile();
-    dispatch(DispatchToken::now, ScriptsDidLoadEvent{});
+    dispatch(DispatchToken::Now, ScriptsDidLoadEvent{});
 }
 
 /// MARK: - Internals
@@ -244,8 +242,8 @@ Reference<Asset> AssetManager::allocateAsset(AssetHandle handle,
                                              std::string name) const {
     return dispatchAssetType(handle.type(),
                              [&]<typename A>(utl::tag<A>) -> Reference<Asset> {
-                                 return allocateRef<A>(handle, std::move(name));
-                             });
+        return allocateRef<A>(handle, std::move(name));
+    });
 }
 
 AssetManager::InternalAsset* AssetManager::find(AssetHandle handle) {
@@ -267,15 +265,15 @@ AssetManager::InternalAsset const* AssetManager::find(
 void AssetManager::readAssetMetaData(std::filesystem::path diskLocation,
                                      bool forceOverride) {
     AssetFileHeader const header = readHeader(makeAbsolute(diskLocation));
-    auto const handle            = header.handle();
+    auto const handle = header.handle();
     if (find(handle)) {
         if (!forceOverride) return;
     }
     auto iAsset =
-        InternalAsset{ .theAsset     = allocateAsset(handle, header.name()),
-                       .name         = header.name(),
+        InternalAsset{ .theAsset = allocateAsset(handle, header.name()),
+                       .name = header.name(),
                        .diskLocation = diskLocation,
-                       .handle       = handle };
+                       .handle = handle };
     auto const [itr, success] = assets.insert({ handle.id(), iAsset });
     if (!success) {
         itr->second = iAsset;
@@ -297,8 +295,7 @@ void AssetManager::makeStaticMeshAvailable(InternalAsset& ia,
 }
 
 void AssetManager::makeMaterialAvailable(InternalAsset& ia,
-                                         AssetRepresentation rep,
-                                         bool force) {
+                                         AssetRepresentation rep, bool force) {
     auto ref = ia.theAsset.lock();
     assert((bool)ref);
     Material& material = utl::down_cast<Material&>(*ref);
@@ -331,8 +328,7 @@ void AssetManager::makeMaterialInstanceAvailable(InternalAsset& ia,
 }
 
 void AssetManager::makeSceneAvailable(InternalAsset& ia,
-                                      AssetRepresentation rep,
-                                      bool force) {
+                                      AssetRepresentation rep, bool force) {
     auto ref = ia.theAsset.lock();
     assert((bool)ref);
     Scene& scene = utl::down_cast<Scene&>(*ref);
@@ -346,8 +342,7 @@ void AssetManager::makeSceneAvailable(InternalAsset& ia,
 }
 
 void AssetManager::makeScriptAvailable(InternalAsset& ia,
-                                       AssetRepresentation rep,
-                                       bool force) {
+                                       AssetRepresentation rep, bool force) {
     Script* asset = utl::down_cast<Script*>(ia.theAsset.lock().get());
     if (test(rep & AssetRepresentation::CPU)) {
         asset->text = loadTextFromDisk(ia.diskLocation);
@@ -371,7 +366,7 @@ Reference<StaticMeshData> AssetManager::readStaticMeshFromDisk(
         return {};
     }
     auto const meshHeader = header.customDataAs<MeshFileHeader>();
-    auto const result     = allocateRef<StaticMeshData>();
+    auto const result = allocateRef<StaticMeshData>();
     result->vertices.resize(meshHeader.vertexDataSize / sizeof(Vertex3D),
                             utl::no_init);
     result->indices.resize(meshHeader.indexDataSize / sizeof(uint32_t),
@@ -449,13 +444,13 @@ void AssetManager::loadStaticMeshRenderer(InternalAsset& ia) {
     asset->mRenderer = allocateRef<StaticMeshRenderer>();
     auto* const mesh = asset->mRenderer.get();
     BufferDescription desc;
-    desc.data           = smData->vertices.data();
-    desc.size           = smData->vertices.size() * sizeof(smData->vertices[0]);
-    desc.storageMode    = StorageMode::shared;
+    desc.data = smData->vertices.data();
+    desc.size = smData->vertices.size() * sizeof(smData->vertices[0]);
+    desc.storageMode = StorageMode::shared;
     mesh->mVertexBuffer = device().createBuffer(desc);
-    desc.data           = smData->indices.data();
-    desc.size           = smData->indices.size() * 4;
-    mesh->mIndexBuffer  = device().createBuffer(desc);
+    desc.data = smData->indices.data();
+    desc.size = smData->indices.size() * 4;
+    mesh->mIndexBuffer = device().createBuffer(desc);
 }
 
 /// MARK: - Memory -> Disk
@@ -491,28 +486,26 @@ void AssetManager::flushStaticMeshToDisk(AssetHandle handle) {
         return;
     }
     assert(assetRef->handle() == handle);
-    auto const& mesh =
-        *utl::down_cast<StaticMesh const*>(assetRef.get())->mData;
-    if (!&mesh) {
+    auto const* mesh =
+        utl::down_cast<StaticMesh const*>(assetRef.get())->mData.get();
+    if (!mesh) {
         return;
     }
     std::uint64_t const vertexDataSize =
-        mesh.vertices.size() * sizeof(bloom::Vertex3D);
-    std::uint64_t const indexDataSize = mesh.indices.size() * sizeof(uint32_t);
+        mesh->vertices.size() * sizeof(bloom::Vertex3D);
+    std::uint64_t const indexDataSize = mesh->indices.size() * sizeof(uint32_t);
     /// Make header
-    AssetFileHeader const header(handle,
-                                 FileFormat::binary,
-                                 asset->name,
+    AssetFileHeader const header(handle, FileFormat::binary, asset->name,
                                  MeshFileHeader{
                                      .vertexDataSize = vertexDataSize,
-                                     .indexDataSize  = indexDataSize });
+                                     .indexDataSize = indexDataSize });
     std::ios::sync_with_stdio(false);
     auto const dest = makeAbsolute(asset->diskLocation);
     std::fstream file(dest, std::ios::out | std::ios::trunc | std::ios::binary);
     handleFileError(file, dest);
     file.write((char*)&header, sizeof(AssetFileHeader));
-    file.write((char*)mesh.vertices.data(), vertexDataSize);
-    file.write((char*)mesh.indices.data(), indexDataSize);
+    file.write((char*)mesh->vertices.data(), vertexDataSize);
+    file.write((char*)mesh->indices.data(), indexDataSize);
 }
 
 void AssetManager::flushMaterialToDisk(AssetHandle handle) {
@@ -522,12 +515,10 @@ void AssetManager::flushMaterialToDisk(AssetHandle handle) {
     assert(!!assetRef);
     assert(assetRef->handle() == handle);
     /// Make header
-    AssetFileHeader const header(handle,
-                                 FileFormat::binary,
-                                 asset->name,
+    AssetFileHeader const header(handle, FileFormat::binary, asset->name,
                                  MaterialFileHeader{});
     std::ios::sync_with_stdio(false);
-    auto const dest         = makeAbsolute(asset->diskLocation);
+    auto const dest = makeAbsolute(asset->diskLocation);
     auto const destLocation = std::filesystem::path{ dest }.remove_filename();
     if (!std::filesystem::exists(destLocation)) {
         std::filesystem::create_directory(destLocation);
@@ -548,9 +539,7 @@ void AssetManager::flushMaterialInstanceToDisk(AssetHandle handle) {
     assert(asset->handle() == handle);
     auto const& inst = utl::down_cast<MaterialInstance const&>(*asset);
     // Make header
-    AssetFileHeader const header(handle,
-                                 FileFormat::text,
-                                 ia->name,
+    AssetFileHeader const header(handle, FileFormat::text, ia->name,
                                  MaterialInstanceFileHeader{});
     std::ios::sync_with_stdio(false);
     auto const dest = makeAbsolute(ia->diskLocation);
@@ -570,9 +559,7 @@ void AssetManager::flushSceneToDisk(AssetHandle handle) {
     assert(asset->handle() == handle);
     auto const& scene = utl::down_cast<Scene const&>(*asset);
     /// Make header
-    AssetFileHeader const header(handle,
-                                 FileFormat::text,
-                                 ia->name,
+    AssetFileHeader const header(handle, FileFormat::text, ia->name,
                                  SceneFileHeader{});
     std::ios::sync_with_stdio(false);
     auto const dest = makeAbsolute(ia->diskLocation);
@@ -593,7 +580,7 @@ void AssetManager::flushScriptToDisk(AssetHandle handle) {
     }
     assert(assetRef->handle() == handle);
     auto const& script = utl::down_cast<Script const&>(*assetRef).text;
-    auto const dest    = makeAbsolute(asset->diskLocation);
+    auto const dest = makeAbsolute(asset->diskLocation);
     std::fstream file(dest, std::ios::out | std::ios::trunc);
     handleFileError(file, dest);
     file << script;
@@ -602,9 +589,8 @@ void AssetManager::flushScriptToDisk(AssetHandle handle) {
 /// MARK: - Import
 AssetType AssetManager::getImportType(std::string_view extView) const {
     std::string ext(extView);
-    std::transform(ext.begin(), ext.end(), ext.begin(), [](auto c) {
-        return std::toupper(c);
-    });
+    std::transform(ext.begin(), ext.end(), ext.begin(),
+                   [](auto c) { return std::toupper(c); });
     if (ext == ".FBX") {
         return AssetType::staticMesh;
     }
@@ -644,11 +630,11 @@ AssetFileHeader AssetManager::readHeader(std::filesystem::path path) const {
         handleFileError(file, path);
         return readHeader(file);
     }
-    return AssetFileHeader{ AssetHandle(toAssetType(extension),
-                                        toUUID(
-                                            path.lexically_normal().string())),
-                            toFileFormat(extension),
-                            path.filename().replace_extension().string() };
+    return AssetFileHeader{
+        AssetHandle(toAssetType(extension),
+                    toUUID(path.lexically_normal().string())),
+        toFileFormat(extension), path.filename().replace_extension().string()
+    };
 }
 
 AssetFileHeader AssetManager::readHeader(std::fstream& file) const {

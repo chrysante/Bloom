@@ -9,23 +9,20 @@
 using namespace bloom;
 using namespace mtl::short_types;
 
-int main(int argc, char const** argv, char const** env) {
-    using namespace bloom;
-
-    auto const theApp = std::unique_ptr<Application>(createApplication());
-    CommandLineArgs cmdArgs{ argc, argv, env };
-    theApp->cmdLineArgs = cmdArgs;
+int main(int argc, char* argv[]) {
+    auto theApp = createApplication();
     theApp->run();
 }
 
-bloom::Application* bloom::createApplication() {
-    std::cerr << "Error: createApplication() must be overridden by client"
-              << std::endl;
+std::unique_ptr<bloom::Application> bloom::createApplication() {
+    std::cerr
+        << "Error: bloom::createApplication() must be overridden by client"
+        << std::endl;
     std::terminate();
 }
 
 Application::Application():
-    Reciever(makeReciever()), Emitter(makeEmitter()), mCoreSystems(this) {}
+    Receiver(makeReciever()), Emitter(makeEmitter()), mCoreSystems(this) {}
 
 Application::~Application() = default;
 
@@ -34,10 +31,8 @@ Application::~Application() = default;
 utl::small_vector<Window*> Application::getWindows() {
     utl::small_vector<Window*> result;
     result.reserve(mWindows.size());
-    std::transform(mWindows.begin(),
-                   mWindows.end(),
-                   std::back_inserter(result),
-                   [](auto& pair) { return pair.first.get(); });
+    std::transform(mWindows.begin(), mWindows.end(), std::back_inserter(result),
+                   [](auto& wrapper) { return wrapper.window.get(); });
     return result;
 }
 
@@ -45,19 +40,14 @@ utl::small_vector<Window*> Application::getWindows() {
 
 Window& Application::createWindow(WindowDescription const& windowDesc,
                                   std::unique_ptr<WindowDelegate> delegate) {
-    auto window               = std::make_unique<Window>(windowDesc);
-    window->desc.application  = this;
+    auto window = std::make_unique<Window>(windowDesc);
+    window->desc.application = this;
     window->onResizePrivateFn = [this](int2 newSize) { doFrame(); };
-    window->onMovePrivateFn   = [this](int2 newSize) { doFrame(); };
-    delegate->theWindow       = window.get();
+    window->onMovePrivateFn = [this](int2 newSize) { doFrame(); };
+    delegate->theWindow = window.get();
     delegate->init();
     mWindows.push_back({ std::move(window), std::move(delegate) });
-    return *mWindows.back().first;
-}
-
-Window& Application::createWindow(WindowDescription const& windowDesc,
-                                  WindowDelegate* delegate) {
-    return createWindow(windowDesc, std::unique_ptr<WindowDelegate>(delegate));
+    return *mWindows.back().window;
 }
 
 /// MARK: Private
@@ -133,7 +123,7 @@ void Application::clearClosingWindows() {
         delegate->shutdown();
         itr = mWindows.erase(itr);
         if (!mWindows.empty()) {
-            mWindows.front().first->setFocused();
+            mWindows.front().window->setFocused();
         }
     }
 }

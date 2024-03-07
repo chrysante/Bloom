@@ -32,7 +32,7 @@ FileExtension bloom::toExtension(std::string_view extension) {
 bool bloom::hasHeader(FileExtension ext) { return ext != FileExtension::chai; }
 
 utl::uuid bloom::toUUID(std::string_view str) {
-    char const* const begin  = str.data();
+    char const* const begin = str.data();
     std::size_t const offset = str.size() / 2;
     struct {
         std::size_t first, second;

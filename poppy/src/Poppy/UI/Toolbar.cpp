@@ -25,8 +25,8 @@ void ToolbarItemUnion::calcWidth(float height) {
     case Type::button: {
         float2 const textSize =
             withFont(FontWeight::semibold, FontStyle::roman, [&] {
-                return ImGui::CalcTextSize(get<Type::button>()._label.data());
-            });
+            return ImGui::CalcTextSize(get<Type::button>()._label.data());
+        });
 
         width = textSize.x + 6 * GImGui->Style.FramePadding.y;
         break;
@@ -40,14 +40,11 @@ void ToolbarItemUnion::calcWidth(float height) {
         if (ddMenu._preview) {
             float2 const textSize =
                 withFont(FontWeight::semibold, FontStyle::roman, [&] {
-                    return ImGui::CalcTextSize(
-                        get<Type::dropdownMenu>()._preview().data());
-                });
+                return ImGui::CalcTextSize(
+                    get<Type::dropdownMenu>()._preview().data());
+            });
 
             width = textSize.x + 6 * GImGui->Style.FramePadding.y;
-            //					if (ddMenu._icon) {
-            //						width +=
-            //					}
         }
         else {
             width = (int)(height * 1.5f);
@@ -83,13 +80,10 @@ float Toolbar::getWidthWithoutSpacers() const {
     if (blocks.empty()) {
         return 0;
     }
-    return std::accumulate(blocks.begin(),
-                           blocks.end(),
-                           0.0f,
-                           [](float acc,
-                              Block const&
-                                  block) { return acc + block.width; }) +
-           (blocks.size() - 1) * GImGui->Style.ItemSpacing.x;
+    return std::accumulate(blocks.begin(), blocks.end(), 0.0f,
+                           [](float acc, Block const& block) {
+        return acc + block.width;
+    }) + (blocks.size() - 1) * GImGui->Style.ItemSpacing.x;
 }
 
 void Toolbar::display(float width) {
@@ -105,8 +99,8 @@ void Toolbar::display(float width) {
     position = ImGui::GetCursorPos();
 
     // display blocks
-    float const totalWidth =
-        width != 0.0f ? width : ImGui::GetContentRegionAvail().x;
+    float const totalWidth = width != 0.0f ? width :
+                                             ImGui::GetContentRegionAvail().x;
     calcOffsets(totalWidth);
     for (auto const& block: blocks) {
         if (!block.visible) {
@@ -129,8 +123,7 @@ void Toolbar::displayItem(ToolbarItemUnion const& item, std::size_t index) {
     switch (item.type()) {
     case ToolbarItemUnion::Type::button: {
         auto const& buttonData = item.get<ToolbarItemUnion::Type::button>();
-        if (button(buttonData._label.data(),
-                   index,
+        if (button(buttonData._label.data(), index,
                    { item.width, actualHeight }))
         {
             if (buttonData._block) {
@@ -144,13 +137,10 @@ void Toolbar::displayItem(ToolbarItemUnion const& item, std::size_t index) {
         auto const& buttonData = item.get<ToolbarItemUnion::Type::iconButton>();
         char const* const tooltip =
             buttonData._tooltip ? buttonData._tooltip() : nullptr;
-        bool const enabled =
-            buttonData._enabled == nullptr || buttonData._enabled();
-        if (iconButton(buttonData._icon(),
-                       index,
-                       { item.width, actualHeight },
-                       tooltip,
-                       enabled))
+        bool const enabled = buttonData._enabled == nullptr ||
+                             buttonData._enabled();
+        if (iconButton(buttonData._icon(), index, { item.width, actualHeight },
+                       tooltip, enabled))
         {
             if (buttonData._block) {
                 buttonData._block();
@@ -179,9 +169,7 @@ void Toolbar::displayItem(ToolbarItemUnion const& item, std::size_t index) {
 }
 
 /// MARK: Buttons
-bool Toolbar::buttonEx(char const* label,
-                       std::size_t id,
-                       mtl::float2 size,
+bool Toolbar::buttonEx(char const* label, std::size_t id, mtl::float2 size,
                        bool enabled) const {
     ImGui::BeginDisabled(!enabled);
 
@@ -203,20 +191,14 @@ bool Toolbar::buttonEx(char const* label,
     return result;
 }
 
-bool Toolbar::button(char const* label,
-                     std::size_t id,
-                     mtl::float2 size,
+bool Toolbar::button(char const* label, std::size_t id, mtl::float2 size,
                      bool enabled) const {
-    return withFont(FontWeight::semibold, FontStyle::roman, [&] {
-        return buttonEx(label, id, size, enabled);
-    });
+    return withFont(FontWeight::semibold, FontStyle::roman,
+                    [&] { return buttonEx(label, id, size, enabled); });
 }
 
-bool Toolbar::iconButton(char const* icon,
-                         std::size_t id,
-                         mtl::float2 size,
-                         char const* tooltip,
-                         bool enabled) const {
+bool Toolbar::iconButton(char const* icon, std::size_t id, mtl::float2 size,
+                         char const* tooltip, bool enabled) const {
     bool const result = withIconFont(IconSize::_16, [&] {
         return buttonEx(icons.unicodeStr(icon).data(), id, size, enabled);
     });
@@ -239,16 +221,15 @@ bool Toolbar::iconButton(char const* icon,
     return result;
 }
 
-bool Toolbar::beginCombo(ToolbarDropdownMenu const& menuData,
-                         std::size_t index,
+bool Toolbar::beginCombo(ToolbarDropdownMenu const& menuData, std::size_t index,
                          mtl::float2 size) const {
-    char const* const tooltip =
-        menuData._tooltip ? menuData._tooltip() : nullptr;
+    char const* const tooltip = menuData._tooltip ? menuData._tooltip() :
+                                                    nullptr;
     bool const enabled = menuData._enabled == nullptr || menuData._enabled();
     using namespace ImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    const ImRect bb(window->DC.CursorPos,
+    ImRect const bb(window->DC.CursorPos,
                     window->DC.CursorPos +
                         ImVec2(size.x,
                                actualHeight + GImGui->Style.ItemSpacing.y));
@@ -260,16 +241,13 @@ bool Toolbar::beginCombo(ToolbarDropdownMenu const& menuData,
     }
     else {
         pressed = iconButton(menuData._icon ? menuData._icon() : "down-open",
-                             index,
-                             size,
-                             tooltip,
-                             enabled);
+                             index, size, tooltip, enabled);
     }
 
-    const ImGuiID id = window->GetID(menuData._id.data());
+    ImGuiID const id = window->GetID(menuData._id.data());
 
-    const ImGuiID popup_id = ImHashStr("##ComboPopup", 0, id);
-    bool popup_open        = IsPopupOpen(popup_id, ImGuiPopupFlags_None);
+    ImGuiID const popup_id = ImHashStr("##ComboPopup", 0, id);
+    bool popup_open = IsPopupOpen(popup_id, ImGuiPopupFlags_None);
     if (pressed && !popup_open) {
         OpenPopupEx(popup_id, ImGuiPopupFlags_None);
         popup_open = true;
@@ -315,7 +293,7 @@ void Toolbar::cook(bool full) {
         }
 
         blocks.back().itemEndIndex = items.size();
-        }();
+    }();
 
     // calc item widths
     for (auto& item: items) {
@@ -326,11 +304,10 @@ void Toolbar::cook(bool full) {
     for (auto& block: blocks) {
         block.width =
             std::accumulate(items.begin() + block.itemBeginIndex,
-                            items.begin() + block.itemEndIndex,
-                            0.0f,
+                            items.begin() + block.itemEndIndex, 0.0f,
                             [](float acc, ToolbarItemUnion const& item) {
             return acc + item.width;
-            });
+        });
         block.width += (block.itemEndIndex - block.itemBeginIndex - 1) *
                        GImGui->Style.ItemSpacing.x;
     }
@@ -346,10 +323,10 @@ void Toolbar::calcOffsets(float const totalWidth) {
     if (blocks.size() == 0) {
         return;
     }
-    float cursor     = 0;
+    float cursor = 0;
     float widthAvail = totalWidth;
 
-    blocks[0].offset  = cursor;
+    blocks[0].offset = cursor;
     blocks[0].visible = true;
 
     if (blocks.size() == 1) {
@@ -380,7 +357,7 @@ void Toolbar::calcOffsets(float const totalWidth) {
     }
 
     blocks[1].visible = true;
-    blocks[1].offset  = cursor + (widthAvail - blocks[1].width) / 2;
+    blocks[1].offset = cursor + (widthAvail - blocks[1].width) / 2;
     return;
     // ...
 }

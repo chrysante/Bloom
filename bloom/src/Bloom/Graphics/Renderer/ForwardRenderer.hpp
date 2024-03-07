@@ -28,8 +28,7 @@ struct BLOOM_API ForwardRendererDebugFramebuffer: ForwardRendererFramebuffer {
 
 namespace {
 
-UTL_SOA_TYPE(SceneRenderObject,
-             (mtl::float4x4, transform),
+UTL_SOA_TYPE(SceneRenderObject, (mtl::float4x4, transform),
              (Reference<MaterialInstance>, materialInstance),
              (Reference<StaticMeshRenderer>, mesh));
 
@@ -47,9 +46,9 @@ struct FWCPUSceneData {
         utl::vector<mtl::float4x4> lightSpaceTransforms;
 
         size_t numShadowCasters;
-        size_t shadowMapArrayLength    = 0;
+        size_t shadowMapArrayLength = 0;
         mtl::uint2 shadowMapResolution = 1024;
-        bool needsNewShadowMaps        = true;
+        bool needsNewShadowMaps = true;
     } shadows;
 
     void clear() {
@@ -85,7 +84,7 @@ struct FWDebugRenderData {};
 
 class BLOOM_API ForwardRenderer: public Renderer, private RendererSanitizer {
 public:
-    ForwardRenderer(bloom::Reciever);
+    ForwardRenderer(bloom::Receiver);
 
     /// MARK: Framebuffer Creation
     std::unique_ptr<Framebuffer> createFramebuffer(
@@ -108,8 +107,7 @@ public:
     void beginScene(Camera const&) override;
     void endScene() override;
 
-    void submit(Reference<StaticMeshRenderer>,
-                Reference<MaterialInstance>,
+    void submit(Reference<StaticMeshRenderer>, Reference<MaterialInstance>,
                 mtl::float4x4 const& transform) override;
     void submit(PointLight const&) override;
     void submit(SpotLight const&) override;

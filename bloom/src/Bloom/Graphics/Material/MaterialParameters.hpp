@@ -16,11 +16,7 @@ struct BLOOM_API MaterialParameters {
 
 #include "Bloom/Core/Serialize.hpp"
 
-BLOOM_MAKE_TEXT_SERIALIZER(bloom::MaterialParameters,
-                           baseColor,
-                           roughness,
-                           metallic,
-                           emissive,
-                           emissiveIntensity);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::MaterialParameters, baseColor, roughness,
+                           metallic, emissive, emissiveIntensity);
 
 #endif

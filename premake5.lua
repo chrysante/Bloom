@@ -11,8 +11,7 @@ configurations {
 }
 
 function addScatha() 
-    filter "configurations:Debug"
-    libdirs "../external/scatha/build/bin/Debug"
+    libdirs "../external/scatha/build/bin/%{cfg.buildcfg}"
     externalincludedirs { 
         "../external/scatha/include", 
         "../external/scatha/runtime/include", 
@@ -20,7 +19,6 @@ function addScatha()
         "../external/scatha/external/range-v3/include", 
         "../external/scatha/external/utility/include", 
     }
-    filter {}
     links { 
         "libscatha.dylib",
         "runtime"

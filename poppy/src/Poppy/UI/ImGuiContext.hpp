@@ -25,7 +25,7 @@ struct ImGuiContextDescription {
     std::filesystem::path iniFilePath;
 };
 
-class ImGuiContext: bloom::Reciever {
+class ImGuiContext: bloom::Receiver {
 public:
     ~ImGuiContext();
     void init(bloom::Application&, ImGuiContextDescription const&);

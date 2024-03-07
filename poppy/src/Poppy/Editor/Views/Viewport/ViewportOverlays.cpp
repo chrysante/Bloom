@@ -22,39 +22,28 @@ static std::uint32_t toUCol32(mtl::float3 color) {
     return toUCol32(mtl::float4{ color, 1 });
 }
 
-static void drawArrow(mtl::float2 from,
-                      mtl::float2 to,
-                      float headSize,
-                      mtl::float4 color,
-                      float thickness) {
-    float2 const p0   = from;
+static void drawArrow(mtl::float2 from, mtl::float2 to, float headSize,
+                      mtl::float4 color, float thickness) {
+    float2 const p0 = from;
     float2 const line = to - from;
 
     float const angle = std::acos(mtl::dot(mtl::normalize(line), float2(1, 0)));
-    float2x2 const arrowRot = { std::cos(angle),
-                                -std::sin(angle),
-                                std::sin(angle),
-                                std::cos(angle) };
-    float2 const t0         = arrowRot * headSize* float2{ 0, 0 };
-    float2 const t1 = arrowRot * headSize* float2{ -std::sqrt(3) / 2, -0.5 };
-    float2 const t2 = arrowRot * headSize* float2{ -std::sqrt(3) / 2, 0.5 };
+    float2x2 const arrowRot = { std::cos(angle), -std::sin(angle),
+                                std::sin(angle), std::cos(angle) };
+    float2 const t0 = arrowRot * headSize * float2{ 0, 0 };
+    float2 const t1 = arrowRot * headSize * float2{ -std::sqrt(3) / 2, -0.5 };
+    float2 const t2 = arrowRot * headSize * float2{ -std::sqrt(3) / 2, 0.5 };
 
     auto* const drawList = ImGui::GetWindowDrawList();
 
     std::array<float2, 5> const positions = {
-        p0,
-        p0 + (mtl::norm(line) - headSize) * mtl::normalize(line),
-        p0 + line + t0,
-        p0 + line + t1,
-        p0 + line + t2
+        p0, p0 + (mtl::norm(line) - headSize) * mtl::normalize(line),
+        p0 + line + t0, p0 + line + t1, p0 + line + t2
     };
 
     drawList->AddLine(positions[0], positions[1], toUCol32(color), thickness);
-    drawList->AddTriangle(positions[2],
-                          positions[3],
-                          positions[4],
-                          toUCol32(color),
-                          thickness);
+    drawList->AddTriangle(positions[2], positions[3], positions[4],
+                          toUCol32(color), thickness);
 }
 
 void ViewportOverlays::init(Viewport* viewport) { this->viewport = viewport; }
@@ -92,8 +81,7 @@ void ViewportOverlays::drawLightOverlays() {
     for (auto&& scene: viewport->editor().coreSystems().sceneSystem().scenes())
     {
         auto view = scene->view<TransformMatrixComponent const, Light const>();
-        view.each([&](auto const id,
-                      TransformMatrixComponent const& transform,
+        view.each([&](auto const id, TransformMatrixComponent const& transform,
                       Light const& light) {
             auto const positionVS =
                 viewport->worldSpaceToViewSpace(transform.matrix.column(3).xyz);
@@ -103,8 +91,7 @@ void ViewportOverlays::drawLightOverlays() {
             auto const positionInWindow =
                 viewport->viewSpaceToWindowSpace(positionVS.xy);
             auto const entity = scene->getHandle(id);
-            drawOneLightOverlay(entity,
-                                positionInWindow,
+            drawOneLightOverlay(entity, positionInWindow,
                                 selection.isSelected(entity),
                                 Transform::fromMatrix(transform.matrix),
                                 light.light);
@@ -129,8 +116,7 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
                                            SpotLight const& s) {
     drawSpotLightIcon(positionInWindow, s.common.color);
     if (selected) {
-        drawSpotlightVizWS(entity,
-                           s.radius,
+        drawSpotlightVizWS(entity, s.radius,
                            (s.innerCutoff + s.outerCutoff) / 2,
                            (s.common.color + mtl::colors<float3>::white) / 2);
     }
@@ -157,7 +143,7 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
 
 void ViewportOverlays::drawPointLightIcon(mtl::float2 position,
                                           mtl::float3 color) {
-    float const size     = 20;
+    float const size = 20;
     auto* const drawList = ImGui::GetWindowDrawList();
     drawList->AddCircle(position, size, toUCol32({ 0, 0, 0, 0.5 }), 0, 4);
     drawList->AddCircle(position, size, toUCol32(color), 0, 2);
@@ -166,7 +152,7 @@ void ViewportOverlays::drawPointLightIcon(mtl::float2 position,
 void ViewportOverlays::drawSpotLightIcon(mtl::float2 position,
                                          mtl::float3 color) {
     float const radius = 25;
-    float2 const v0    = float2(0, 1) * radius + position;
+    float2 const v0 = float2(0, 1) * radius + position;
     float const angle1 = mtl::constants<>::pi * (0.5 + 2. / 3.);
     float2 const v1 =
         float2(std::cos(angle1), std::sin(angle1)) * radius + position;
@@ -198,7 +184,7 @@ void ViewportOverlays::drawDirectionalLightIcon(mtl::float2 position,
 
 void ViewportOverlays::drawSkyLightIcon(mtl::float2 position,
                                         mtl::float3 color) {
-    float const size     = 20;
+    float const size = 20;
     float const lineSize = size;
 
     auto doDraw = [&](float4 color, float thickness) {
@@ -206,42 +192,39 @@ void ViewportOverlays::drawSkyLightIcon(mtl::float2 position,
         for (int i = 0; i < 9; ++i) {
             float angle = mtl::constants<>::pi * (0.5 + (i - 4) / 4.0 * 0.25);
 
-            float2 const dir  = float2(std::cos(-angle), std::sin(-angle));
+            float2 const dir = float2(std::cos(-angle), std::sin(-angle));
             float2 const from = position + (float2(0, 1) + dir * 2) * size;
-            points[i]         = from;
+            points[i] = from;
             if (i % 2) {
                 continue;
             }
             float2 const line = -dir * lineSize;
             drawArrow(from, from + line, 0.3 * lineSize, color, thickness);
         }
-        ImGui::GetWindowDrawList()->AddPolyline(points.data(),
-                                                9,
+        ImGui::GetWindowDrawList()->AddPolyline(points.data(), 9,
                                                 toUCol32(color),
-                                                ImDrawFlags_None,
-                                                2);
+                                                ImDrawFlags_None, 2);
     };
     doDraw(float4(0, 0, 0, 0.5), 4);
     doDraw(float4(color, 1), 2);
 }
 
 void ViewportOverlays::drawSpotlightVizWS(bloom::EntityHandle entity,
-                                          float radius,
-                                          float angle,
+                                          float radius, float angle,
                                           mtl::float3 color) {
     auto* const drawList = ImGui::GetWindowDrawList();
-    int const segments   = 32;
+    int const segments = 32;
     utl::small_vector<float3, 32> circlePoints1;
     for (int i = 0; i < segments; ++i) {
-        float const tau   = mtl::constants<>::pi * 2;
+        float const tau = mtl::constants<>::pi * 2;
         float const angle = i * tau / segments;
         circlePoints1.push_back({ 0, cos(angle), sin(angle) });
     }
-    float const theta  = angle;
-    float const r1     = radius;
-    float const r2     = radius + 50;
-    float const rho1   = r1 * sin(theta);
-    float const rho2   = r2 * sin(theta);
+    float const theta = angle;
+    float const r1 = radius;
+    float const r2 = radius + 50;
+    float const rho1 = r1 * sin(theta);
+    float const rho2 = r2 * sin(theta);
     float const sigma1 = r1 * cos(theta);
     float const sigma2 = r2 * cos(theta);
 
@@ -263,23 +246,18 @@ void ViewportOverlays::drawSpotlightVizWS(bloom::EntityHandle entity,
     }
 
     utl::small_vector<float2, 32> pointsWindowSpace1;
-    std::transform(circlePoints1.begin(),
-                   circlePoints1.end(),
-                   std::back_inserter(pointsWindowSpace1),
-                   [this](float3 x) {
+    std::transform(circlePoints1.begin(), circlePoints1.end(),
+                   std::back_inserter(pointsWindowSpace1), [this](float3 x) {
         return viewport->worldSpaceToWindowSpace(x).xy;
     });
     utl::small_vector<float2, 32> pointsWindowSpace2;
-    std::transform(circlePoints2.begin(),
-                   circlePoints2.end(),
-                   std::back_inserter(pointsWindowSpace2),
-                   [this](float3 x) {
+    std::transform(circlePoints2.begin(), circlePoints2.end(),
+                   std::back_inserter(pointsWindowSpace2), [this](float3 x) {
         return viewport->worldSpaceToWindowSpace(x).xy;
     });
 
     for (int i = 0; i < segments; i += 4) {
-        drawList->AddLine(pointsWindowSpace1[i],
-                          pointsWindowSpace2[i],
+        drawList->AddLine(pointsWindowSpace1[i], pointsWindowSpace2[i],
                           toUCol32(color));
     }
     for (int i = 0; i < segments; ++i) {

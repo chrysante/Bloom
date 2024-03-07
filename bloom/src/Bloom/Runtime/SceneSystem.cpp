@@ -17,20 +17,20 @@ void SceneSystem::loadScene(Reference<Scene> scene) {
 }
 
 void SceneSystem::unloadScene(utl::uuid id) {
-    auto const itr    = mScenes.find(id);
+    auto const itr = mScenes.find(id);
     auto* const scene = itr->second.get();
     if (itr == mScenes.end()) {
         Logger::error("Failed to unload scene. Scene was not loaded.");
         return;
     }
     mScenes.erase(itr);
-    dispatch(DispatchToken::now, UnloadSceneEvent{ .scene = scene });
+    dispatch(DispatchToken::Now, UnloadSceneEvent{ .scene = scene });
     setPointers();
 }
 
 void SceneSystem::unloadAll() {
     for (auto&& [key, scene]: mScenes) {
-        dispatch(DispatchToken::now, UnloadSceneEvent{ .scene = scene.get() });
+        dispatch(DispatchToken::Now, UnloadSceneEvent{ .scene = scene.get() });
     }
     mScenes.clear();
     setPointers();
@@ -43,8 +43,7 @@ std::unique_lock<std::mutex> SceneSystem::lock() {
 void SceneSystem::applyTransformHierarchy() {
     for (auto scene: scenes()) {
         auto view = scene->view<Transform const, TransformMatrixComponent>();
-        view.each([&](auto const id,
-                      Transform const& transform,
+        view.each([&](auto const id, Transform const& transform,
                       TransformMatrixComponent& transformMatrix) {
             transformMatrix.matrix = transform.calculate();
         });
@@ -116,8 +115,6 @@ void SceneSystem::tryCopyOut() {
 
 void SceneSystem::setPointers() {
     mScenePtrs.resize(mScenes.size(), utl::no_init);
-    std::transform(mScenes.begin(),
-                   mScenes.end(),
-                   mScenePtrs.begin(),
+    std::transform(mScenes.begin(), mScenes.end(), mScenePtrs.begin(),
                    [](auto&& p) { return p.second.get(); });
 }

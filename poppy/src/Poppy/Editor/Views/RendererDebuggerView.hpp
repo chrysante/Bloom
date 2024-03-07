@@ -24,7 +24,7 @@ private:
 private:
     struct BloomVeilParams {
         int downsampleMipmapLevel = 0;
-        int upsampleMipmapLevel   = 0;
+        int upsampleMipmapLevel = 0;
     } veil;
 };
 

@@ -10,20 +10,17 @@ public:
     virtual ~ComputeContext() = default;
 
     virtual void begin() = 0;
-    virtual void end()   = 0;
+    virtual void end() = 0;
 
     virtual void setPipeline(ComputePipelineView) = 0;
 
-    virtual void setBuffer(BufferView,
-                           std::size_t index,
-                           std::size_t offset = 0)                      = 0;
+    virtual void setBuffer(BufferView, std::size_t index,
+                           std::size_t offset = 0) = 0;
     virtual void setBufferOffset(std::size_t index, std::size_t offset) = 0;
-    virtual void setSampler(SamplerView, std::size_t index)             = 0;
-    virtual void setSampler(SamplerView,
-                            float lodMinClamp,
-                            float lodMaxClamp,
-                            std::size_t index)                          = 0;
-    virtual void setTexture(TextureView, std::size_t index)             = 0;
+    virtual void setSampler(SamplerView, std::size_t index) = 0;
+    virtual void setSampler(SamplerView, float lodMinClamp, float lodMaxClamp,
+                            std::size_t index) = 0;
+    virtual void setTexture(TextureView, std::size_t index) = 0;
 
     void dispatchThreads(mtl::usize2 threadsPerGrid,
                          mtl::usize2 threadsPerThreadgroup) {

@@ -15,18 +15,15 @@ SceneRenderer::SceneRenderer(Renderer& renderer) { setRenderer(renderer); }
 
 void SceneRenderer::setRenderer(Renderer& renderer) { mRenderer = &renderer; }
 
-void SceneRenderer::draw(Scene const& scene,
-                         Camera const& camera,
-                         Framebuffer& framebuffer,
-                         CommandQueue& commandQueue) {
+void SceneRenderer::draw(Scene const& scene, Camera const& camera,
+                         Framebuffer& framebuffer, CommandQueue& commandQueue) {
     assert(mRenderer);
     std::array const scenes{ &scene };
     draw(scenes, camera, framebuffer, commandQueue);
 }
 
 void SceneRenderer::draw(std::span<Scene const* const> scenes,
-                         Camera const& camera,
-                         Framebuffer& framebuffer,
+                         Camera const& camera, Framebuffer& framebuffer,
                          CommandQueue& commandQueue) {
     assert(mRenderer);
     renderer().beginScene(camera);
@@ -43,13 +40,11 @@ void SceneRenderer::draw(std::span<Scene const* const> scenes,
 }
 
 template <typename LightComponent>
-static void submitLights(Renderer& renderer,
-                         Scene const& scene,
+static void submitLights(Renderer& renderer, Scene const& scene,
                          auto&& lightModifier) {
     auto view =
         scene.view<TransformMatrixComponent const, LightComponent const>();
-    view.each([&](auto id,
-                  TransformMatrixComponent const& transform,
+    view.each([&](auto id, TransformMatrixComponent const& transform,
                   LightComponent light) {
         lightModifier(transform, light);
         renderer.submit(light.light);
@@ -65,8 +60,7 @@ void SceneRenderer::submitScene(Scene const& scene) {
     /* submit meshes */ {
         auto view = scene.view<TransformMatrixComponent const,
                                MeshRendererComponent const>();
-        view.each([&](auto const id,
-                      TransformMatrixComponent const& transform,
+        view.each([&](auto const id, TransformMatrixComponent const& transform,
                       MeshRendererComponent const& meshRenderer) {
             if (!meshRenderer.mesh || !meshRenderer.materialInstance ||
                 !meshRenderer.materialInstance->material())
@@ -74,25 +68,21 @@ void SceneRenderer::submitScene(Scene const& scene) {
                 return;
             }
             renderer().submit(meshRenderer.mesh->getRenderer(),
-                              meshRenderer.materialInstance,
-                              transform.matrix);
+                              meshRenderer.materialInstance, transform.matrix);
         });
     }
 
-    submitLights<PointLightComponent>(renderer(),
-                                      scene,
+    submitLights<PointLightComponent>(renderer(), scene,
                                       [](auto& transform, auto& light) {
         light.light.position = transform.matrix.column(3).xyz;
     });
-    submitLights<SpotLightComponent>(renderer(),
-                                     scene,
+    submitLights<SpotLightComponent>(renderer(), scene,
                                      [](auto& transform, auto& light) {
         light.light.position = transform.matrix.column(3).xyz;
         light.light.direction =
             mtl::normalize((transform.matrix * mtl::float4{ 1, 0, 0, 0 }).xyz);
     });
-    submitLights<DirectionalLightComponent>(renderer(),
-                                            scene,
+    submitLights<DirectionalLightComponent>(renderer(), scene,
                                             [](auto& transform, auto& light) {
         light.light.direction =
             mtl::normalize((transform.matrix * mtl::float4{ 0, 0, 1, 0 }).xyz);

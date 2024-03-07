@@ -22,7 +22,7 @@ public:
 
 private:
     bool buildingScene = false;
-    bool isInit        = false;
+    bool isInit = false;
 };
 
 } // namespace bloom

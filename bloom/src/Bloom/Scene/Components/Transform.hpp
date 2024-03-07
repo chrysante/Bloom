@@ -9,9 +9,9 @@ namespace bloom {
 struct BLOOM_API Transform {
     BLOOM_REGISTER_COMPONENT("Transform");
 
-    mtl::float3 position              = 0;
+    mtl::float3 position = 0;
     mtl::quaternion_float orientation = 1;
-    mtl::float3 scale                 = 1;
+    mtl::float3 scale = 1;
 
     static Transform fromMatrix(mtl::float4x4 const& m) {
         auto const [t, r, s] = mtl::decompose_transform(m);

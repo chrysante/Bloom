@@ -31,11 +31,11 @@ std::unique_ptr<Framebuffer> ForwardRenderer::createDebugFramebuffer(
     ;
 
     TextureDescription desc;
-    desc.size             = { size, 1 };
-    desc.type             = TextureType::texture2D;
+    desc.size = { size, 1 };
+    desc.type = TextureType::texture2D;
     desc.mipmapLevelCount = 1;
-    desc.storageMode      = StorageMode::GPUOnly;
-    desc.usage       = TextureUsage::shaderRead | TextureUsage::renderTarget;
+    desc.storageMode = StorageMode::GPUOnly;
+    desc.usage = TextureUsage::shaderRead | TextureUsage::renderTarget;
     desc.pixelFormat = PixelFormat::RGBA8Unorm;
     framebuffer->shadowCascade = device().createTexture(desc);
 
@@ -43,25 +43,24 @@ std::unique_ptr<Framebuffer> ForwardRenderer::createDebugFramebuffer(
 }
 
 void ForwardRenderer::populateFramebuffer(
-    HardwareDevice& device,
-    ForwardRendererFramebuffer& framebuffer,
+    HardwareDevice& device, ForwardRendererFramebuffer& framebuffer,
     mtl::usize2 size) const {
     framebuffer.size = size;
     TextureDescription desc;
-    desc.size             = { size, 1 };
-    desc.type             = TextureType::texture2D;
+    desc.size = { size, 1 };
+    desc.type = TextureType::texture2D;
     desc.mipmapLevelCount = 1;
-    desc.storageMode      = StorageMode::GPUOnly;
+    desc.storageMode = StorageMode::GPUOnly;
     desc.usage = TextureUsage::shaderRead | TextureUsage::renderTarget;
 
-    desc.pixelFormat  = PixelFormat::Depth32Float;
+    desc.pixelFormat = PixelFormat::Depth32Float;
     framebuffer.depth = device.createTexture(desc);
 
-    desc.pixelFormat     = PixelFormat::RGBA32Float;
+    desc.pixelFormat = PixelFormat::RGBA32Float;
     framebuffer.rawColor = device.createTexture(desc);
 
     desc.pixelFormat = PixelFormat::RGBA8Unorm;
-    desc.usage       = TextureUsage::shaderRead | TextureUsage::shaderWrite;
+    desc.usage = TextureUsage::shaderRead | TextureUsage::shaderWrite;
     framebuffer.postProcessed = device.createTexture(desc);
 
     // Bloom / Veil
@@ -71,7 +70,7 @@ void ForwardRenderer::populateFramebuffer(
 /// MARK: Initialization
 ///
 ///
-ForwardRenderer::ForwardRenderer(bloom::Reciever reciever):
+ForwardRenderer::ForwardRenderer(bloom::Receiver reciever):
     Renderer(std::move(reciever)) {
     listen([this](ReloadShadersCommand) {
         device().reloadDefaultLibrary();
@@ -84,7 +83,7 @@ static RenderPipelineHandle createShadowPipeline(HardwareDevice& device) {
     desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
     desc.vertexFunction = device.createFunction("shadowVertexShader");
 
-    desc.rasterSampleCount      = 1;
+    desc.rasterSampleCount = 1;
     desc.inputPrimitiveTopology = PrimitiveTopologyClass::triangle;
 
     return device.createRenderPipeline(desc);
@@ -113,19 +112,19 @@ void ForwardRenderer::createGPUState(HardwareDevice& device) {
         BufferDescription desc{};
         desc.storageMode = StorageMode::managed;
 
-        desc.size                     = sizeof(RendererParameters);
+        desc.size = sizeof(RendererParameters);
         renderObjects.parameterBuffer = device.createBuffer(desc);
     }
     {
         DepthStencilDescription desc{};
-        desc.depthWrite           = true;
+        desc.depthWrite = true;
         desc.depthCompareFunction = CompareFunction::lessEqual;
 
         renderObjects.depthStencil = device.createDepthStencil(desc);
     }
 
     renderObjects.shadows.pipeline = createShadowPipeline(device);
-    renderObjects.shadows.sampler  = device.createSampler(SamplerDescription{});
+    renderObjects.shadows.sampler = device.createSampler(SamplerDescription{});
 
     renderObjects.postprocessSampler =
         device.createSampler(SamplerDescription{});
@@ -142,9 +141,9 @@ void ForwardRenderer::beginScene(Camera const& camera) {
 }
 
 static auto const objectOrder = [](auto&& a, auto&& b) {
-    auto& aMatInst   = *a.materialInstance;
+    auto& aMatInst = *a.materialInstance;
     auto* const aMat = aMatInst.material();
-    auto& bMatInst   = *b.materialInstance;
+    auto& bMatInst = *b.materialInstance;
     auto* const bMat = bMatInst.material();
 
     if (aMat == bMat) { // sort by material first
@@ -169,13 +168,12 @@ void ForwardRenderer::endScene() {
         }
         if (renderObjects.transformBuffer.size() < size) {
             BufferDescription desc;
-            desc.size                     = size;
-            desc.storageMode              = StorageMode::managed;
+            desc.size = size;
+            desc.storageMode = StorageMode::managed;
             renderObjects.transformBuffer = device().createBuffer(desc);
         }
         device().fillManagedBuffer(renderObjects.transformBuffer,
-                                   scene.objects.data().transform,
-                                   size);
+                                   scene.objects.data().transform, size);
     } while (0);
 
     /* upload light space transforms */ {
@@ -188,7 +186,7 @@ void ForwardRenderer::endScene() {
 
         if (renderObjects.shadows.lightSpaceTransforms.size() < size) {
             BufferDescription desc;
-            desc.size        = size;
+            desc.size = size;
             desc.storageMode = StorageMode::managed;
             renderObjects.shadows.lightSpaceTransforms =
                 device().createBuffer(desc);
@@ -230,7 +228,7 @@ void ForwardRenderer::submit(PointLight const& light) {
 
 void ForwardRenderer::submit(SpotLight const& l) {
     RendererSanitizer::submit();
-    auto light        = l;
+    auto light = l;
     light.innerCutoff = std::cos(light.innerCutoff);
     light.outerCutoff = std::cos(light.outerCutoff);
     scene.spotLights.push_back(light);
@@ -263,8 +261,7 @@ void ForwardRenderer::submit(DirectionalLight const& light) {
     float distance = light.shadowDistance;
     for (int i = 0; i < light.numCascades; ++i) {
         auto const lightSpaceTransform =
-            directionalLightSpaceTransform(scene.camera,
-                                           distance,
+            directionalLightSpaceTransform(scene.camera, distance,
                                            light.shadowDistanceZ,
                                            light.direction);
         scene.shadows.lightSpaceTransforms.push_back(
@@ -284,19 +281,15 @@ void ForwardRenderer::draw(Framebuffer& fb, CommandQueue& commandQueue) {
 
     /* upload parameters */ {
         RendererParameters const params = makeParameters(fb.size);
-        mDevice->fillManagedBuffer(renderObjects.parameterBuffer,
-                                   &params,
+        mDevice->fillManagedBuffer(renderObjects.parameterBuffer, &params,
                                    sizeof params);
     }
 
     shadowMapPass(commandQueue);
     mainPass(framebuffer, commandQueue);
 
-    bloomRenderer.render(commandQueue,
-                         framebuffer.bloom,
-                         framebuffer.rawColor,
-                         renderObjects.parameterBuffer,
-                         framebuffer.size);
+    bloomRenderer.render(commandQueue, framebuffer.bloom, framebuffer.rawColor,
+                         renderObjects.parameterBuffer, framebuffer.size);
 
     postprocessPass(framebuffer, commandQueue);
 }
@@ -304,7 +297,7 @@ void ForwardRenderer::draw(Framebuffer& fb, CommandQueue& commandQueue) {
 RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
     RendererParameters result;
 
-    result.scene.camera         = mtl::transpose(scene.camera.viewProjection());
+    result.scene.camera = mtl::transpose(scene.camera.viewProjection());
     result.scene.cameraPosition = scene.camera.position();
     result.scene.screenResolution = framebufferSize;
 
@@ -313,9 +306,9 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
         Logger::warn("Can't render more than 32 Point Lights");
         scene.pointLights.resize(32);
     }
-    result.scene.numPointLights = scene.pointLights.size();
-    std::copy(scene.pointLights.begin(),
-              scene.pointLights.end(),
+    result.scene.numPointLights =
+        utl::narrow_cast<uint32_t>(scene.pointLights.size());
+    std::copy(scene.pointLights.begin(), scene.pointLights.end(),
               result.scene.pointLights);
 
     // Spotlights
@@ -323,9 +316,9 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
         Logger::warn("Can't render more than 32 Spot Lights");
         scene.spotLights.resize(32);
     }
-    result.scene.numSpotLights = scene.spotLights.size();
-    std::copy(scene.spotLights.begin(),
-              scene.spotLights.end(),
+    result.scene.numSpotLights =
+        utl::narrow_cast<uint32_t>(scene.spotLights.size());
+    std::copy(scene.spotLights.begin(), scene.spotLights.end(),
               result.scene.spotLights);
 
     // Directional Lights
@@ -333,9 +326,9 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
         Logger::warn("Can't render more than 32 Directional Lights");
         scene.dirLights.resize(32);
     }
-    result.scene.numDirLights = scene.dirLights.size();
-    std::copy(scene.dirLights.begin(),
-              scene.dirLights.end(),
+    result.scene.numDirLights =
+        utl::narrow_cast<uint32_t>(scene.dirLights.size());
+    std::copy(scene.dirLights.begin(), scene.dirLights.end(),
               result.scene.dirLights);
 
     // Skylights
@@ -343,19 +336,20 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
         Logger::warn("Can't render more than 32 Sky Lights");
         scene.skyLights.resize(32);
     }
-    result.scene.numSkyLights = scene.skyLights.size();
-    std::copy(scene.skyLights.begin(),
-              scene.skyLights.end(),
+    result.scene.numSkyLights =
+        utl::narrow_cast<uint32_t>(scene.skyLights.size());
+    std::copy(scene.skyLights.begin(), scene.skyLights.end(),
               result.scene.skyLights);
 
-    result.shadowData.numShadowCasters = scene.shadows.numShadowCasters;
+    result.shadowData.numShadowCasters =
+        utl::narrow_cast<int>(scene.shadows.numShadowCasters);
     assert(scene.shadows.numShadowCasters == scene.shadows.numCascades.size());
     std::copy(scene.shadows.numCascades.begin(),
               scene.shadows.numCascades.end(),
               std::begin(result.shadowData.numCascades));
 
     result.postprocess.tonemapping = mToneMapping;
-    result.postprocess.bloom       = bloomRenderer.makeShaderParameters();
+    result.postprocess.bloom = bloomRenderer.makeShaderParameters();
 
     return result;
 }
@@ -363,11 +357,11 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
 void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
                                CommandQueue& commandQueue) const {
     std::unique_ptr _ctx = commandQueue.createRenderContext();
-    auto& ctx            = *_ctx;
+    auto& ctx = *_ctx;
 
     RenderPassDescription desc{};
     RenderPassColorAttachmentDescription caDesc{};
-    caDesc.texture    = framebuffer.rawColor;
+    caDesc.texture = framebuffer.rawColor;
     caDesc.clearColor = mtl::colors<>::black;
     caDesc.loadAction = LoadAction::clear;
     desc.colorAttachments.push_back(caDesc);
@@ -379,8 +373,7 @@ void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
     ctx.begin(desc);
 
     // Vertex buffers
-    ctx.setVertexBuffer(renderObjects.parameterBuffer,
-                        0,
+    ctx.setVertexBuffer(renderObjects.parameterBuffer, 0,
                         offsetof(RendererParameters, scene));
 
     // Fragment buffers
@@ -391,9 +384,9 @@ void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
     ctx.setFragmentSampler(renderObjects.shadows.sampler, 0);
 
     ctx.setVertexBuffer(renderObjects.transformBuffer, 2);
-    Material const* currentMaterial                 = nullptr;
+    Material const* currentMaterial = nullptr;
     MaterialInstance const* currentMaterialInstance = nullptr;
-    StaticMeshRenderer const* currentMesh           = nullptr;
+    StaticMeshRenderer const* currentMesh = nullptr;
     for (size_t index = 0; auto&& object: scene.objects) {
         if (object.materialInstance->material() != currentMaterial) {
             currentMaterial = object.materialInstance->material();
@@ -418,8 +411,8 @@ void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
         BufferView indexBuffer = object.mesh->indexBuffer();
 
         DrawDescription desc{};
-        desc.indexCount  = indexBuffer.size() / 4;
-        desc.indexType   = IndexType::uint32;
+        desc.indexCount = indexBuffer.size() / 4;
+        desc.indexType = IndexType::uint32;
         desc.indexBuffer = indexBuffer;
         ctx.draw(desc);
         ++index;
@@ -433,11 +426,11 @@ static TextureHandle createShadowMaps(HardwareDevice& device,
                                       size_t totalShadowMaps,
                                       ulong2 resolution) {
     TextureDescription desc;
-    desc.type        = TextureType::texture2DArray;
-    desc.size        = usize3(resolution, 1);
+    desc.type = TextureType::texture2DArray;
+    desc.size = usize3(resolution, 1);
     desc.arrayLength = totalShadowMaps;
     desc.pixelFormat = PixelFormat::Depth32Float;
-    desc.usage       = TextureUsage::renderTarget | TextureUsage::shaderRead;
+    desc.usage = TextureUsage::renderTarget | TextureUsage::shaderRead;
     desc.storageMode = StorageMode::GPUOnly;
 
     return device.createTexture(desc);
@@ -449,34 +442,31 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
     }
     std::size_t const numShadowMaps =
         std::accumulate(scene.shadows.numCascades.begin(),
-                        scene.shadows.numCascades.end(),
-                        0);
+                        scene.shadows.numCascades.end(), 0);
     if (numShadowMaps > scene.shadows.shadowMapArrayLength ||
         scene.shadows.needsNewShadowMaps)
     {
         renderObjects.shadows.shadowMaps =
-            createShadowMaps(device(),
-                             numShadowMaps,
+            createShadowMaps(device(), numShadowMaps,
                              scene.shadows.shadowMapResolution);
         scene.shadows.shadowMapArrayLength = numShadowMaps;
-        scene.shadows.needsNewShadowMaps   = false;
+        scene.shadows.needsNewShadowMaps = false;
     }
     std::unique_ptr _ctx = commandQueue.createRenderContext();
-    auto& ctx            = *_ctx;
+    auto& ctx = *_ctx;
     RenderPassDescription desc{};
     RenderPassDepthAttachmentDescription dDesc{};
-    dDesc.texture                = renderObjects.shadows.shadowMaps;
-    desc.depthAttachment         = dDesc;
+    dDesc.texture = renderObjects.shadows.shadowMaps;
+    desc.depthAttachment = dDesc;
     desc.renderTargetArrayLength = numShadowMaps;
-    desc.renderTargetSize        = scene.shadows.shadowMapResolution;
+    desc.renderTargetSize = scene.shadows.shadowMapResolution;
 
     ctx.begin(desc);
 
     ctx.setPipeline(renderObjects.shadows.pipeline);
     ctx.setTriangleCullMode(TriangleCullMode::front); /// TODO: temporary
     ctx.setDepthStencil(renderObjects.depthStencil);
-    ctx.setVertexBuffer(renderObjects.parameterBuffer,
-                        0,
+    ctx.setVertexBuffer(renderObjects.parameterBuffer, 0,
                         offsetof(RendererParameters, scene));
     ctx.setVertexBuffer(renderObjects.transformBuffer, 2);
     ctx.setVertexBuffer(renderObjects.shadows.lightSpaceTransforms, 3);
@@ -489,9 +479,9 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
         ctx.setVertexBufferOffset(2, index * sizeof(float4x4));
         BufferView indexBuffer = object.mesh->indexBuffer();
         DrawDescription desc{};
-        desc.indexCount    = indexBuffer.size() / 4;
-        desc.indexType     = IndexType::uint32;
-        desc.indexBuffer   = indexBuffer;
+        desc.indexCount = indexBuffer.size() / 4;
+        desc.indexType = IndexType::uint32;
+        desc.indexBuffer = indexBuffer;
         desc.instanceCount = numShadowMaps;
         ctx.draw(desc);
         ++index;
@@ -504,14 +494,13 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
 void ForwardRenderer::postprocessPass(ForwardRendererFramebuffer& framebuffer,
                                       CommandQueue& commandQueue) const {
     std::unique_ptr const _ctx = commandQueue.createComputeContext();
-    auto& ctx                  = *_ctx;
+    auto& ctx = *_ctx;
 
     ctx.begin();
 
     ctx.setPipeline(renderObjects.postprocessPipeline);
 
-    ctx.setBuffer(renderObjects.parameterBuffer,
-                  0,
+    ctx.setBuffer(renderObjects.parameterBuffer, 0,
                   offsetof(RendererParameters, postprocess));
     ctx.setTexture(framebuffer.postProcessed, 0); // dest
     ctx.setTexture(framebuffer.rawColor, 1);
@@ -524,7 +513,10 @@ void ForwardRenderer::postprocessPass(ForwardRendererFramebuffer& framebuffer,
     auto const threadGroupHeight =
         renderObjects.postprocessPipeline.maxTotalThreadsPerThreadgroup /
         threadGroupWidth;
-    mtl::uint2 const threadGroupSize = { threadGroupWidth, threadGroupHeight };
+    mtl::uint2 const threadGroupSize = {
+        utl::narrow_cast<uint32_t>(threadGroupWidth),
+        utl::narrow_cast<uint32_t>(threadGroupHeight)
+    };
 
     ctx.dispatchThreads(gridSize, threadGroupSize);
 

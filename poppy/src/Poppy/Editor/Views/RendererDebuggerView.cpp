@@ -17,7 +17,7 @@ using namespace poppy;
 POPPY_REGISTER_VIEW(RendererDebuggerView, "Renderer Debugger", {});
 
 void RendererDebuggerView::init() {
-    mRenderer    = findRenderer();
+    mRenderer = findRenderer();
     mFramebuffer = findFramebuffer();
 }
 
@@ -31,7 +31,7 @@ void RendererDebuggerView::frame() {
     }
 
     if (!currentFramebuffer) {
-        mFramebuffer       = findFramebuffer();
+        mFramebuffer = findFramebuffer();
         currentFramebuffer = mFramebuffer.lock();
         if (!currentFramebuffer) {
             displayEmptyWithReason("No Compatible Framebuffer found");
@@ -44,9 +44,7 @@ void RendererDebuggerView::frame() {
         beginProperty("Tone Mapping");
         fullWidth();
         char const* const items[] = { "ACES", "reinhard" };
-        ImGui::Combo("##tone-mapping",
-                     (int*)&mRenderer->mToneMapping,
-                     items,
+        ImGui::Combo("##tone-mapping", (int*)&mRenderer->mToneMapping, items,
                      2);
         endSection();
     }
@@ -54,7 +52,7 @@ void RendererDebuggerView::frame() {
     if (beginSection("Bloom/Veil")) {
         /* Bloom Settings */ {
             auto params = mRenderer->bloomRenderer.getParameters();
-            bool edit   = false;
+            bool edit = false;
 
             beginProperty("Enabled");
             edit |= ImGui::Checkbox("##enabled", &params.enabled);
@@ -65,16 +63,12 @@ void RendererDebuggerView::frame() {
                 if (!params.physicallyCorrect) {
                     beginProperty("Intensity");
                     fullWidth();
-                    edit |= ImGui::SliderFloat("##intensity",
-                                               &params.intensity,
-                                               0,
-                                               10);
+                    edit |= ImGui::SliderFloat("##intensity", &params.intensity,
+                                               0, 10);
                     beginProperty("Threshold");
                     fullWidth();
-                    edit |= ImGui::SliderFloat("##threshold",
-                                               &params.threshold,
-                                               0,
-                                               10);
+                    edit |= ImGui::SliderFloat("##threshold", &params.threshold,
+                                               0, 10);
                     beginProperty("Soft Knee");
                     fullWidth();
                     edit |= ImGui::SliderFloat("##knee", &params.knee, 0, 1);
@@ -93,9 +87,7 @@ void RendererDebuggerView::frame() {
                     beginProperty("Contribution");
                     fullWidth();
                     edit |= ImGui::SliderFloat("##contribution",
-                                               &params.contribution,
-                                               0,
-                                               1);
+                                               &params.contribution, 0, 1);
                 }
             }
 
@@ -109,33 +101,27 @@ void RendererDebuggerView::frame() {
         beginProperty("Mipmap Level");
         fullWidth();
         ImGui::SliderInt("##downsample-mipmap-level",
-                         &veil.downsampleMipmapLevel,
-                         0,
-                         BloomFramebuffer::numDSMipLevels - 1,
-                         nullptr,
+                         &veil.downsampleMipmapLevel, 0,
+                         BloomFramebuffer::numDSMipLevels - 1, nullptr,
                          ImGuiSliderFlags_AlwaysClamp);
 
         endSection();
 
         auto displayImage = [](TextureView image, int2 size) {
-            auto& style        = ImGui::GetStyle();
+            auto& style = ImGui::GetStyle();
             auto* const window = ImGui::GetCurrentWindow();
-            float2 const cp    = window->DC.CursorPos;
-            float const width  = ImGui::GetContentRegionAvail().x;
+            float2 const cp = window->DC.CursorPos;
+            float const width = ImGui::GetContentRegionAvail().x;
             float2 const imageSize =
                 float2(width, image.size().y / float(image.size().x) * width);
             float2 const cursorEnd =
                 (float2)ImGui::GetCursorPos() +
                 float2(0, imageSize.y + style.ItemSpacing.y);
-            window->DrawList->AddImageRounded(image.nativeHandle(),
-                                              cp,
-                                              cp + imageSize,
-                                              { 0, 0 },
-                                              { 1, 1 },
-                                              0xFFffFFff,
+            window->DrawList->AddImageRounded(image.nativeHandle(), cp,
+                                              cp + imageSize, { 0, 0 },
+                                              { 1, 1 }, 0xFFffFFff,
                                               style.FrameRounding);
-            window->DrawList->AddRect(cp,
-                                      cp + imageSize,
+            window->DrawList->AddRect(cp, cp + imageSize,
                                       ImGui::GetColorU32(ImGuiCol_Border),
                                       style.FrameRounding);
             ImGui::SetCursorPos(ImGui::GetCursorPos() + style.FramePadding);
@@ -152,11 +138,8 @@ void RendererDebuggerView::frame() {
         beginSection();
         beginProperty("Mipmap Level");
         fullWidth();
-        ImGui::SliderInt("##upsample-mipmap-level",
-                         &veil.upsampleMipmapLevel,
-                         0,
-                         BloomFramebuffer::numUSMipLevels - 1,
-                         nullptr,
+        ImGui::SliderInt("##upsample-mipmap-level", &veil.upsampleMipmapLevel,
+                         0, BloomFramebuffer::numUSMipLevels - 1, nullptr,
                          ImGuiSliderFlags_AlwaysClamp);
         endSection();
 

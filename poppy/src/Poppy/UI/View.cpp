@@ -74,9 +74,9 @@ void View::setTitle(std::string newTitle) {
 /// MARK: Convinience Helpers
 void View::displayEmptyWithReason(std::string_view reason) const {
     auto const oldCursorPos = ImGui::GetCursorPos();
-    utl::scope_guard reset  = [&] { ImGui::SetCursorPos(oldCursorPos); };
+    utl::scope_guard reset = [&] { ImGui::SetCursorPos(oldCursorPos); };
 
-    Font font   = Font::UIDefault();
+    Font font = Font::UIDefault();
     font.weight = FontWeight::semibold;
 
     withFont(font, [&] {
@@ -147,9 +147,9 @@ void View::doFrame() {
         auto* const window = ImGui::GetCurrentWindow();
 
         desc.imguiWindow = window;
-        desc.pub.size    = window->Size;
-        desc.position    = window->Pos;
-        desc.windowSize  = ImGui::GetMainViewport()->Size;
+        desc.pub.size = window->Size;
+        desc.position = window->Pos;
+        desc.windowSize = ImGui::GetMainViewport()->Size;
 
         this->frame();
     }
@@ -161,7 +161,7 @@ void View::doOnInput(bloom::InputEvent&) {}
 
 YAML::Node View::doSerialize() const {
     YAML::Node node;
-    node["View Base"]    = desc.pub;
+    node["View Base"] = desc.pub;
     node["Derived View"] = this->serialize(); /// Call to derived
     return node;
 }
@@ -177,8 +177,7 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
 
         auto const entry = ViewRegistry::get(desc.name());
         if (!entry) {
-            Logger::error("Failed to deserialize View named '",
-                          desc.name(),
+            Logger::error("Failed to deserialize View named '", desc.name(),
                           "'");
             return nullptr;
         }

@@ -16,15 +16,13 @@ public:
     void setPipeline(RenderPipelineView) override;
     void setDepthStencil(DepthStencilView) override;
 
-    void setVertexBuffer(BufferView,
-                         std::size_t index,
+    void setVertexBuffer(BufferView, std::size_t index,
                          std::size_t offset) override;
     void setVertexBufferOffset(std::size_t index, std::size_t offset) override;
     void setVertexTexture(TextureView, std::size_t index) override;
     void setVertexSampler(SamplerView, std::size_t index) override;
 
-    void setFragmentBuffer(BufferView,
-                           std::size_t index,
+    void setFragmentBuffer(BufferView, std::size_t index,
                            std::size_t offset) override;
     void setFragmentBufferOffset(std::size_t index,
                                  std::size_t offset) override;

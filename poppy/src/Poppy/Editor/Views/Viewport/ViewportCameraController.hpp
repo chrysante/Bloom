@@ -26,26 +26,21 @@ struct ViewportCameraController {
     mtl::float3 up() const { return { 0, 0, 1 }; }
 
     struct Data {
-        float angleLR         = mtl::constants<>::pi / 2;
-        float angleUD         = mtl::constants<>::pi / 2;
-        float speed           = 500;
-        mtl::float3 position  = { 0, -5, 1 };
+        float angleLR = mtl::constants<>::pi / 2;
+        float angleUD = mtl::constants<>::pi / 2;
+        float speed = 500;
+        mtl::float3 position = { 0, -5, 1 };
         Projection projection = Projection::perspective;
-        float fieldOfView     = 60;
-        float nearClip        = 1;
+        float fieldOfView = 60;
+        float nearClip = 1;
     } data;
     bloom::Camera camera;
 };
 
 } // namespace poppy
 
-BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewportCameraController::Data,
-                           angleLR,
-                           angleUD,
-                           speed,
-                           position,
-                           projection,
-                           fieldOfView,
+BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewportCameraController::Data, angleLR,
+                           angleUD, speed, position, projection, fieldOfView,
                            nearClip);
 
 BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewportCameraController, data);

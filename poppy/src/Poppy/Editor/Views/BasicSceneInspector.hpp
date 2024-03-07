@@ -24,11 +24,11 @@ class Editor;
 class SelectionContext;
 
 enum struct LightType {
-    none        = -1,
-    pointlight  = 0,
-    spotlight   = 1,
+    none = -1,
+    pointlight = 0,
+    spotlight = 1,
     directional = 2,
-    skylight    = 3,
+    skylight = 3,
     _count
 };
 

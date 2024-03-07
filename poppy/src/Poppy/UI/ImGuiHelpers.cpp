@@ -11,10 +11,8 @@
 
 using namespace poppy;
 
-static bool ViewportButtonBehavior(ImRect const& bb,
-                                   ImGuiID id,
-                                   bool* out_hovered,
-                                   bool* out_held,
+static bool ViewportButtonBehavior(ImRect const& bb, ImGuiID id,
+                                   bool* out_hovered, bool* out_held,
                                    ImGuiButtonFlags flags);
 
 ViewportInput poppy::detectViewportInput(ImGuiButtonFlags buttonFlags) {
@@ -29,33 +27,28 @@ ViewportInput poppy::detectViewportInput(ImGuiButtonFlags buttonFlags) {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems) return ViewportInput{};
 
-    const ImGuiID id = window->GetID("__Invisible_Button__");
+    ImGuiID const id = window->GetID("__Invisible_Button__");
 
     ImVec2 size = CalcItemSize(window->Size, 0.0f, 0.0f);
-    const ImRect bb(window->DC.CursorPos,
+    ImRect const bb(window->DC.CursorPos,
                     mtl::float2(window->DC.CursorPos) + mtl::float2(size));
     ItemSize(size);
     if (!ItemAdd(bb, id)) return {};
 
     ViewportInput result{};
-    result.pressed = ViewportButtonBehavior(bb,
-                                            id,
-                                            &result.hovered,
-                                            &result.held,
-                                            buttonFlags);
+    result.pressed = ViewportButtonBehavior(bb, id, &result.hovered,
+                                            &result.held, buttonFlags);
 
     SetCursorPos(cursorPos);
 
     return result;
 }
 
-static bool ViewportButtonBehavior(ImRect const& bb,
-                                   ImGuiID id,
-                                   bool* out_hovered,
-                                   bool* out_held,
+static bool ViewportButtonBehavior(ImRect const& bb, ImGuiID id,
+                                   bool* out_hovered, bool* out_held,
                                    ImGuiButtonFlags flags) {
     using namespace ImGui;
-    ::ImGuiContext& g   = *GImGui;
+    ::ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
     // Default only reacts to left mouse button
@@ -101,7 +94,7 @@ static bool ViewportButtonBehavior(ImRect const& bb,
             (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
             // Poll buttons
-            int mouse_button_clicked  = -1;
+            int mouse_button_clicked = -1;
             int mouse_button_released = -1;
             if ((flags & ImGuiButtonFlags_MouseButtonLeft) &&
                 g.IO.MouseClicked[0])
@@ -151,7 +144,8 @@ static bool ViewportButtonBehavior(ImRect const& bb,
                     pressed = true;
                     if (flags & ImGuiButtonFlags_NoHoldingActiveId)
                         ClearActiveID();
-                    else SetActiveID(id, window); // Hold on ID
+                    else
+                        SetActiveID(id, window); // Hold on ID
                     if (!(flags & ImGuiButtonFlags_NoNavFocus))
                         SetFocusID(id, window);
                     g.ActiveIdMouseButton = mouse_button_clicked;
@@ -262,12 +256,8 @@ static bool ViewportButtonBehavior(ImRect const& bb,
     return pressed;
 }
 
-bool poppy::dragFloat3Pretty(char const* label,
-                             float v[3],
-                             float v_speed,
-                             float v_min,
-                             float v_max,
-                             char const* format,
+bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
+                             float v_min, float v_max, char const* format,
                              ImGuiSliderFlags flags) {
     int const components = 3;
     using namespace ImGui;
@@ -275,7 +265,7 @@ bool poppy::dragFloat3Pretty(char const* label,
     if (window->SkipItems) return false;
 
     ImGuiContext& g = *GImGui;
-    auto& style     = GetStyle();
+    auto& style = GetStyle();
 
     bool value_changed = false;
 
@@ -285,13 +275,12 @@ bool poppy::dragFloat3Pretty(char const* label,
     BeginGroup();
     PushID(label);
 
-    constexpr std::array colors = { ImU32(0xFF1111FFu),
-                                    ImU32(0xFF00CC00u),
+    constexpr std::array colors = { ImU32(0xFF1111FFu), ImU32(0xFF00CC00u),
                                     ImU32(0xFFFF2222u) };
     constexpr std::array labels = { "X", "Y", "Z" };
 
-    ImVec2 labelButtonSize      = { height * 1.5f, height };
-    float const fullWidth       = CalcItemWidth();
+    ImVec2 labelButtonSize = { height * 1.5f, height };
+    float const fullWidth = CalcItemWidth();
     bool const haveLabelButtons = fullWidth / components >= 90;
     float const itemWidth =
         fullWidth / components - (haveLabelButtons ? labelButtonSize.x : 0);
@@ -304,7 +293,7 @@ bool poppy::dragFloat3Pretty(char const* label,
 
             auto const cursorPos = window->DC.CursorPos;
             if (i == 0) {
-                auto* const dl       = window->DrawList;
+                auto* const dl = window->DrawList;
                 float const rounding = style.FrameRounding;
                 dl->PathLineTo(
                     ImVec2(cursorPos.x + labelButtonSize.x, cursorPos.y));
@@ -313,14 +302,10 @@ bool poppy::dragFloat3Pretty(char const* label,
                 dl->PathArcToFast(ImVec2(cursorPos.x + rounding,
                                          cursorPos.y + labelButtonSize.y -
                                              rounding),
-                                  rounding,
-                                  3,
-                                  6);
+                                  rounding, 3, 6);
                 dl->PathArcToFast(ImVec2(cursorPos.x + rounding,
                                          cursorPos.y + rounding),
-                                  rounding,
-                                  6,
-                                  9);
+                                  rounding, 6, 9);
                 dl->PathFillConvex(colors[i]);
             }
             else {
@@ -329,7 +314,7 @@ bool poppy::dragFloat3Pretty(char const* label,
                                                 colors[i]);
             }
 
-            auto const cp    = GetCursorPos();
+            auto const cp = GetCursorPos();
             auto const label = labels[i];
             //				withFont(Font::UIDefault().setWeight(FontWeight::black),
             //[&]{ 					auto const textSize = CalcTextSize(label);
@@ -374,21 +359,17 @@ bool poppy::dragFloat3Pretty(char const* label,
                                       hovered ? ImGuiCol_FrameBgHovered :
                                                 ImGuiCol_FrameBg);
         if (i == 0 && !haveLabelButtons) {
-            auto* const dl       = window->DrawList;
+            auto* const dl = window->DrawList;
             float const rounding = style.FrameRounding;
             dl->PathLineTo(ImVec2(cursorPos.x + itemWidth, cursorPos.y));
             dl->PathLineTo(ImVec2(cursorPos.x + itemWidth,
                                   cursorPos.y + labelButtonSize.y));
             dl->PathArcToFast(ImVec2(cursorPos.x + rounding,
                                      cursorPos.y + height - rounding),
-                              rounding,
-                              3,
-                              6);
+                              rounding, 3, 6);
             dl->PathArcToFast(ImVec2(cursorPos.x + rounding,
                                      cursorPos.y + rounding),
-                              rounding,
-                              6,
-                              9);
+                              rounding, 6, 9);
             dl->PathFillConvex(col);
         }
         else if (i < components - 1) {
@@ -398,19 +379,15 @@ bool poppy::dragFloat3Pretty(char const* label,
                                             col);
         }
         else {
-            auto* const dl       = window->DrawList;
+            auto* const dl = window->DrawList;
             float const rounding = style.FrameRounding;
             dl->PathLineTo(cursorPos);
             dl->PathArcToFast(ImVec2(cursorPos.x + itemWidth - rounding,
                                      cursorPos.y + rounding),
-                              rounding,
-                              9,
-                              12);
+                              rounding, 9, 12);
             dl->PathArcToFast(ImVec2(cursorPos.x + itemWidth - rounding,
                                      cursorPos.y + height - rounding),
-                              rounding,
-                              0,
-                              3);
+                              rounding, 0, 3);
             dl->PathLineTo(ImVec2(cursorPos.x, cursorPos.y + height));
             dl->PathFillConvex(col);
         }
@@ -423,8 +400,7 @@ bool poppy::dragFloat3Pretty(char const* label,
     if (style.FrameBorderSize > 0) {
         auto const col = GetColorU32(ImGuiCol_Border);
         window->DrawList->AddRect(beginCursor,
-                                  beginCursor + ImVec2(fullWidth, height),
-                                  col,
+                                  beginCursor + ImVec2(fullWidth, height), col,
                                   style.FrameRounding);
 
         for (int i = 0; i < components; ++i) {
@@ -460,8 +436,7 @@ bool poppy::dragFloat3Pretty(char const* label,
     return value_changed;
 }
 
-std::array<char, 64> poppy::generateUniqueID(std::string_view name,
-                                             int id,
+std::array<char, 64> poppy::generateUniqueID(std::string_view name, int id,
                                              bool const prepentDoubleHash) {
     std::array<char, 64> buffer{};
     char* bufferPtr = buffer.data();

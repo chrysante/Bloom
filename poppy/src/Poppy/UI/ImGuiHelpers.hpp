@@ -18,13 +18,9 @@ ViewportInput detectViewportInput(int mouseButtons);
 
 //	bool dragFloat3Pretty(float*, char const* labelID, float speed = 1);
 
-bool dragFloat3Pretty(char const* label,
-                      float v[3],
-                      float v_speed          = 1.0f,
-                      float v_min            = 0.0f,
-                      float v_max            = 0.0f,
-                      char const* format     = "%.3f",
-                      ImGuiSliderFlags flags = 0);
+bool dragFloat3Pretty(char const* label, float v[3], float v_speed = 1.0f,
+                      float v_min = 0.0f, float v_max = 0.0f,
+                      char const* format = "%.3f", ImGuiSliderFlags flags = 0);
 
 auto withID(int id, std::invocable auto&& block) {
     ImGui::PushID(id);
@@ -47,8 +43,8 @@ auto withIconFont(IconSize size, std::invocable auto&& block) {
 auto withFont(FontWeight w, FontStyle s, std::invocable auto&& block) {
     Font font{};
     font.weight = w;
-    font.style  = s;
-    font.size   = FontSize::medium;
+    font.style = s;
+    font.size = FontSize::medium;
     return withFont(font, UTL_FORWARD(block));
 }
 
@@ -58,21 +54,20 @@ auto disabledIf(bool condition, std::invocable auto&& block) {
     return block();
 }
 
-std::array<char, 64> generateUniqueID(std::string_view,
-                                      int,
+std::array<char, 64> generateUniqueID(std::string_view, int,
                                       bool prepentDoubleHash = false);
 
 template <typename E>
 bool enumCombo(E& e, std::size_t count = (std::size_t)E::_count) {
     bool result = false;
     for (size_t j = 0; j < count; ++j) {
-        E const i           = (E)j;
+        E const i = (E)j;
         bool const selected = e == i;
-        auto const label    = toString(i);
-        bool const pressed  = ImGui::Selectable(label.data(), selected);
+        auto const label = toString(i);
+        bool const pressed = ImGui::Selectable(label.data(), selected);
         //, ImGuiSelectableFlags_SpanAvailWidth);
         if (pressed) {
-            e      = i;
+            e = i;
             result = true;
         }
         if (selected) {

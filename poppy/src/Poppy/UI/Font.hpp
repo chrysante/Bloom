@@ -46,9 +46,9 @@ struct Font {
     static Font UIDefault() {
         Font font{};
 
-        font.size       = FontSize::medium;
-        font.weight     = FontWeight::regular;
-        font.style      = FontStyle::roman;
+        font.size = FontSize::medium;
+        font.weight = FontWeight::regular;
+        font.style = FontStyle::roman;
         font.monospaced = false;
 
         return font;
@@ -60,17 +60,17 @@ struct Font {
         return result;
     }
     Font setWeight(FontWeight weight) const {
-        auto result   = *this;
+        auto result = *this;
         result.weight = weight;
         return result;
     }
     Font setStyle(FontStyle style) const {
-        auto result  = *this;
+        auto result = *this;
         result.style = style;
         return result;
     }
     Font setMonospaced(bool monospaced) const {
-        auto result       = *this;
+        auto result = *this;
         result.monospaced = monospaced;
         return result;
     }
@@ -98,9 +98,7 @@ extern FontMap fonts;
 template <>
 struct std::hash<poppy::Font> {
     std::size_t operator()(poppy::Font const& font) const {
-        return utl::hash_combine(font.size,
-                                 font.weight,
-                                 font.style,
+        return utl::hash_combine(font.size, font.weight, font.style,
                                  font.monospaced);
     }
 };

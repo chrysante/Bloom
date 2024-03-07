@@ -17,11 +17,7 @@ struct BLOOM_API HierarchyComponent {
 
 #include "Bloom/Core/Serialize.hpp"
 
-BLOOM_MAKE_TEXT_SERIALIZER(bloom::HierarchyComponent,
-                           parent,
-                           prevSibling,
-                           nextSibling,
-                           firstChild,
-                           lastChild);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::HierarchyComponent, parent, prevSibling,
+                           nextSibling, firstChild, lastChild);
 
 #endif

@@ -124,15 +124,15 @@ void Renderer::init(HardwareDevice& device) {
         BufferDescription desc{};
         desc.storageMode = StorageMode::managed;
 
-        desc.size       = sizeof(SceneRenderData);
+        desc.size = sizeof(SceneRenderData);
         sceneDataBuffer = device.createBuffer(desc);
 
-        desc.size           = sizeof(DebugDrawData);
+        desc.size = sizeof(DebugDrawData);
         debugDrawDataBuffer = device.createBuffer(desc);
     }
     {
         DepthStencilDescription desc{};
-        desc.depthWrite           = true;
+        desc.depthWrite = true;
         desc.depthCompareFunction = CompareFunction::lessEqual;
 
         depthStencil = device.createDepthStencil(desc);
@@ -216,8 +216,7 @@ void Renderer::submit(DirectionalLight light) {
     float distance = light.shadowDistance;
     for (int i = 0; i < light.numCascades; ++i) {
         auto const lightSpaceTransform =
-            directionalLightSpaceTransform(camera,
-                                           distance,
+            directionalLightSpaceTransform(camera, distance,
                                            light.shadowDistanceZ,
                                            light.direction);
         lightSpaceTransforms.push_back(mtl::transpose(lightSpaceTransform));
@@ -238,8 +237,7 @@ void Renderer::submitShadowCascadeViz(DirectionalLight light) {
 
     for (int i = 0; i < light.numCascades; ++i) {
         auto const lightSpaceTransform =
-            directionalLightSpaceTransform(camera,
-                                           distance,
+            directionalLightSpaceTransform(camera, distance,
                                            light.shadowDistanceZ,
                                            light.direction);
         shadowCascadeVizTransforms[i] = mtl::transpose(lightSpaceTransform);
@@ -268,8 +266,7 @@ void Renderer::drawWireframe(Framebuffer& framebuffer,
     drawPrivate(framebuffer, commandQueue, &Renderer::wireframePass);
 }
 
-void Renderer::drawPrivate(Framebuffer& framebuffer,
-                           CommandQueue& commandQueue,
+void Renderer::drawPrivate(Framebuffer& framebuffer, CommandQueue& commandQueue,
                            void (Renderer::*renderPass)(Framebuffer&,
                                                         CommandQueue&)) {
     std::sort(objects.begin(), objects.end(), objectOrder);
@@ -277,8 +274,8 @@ void Renderer::drawPrivate(Framebuffer& framebuffer,
     SceneRenderData sceneRenderData;
 
     // Scene Data
-    sceneRenderData.camera           = mtl::transpose(camera.viewProjection());
-    sceneRenderData.cameraPosition   = camera.position();
+    sceneRenderData.camera = mtl::transpose(camera.viewProjection());
+    sceneRenderData.cameraPosition = camera.position();
     sceneRenderData.screenResolution = framebuffer.size();
 
     // Point Lights
@@ -287,8 +284,7 @@ void Renderer::drawPrivate(Framebuffer& framebuffer,
         pointLights.resize(32);
     }
     sceneRenderData.numPointLights = pointLights.size();
-    std::copy(pointLights.begin(),
-              pointLights.end(),
+    std::copy(pointLights.begin(), pointLights.end(),
               sceneRenderData.pointLights);
 
     // Spotlights
@@ -315,8 +311,7 @@ void Renderer::drawPrivate(Framebuffer& framebuffer,
     sceneRenderData.numSkyLights = skyLights.size();
     std::copy(skyLights.begin(), skyLights.end(), sceneRenderData.skyLights);
 
-    mDevice->fillManagedBuffer(sceneDataBuffer,
-                               &sceneRenderData,
+    mDevice->fillManagedBuffer(sceneDataBuffer, &sceneRenderData,
                                sizeof sceneRenderData);
 
     shadowMapPass(commandQueue);
@@ -331,15 +326,14 @@ void Renderer::drawDebugInfo(EditorFramebuffer& framebuffer,
                              DebugDrawOptions options) {
     // Debug Draw Data
     DebugDrawData debugDrawData;
-    debugDrawData.selectionLineWidth      = 3;
+    debugDrawData.selectionLineWidth = 3;
     debugDrawData.visualizeShadowCascades = options.visualizeShadowCascades;
-    debugDrawData.shadowCascadeVizCount   = shadowCascadeVizCount;
+    debugDrawData.shadowCascadeVizCount = shadowCascadeVizCount;
     std::copy(shadowCascadeVizTransforms.begin(),
               shadowCascadeVizTransforms.end(),
               debugDrawData.shadowCascadeVizTransforms);
 
-    mDevice->fillManagedBuffer(debugDrawDataBuffer,
-                               &debugDrawData,
+    mDevice->fillManagedBuffer(debugDrawDataBuffer, &debugDrawData,
                                sizeof debugDrawData);
 
     editorPass(framebuffer, commandQueue);
@@ -376,7 +370,7 @@ void Renderer::postprocess(Framebuffer& framebuffer,
 
     DrawDescription desc{};
     desc.indexBuffer = quadIB;
-    desc.indexCount  = 6;
+    desc.indexCount = 6;
 
     ctx->draw(desc);
 
@@ -390,7 +384,7 @@ void Renderer::mainPass(Framebuffer& framebuffer, CommandQueue& commandQueue) {
     {
         RenderPassDescription desc{};
         ColorAttachment caDesc{};
-        caDesc.texture    = framebuffer.color;
+        caDesc.texture = framebuffer.color;
         caDesc.clearColor = { 1, 0, 1, 1 };
         caDesc.loadAction = LoadAction::clear;
         desc.colorAttachments.push_back(caDesc);
@@ -408,8 +402,7 @@ void Renderer::mainPass(Framebuffer& framebuffer, CommandQueue& commandQueue) {
     // Fragment buffers
     ctx->setFragmentBuffer(sceneDataBuffer, 0);
     ctx->setFragmentBuffer(shadowDataBuffer, 1);
-    ctx->setFragmentBuffer(shadowDataBuffer,
-                           2,
+    ctx->setFragmentBuffer(shadowDataBuffer, 2,
                            sizeof(ShadowRenderData) /* offset */);
     ctx->setFragmentTexture(shadowMapArray, 0);
     ctx->setFragmentSampler(shadowMapSampler, 0);
@@ -424,13 +417,12 @@ void Renderer::mainPass(Framebuffer& framebuffer, CommandQueue& commandQueue) {
         }
 
         ctx->setVertexBuffer(object.mesh->vertexBuffer, 1);
-        ctx->setVertexBuffer(entityDataBuffer,
-                             2,
+        ctx->setVertexBuffer(entityDataBuffer, 2,
                              index * sizeof(EntityRenderData));
 
         DrawDescription desc{};
-        desc.indexCount  = object.mesh->indexBuffer.size() / 4;
-        desc.indexType   = IndexType::uint32;
+        desc.indexCount = object.mesh->indexBuffer.size() / 4;
+        desc.indexType = IndexType::uint32;
         desc.indexBuffer = object.mesh->indexBuffer;
         ctx->draw(desc);
     }
@@ -447,7 +439,7 @@ void Renderer::wireframePass(Framebuffer& framebuffer,
     {
         RenderPassDescription desc{};
         ColorAttachment caDesc{};
-        caDesc.texture    = framebuffer.color;
+        caDesc.texture = framebuffer.color;
         caDesc.clearColor = { 1, 0, 1, 1 };
         caDesc.loadAction = LoadAction::clear;
         desc.colorAttachments.push_back(caDesc);
@@ -474,13 +466,12 @@ void Renderer::wireframePass(Framebuffer& framebuffer,
         }
 
         ctx->setVertexBuffer(object.mesh->vertexBuffer, 1);
-        ctx->setVertexBuffer(entityDataBuffer,
-                             2,
+        ctx->setVertexBuffer(entityDataBuffer, 2,
                              index * sizeof(EntityRenderData));
 
         DrawDescription desc{};
-        desc.indexCount  = object.mesh->indexBuffer.size() / 4;
-        desc.indexType   = IndexType::uint32;
+        desc.indexCount = object.mesh->indexBuffer.size() / 4;
+        desc.indexType = IndexType::uint32;
         desc.indexBuffer = object.mesh->indexBuffer;
         ctx->draw(desc);
     }
@@ -495,20 +486,20 @@ void Renderer::editorPass(EditorFramebuffer& framebuffer,
     {
         RenderPassDescription desc{};
         ColorAttachment caDesc{};
-        caDesc.texture    = framebuffer.entityID;
+        caDesc.texture = framebuffer.entityID;
         caDesc.clearColor = 1; // null entity
         caDesc.loadAction = LoadAction::clear;
 
         desc.colorAttachments.push_back(caDesc);
 
-        caDesc.texture    = framebuffer.shadowCascade;
+        caDesc.texture = framebuffer.shadowCascade;
         caDesc.clearColor = 0;
         caDesc.loadAction = LoadAction::clear;
 
         desc.colorAttachments.push_back(caDesc);
 
         DepthAttachment dDesc{};
-        dDesc.texture        = framebuffer.editorDepth;
+        dDesc.texture = framebuffer.editorDepth;
         desc.depthAttachment = dDesc;
         ctx->begin(desc);
     }
@@ -518,8 +509,7 @@ void Renderer::editorPass(EditorFramebuffer& framebuffer,
     ctx->setFragmentBuffer(sceneDataBuffer, 0);
     ctx->setFragmentBuffer(debugDrawDataBuffer, 1);
     ctx->setFragmentBuffer(shadowDataBuffer, 2);
-    ctx->setFragmentBuffer(shadowDataBuffer,
-                           3,
+    ctx->setFragmentBuffer(shadowDataBuffer, 3,
                            sizeof(ShadowRenderData) /* offset */);
     ctx->setFragmentTexture(shadowMapArray, 0);
     ctx->setFragmentSampler(shadowMapSampler, 0);
@@ -534,13 +524,12 @@ void Renderer::editorPass(EditorFramebuffer& framebuffer,
             ctx->setDepthStencil(depthStencil);
         }
         ctx->setVertexBuffer(object.mesh->vertexBuffer, 1);
-        ctx->setVertexBuffer(entityDataBuffer,
-                             2,
+        ctx->setVertexBuffer(entityDataBuffer, 2,
                              index * sizeof(EntityRenderData));
 
         DrawDescription desc{};
-        desc.indexCount  = object.mesh->indexBuffer.size() / 4;
-        desc.indexType   = IndexType::uint32;
+        desc.indexCount = object.mesh->indexBuffer.size() / 4;
+        desc.indexType = IndexType::uint32;
         desc.indexBuffer = object.mesh->indexBuffer;
         ctx->draw(desc);
 
@@ -570,10 +559,10 @@ void Renderer::shadowMapPass(CommandQueue& commandQueue) {
     {
         RenderPassDescription desc{};
         DepthAttachment dDesc{};
-        dDesc.texture                = shadowMapArray;
-        desc.depthAttachment         = dDesc;
+        dDesc.texture = shadowMapArray;
+        desc.depthAttachment = dDesc;
         desc.renderTargetArrayLength = numShadowMaps;
-        desc.renderTargetSize        = shadowMapResolution;
+        desc.renderTargetSize = shadowMapResolution;
 
         ctx->begin(desc);
     }
@@ -587,18 +576,16 @@ void Renderer::shadowMapPass(CommandQueue& commandQueue) {
 
     for (auto&& [index, object]: utl::enumerate(objects)) {
         ctx->setVertexBuffer(object.mesh->vertexBuffer, 1);
-        ctx->setVertexBuffer(entityDataBuffer,
-                             2,
+        ctx->setVertexBuffer(entityDataBuffer, 2,
                              index * sizeof(EntityRenderData));
         ctx->setVertexBuffer(
-            shadowDataBuffer,
-            3, /* offset = */
+            shadowDataBuffer, 3, /* offset = */
             sizeof(ShadowRenderData) /* <- this is the header of the buffer */);
 
         DrawDescription desc{};
-        desc.indexCount    = object.mesh->indexBuffer.size() / 4;
-        desc.indexType     = IndexType::uint32;
-        desc.indexBuffer   = object.mesh->indexBuffer;
+        desc.indexCount = object.mesh->indexBuffer.size() / 4;
+        desc.indexType = IndexType::uint32;
+        desc.indexBuffer = object.mesh->indexBuffer;
         desc.instanceCount = numShadowMaps;
         ctx->draw(desc);
     }
@@ -609,12 +596,12 @@ void Renderer::shadowMapPass(CommandQueue& commandQueue) {
 
 void Renderer::selectionPass(Framebuffer& fb, CommandQueue& commandQueue) {
     EditorFramebuffer& framebuffer = static_cast<EditorFramebuffer&>(fb);
-    std::unique_ptr ctx            = commandQueue.createRenderContext();
+    std::unique_ptr ctx = commandQueue.createRenderContext();
 
     {
         RenderPassDescription desc{};
         ColorAttachment caDesc;
-        caDesc.texture    = framebuffer.selected;
+        caDesc.texture = framebuffer.selected;
         caDesc.loadAction = LoadAction::clear;
         caDesc.clearColor = 0;
 
@@ -631,13 +618,12 @@ void Renderer::selectionPass(Framebuffer& fb, CommandQueue& commandQueue) {
             ctx->setPipeline(currentMaterial->outlinePass);
         }
         ctx->setVertexBuffer(object.mesh->vertexBuffer, 1);
-        ctx->setVertexBuffer(entityDataBuffer,
-                             2,
+        ctx->setVertexBuffer(entityDataBuffer, 2,
                              index * sizeof(EntityRenderData));
 
         DrawDescription desc{};
-        desc.indexCount  = object.mesh->indexBuffer.size() / 4;
-        desc.indexType   = IndexType::uint32;
+        desc.indexCount = object.mesh->indexBuffer.size() / 4;
+        desc.indexType = IndexType::uint32;
         desc.indexBuffer = object.mesh->indexBuffer;
         ctx->draw(desc);
 
@@ -649,8 +635,7 @@ void Renderer::selectionPass(Framebuffer& fb, CommandQueue& commandQueue) {
 }
 
 void Renderer::editorPP(EditorFramebuffer& framebuffer,
-                        CommandQueue& commandQueue,
-                        DebugDrawOptions options) {
+                        CommandQueue& commandQueue, DebugDrawOptions options) {
     std::unique_ptr ctx = commandQueue.createRenderContext();
 
     {
@@ -674,8 +659,8 @@ void Renderer::editorPP(EditorFramebuffer& framebuffer,
     ctx->setFragmentSampler(postprocessSampler, 0);
 
     DrawDescription desc{};
-    desc.indexCount  = 6;
-    desc.indexType   = IndexType::uint32;
+    desc.indexCount = 6;
+    desc.indexType = IndexType::uint32;
     desc.indexBuffer = quadIB;
     ctx->draw(desc);
 
@@ -683,8 +668,7 @@ void Renderer::editorPP(EditorFramebuffer& framebuffer,
     ctx->commit();
 }
 
-static void uploadEntityDataEx(auto&& objects,
-                               auto&& entityDataBuffer,
+static void uploadEntityDataEx(auto&& objects, auto&& entityDataBuffer,
                                HardwareDevice& device) {
     std::size_t const size = objects.size() * sizeof(EntityRenderData);
     if (size == 0) {
@@ -692,7 +676,7 @@ static void uploadEntityDataEx(auto&& objects,
     }
     if (entityDataBuffer.size() < size) {
         BufferDescription desc;
-        desc.size        = size;
+        desc.size = size;
         desc.storageMode = StorageMode::managed;
         entityDataBuffer = device.createBuffer(desc);
     }
@@ -709,7 +693,7 @@ void Renderer::uploadDebugDrawData() {}
 
 void Renderer::setShadowMapResolution(mtl::uint2 r) {
     shadowMapResolution = r;
-    needsNewShadowMaps  = true;
+    needsNewShadowMaps = true;
 }
 
 void Renderer::createShadowPipeline() {
@@ -717,7 +701,7 @@ void Renderer::createShadowPipeline() {
     desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
     desc.vertexFunction = device().createFunction("shadowVertexShader");
 
-    desc.rasterSampleCount      = 1;
+    desc.rasterSampleCount = 1;
     desc.inputPrimitiveTopology = PrimitiveTopologyClass::triangle;
 
     shadowPipeline = device().createRenderPipeline(desc);
@@ -732,8 +716,7 @@ void Renderer::uploadShadowData() {
     ShadowRenderData header;
     header.numShadowCasters = numShadowCasters;
     bloomAssert(numShadowCasters == numCascades.size());
-    std::copy(numCascades.begin(),
-              numCascades.end(),
+    std::copy(numCascades.begin(), numCascades.end(),
               std::begin(header.numCascades));
 
     std::size_t const size =
@@ -743,13 +726,12 @@ void Renderer::uploadShadowData() {
 
     if (shadowDataBuffer.size() < size) {
         BufferDescription desc;
-        desc.size        = size;
+        desc.size = size;
         desc.storageMode = StorageMode::managed;
         shadowDataBuffer = device().createBuffer(desc);
     }
     device().fillManagedBuffer(shadowDataBuffer, &header, sizeof header);
-    device().fillManagedBuffer(shadowDataBuffer,
-                               lightSpaceTransforms.data(),
+    device().fillManagedBuffer(shadowDataBuffer, lightSpaceTransforms.data(),
                                lightSpaceTransforms.size() *
                                    sizeof(mtl::float4x4),
                                sizeof header /* offset */);
@@ -757,14 +739,14 @@ void Renderer::uploadShadowData() {
 
 TextureHandle Renderer::createShadowMaps(int totalShadowMaps) {
     shadowMapArrayLength = totalShadowMaps;
-    needsNewShadowMaps   = false;
+    needsNewShadowMaps = false;
 
     TextureDescription desc;
-    desc.type        = TextureType::texture2DArray;
-    desc.size        = usize3(shadowMapResolution, 1);
+    desc.type = TextureType::texture2DArray;
+    desc.size = usize3(shadowMapResolution, 1);
     desc.arrayLength = totalShadowMaps;
     desc.pixelFormat = PixelFormat::Depth32Float;
-    desc.usage       = TextureUsage::renderTarget | TextureUsage::shaderRead;
+    desc.usage = TextureUsage::renderTarget | TextureUsage::shaderRead;
     desc.storageMode = StorageMode::GPUOnly;
 
     return device().createTexture(desc);
@@ -783,7 +765,7 @@ void Renderer::createEditorPassPipeline() {
 
     desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
 
-    desc.vertexFunction   = device().createFunction("editorPassVS");
+    desc.vertexFunction = device().createFunction("editorPassVS");
     desc.fragmentFunction = device().createFunction("editorPassFS");
 
     editorPassPipeline = device().createRenderPipeline(desc);
@@ -797,7 +779,7 @@ void Renderer::createWireframePassPipeline() {
     caDesc.pixelFormat = PixelFormat::R32Float;
     desc.colorAttachments.push_back(caDesc);
 
-    desc.vertexFunction   = device().createFunction("editorPassVS");
+    desc.vertexFunction = device().createFunction("editorPassVS");
     desc.fragmentFunction = device().createFunction("wireframePassFS");
 
     wireframePassPipeline = device().createRenderPipeline(desc);
@@ -809,17 +791,17 @@ void Renderer::createPostprocessQuad() {
                                      { -1, 1 },
                                      { 1, 1 } };
     BufferDescription desc;
-    desc.size        = sizeof vertices;
-    desc.data        = vertices;
+    desc.size = sizeof vertices;
+    desc.data = vertices;
     desc.storageMode = StorageMode::shared;
-    quadVB           = device().createBuffer(desc);
+    quadVB = device().createBuffer(desc);
 
     std::uint32_t const indices[] = { 0, 1, 2, 1, 3, 2 };
 
-    desc.size        = sizeof indices;
-    desc.data        = indices;
+    desc.size = sizeof indices;
+    desc.data = indices;
     desc.storageMode = StorageMode::shared;
-    quadIB           = device().createBuffer(desc);
+    quadIB = device().createBuffer(desc);
 }
 
 void Renderer::createPostprocessPipelines() {
@@ -831,13 +813,13 @@ void Renderer::createPostprocessPipelines() {
     caDesc.pixelFormat = PixelFormat::RGBA8Unorm;
     desc.colorAttachments.push_back(caDesc);
 
-    desc.vertexFunction   = device().createFunction("postprocessVS");
+    desc.vertexFunction = device().createFunction("postprocessVS");
     desc.fragmentFunction = device().createFunction("postprocess");
 
     postprocessPipeline = device().createRenderPipeline(desc);
 
     // ---------------
-    desc.vertexFunction   = device().createFunction("postprocessVS");
+    desc.vertexFunction = device().createFunction("postprocessVS");
     desc.fragmentFunction = device().createFunction("editorPP");
 
     editorPPPipeline = device().createRenderPipeline(desc);

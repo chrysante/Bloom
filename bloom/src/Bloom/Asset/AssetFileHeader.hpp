@@ -8,18 +8,15 @@ struct AssetFileHeader {
     static constexpr std::size_t customDataSize = 256;
 
     AssetFileHeader() = default;
-    AssetFileHeader(AssetHandle const& handle,
-                    FileFormat format,
+    AssetFileHeader(AssetHandle const& handle, FileFormat format,
                     std::string_view name):
         _handle(handle), _format(format), nameBuffer{} {
         std::strncpy(nameBuffer, name.data(), 127);
     }
     template <typename T>
         requires(sizeof(T) <= customDataSize)
-    AssetFileHeader(AssetHandle const& handle,
-                    FileFormat format,
-                    std::string_view name,
-                    T&& t):
+    AssetFileHeader(AssetHandle const& handle, FileFormat format,
+                    std::string_view name, T&& t):
         AssetFileHeader(handle, format, name) {
         ::new ((void*)customData) T(std::forward<T>(t));
     }

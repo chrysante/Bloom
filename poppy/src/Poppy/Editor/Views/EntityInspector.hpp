@@ -42,15 +42,14 @@ private:
     bool beginComponentSection(std::string_view name, bloom::EntityHandle);
     bool beginSubSection(std::string_view name);
 
-    bool beginGenericSection(std::string_view name,
-                             Font const&,
+    bool beginGenericSection(std::string_view name, Font const&,
                              utl::function<void()> deleter);
 
     void endSection();
     void endSubSection();
 
 private:
-    int editingNameState      = 0;
+    int editingNameState = 0;
     bool transformScaleLinked = false;
 };
 

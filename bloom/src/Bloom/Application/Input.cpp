@@ -7,27 +7,25 @@
 using namespace bloom;
 
 ModFlags bloom::modFlagsFromGLFW(int glfwFlags) {
-    ModFlags result = ModFlags::none;
-
+    ModFlags result = ModFlags::None;
     if (glfwFlags & GLFW_MOD_SHIFT) {
-        result |= ModFlags::shift;
+        result |= ModFlags::Shift;
     }
     if (glfwFlags & GLFW_MOD_CONTROL) {
-        result |= ModFlags::control;
+        result |= ModFlags::Control;
     }
     if (glfwFlags & GLFW_MOD_ALT) {
-        result |= ModFlags::alt;
+        result |= ModFlags::Alt;
     }
     if (glfwFlags & GLFW_MOD_SUPER) {
-        result |= ModFlags::super;
+        result |= ModFlags::Super;
     }
     if (glfwFlags & GLFW_MOD_CAPS_LOCK) {
-        result |= ModFlags::capsLock;
+        result |= ModFlags::CapsLock;
     }
     if (glfwFlags & GLFW_MOD_NUM_LOCK) {
-        result |= ModFlags::numLock;
+        result |= ModFlags::NumLock;
     }
-
     return result;
 }
 
@@ -69,91 +67,88 @@ static std::array<Key, GLFW_KEY_LAST + 1> glfwKeyTranslationTable = [] {
     result[GLFW_KEY_X] = Key::X;
     result[GLFW_KEY_Y] = Key::Y;
     result[GLFW_KEY_Z] = Key::Z;
-
-    result[GLFW_KEY_APOSTROPHE]    = Key::apostrophe;
-    result[GLFW_KEY_BACKSLASH]     = Key::backslash;
-    result[GLFW_KEY_COMMA]         = Key::comma;
-    result[GLFW_KEY_EQUAL]         = Key::equal;
-    result[GLFW_KEY_GRAVE_ACCENT]  = Key::graveAccent;
-    result[GLFW_KEY_LEFT_BRACKET]  = Key::leftBracket;
-    result[GLFW_KEY_MINUS]         = Key::minus;
-    result[GLFW_KEY_PERIOD]        = Key::period;
-    result[GLFW_KEY_RIGHT_BRACKET] = Key::rightBracket;
-    result[GLFW_KEY_SEMICOLON]     = Key::semicolon;
-    result[GLFW_KEY_SLASH]         = Key::slash;
-    result[GLFW_KEY_WORLD_1]       = Key::_1;
-
-    result[GLFW_KEY_BACKSPACE]     = Key::backspace;
-    result[GLFW_KEY_CAPS_LOCK]     = Key::capsLock;
-    result[GLFW_KEY_DELETE]        = Key::delete_;
-    result[GLFW_KEY_DOWN]          = Key::downArrow;
-    result[GLFW_KEY_END]           = Key::end;
-    result[GLFW_KEY_ENTER]         = Key::enter;
-    result[GLFW_KEY_ESCAPE]        = Key::escape;
-    result[GLFW_KEY_F1]            = Key::F1;
-    result[GLFW_KEY_F2]            = Key::F2;
-    result[GLFW_KEY_F3]            = Key::F3;
-    result[GLFW_KEY_F4]            = Key::F4;
-    result[GLFW_KEY_F5]            = Key::F5;
-    result[GLFW_KEY_F6]            = Key::F6;
-    result[GLFW_KEY_F7]            = Key::F7;
-    result[GLFW_KEY_F8]            = Key::F8;
-    result[GLFW_KEY_F9]            = Key::F9;
-    result[GLFW_KEY_F10]           = Key::F10;
-    result[GLFW_KEY_F11]           = Key::F11;
-    result[GLFW_KEY_F12]           = Key::F12;
-    result[GLFW_KEY_PRINT_SCREEN]  = Key::printScreen;
-    result[GLFW_KEY_F14]           = Key::none;
-    result[GLFW_KEY_F15]           = Key::none;
-    result[GLFW_KEY_F16]           = Key::none;
-    result[GLFW_KEY_F17]           = Key::none;
-    result[GLFW_KEY_F18]           = Key::none;
-    result[GLFW_KEY_F19]           = Key::none;
-    result[GLFW_KEY_F20]           = Key::none;
-    result[GLFW_KEY_HOME]          = Key::home;
-    result[GLFW_KEY_INSERT]        = Key::insert;
-    result[GLFW_KEY_LEFT]          = Key::leftArrow;
-    result[GLFW_KEY_LEFT_ALT]      = Key::leftAlt;
-    result[GLFW_KEY_LEFT_CONTROL]  = Key::leftCtrl;
-    result[GLFW_KEY_LEFT_SHIFT]    = Key::leftShift;
-    result[GLFW_KEY_LEFT_SUPER]    = Key::leftSuper;
-    result[GLFW_KEY_MENU]          = Key::menu;
-    result[GLFW_KEY_NUM_LOCK]      = Key::numLock;
-    result[GLFW_KEY_PAGE_DOWN]     = Key::pageDown;
-    result[GLFW_KEY_PAGE_UP]       = Key::pageUp;
-    result[GLFW_KEY_RIGHT]         = Key::rightArrow;
-    result[GLFW_KEY_RIGHT_ALT]     = Key::rightAlt;
-    result[GLFW_KEY_RIGHT_CONTROL] = Key::rightCtrl;
-    result[GLFW_KEY_RIGHT_SHIFT]   = Key::rightShift;
-    result[GLFW_KEY_RIGHT_SUPER]   = Key::rightSuper;
-    result[GLFW_KEY_SPACE]         = Key::space;
-    result[GLFW_KEY_TAB]           = Key::tab;
-    result[GLFW_KEY_UP]            = Key::upArrow;
-
-    result[GLFW_KEY_KP_0]        = Key::keypad0;
-    result[GLFW_KEY_KP_1]        = Key::keypad1;
-    result[GLFW_KEY_KP_2]        = Key::keypad2;
-    result[GLFW_KEY_KP_3]        = Key::keypad3;
-    result[GLFW_KEY_KP_4]        = Key::keypad4;
-    result[GLFW_KEY_KP_5]        = Key::keypad5;
-    result[GLFW_KEY_KP_6]        = Key::keypad6;
-    result[GLFW_KEY_KP_7]        = Key::keypad7;
-    result[GLFW_KEY_KP_8]        = Key::keypad8;
-    result[GLFW_KEY_KP_9]        = Key::keypad9;
-    result[GLFW_KEY_KP_ADD]      = Key::keypadAdd;
-    result[GLFW_KEY_KP_DECIMAL]  = Key::keypadDecimal;
-    result[GLFW_KEY_KP_DIVIDE]   = Key::keypadDivide;
-    result[GLFW_KEY_KP_ENTER]    = Key::keypadEnter;
-    result[GLFW_KEY_KP_EQUAL]    = Key::keypadEqual;
-    result[GLFW_KEY_KP_MULTIPLY] = Key::keypadMultiply;
-    result[GLFW_KEY_KP_SUBTRACT] = Key::keypadSubtract;
+    result[GLFW_KEY_APOSTROPHE] = Key::Apostrophe;
+    result[GLFW_KEY_BACKSLASH] = Key::Backslash;
+    result[GLFW_KEY_COMMA] = Key::Comma;
+    result[GLFW_KEY_EQUAL] = Key::Equal;
+    result[GLFW_KEY_GRAVE_ACCENT] = Key::GraveAccent;
+    result[GLFW_KEY_LEFT_BRACKET] = Key::LeftBracket;
+    result[GLFW_KEY_MINUS] = Key::Minus;
+    result[GLFW_KEY_PERIOD] = Key::Period;
+    result[GLFW_KEY_RIGHT_BRACKET] = Key::RightBracket;
+    result[GLFW_KEY_SEMICOLON] = Key::Semicolon;
+    result[GLFW_KEY_SLASH] = Key::Slash;
+    result[GLFW_KEY_WORLD_1] = Key::_1;
+    result[GLFW_KEY_BACKSPACE] = Key::Backspace;
+    result[GLFW_KEY_CAPS_LOCK] = Key::CapsLock;
+    result[GLFW_KEY_DELETE] = Key::Delete;
+    result[GLFW_KEY_DOWN] = Key::DownArrow;
+    result[GLFW_KEY_END] = Key::End;
+    result[GLFW_KEY_ENTER] = Key::Enter;
+    result[GLFW_KEY_ESCAPE] = Key::Escape;
+    result[GLFW_KEY_F1] = Key::F1;
+    result[GLFW_KEY_F2] = Key::F2;
+    result[GLFW_KEY_F3] = Key::F3;
+    result[GLFW_KEY_F4] = Key::F4;
+    result[GLFW_KEY_F5] = Key::F5;
+    result[GLFW_KEY_F6] = Key::F6;
+    result[GLFW_KEY_F7] = Key::F7;
+    result[GLFW_KEY_F8] = Key::F8;
+    result[GLFW_KEY_F9] = Key::F9;
+    result[GLFW_KEY_F10] = Key::F10;
+    result[GLFW_KEY_F11] = Key::F11;
+    result[GLFW_KEY_F12] = Key::F12;
+    result[GLFW_KEY_PRINT_SCREEN] = Key::PrintScreen;
+    result[GLFW_KEY_F14] = Key::None;
+    result[GLFW_KEY_F15] = Key::None;
+    result[GLFW_KEY_F16] = Key::None;
+    result[GLFW_KEY_F17] = Key::None;
+    result[GLFW_KEY_F18] = Key::None;
+    result[GLFW_KEY_F19] = Key::None;
+    result[GLFW_KEY_F20] = Key::None;
+    result[GLFW_KEY_HOME] = Key::Home;
+    result[GLFW_KEY_INSERT] = Key::Insert;
+    result[GLFW_KEY_LEFT] = Key::LeftArrow;
+    result[GLFW_KEY_LEFT_ALT] = Key::LeftAlt;
+    result[GLFW_KEY_LEFT_CONTROL] = Key::LeftCtrl;
+    result[GLFW_KEY_LEFT_SHIFT] = Key::LeftShift;
+    result[GLFW_KEY_LEFT_SUPER] = Key::LeftSuper;
+    result[GLFW_KEY_MENU] = Key::Menu;
+    result[GLFW_KEY_NUM_LOCK] = Key::NumLock;
+    result[GLFW_KEY_PAGE_DOWN] = Key::PageDown;
+    result[GLFW_KEY_PAGE_UP] = Key::PageUp;
+    result[GLFW_KEY_RIGHT] = Key::RightArrow;
+    result[GLFW_KEY_RIGHT_ALT] = Key::RightAlt;
+    result[GLFW_KEY_RIGHT_CONTROL] = Key::RightCtrl;
+    result[GLFW_KEY_RIGHT_SHIFT] = Key::RightShift;
+    result[GLFW_KEY_RIGHT_SUPER] = Key::RightSuper;
+    result[GLFW_KEY_SPACE] = Key::Space;
+    result[GLFW_KEY_TAB] = Key::Tab;
+    result[GLFW_KEY_UP] = Key::UpArrow;
+    result[GLFW_KEY_KP_0] = Key::Keypad0;
+    result[GLFW_KEY_KP_1] = Key::Keypad1;
+    result[GLFW_KEY_KP_2] = Key::Keypad2;
+    result[GLFW_KEY_KP_3] = Key::Keypad3;
+    result[GLFW_KEY_KP_4] = Key::Keypad4;
+    result[GLFW_KEY_KP_5] = Key::Keypad5;
+    result[GLFW_KEY_KP_6] = Key::Keypad6;
+    result[GLFW_KEY_KP_7] = Key::Keypad7;
+    result[GLFW_KEY_KP_8] = Key::Keypad8;
+    result[GLFW_KEY_KP_9] = Key::Keypad9;
+    result[GLFW_KEY_KP_ADD] = Key::KeypadAdd;
+    result[GLFW_KEY_KP_DECIMAL] = Key::KeypadDecimal;
+    result[GLFW_KEY_KP_DIVIDE] = Key::KeypadDivide;
+    result[GLFW_KEY_KP_ENTER] = Key::KeypadEnter;
+    result[GLFW_KEY_KP_EQUAL] = Key::KeypadEqual;
+    result[GLFW_KEY_KP_MULTIPLY] = Key::KeypadMultiply;
+    result[GLFW_KEY_KP_SUBTRACT] = Key::KeypadSubtract;
 
     return result;
 }();
 
 Key bloom::keyFromGLFW(int glfwCode) {
     if (glfwCode == GLFW_KEY_UNKNOWN) {
-        return Key::none;
+        return Key::None;
     }
     return glfwKeyTranslationTable[glfwCode];
 }
@@ -161,9 +156,9 @@ Key bloom::keyFromGLFW(int glfwCode) {
 static std::array<MouseButton, 3> glfwMouseButtonTranslationTable = [] {
     std::array<MouseButton, 3> result{};
 
-    result[GLFW_MOUSE_BUTTON_LEFT]   = MouseButton::left;
-    result[GLFW_MOUSE_BUTTON_RIGHT]  = MouseButton::right;
-    result[GLFW_MOUSE_BUTTON_MIDDLE] = MouseButton::other;
+    result[GLFW_MOUSE_BUTTON_LEFT] = MouseButton::Left;
+    result[GLFW_MOUSE_BUTTON_RIGHT] = MouseButton::Right;
+    result[GLFW_MOUSE_BUTTON_MIDDLE] = MouseButton::Other;
 
     return result;
 }();

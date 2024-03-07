@@ -10,9 +10,7 @@ using namespace bloom;
 using namespace poppy;
 
 std::string_view poppy::toString(LightType type) {
-    return std::array{ "Point Light",
-                       "Spotlight",
-                       "Directional Light",
+    return std::array{ "Point Light", "Spotlight", "Directional Light",
                        "Sky Light" }[(std::size_t)type];
 }
 

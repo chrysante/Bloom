@@ -25,8 +25,8 @@ class DirectoryView {
 public:
     struct Parameters {
         mtl::float2 itemSpacing = 10;
-        mtl::float2 itemSize    = 100;
-        float labelHeight       = 20;
+        mtl::float2 itemSize = 100;
+        float labelHeight = 20;
     };
 
 public:
@@ -46,14 +46,14 @@ private:
     utl::vector<std::string> foldersInCurrentDir;
     utl::vector<bloom::AssetHandle> assetsInCurrentDir;
     bloom::AssetManager* assetManager = nullptr;
-    AssetBrowser* browser             = nullptr;
+    AssetBrowser* browser = nullptr;
 
 private:
     mtl::float2 contentSize = 0;
-    mtl::float2 cursor      = 0;
-    int itemIndex           = 0;
-    int renaming            = -1;
-    bool setRenameFocus     = false;
+    mtl::float2 cursor = 0;
+    int itemIndex = 0;
+    int renaming = -1;
+    bool setRenameFocus = false;
     std::array<char, 256> renameBuffer{};
 };
 

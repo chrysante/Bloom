@@ -56,32 +56,32 @@ struct BLOOM_API KeyEvent: InputEventBase {
 enum struct BLOOM_API InputEventType : unsigned {
     none = 0,
 
-    leftMouseDown  = 1 << 0,
+    leftMouseDown = 1 << 0,
     rightMouseDown = 1 << 1,
     otherMouseDown = 1 << 2,
-    mouseDown      = leftMouseDown | rightMouseDown | otherMouseDown,
+    mouseDown = leftMouseDown | rightMouseDown | otherMouseDown,
 
-    leftMouseUp  = 1 << 3,
+    leftMouseUp = 1 << 3,
     rightMouseUp = 1 << 4,
     otherMouseUp = 1 << 5,
-    mouseUp      = leftMouseUp | rightMouseUp | otherMouseUp,
+    mouseUp = leftMouseUp | rightMouseUp | otherMouseUp,
 
     mouseMoved = 1 << 6,
 
-    leftMouseDragged  = 1 << 7,
+    leftMouseDragged = 1 << 7,
     rightMouseDragged = 1 << 8,
     otherMouseDragged = 1 << 9,
     mouseDragged = leftMouseDragged | rightMouseDragged | otherMouseDragged,
 
     scrollWheel = 1 << 10,
-    magnify     = 1 << 11,
+    magnify = 1 << 11,
 
-    mouse =
-        mouseDown | mouseUp | mouseMoved | mouseDragged | scrollWheel | magnify,
+    mouse = mouseDown | mouseUp | mouseMoved | mouseDragged | scrollWheel |
+            magnify,
 
     keyDown = 1 << 12,
-    keyUp   = 1 << 13,
-    key     = keyDown | keyUp
+    keyUp = 1 << 13,
+    key = keyDown | keyUp
 };
 
 UTL_ENUM_OPERATORS(InputEventType);
@@ -237,28 +237,20 @@ public:
 private:
     friend class Application;
     friend class Input;
-    using EventUnion = std::variant<MouseEvent,
-                                    MouseDownEvent,
-                                    MouseUpEvent,
-                                    MouseMoveEvent,
-                                    MouseDragEvent,
-                                    ScrollEvent,
-                                    MagnificationEvent,
-                                    KeyEvent>;
+    using EventUnion =
+        std::variant<MouseEvent, MouseDownEvent, MouseUpEvent, MouseMoveEvent,
+                     MouseDragEvent, ScrollEvent, MagnificationEvent, KeyEvent>;
     InputEventType _type;
     EventUnion _union;
     bool _handled = false;
 };
 
-InputEvent inputEventFromGLFWMouseButton(Input const&,
-                                         int button,
-                                         int action,
+InputEvent inputEventFromGLFWMouseButton(Input const&, int button, int action,
                                          int mods);
 InputEvent inputEventFromGLFWCursorPos(Input const&, double xpos, double ypos);
-InputEvent inputEventFromGLFWScroll(Input const&,
-                                    double xoffset,
+InputEvent inputEventFromGLFWScroll(Input const&, double xoffset,
                                     double yoffset);
-InputEvent inputEventFromGLFWKey(
-    Input const&, int key, int scancode, int action, int mods);
+InputEvent inputEventFromGLFWKey(Input const&, int key, int scancode,
+                                 int action, int mods);
 
 } // namespace bloom

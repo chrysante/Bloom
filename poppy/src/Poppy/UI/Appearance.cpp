@@ -14,64 +14,64 @@ using namespace mtl::short_types;
 using namespace poppy;
 
 static void applyStyle(poppy::Style const& style) {
-    auto& imguiStyle                      = ImGui::GetStyle();
-    auto* const colors                    = imguiStyle.Colors;
-    constexpr mtl::float4 clear           = 0;
-    colors[ImGuiCol_Text]                 = style.colors.text;
-    colors[ImGuiCol_TextDisabled]         = style.colors.textDisabled;
-    colors[ImGuiCol_WindowBg]             = style.colors.windowBG;
-    colors[ImGuiCol_ChildBg]              = style.colors.childWindowBG;
-    colors[ImGuiCol_PopupBg]              = style.colors.popupBG;
-    colors[ImGuiCol_Border]               = style.colors.border;
-    colors[ImGuiCol_BorderShadow]         = clear;
-    colors[ImGuiCol_FrameBg]              = style.colors.controlFrame;
-    colors[ImGuiCol_FrameBgHovered]       = style.colors.controlFrameHovered;
-    colors[ImGuiCol_FrameBgActive]        = style.colors.controlFrameDown;
-    colors[ImGuiCol_TitleBg]              = style.colors.windowTitleBar;
-    colors[ImGuiCol_TitleBgActive]        = style.colors.activeWindowTitleBar;
-    colors[ImGuiCol_TitleBgCollapsed]     = style.colors.windowTitleBar;
-    colors[ImGuiCol_MenuBarBg]            = style.colors.menubarBG;
-    colors[ImGuiCol_ScrollbarBg]          = clear;
-    colors[ImGuiCol_ScrollbarGrab]        = style.colors.scrollbar;
+    auto& imguiStyle = ImGui::GetStyle();
+    auto* const colors = imguiStyle.Colors;
+    constexpr mtl::float4 clear = 0;
+    colors[ImGuiCol_Text] = style.colors.text;
+    colors[ImGuiCol_TextDisabled] = style.colors.textDisabled;
+    colors[ImGuiCol_WindowBg] = style.colors.windowBG;
+    colors[ImGuiCol_ChildBg] = style.colors.childWindowBG;
+    colors[ImGuiCol_PopupBg] = style.colors.popupBG;
+    colors[ImGuiCol_Border] = style.colors.border;
+    colors[ImGuiCol_BorderShadow] = clear;
+    colors[ImGuiCol_FrameBg] = style.colors.controlFrame;
+    colors[ImGuiCol_FrameBgHovered] = style.colors.controlFrameHovered;
+    colors[ImGuiCol_FrameBgActive] = style.colors.controlFrameDown;
+    colors[ImGuiCol_TitleBg] = style.colors.windowTitleBar;
+    colors[ImGuiCol_TitleBgActive] = style.colors.activeWindowTitleBar;
+    colors[ImGuiCol_TitleBgCollapsed] = style.colors.windowTitleBar;
+    colors[ImGuiCol_MenuBarBg] = style.colors.menubarBG;
+    colors[ImGuiCol_ScrollbarBg] = clear;
+    colors[ImGuiCol_ScrollbarGrab] = style.colors.scrollbar;
     colors[ImGuiCol_ScrollbarGrabHovered] = style.colors.scrollbar;
-    colors[ImGuiCol_ScrollbarGrabActive]  = style.colors.scrollbar;
-    colors[ImGuiCol_CheckMark]            = style.colors.checkMark;
-    colors[ImGuiCol_SliderGrab]           = style.colors.highlightControlFrame;
+    colors[ImGuiCol_ScrollbarGrabActive] = style.colors.scrollbar;
+    colors[ImGuiCol_CheckMark] = style.colors.checkMark;
+    colors[ImGuiCol_SliderGrab] = style.colors.highlightControlFrame;
     colors[ImGuiCol_SliderGrabActive] = style.colors.highlightControlFrameDown;
-    colors[ImGuiCol_Button]           = style.colors.controlFrame;
-    colors[ImGuiCol_ButtonHovered]    = style.colors.controlFrameHovered;
-    colors[ImGuiCol_ButtonActive]     = style.colors.controlFrameDown;
-    colors[ImGuiCol_Header]           = style.colors.highlightControlFrame;
+    colors[ImGuiCol_Button] = style.colors.controlFrame;
+    colors[ImGuiCol_ButtonHovered] = style.colors.controlFrameHovered;
+    colors[ImGuiCol_ButtonActive] = style.colors.controlFrameDown;
+    colors[ImGuiCol_Header] = style.colors.highlightControlFrame;
     colors[ImGuiCol_HeaderHovered] = style.colors.highlightControlFrameHovered;
-    colors[ImGuiCol_HeaderActive]  = style.colors.highlightControlFrameDown;
-    colors[ImGuiCol_Separator]     = style.colors.separator;
-    colors[ImGuiCol_SeparatorHovered]   = style.colors.separator;
-    colors[ImGuiCol_SeparatorActive]    = style.colors.separator;
-    colors[ImGuiCol_ResizeGrip]         = clear;
-    colors[ImGuiCol_ResizeGripHovered]  = clear;
-    colors[ImGuiCol_ResizeGripActive]   = clear;
-    colors[ImGuiCol_Tab]                = style.colors.tab;
-    colors[ImGuiCol_TabActive]          = style.colors.tabActive;
-    colors[ImGuiCol_TabUnfocused]       = style.colors.tabUnfocused;
+    colors[ImGuiCol_HeaderActive] = style.colors.highlightControlFrameDown;
+    colors[ImGuiCol_Separator] = style.colors.separator;
+    colors[ImGuiCol_SeparatorHovered] = style.colors.separator;
+    colors[ImGuiCol_SeparatorActive] = style.colors.separator;
+    colors[ImGuiCol_ResizeGrip] = clear;
+    colors[ImGuiCol_ResizeGripHovered] = clear;
+    colors[ImGuiCol_ResizeGripActive] = clear;
+    colors[ImGuiCol_Tab] = style.colors.tab;
+    colors[ImGuiCol_TabActive] = style.colors.tabActive;
+    colors[ImGuiCol_TabUnfocused] = style.colors.tabUnfocused;
     colors[ImGuiCol_TabUnfocusedActive] = style.colors.tabUnfocusedActive;
-    colors[ImGuiCol_DockingPreview]     = style.colors.dockingPreview;
-    colors[ImGuiCol_DockingEmptyBg]     = style.colors.windowBG;
-    imguiStyle.WindowBorderSize         = (float)style.vars.windowBorder;
-    imguiStyle.ChildBorderSize          = (float)style.vars.childWindowBorder;
-    imguiStyle.PopupBorderSize          = (float)style.vars.popupBorder;
-    imguiStyle.FrameBorderSize          = (float)style.vars.frameBorder;
-    imguiStyle.TabBorderSize            = (float)style.vars.tabBorder;
-    imguiStyle.WindowRounding           = style.vars.windowRounding;
-    imguiStyle.ChildRounding            = style.vars.childWindowRounding;
-    imguiStyle.PopupRounding            = style.vars.popupRounding;
-    imguiStyle.FrameRounding            = style.vars.frameRounding;
-    imguiStyle.SelectableRounding       = style.vars.selectableRounding;
-    imguiStyle.TabRounding              = style.vars.tabRounding;
-    imguiStyle.GrabMinSize              = style.vars.grabMinSize;
-    imguiStyle.GrabRounding             = style.vars.grabRounding;
-    imguiStyle.ScrollbarSize     = std::max(1.0f, style.vars.scrollbarSize);
+    colors[ImGuiCol_DockingPreview] = style.colors.dockingPreview;
+    colors[ImGuiCol_DockingEmptyBg] = style.colors.windowBG;
+    imguiStyle.WindowBorderSize = (float)style.vars.windowBorder;
+    imguiStyle.ChildBorderSize = (float)style.vars.childWindowBorder;
+    imguiStyle.PopupBorderSize = (float)style.vars.popupBorder;
+    imguiStyle.FrameBorderSize = (float)style.vars.frameBorder;
+    imguiStyle.TabBorderSize = (float)style.vars.tabBorder;
+    imguiStyle.WindowRounding = style.vars.windowRounding;
+    imguiStyle.ChildRounding = style.vars.childWindowRounding;
+    imguiStyle.PopupRounding = style.vars.popupRounding;
+    imguiStyle.FrameRounding = style.vars.frameRounding;
+    imguiStyle.SelectableRounding = style.vars.selectableRounding;
+    imguiStyle.TabRounding = style.vars.tabRounding;
+    imguiStyle.GrabMinSize = style.vars.grabMinSize;
+    imguiStyle.GrabRounding = style.vars.grabRounding;
+    imguiStyle.ScrollbarSize = std::max(1.0f, style.vars.scrollbarSize);
     imguiStyle.ScrollbarRounding = style.vars.scrollbarRounding;
-    imguiStyle.WindowTitleAlign  = { style.vars.windowTitleAlign, 0.5 };
+    imguiStyle.WindowTitleAlign = { style.vars.windowTitleAlign, 0.5 };
     imguiStyle.CircleTessellationMaxError = 0.1;
 }
 
@@ -79,31 +79,31 @@ Appearance poppy::appearance{};
 
 StyleColors poppy::makeStyle(float hue, StyleColorDescription const& desc) {
     StyleColors result{};
-    result.text                 = mtl::hsva_to_rgba(desc.text);
-    result.textDisabled         = mtl::hsva_to_rgba(desc.textDisabled);
-    result.windowBG             = mtl::hsva_to_rgba(desc.windowBG);
-    result.childWindowBG        = mtl::hsva_to_rgba(desc.windowBG);
-    result.popupBG              = mtl::hsva_to_rgba(desc.popupBG);
-    result.menubarBG            = mtl::hsva_to_rgba(desc.menubarBG);
-    result.border               = mtl::hsva_to_rgba(desc.border);
-    result.windowTitleBar       = mtl::hsva_to_rgba(desc.windowTitleBar);
+    result.text = mtl::hsva_to_rgba(desc.text);
+    result.textDisabled = mtl::hsva_to_rgba(desc.textDisabled);
+    result.windowBG = mtl::hsva_to_rgba(desc.windowBG);
+    result.childWindowBG = mtl::hsva_to_rgba(desc.windowBG);
+    result.popupBG = mtl::hsva_to_rgba(desc.popupBG);
+    result.menubarBG = mtl::hsva_to_rgba(desc.menubarBG);
+    result.border = mtl::hsva_to_rgba(desc.border);
+    result.windowTitleBar = mtl::hsva_to_rgba(desc.windowTitleBar);
     result.activeWindowTitleBar = mtl::hsva_to_rgba(desc.activeWindowTitleBar);
-    result.scrollbar            = mtl::hsva_to_rgba(desc.scrollbar);
-    result.separator            = mtl::hsva_to_rgba(desc.separator);
-    result.dockingPreview       = mtl::hsva_to_rgba(desc.dockPreview);
-    result.controlFrame         = mtl::hsva_to_rgba(desc.controlFrame);
-    result.controlFrameHovered  = mtl::hsva_to_rgba(desc.controlFrameHovered);
-    result.controlFrameDown     = mtl::hsva_to_rgba(desc.controlFrameDown);
+    result.scrollbar = mtl::hsva_to_rgba(desc.scrollbar);
+    result.separator = mtl::hsva_to_rgba(desc.separator);
+    result.dockingPreview = mtl::hsva_to_rgba(desc.dockPreview);
+    result.controlFrame = mtl::hsva_to_rgba(desc.controlFrame);
+    result.controlFrameHovered = mtl::hsva_to_rgba(desc.controlFrameHovered);
+    result.controlFrameDown = mtl::hsva_to_rgba(desc.controlFrameDown);
     result.highlightControlFrame =
         mtl::hsva_to_rgba(desc.highlightControlFrame);
     result.highlightControlFrameHovered =
         mtl::hsva_to_rgba(desc.highlightControlFrameHovered);
     result.highlightControlFrameDown =
         mtl::hsva_to_rgba(desc.highlightControlFrameDown);
-    result.checkMark          = mtl::hsva_to_rgba(desc.checkMark);
-    result.tab                = mtl::hsva_to_rgba(desc.tab);
-    result.tabActive          = mtl::hsva_to_rgba(desc.tabActive);
-    result.tabUnfocused       = mtl::hsva_to_rgba(desc.tabUnfocused);
+    result.checkMark = mtl::hsva_to_rgba(desc.checkMark);
+    result.tab = mtl::hsva_to_rgba(desc.tab);
+    result.tabActive = mtl::hsva_to_rgba(desc.tabActive);
+    result.tabUnfocused = mtl::hsva_to_rgba(desc.tabUnfocused);
     result.tabUnfocusedActive = mtl::hsva_to_rgba(desc.tabUnfocusedActive);
     return result;
 }
@@ -116,7 +116,7 @@ void Appearance::update(bool force) {
         return;
     }
     auto const systemAppearance = SystemAppearance::get(currentType);
-    mType                       = currentType;
+    mType = currentType;
     globalHue = mtl::rgb_to_hsv(systemAppearance.controlAccentColor.rgb).hue;
     switch (currentType) {
     case AppearanceType::light:
@@ -151,14 +151,14 @@ void Appearance::deserialize(YAML::Node root) {
 YAML::Node Appearance::serialize() const {
     YAML::Node root;
     root["Light Color Description"] = lightColorDesc;
-    root["Dark Color Description"]  = darkColorDesc;
-    root["Style Vars"]              = mStyle.vars;
+    root["Dark Color Description"] = darkColorDesc;
+    root["Style Vars"] = mStyle.vars;
     return root;
 }
 
 void Appearance::showInspector(bool* open) {
     ImGui::Begin("Style Editor");
-    bool update                = false;
+    bool update = false;
     char const* const names[2] = { "Dark", "Light" };
     update |= ImGui::Combo("Style", (int*)&mType, names, 2);
     if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None)) {
@@ -174,66 +174,44 @@ void Appearance::showInspector(bool* open) {
 
             ImGui::Text("Roundings");
             update |= ImGui::SliderFloat("Window Rounding",
-                                         &mStyle.vars.windowRounding,
-                                         0,
-                                         12,
+                                         &mStyle.vars.windowRounding, 0, 12,
                                          "%.0f");
             update |= ImGui::SliderFloat("Child Window Rounding",
-                                         &mStyle.vars.childWindowRounding,
-                                         0,
-                                         12,
-                                         "%.0f");
+                                         &mStyle.vars.childWindowRounding, 0,
+                                         12, "%.0f");
             update |= ImGui::SliderFloat("Popup Rounding",
-                                         &mStyle.vars.popupRounding,
-                                         0,
-                                         12,
+                                         &mStyle.vars.popupRounding, 0, 12,
                                          "%.0f");
             update |= ImGui::SliderFloat("Frame Rounding",
-                                         &mStyle.vars.frameRounding,
-                                         0,
-                                         12,
+                                         &mStyle.vars.frameRounding, 0, 12,
                                          "%.0f");
             update |= ImGui::SliderFloat("Tab Rounding",
-                                         &mStyle.vars.tabRounding,
-                                         0,
-                                         12,
+                                         &mStyle.vars.tabRounding, 0, 12,
                                          "%.0f");
             update |= ImGui::SliderFloat("Selectable Rounding",
-                                         &mStyle.vars.selectableRounding,
-                                         0,
-                                         12,
+                                         &mStyle.vars.selectableRounding, 0, 12,
                                          "%.0f");
 
             ImGui::Text("Grab");
             update |= ImGui::SliderFloat("Grab Min Size",
-                                         &mStyle.vars.grabMinSize,
-                                         1,
-                                         20,
+                                         &mStyle.vars.grabMinSize, 1, 20,
                                          "%.0f");
             update |= ImGui::SliderFloat("Grab Rounding",
-                                         &mStyle.vars.grabRounding,
-                                         0,
-                                         12,
+                                         &mStyle.vars.grabRounding, 0, 12,
                                          "%.1f");
 
             ImGui::Text("Scrollbar");
             update |= ImGui::SliderFloat("Scrollbar Size",
-                                         &mStyle.vars.scrollbarSize,
-                                         1,
-                                         20,
+                                         &mStyle.vars.scrollbarSize, 1, 20,
                                          "%.0f");
             update |= ImGui::SliderFloat("Scrollbar Rounding",
-                                         &mStyle.vars.scrollbarRounding,
-                                         0,
-                                         12,
+                                         &mStyle.vars.scrollbarRounding, 0, 12,
                                          "%.0f");
 
             ImGui::Text("Misc");
             update |= ImGui::SliderFloat2("Window Title Align",
-                                          &mStyle.vars.windowTitleAlign,
-                                          0.0f,
-                                          1.0f,
-                                          "%.2f");
+                                          &mStyle.vars.windowTitleAlign, 0.0f,
+                                          1.0f, "%.2f");
 
             ImGui::EndTabItem();
         }
@@ -241,8 +219,7 @@ void Appearance::showInspector(bool* open) {
         if (ImGui::BeginTabItem("Colors")) {
             auto item = [&](char const* name, mtl::float4& color) -> bool {
                 bool const result =
-                    ImGui::ColorEdit4(name,
-                                      color.data(),
+                    ImGui::ColorEdit4(name, color.data(),
                                       ImGuiColorEditFlags_AlphaPreviewHalf |
                                           ImGuiColorEditFlags_NoInputs |
                                           ImGuiColorEditFlags_Float |
@@ -253,8 +230,8 @@ void Appearance::showInspector(bool* open) {
 
             ImGui::BeginChild("##Colors");
 
-            auto& desc =
-                mType == AppearanceType::light ? lightColorDesc : darkColorDesc;
+            auto& desc = mType == AppearanceType::light ? lightColorDesc :
+                                                          darkColorDesc;
 
             update |= item("Control Frame", desc.controlFrame);
             update |= item("Control Frame Hovered", desc.controlFrameHovered);

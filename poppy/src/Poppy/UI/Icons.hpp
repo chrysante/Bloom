@@ -15,10 +15,8 @@ enum class IconSize { _16 = 16, _24 = 24, _32 = 32, _48 = 48, _64 = 64 };
 
 class IconFontMap {
 public:
-    void load(ImFontAtlas& atlas,
-              float scaleFactor,
-              std::filesystem::path config,
-              std::filesystem::path icons);
+    void load(ImFontAtlas& atlas, float scaleFactor,
+              std::filesystem::path config, std::filesystem::path icons);
 
     WChar unicode(std::string key) const;
     std::array<char, 8> unicodeStr(std::string key) const;

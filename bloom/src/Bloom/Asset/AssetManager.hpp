@@ -53,8 +53,7 @@ public:
     /// @param name	Name of the asset.
     /// @param dest	Path to directory relative to current working directory.
     /// @returns	Reference to the created asset.
-    Reference<Asset> create(AssetType type,
-                            std::string_view name,
+    Reference<Asset> create(AssetType type, std::string_view name,
                             std::filesystem::path dest);
 
     /// MARK: Import
@@ -111,8 +110,7 @@ public:
     /// type.
     /// @param force	If true, reloads asset into memory even if already
     /// available.
-    void makeAvailable(AssetHandle handle,
-                       AssetRepresentation rep,
+    void makeAvailable(AssetHandle handle, AssetRepresentation rep,
                        bool force = false);
 
     /// @brief 		Check if an AssetHandle is valid.
@@ -133,7 +131,7 @@ public:
     // path can be relative or absolute
     AssetHandle getHandleFromFile(std::filesystem::path path) const;
 
-    void loadScripts();
+    void compileScripts();
 
     scatha::Program* getProgram() const { return program.get(); }
 
@@ -154,20 +152,15 @@ private:
                            bool forceOverride = false);
 
     /// MARK: Make Available
-    void makeStaticMeshAvailable(InternalAsset&,
-                                 AssetRepresentation rep,
+    void makeStaticMeshAvailable(InternalAsset&, AssetRepresentation rep,
                                  bool force);
-    void makeMaterialAvailable(InternalAsset&,
-                               AssetRepresentation rep,
+    void makeMaterialAvailable(InternalAsset&, AssetRepresentation rep,
                                bool force);
-    void makeMaterialInstanceAvailable(InternalAsset&,
-                                       AssetRepresentation rep,
+    void makeMaterialInstanceAvailable(InternalAsset&, AssetRepresentation rep,
                                        bool force);
-    void makeSceneAvailable(InternalAsset&,
-                            AssetRepresentation rep,
+    void makeSceneAvailable(InternalAsset&, AssetRepresentation rep,
                             bool force);
-    void makeScriptAvailable(InternalAsset&,
-                             AssetRepresentation rep,
+    void makeScriptAvailable(InternalAsset&, AssetRepresentation rep,
                              bool force);
 
     /// MARK: Disk -> Memory
@@ -191,8 +184,7 @@ private:
 
     /// MARK: Import
     AssetType getImportType(std::string_view extension) const;
-    AssetHandle store(Reference<Asset> asset,
-                      std::string_view name,
+    AssetHandle store(Reference<Asset> asset, std::string_view name,
                       std::filesystem::path dest);
     void importStaticMesh(StaticMesh* meshOut,
                           std::filesystem::path source) const;

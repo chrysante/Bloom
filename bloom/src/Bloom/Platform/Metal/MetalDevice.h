@@ -28,12 +28,11 @@ public:
     TextureHandle createTexture(TextureDescription const&) override;
     SamplerHandle createSampler(SamplerDescription const&) override;
 
-    TextureHandle createSharedTextureView(TextureView texture,
-                                          TextureType,
+    TextureHandle createSharedTextureView(TextureView texture, TextureType,
                                           PixelFormat,
                                           std::size_t firstMipLevel = 0,
-                                          std::size_t numMipLevels  = 1,
-                                          std::size_t firstSlice    = 0,
+                                          std::size_t numMipLevels = 1,
+                                          std::size_t firstSlice = 0,
                                           std::size_t numSlices = 1) override;
 
     DepthStencilHandle createDepthStencil(
@@ -45,9 +44,7 @@ public:
     ComputePipelineHandle createComputePipeline(
         ComputePipelineDescription const&) override;
 
-    void fillManagedBuffer(BufferView,
-                           void const* data,
-                           std::size_t size,
+    void fillManagedBuffer(BufferView, void const* data, std::size_t size,
                            std::size_t offset) override;
 
     void reloadDefaultLibrary() override;

@@ -7,6 +7,7 @@
 #include <imgui/imgui_internal.h>
 #include <utl/scope_guard.hpp>
 #include <utl/stack.hpp>
+#include <utl/utility.hpp>
 #include <utl/vector.hpp>
 
 #include "Bloom/Runtime/SceneSystem.hpp"
@@ -29,18 +30,9 @@ void SceneOutliner::frame() {
         displayEmptyWithReason("No active Scene");
         return;
     }
-
     for (auto scene: scenes()) {
         displayScene(*scene);
     }
-
-    //		ImGui::InvisibleButton("open-popup-hack",
-    // ImGui::GetContentRegionAvail());
-    //		ImGui::OpenPopupOnItemClick("SceneOutlinerContextMenu");
-    //		if (ImGui::BeginPopup("SceneOutlinerContextMenu")) {
-    //
-    //			ImGui::EndPopup();
-    //		}
 }
 
 void SceneOutliner::onInput(bloom::InputEvent& e) {}
@@ -71,18 +63,18 @@ void SceneOutliner::treeNode(TreeNodeDescription const& desc, auto&& block) {
 
 void SceneOutliner::displayScene(bloom::Scene& scene) {
     TreeNodeDescription desc;
-    desc.id       = (std::size_t)&scene;
+    desc.id = (std::size_t)&scene;
     desc.selected = false;
     desc.expanded = expanded(&scene);
-    desc.isLeaf   = scene.empty();
-    desc.name     = scene.name();
+    desc.isLeaf = scene.empty();
+    desc.name = scene.name();
 
     treeNode(desc, [&](bool isExpanded) {
         utl_defer {
             if (isExpanded) ImGui::TreePop();
         };
         /* Context Menu */ {
-            ImGui::PushID(desc.id);
+            ImGui::PushID(utl::narrow_cast<int>(desc.id));
             utl_defer { ImGui::PopID(); };
             ImGui::OpenPopupOnItemClick("Context Menu");
             if (ImGui::BeginPopup("Context Menu")) {
@@ -142,11 +134,11 @@ void SceneOutliner::displayEntity(bloom::EntityHandle e) {
     assert(!!e);
 
     TreeNodeDescription desc;
-    desc.id       = e.raw();
+    desc.id = e.raw();
     desc.selected = selection().isSelected(e);
     desc.expanded = expanded(e);
-    desc.isLeaf   = e.scene().isLeaf(e);
-    desc.name     = e.get<bloom::TagComponent>().name;
+    desc.isLeaf = e.scene().isLeaf(e);
+    desc.name = e.get<bloom::TagComponent>().name;
 
     treeNode(desc, [&](bool isExpanded) {
         utl_defer {
@@ -154,16 +146,16 @@ void SceneOutliner::displayEntity(bloom::EntityHandle e) {
         };
 
         /* Context Menu */ {
-            ImGui::PushID(desc.id);
+            ImGui::PushID(utl::narrow_cast<int>(desc.id));
             utl_defer { ImGui::PopID(); };
             ImGui::OpenPopupOnItemClick("Context Menu");
             if (ImGui::BeginPopup("Context Menu")) {
                 utl_defer { ImGui::EndPopup(); };
                 if (ImGui::MenuItem("Delete Entity")) {
-                    dispatch(DispatchToken::nextFrame, CustomCommand([this, e] {
-                                 e.scene().deleteEntity(e);
-                                 selection().deselect(e);
-                             }));
+                    dispatch(DispatchToken::NextFrame, [this, e] {
+                        e.scene().deleteEntity(e);
+                        selection().deselect(e);
+                    });
 
                     ImGui::CloseCurrentPopup();
                 }
@@ -190,8 +182,7 @@ void SceneOutliner::displayEntity(bloom::EntityHandle e) {
 
 void SceneOutliner::dragDropSource(bloom::EntityHandle child) {
     if (ImGui::BeginDragDropSource()) {
-        ImGui::SetDragDropPayload("DD-Entity-Hierarchy-View",
-                                  &child,
+        ImGui::SetDragDropPayload("DD-Entity-Hierarchy-View", &child,
                                   sizeof child);
         displayEntity(child);
         ImGui::EndDragDropSource();
@@ -200,41 +191,35 @@ void SceneOutliner::dragDropSource(bloom::EntityHandle child) {
 
 void SceneOutliner::dragDropTarget(bloom::EntityHandle parent) {
     using namespace bloom;
-    if (ImGui::BeginDragDropTarget()) {
-        auto* const payload =
-            ImGui::AcceptDragDropPayload("DD-Entity-Hierarchy-View");
-        if (payload && payload->IsDelivery()) {
-            EntityHandle child;
-            std::memcpy(&child, payload->Data, sizeof child);
-
-            dispatch(DispatchToken::nextFrame,
-                     CustomCommand([this,
-                                    child,
-                                    parent,
-                                    window = ImGui::GetCurrentWindow()] {
-                         if (&child.scene() != &parent.scene()) {
-                             return;
-                         }
-
-                         /**
-                          We need to make sure that we don't attach an entity to
-                          it's own descendend
-                          */
-                         auto& scene = child.scene();
-                         if (child && !scene.descendsFrom(parent, child)) {
-                             scene.unparent(child);
-                             if (parent) {
-                                 scene.parent(child, parent);
-                                 setExpanded(parent, true);
-                             }
-                         }
-                         else {
-                             Logger::warn("Hierarchy Error");
-                         }
-                     }));
-        }
-        ImGui::EndDragDropTarget();
+    if (!ImGui::BeginDragDropTarget()) {
+        return;
     }
+    auto* const payload =
+        ImGui::AcceptDragDropPayload("DD-Entity-Hierarchy-View");
+    if (!payload || !payload->IsDelivery()) {
+        return;
+    }
+    EntityHandle child;
+    std::memcpy(&child, payload->Data, sizeof child);
+    dispatch(DispatchToken::NextFrame,
+             [this, child, parent, window = ImGui::GetCurrentWindow()] {
+        if (&child.scene() != &parent.scene()) {
+            return;
+        }
+        /// We need to make sure that we don't attach an entity to it's own
+        /// descendend
+        auto& scene = child.scene();
+        if (!child || scene.descendsFrom(parent, child)) {
+            Logger::warn("Hierarchy Error");
+            return;
+        }
+        scene.unparent(child);
+        if (parent) {
+            scene.parent(child, parent);
+            setExpanded(parent, true);
+        }
+    });
+    ImGui::EndDragDropTarget();
 }
 
 bool SceneOutliner::expanded(Scene const* scene) const {

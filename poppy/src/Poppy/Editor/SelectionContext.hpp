@@ -10,9 +10,9 @@
 
 namespace poppy {
 
-class SelectionContext: bloom::Reciever {
+class SelectionContext: bloom::Receiver {
 public:
-    explicit SelectionContext(bloom::Reciever);
+    explicit SelectionContext(bloom::Receiver);
 
     std::span<bloom::EntityHandle const> entities() const { return mEntities; }
 

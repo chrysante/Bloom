@@ -38,11 +38,8 @@ Window::Window(WindowDescription const& d) {
     desc.fullscreen = false;
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    auto* const w = glfwCreateWindow(desc.size.x,
-                                     desc.size.y,
-                                     desc.title.data(),
-                                     nullptr,
-                                     nullptr);
+    auto* const w = glfwCreateWindow(desc.size.x, desc.size.y,
+                                     desc.title.data(), nullptr, nullptr);
     glfwWindowPtr = std::unique_ptr<void, Deleter>(w);
 
     platformInit();
@@ -51,8 +48,7 @@ Window::Window(WindowDescription const& d) {
 
     glfwGetWindowPos(GLFW_WND, &desc.position.x, &desc.position.y);
     glfwGetWindowSize(GLFW_WND, &desc.size.x, &desc.size.y);
-    glfwGetWindowContentScale(GLFW_WND,
-                              &desc.contentScaleFactor.x,
+    glfwGetWindowContentScale(GLFW_WND, &desc.contentScaleFactor.x,
                               &desc.contentScaleFactor.y);
 
     setCallbacks();
@@ -63,8 +59,8 @@ Window::~Window() = default;
 void Window::createDefaultSwapchain(HardwareDevice& device,
                                     std::size_t backbufferCount) {
     SwapchainDescription swapchainDesc;
-    swapchainDesc.displaySync     = true;
-    swapchainDesc.size            = size() * contentScaleFactor();
+    swapchainDesc.displaySync = true;
+    swapchainDesc.size = size() * contentScaleFactor();
     swapchainDesc.backBufferCount = backbufferCount;
 
     auto swapchain = device.createSwapchain(swapchainDesc);
@@ -84,7 +80,7 @@ void Window::setCommandQueue(std::unique_ptr<CommandQueue> queue) {
 void Window::beginFrame() {}
 
 void Window::endFrame() {
-    userInput._mouseOffset  = 0;
+    userInput._mouseOffset = 0;
     userInput._scrollOffset = 0;
 }
 
@@ -153,8 +149,8 @@ void Window::setSize(mtl::int2 newSize) {
 }
 
 void Window::setMinSize(mtl::int2 size) {
-    size.x       = std::max(size.x, 0);
-    size.y       = std::max(size.y, 0);
+    size.x = std::max(size.x, 0);
+    size.y = std::max(size.y, 0);
     desc.minSize = size;
     glfwSetWindowSizeLimits(GLFW_WND,
                             desc.minSize.x > 0 ? desc.minSize.x :
@@ -168,8 +164,8 @@ void Window::setMinSize(mtl::int2 size) {
 }
 
 void Window::setMaxSize(mtl::int2 size) {
-    size.x       = std::max(size.x, 0);
-    size.y       = std::max(size.y, 0);
+    size.x = std::max(size.x, 0);
+    size.y = std::max(size.y, 0);
     desc.maxSize = size;
     glfwSetWindowSizeLimits(GLFW_WND,
                             desc.minSize.x > 0 ? desc.minSize.x :
@@ -198,24 +194,19 @@ void Window::makeFullscreen() {
     if (isFullscreen()) {
         return;
     }
-    auto* const monitor    = glfwGetPrimaryMonitor();
-    auto* const vidMode    = glfwGetVideoMode(monitor);
-    int2 const monitorPos  = 0;
+    auto* const monitor = glfwGetPrimaryMonitor();
+    auto* const vidMode = glfwGetVideoMode(monitor);
+    int2 const monitorPos = 0;
     int2 const monitorSize = { vidMode->width, vidMode->height };
 
-    desc.backupSize     = desc.size;
-    desc.size           = monitorSize;
+    desc.backupSize = desc.size;
+    desc.size = monitorSize;
     desc.backupPosition = desc.position;
-    desc.position       = monitorPos;
-    desc.fullscreen     = true;
+    desc.position = monitorPos;
+    desc.fullscreen = true;
 
-    glfwSetWindowMonitor(GLFW_WND,
-                         monitor,
-                         monitorPos.x,
-                         monitorPos.y,
-                         monitorSize.x,
-                         monitorSize.y,
-                         GLFW_DONT_CARE);
+    glfwSetWindowMonitor(GLFW_WND, monitor, monitorPos.x, monitorPos.y,
+                         monitorSize.x, monitorSize.y, GLFW_DONT_CARE);
 }
 
 void Window::toggleFullscreen() {
@@ -231,16 +222,11 @@ void Window::makeWindowed() {
     if (isWindowed()) {
         return;
     }
-    desc.size       = desc.backupSize;
-    desc.position   = desc.backupPosition;
+    desc.size = desc.backupSize;
+    desc.position = desc.backupPosition;
     desc.fullscreen = false;
-    glfwSetWindowMonitor(GLFW_WND,
-                         nullptr,
-                         desc.position.x,
-                         desc.position.y,
-                         desc.size.x,
-                         desc.size.y,
-                         GLFW_DONT_CARE);
+    glfwSetWindowMonitor(GLFW_WND, nullptr, desc.position.x, desc.position.y,
+                         desc.size.x, desc.size.y, GLFW_DONT_CARE);
 }
 
 void Window::close() { glfwSetWindowShouldClose(GLFW_WND, true); }
@@ -257,11 +243,8 @@ void Window::platformInit() {}
 #endif
 
 void Window::setCallbacks() {
-    glfwSetMouseButtonCallback(GLFW_WND,
-                               [](GLFWwindow* w,
-                                  int button,
-                                  int action,
-                                  int mods) {
+    glfwSetMouseButtonCallback(GLFW_WND, [](GLFWwindow* w, int button,
+                                            int action, int mods) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
 
         window.userInput
@@ -270,8 +253,7 @@ void Window::setCallbacks() {
 
         if (window.onInputFn) {
             auto const event = inputEventFromGLFWMouseButton(window.userInput,
-                                                             button,
-                                                             action,
+                                                             button, action,
                                                              mods);
             window.onInputFn(event);
         }
@@ -282,10 +264,10 @@ void Window::setCallbacks() {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
 
         float2 const currentPos = { xpos, ypos };
-        float2 const lastPos    = window.userInput._mousePosition;
+        float2 const lastPos = window.userInput._mousePosition;
 
         window.userInput._mousePosition = currentPos;
-        window.userInput._mouseOffset   = currentPos - lastPos;
+        window.userInput._mouseOffset = currentPos - lastPos;
 
         if (window.onInputFn) {
             window.onInputFn(
@@ -309,12 +291,8 @@ void Window::setCallbacks() {
         }
     });
 
-    glfwSetKeyCallback(GLFW_WND,
-                       [](GLFWwindow* w,
-                          int key,
-                          int scancode,
-                          int action,
-                          int mods) {
+    glfwSetKeyCallback(GLFW_WND, [](GLFWwindow* w, int key, int scancode,
+                                    int action, int mods) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
 
         int& repeatCount =
@@ -336,11 +314,8 @@ void Window::setCallbacks() {
         window.userInput._modFlags = modFlagsFromGLFW(mods);
 
         if (window.onInputFn) {
-            window.onInputFn(inputEventFromGLFWKey(window.userInput,
-                                                   key,
-                                                   scancode,
-                                                   action,
-                                                   mods));
+            window.onInputFn(inputEventFromGLFWKey(window.userInput, key,
+                                                   scancode, action, mods));
         }
     });
 
@@ -366,8 +341,8 @@ void Window::setCallbacks() {
 
     glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        int2 const pos                  = { posx, posy };
-        window.desc.position            = pos;
+        int2 const pos = { posx, posy };
+        window.desc.position = pos;
         if (window.onMovePrivateFn) {
             window.onMovePrivateFn(pos);
         }
@@ -379,8 +354,8 @@ void Window::setCallbacks() {
     glfwSetWindowSizeCallback(GLFW_WND,
                               [](GLFWwindow* w, int sizex, int sizey) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        int2 const newSize              = { sizex, sizey };
-        window.desc.size                = newSize;
+        int2 const newSize = { sizex, sizey };
+        window.desc.size = newSize;
         window.resizeSwapchain(newSize);
         if (window.onResizePrivateFn) {
             window.onResizePrivateFn(newSize);
@@ -409,7 +384,7 @@ void Window::setCallbacks() {
 
     glfwSetWindowCloseCallback(GLFW_WND, [](GLFWwindow* w) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.desc.shallPreventClose   = false;
+        window.desc.shallPreventClose = false;
         if (window.onCloseFn) {
             window.onCloseFn();
         }
@@ -418,16 +393,15 @@ void Window::setCallbacks() {
     glfwSetWindowContentScaleCallback(GLFW_WND,
                                       [](GLFWwindow* w, float x, float y) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        float2 const contentScale       = { x, y };
-        window.desc.contentScaleFactor  = contentScale;
+        float2 const contentScale = { x, y };
+        window.desc.contentScaleFactor = contentScale;
         if (window.onContentScaleChangeFn) {
             window.onContentScaleChangeFn(contentScale);
         }
     });
 }
 
-static std::optional<int> calcNewSize(int currentSize,
-                                      int newSize,
+static std::optional<int> calcNewSize(int currentSize, int newSize,
                                       int padding) {
     if (newSize <= currentSize && newSize > currentSize - padding) {
         return std::nullopt;

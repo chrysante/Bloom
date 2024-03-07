@@ -24,18 +24,18 @@ std::unique_ptr<EditorFramebuffer> EditorRenderer::createEditorFramebuffer(
     auto framebuffer = std::make_unique<EditorFramebuffer>();
 
     TextureDescription desc;
-    desc.size        = { size, 1 };
-    desc.usage       = TextureUsage::shaderRead | TextureUsage::renderTarget;
+    desc.size = { size, 1 };
+    desc.usage = TextureUsage::shaderRead | TextureUsage::renderTarget;
     desc.storageMode = StorageMode::GPUOnly;
-    desc.type        = TextureType::texture2D;
+    desc.type = TextureType::texture2D;
 
-    desc.pixelFormat      = PixelFormat::R8Unorm;
+    desc.pixelFormat = PixelFormat::R8Unorm;
     framebuffer->selected = device().createTexture(desc);
 
-    desc.pixelFormat           = PixelFormat::Depth32Float;
+    desc.pixelFormat = PixelFormat::Depth32Float;
     framebuffer->selectedDepth = device().createTexture(desc);
 
-    desc.pixelFormat      = PixelFormat::RGBA8Unorm;
+    desc.pixelFormat = PixelFormat::RGBA8Unorm;
     framebuffer->composed = device().createTexture(desc);
 
     framebuffer->size = size;
@@ -43,7 +43,7 @@ std::unique_ptr<EditorFramebuffer> EditorRenderer::createEditorFramebuffer(
 }
 
 /// MARK: Initialization
-EditorRenderer::EditorRenderer(bloom::Reciever reciever,
+EditorRenderer::EditorRenderer(bloom::Receiver reciever,
                                std::shared_ptr<Renderer> renderer):
     Renderer(std::move(reciever)), mRenderer(std::move(renderer)) {}
 
@@ -53,8 +53,8 @@ void EditorRenderer::init(HardwareDevice& device) {
     /* Create Depth Stencil */ {
         DepthStencilDescription depthDesc;
         depthDesc.depthCompareFunction = CompareFunction::lessEqual;
-        depthDesc.depthWrite           = true;
-        depthStencil                   = device.createDepthStencil(depthDesc);
+        depthDesc.depthWrite = true;
+        depthStencil = device.createDepthStencil(depthDesc);
     }
 
     /* Create Selection Pipeline */ {
@@ -64,7 +64,7 @@ void EditorRenderer::init(HardwareDevice& device) {
         desc.colorAttachments.push_back(caDesc);
         desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
 
-        desc.vertexFunction   = device.createFunction("selectionPassVS");
+        desc.vertexFunction = device.createFunction("selectionPassVS");
         desc.fragmentFunction = device.createFunction("selectionPassFS");
 
         selectedPipeline = device.createRenderPipeline(desc);
@@ -76,7 +76,7 @@ void EditorRenderer::init(HardwareDevice& device) {
         caDesc.pixelFormat = PixelFormat::RGBA8Unorm;
         desc.colorAttachments.push_back(caDesc);
 
-        desc.vertexFunction   = device.createFunction("postprocessVS");
+        desc.vertexFunction = device.createFunction("postprocessVS");
         desc.fragmentFunction = device.createFunction("editorCompositionFS");
 
         compositionPipeline = device.createRenderPipeline(desc);
@@ -84,8 +84,8 @@ void EditorRenderer::init(HardwareDevice& device) {
 
     /* Create Editor Draw Data Buffer */ {
         BufferDescription desc;
-        desc.size            = sizeof(EditorDrawData);
-        desc.storageMode     = StorageMode::managed;
+        desc.size = sizeof(EditorDrawData);
+        desc.storageMode = StorageMode::managed;
         editorDrawDataBuffer = device.createBuffer(desc);
     }
 }
@@ -150,8 +150,7 @@ void EditorRenderer::drawOverlays(Framebuffer& framebuffer,
 
 void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
                                          bloom::CommandQueue& commandQueue) {
-    std::sort(selectedObjects.begin(),
-              selectedObjects.end(),
+    std::sort(selectedObjects.begin(), selectedObjects.end(),
               selectedObjectsOrder);
 
     /* Upload transforms of selected entities */ {
@@ -159,8 +158,8 @@ void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
             selectedObjects.size() * sizeof(float4x4);
         if (selectedTransformsBuffer.size() < targetBufferSize) {
             BufferDescription desc;
-            desc.size                = targetBufferSize;
-            desc.storageMode         = StorageMode::managed;
+            desc.size = targetBufferSize;
+            desc.storageMode = StorageMode::managed;
             selectedTransformsBuffer = device().createBuffer(desc);
         }
         device().fillManagedBuffer(selectedTransformsBuffer,
@@ -169,11 +168,11 @@ void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
     }
 
     std::unique_ptr _ctx = commandQueue.createRenderContext();
-    auto& ctx            = *_ctx;
+    auto& ctx = *_ctx;
 
     RenderPassDescription desc{};
     RenderPassColorAttachmentDescription caDesc{};
-    caDesc.texture    = framebuffer.selected;
+    caDesc.texture = framebuffer.selected;
     caDesc.clearColor = { 0, 0, 0, 1 };
     caDesc.loadAction = LoadAction::clear;
     desc.colorAttachments.push_back(caDesc);
@@ -187,8 +186,7 @@ void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
     auto& renderer = utl::down_cast<ForwardRenderer&>(*mRenderer);
 
     // Vertex buffers
-    ctx.setVertexBuffer(renderer.renderObjects.parameterBuffer,
-                        0,
+    ctx.setVertexBuffer(renderer.renderObjects.parameterBuffer, 0,
                         offsetof(RendererParameters, scene));
     ctx.setVertexBuffer(selectedTransformsBuffer, 2);
 
@@ -207,8 +205,8 @@ void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
         BufferView indexBuffer = object.mesh->indexBuffer();
 
         DrawDescription desc{};
-        desc.indexCount  = indexBuffer.size() / 4;
-        desc.indexType   = IndexType::uint32;
+        desc.indexCount = indexBuffer.size() / 4;
+        desc.indexType = IndexType::uint32;
         desc.indexBuffer = indexBuffer;
         ctx.draw(desc);
         ++index;
@@ -225,17 +223,16 @@ void EditorRenderer::compositionPass(Framebuffer& framebuffer,
     /* Upload Editor Draw Data */ {
         EditorDrawData drawData;
         drawData.overlayDrawDesc = drawDesc;
-        device().fillManagedBuffer(editorDrawDataBuffer,
-                                   &drawData,
+        device().fillManagedBuffer(editorDrawDataBuffer, &drawData,
                                    sizeof drawData);
     }
 
     std::unique_ptr _ctx = commandQueue.createRenderContext();
-    auto& ctx            = *_ctx;
+    auto& ctx = *_ctx;
 
     RenderPassDescription desc{};
     RenderPassColorAttachmentDescription caDesc{};
-    caDesc.texture    = editorFramebuffer.composed;
+    caDesc.texture = editorFramebuffer.composed;
     caDesc.loadAction = LoadAction::dontCare;
     desc.colorAttachments.push_back(caDesc);
 
@@ -247,8 +244,7 @@ void EditorRenderer::compositionPass(Framebuffer& framebuffer,
 
     ctx.setPipeline(compositionPipeline);
 
-    ctx.setFragmentBuffer(renderer.renderObjects.parameterBuffer,
-                          0,
+    ctx.setFragmentBuffer(renderer.renderObjects.parameterBuffer, 0,
                           offsetof(RendererParameters, scene));
     ctx.setFragmentBuffer(editorDrawDataBuffer, 1);
     ctx.setFragmentTexture(fwFramebuffer.postProcessed, 0);

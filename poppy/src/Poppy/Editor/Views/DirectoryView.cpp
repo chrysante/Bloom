@@ -45,8 +45,8 @@ void DirectoryView::display() {
     ImGui::BeginChild("Asset Browser DirView");
     {
         contentSize = ImGui::GetWindowSize();
-        cursor      = 0;
-        itemIndex   = 0;
+        cursor = 0;
+        itemIndex = 0;
 
         for (auto&& folderName: foldersInCurrentDir) {
             if (displayItem(folderName)) {
@@ -96,7 +96,7 @@ static auto selectIcon(bloom::AssetType t) -> std::string_view {
 bool DirectoryView::displayItem(std::string_view label,
                                 std::optional<bloom::AssetHandle> asset) {
     mtl::float2 const labelSize = ImGui::CalcTextSize(label.data());
-    auto const uniqueID         = generateUniqueID(label, itemIndex, true);
+    auto const uniqueID = generateUniqueID(label, itemIndex, true);
 
     auto const popupID = generateUniqueID(uniqueID.data(), itemIndex);
 
@@ -104,7 +104,7 @@ bool DirectoryView::displayItem(std::string_view label,
 
     // Button
     localCursor += params.itemSpacing;
-    params.itemSize     = 96;
+    params.itemSize = 96;
     auto const iconSize = IconSize::_32;
 
     // button
@@ -123,7 +123,7 @@ bool DirectoryView::displayItem(std::string_view label,
     ImGui::OpenPopupOnItemClick(popupID.data());
     if (ImGui::BeginPopup(popupID.data())) {
         if (ImGui::Selectable("Rename")) {
-            renaming       = itemIndex;
+            renaming = itemIndex;
             setRenameFocus = true;
             ImGui::CloseCurrentPopup();
         }
@@ -135,8 +135,7 @@ bool DirectoryView::displayItem(std::string_view label,
         if (ImGui::BeginDragDropSource()) {
             auto const handle = *asset;
             ImGui::SetDragDropPayload(toDragDropType(asset->type()).data(),
-                                      &handle,
-                                      sizeof handle);
+                                      &handle, sizeof handle);
 
             ImGui::PushFont((ImFont*)icons.font(iconSize));
 
@@ -170,8 +169,7 @@ bool DirectoryView::displayItem(std::string_view label,
     // Label
     if (itemIndex == renaming) {
         if (setRenameFocus) {
-            std::strncpy(renameBuffer.data(),
-                         label.data(),
+            std::strncpy(renameBuffer.data(), label.data(),
                          renameBuffer.size() - 1);
         }
         mtl::float2 const labelSize = ImGui::CalcTextSize(renameBuffer.data());
@@ -182,26 +180,22 @@ bool DirectoryView::displayItem(std::string_view label,
         localCursor -= labelSize / 2;
         localCursor -= framePadding / 2;
         ImGui::SetCursorPos(localCursor);
-        std::strncpy(renameBuffer.data(),
-                     label.data(),
+        std::strncpy(renameBuffer.data(), label.data(),
                      renameBuffer.size() - 1);
         if (setRenameFocus) {
             ImGui::SetKeyboardFocusHere();
             setRenameFocus = false;
         }
         ImGui::SetNextItemWidth(labelSize.x + 2 * framePadding.x);
-        if (ImGui::InputText("##rename-field",
-                             renameBuffer.data(),
+        if (ImGui::InputText("##rename-field", renameBuffer.data(),
                              renameBuffer.size(),
                              ImGuiInputTextFlags_EnterReturnsTrue))
         {
-            renaming     = -1;
+            renaming = -1;
             renameBuffer = {};
         }
-        Logger::trace("ItemID: ",
-                      ImGui::GetItemID(),
-                      ", FocusID: ",
-                      ImGui::GetFocusID());
+        Logger::trace("ItemID: ", ImGui::GetItemID(),
+                      ", FocusID: ", ImGui::GetFocusID());
     }
     else {
         localCursor.y += params.itemSize.y - params.labelHeight / 2;

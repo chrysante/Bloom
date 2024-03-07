@@ -39,7 +39,7 @@ public:
         mtl::int2 size) const;
 
     /// MARK: Initialization
-    explicit EditorRenderer(bloom::Reciever, std::shared_ptr<bloom::Renderer>);
+    explicit EditorRenderer(bloom::Receiver, std::shared_ptr<bloom::Renderer>);
     void init(bloom::HardwareDevice&) override;
 
     /// MARK: Scene Construction
@@ -60,19 +60,15 @@ public:
 
     /// MARK: Draw
     void draw(bloom::Framebuffer&, bloom::CommandQueue&) override;
-    void drawOverlays(bloom::Framebuffer&,
-                      EditorFramebuffer&,
-                      bloom::CommandQueue&,
-                      OverlayDrawDescription const&);
+    void drawOverlays(bloom::Framebuffer&, EditorFramebuffer&,
+                      bloom::CommandQueue&, OverlayDrawDescription const&);
 
     Renderer& wrappedRenderer() const { return *mRenderer; }
 
 private:
     void selectedObjectsPass(EditorFramebuffer&, bloom::CommandQueue&);
-    void compositionPass(bloom::Framebuffer&,
-                         EditorFramebuffer&,
-                         bloom::CommandQueue&,
-                         OverlayDrawDescription const&);
+    void compositionPass(bloom::Framebuffer&, EditorFramebuffer&,
+                         bloom::CommandQueue&, OverlayDrawDescription const&);
 
 private:
     std::shared_ptr<bloom::Renderer> mRenderer;

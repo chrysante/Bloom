@@ -33,8 +33,8 @@ public:
         }
         release();
         this->_refcount = rhs._refcount;
-        this->_native   = rhs._native;
-        this->_deleter  = rhs._deleter;
+        this->_native = rhs._native;
+        this->_deleter = rhs._deleter;
 
         rhs._refcount = nullptr;
 
@@ -46,8 +46,8 @@ public:
         }
         release();
         this->_refcount = rhs._refcount;
-        this->_native   = rhs._native;
-        this->_deleter  = rhs._deleter;
+        this->_native = rhs._native;
+        this->_deleter = rhs._deleter;
 
         if (_refcount) {
             ++*_refcount;
@@ -77,8 +77,8 @@ public:
 
 private:
     std::atomic<std::size_t>* _refcount = nullptr;
-    void* _native                       = nullptr;
-    Deleter _deleter                    = nullptr;
+    void* _native = nullptr;
+    Deleter _deleter = nullptr;
 };
 
 class BLOOM_API HardwareResourceView {

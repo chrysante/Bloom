@@ -17,11 +17,10 @@ void ViewportCameraController::update(bloom::Timestep time,
     data.angleLR = utl::mod(data.angleLR - input.mouseOffset().x / 180.,
                             mtl::constants<>::pi * 2);
     data.angleUD = std::clamp(data.angleUD + input.mouseOffset().y / 180.f,
-                              0.01f,
-                              mtl::constants<float>::pi - 0.01f);
+                              0.01f, mtl::constants<float>::pi - 0.01f);
 
     float offset = data.speed * time.delta;
-    if (input.keyDown(bloom::Key::leftShift)) {
+    if (input.keyDown(bloom::Key::LeftShift)) {
         offset *= 3;
     }
 
@@ -53,20 +52,15 @@ void ViewportCameraController::applyTransform() {
 
 void ViewportCameraController::applyProjection(mtl::float2 screenSize) {
     if (data.projection == Projection::perspective) {
-        camera.setProjection(mtl::to_radians(data.fieldOfView),
-                             screenSize,
+        camera.setProjection(mtl::to_radians(data.fieldOfView), screenSize,
                              data.nearClip);
     }
     else {
-        float const width  = 1000; // ??
+        float const width = 1000; // ??
         float const aspect = screenSize.y / screenSize.x;
         float const height = width * aspect;
-        camera.setProjectionOrtho(-width / 2,
-                                  width / 2,
-                                  -height / 2,
-                                  height / 2,
-                                  0,
-                                  5000);
+        camera.setProjectionOrtho(-width / 2, width / 2, -height / 2,
+                                  height / 2, 0, 5000);
     }
 }
 
@@ -74,6 +68,5 @@ mtl::float3 ViewportCameraController::front() const {
     using std::cos;
     using std::sin;
     return { sin(data.angleUD) * cos(data.angleLR),
-             sin(data.angleUD) * sin(data.angleLR),
-             cos(data.angleUD) };
+             sin(data.angleUD) * sin(data.angleLR), cos(data.angleUD) };
 }

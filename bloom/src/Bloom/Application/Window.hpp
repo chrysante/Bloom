@@ -30,7 +30,7 @@ struct WindowDescription {
     mtl::int2 size = 0;
 
     mtl::int2 swapchainResizePadding = 100;
-    bool autoResizeSwapchain         = true;
+    bool autoResizeSwapchain = true;
 
     bool fullscreen = false; // ignored for now
 };
@@ -128,15 +128,15 @@ private:
     };
 
     struct WindowDescPrivate: WindowDescription {
-        Application* application       = nullptr;
-        mtl::int2 position             = 0;
-        mtl::int2 backupPosition       = 0;
-        mtl::int2 backupSize           = 0;
+        Application* application = nullptr;
+        mtl::int2 position = 0;
+        mtl::int2 backupPosition = 0;
+        mtl::int2 backupSize = 0;
         mtl::float2 contentScaleFactor = 1;
-        mtl::int2 minSize              = 0;
-        mtl::int2 maxSize              = 0;
-        bool focused                   = false;
-        bool shallPreventClose         = false;
+        mtl::int2 minSize = 0;
+        mtl::int2 maxSize = 0;
+        bool focused = false;
+        bool shallPreventClose = false;
     };
 
     WindowDescPrivate desc;

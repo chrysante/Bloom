@@ -25,7 +25,7 @@ struct SceneRenderData {
 };
 
 BLOOM_SHADER_CONSTANT int maxShadowCascades = 10; // do we need this?
-BLOOM_SHADER_CONSTANT int maxShadowCasters  = 32;
+BLOOM_SHADER_CONSTANT int maxShadowCasters = 32;
 
 struct alignas(metal::float4x4) ShadowRenderData {
     int numShadowCasters;
@@ -33,7 +33,7 @@ struct alignas(metal::float4x4) ShadowRenderData {
 };
 
 struct BloomParameters {
-    bool enabled           = true;
+    bool enabled = true;
     bool physicallyCorrect = true;
     metal::float3 curve;
     float contribution;

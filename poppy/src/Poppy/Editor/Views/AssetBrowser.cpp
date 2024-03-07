@@ -72,8 +72,7 @@ AssetBrowser::AssetBrowser(): dirView(this) {
 
         ToolbarButton("Reload Scripts")
             .onClick([this] {
-                assetManager->loadScripts();
-                dispatch(DispatchToken::nextFrame, bloom::ScriptReloadEvent{});
+                assetManager->compileScripts();
             })
     }; // clang-format on
     toolbar.setHeight(30);
@@ -106,7 +105,7 @@ void AssetBrowser::frame() {
     newAssetPopup();
 
     // draw separator
-    auto* window        = ImGui::GetCurrentWindow();
+    auto* window = ImGui::GetCurrentWindow();
     auto const yPadding = GImGui->Style.WindowPadding.y;
     auto const from =
         ImGui::GetWindowPos() + ImGui::GetCursorPos() + ImVec2(-yPadding, -1);
@@ -124,7 +123,7 @@ void AssetBrowser::newAssetPopup() {
         static AssetType type = AssetType::none;
         if (ImGui::BeginCombo("Type", toString(type).data())) {
             for (int i = 0; i < (std::size_t)AssetType::itemCount; ++i) {
-                auto const t        = (AssetType)(1 << i);
+                auto const t = (AssetType)(1 << i);
                 bool const selected = type == t;
                 if (ImGui::Selectable(toString(t).data(), selected)) {
                     type = t;
@@ -157,25 +156,25 @@ void AssetBrowser::displayNoOpenProject() {
 
     bool const pressed =
         withFont(Font::UIDefault().setWeight(FontWeight::semibold), [&] {
-            auto& style = ImGui::GetStyle();
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
-                                2 * (float2)style.FramePadding);
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,
-                                2 * style.FrameRounding);
-            utl_defer { ImGui::PopStyleVar(2); };
-            auto const buttonSize = (float2)ImGui::CalcTextSize(text) +
-                                    2 * (float2)ImGui::GetStyle().FramePadding;
-            auto const cursor =
-                ((float2)ImGui::GetContentRegionAvail() - buttonSize) / 2;
-            ImGui::SetCursorPos(cursor);
+        auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+                            2 * (float2)style.FramePadding);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,
+                            2 * style.FrameRounding);
+        utl_defer { ImGui::PopStyleVar(2); };
+        auto const buttonSize = (float2)ImGui::CalcTextSize(text) +
+                                2 * (float2)ImGui::GetStyle().FramePadding;
+        auto const cursor =
+            ((float2)ImGui::GetContentRegionAvail() - buttonSize) / 2;
+        ImGui::SetCursorPos(cursor);
 
-            return ImGui::Button(text);
-        });
+        return ImGui::Button(text);
+    });
 
     if (pressed) {
         OpenPanelDescription desc;
-        desc.canChooseFiles          = false;
-        desc.canChooseDirectories    = true;
+        desc.canChooseFiles = false;
+        desc.canChooseDirectories = true;
         desc.allowsMultipleSelection = false;
         showOpenPanel(desc, [this](std::filesystem::path const& dir) {
             if (!std::filesystem::exists(dir)) {

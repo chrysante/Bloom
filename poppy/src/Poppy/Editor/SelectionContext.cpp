@@ -6,15 +6,13 @@ using namespace bloom;
 
 using namespace poppy;
 
-SelectionContext::SelectionContext(bloom::Reciever reciever):
-    bloom::Reciever(std::move(reciever)) {
+SelectionContext::SelectionContext(bloom::Receiver reciever):
+    bloom::Receiver(std::move(reciever)) {
     listen([this](UnloadSceneEvent event) {
-        mEntities.erase(std::remove_if(
-                            mEntities.begin(),
-                            mEntities.end(),
-                            [&](EntityHandle entity) {
+        mEntities.erase(std::remove_if(mEntities.begin(), mEntities.end(),
+                                       [&](EntityHandle entity) {
             return &entity.scene() == event.scene;
-                            }),
+        }),
                         mEntities.end());
     });
 }

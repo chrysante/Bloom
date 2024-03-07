@@ -1,11 +1,11 @@
 #include "Bloom/Scene/Scene.hpp"
 
-#include <utl/format.hpp>
 #include <utl/hashmap.hpp>
 #include <utl/stack.hpp>
-#include <yaml-cpp/helpers.hpp>
+#include <utl/strcat.hpp>
 
 #include "Bloom/Core/Debug.hpp"
+#include "Bloom/Core/Yaml.hpp"
 #include "Bloom/Scene/Components/Hierarchy.hpp"
 #include "Bloom/Scene/Components/Tag.hpp"
 #include "Bloom/Scene/Components/Transform.hpp"
@@ -57,6 +57,8 @@ Scene Scene::copy() {
     utl::hashmap<EntityID, EntityID> idMap;
 
     Scene result(handle(), std::string(name()));
+    assert(false);
+#if 0
     _registry.each([&](EntityID fromID) {
         auto const fromHandle = this->getHandle(fromID);
         EntityID const toID = result.createEmptyEntity(fromID);
@@ -68,6 +70,7 @@ Scene Scene::copy() {
             }
         });
     });
+#endif
 
     /// Copy hierarchy
     for (auto [from, to]: idMap) {
@@ -166,9 +169,12 @@ static void deserializeEntity(YAML::Node const& node, Scene& scene,
 
 BLOOM_API YAML::Node Scene::serialize() const {
     YAML::Node root;
+    assert(false);
+#if 0
     each([&](entt::entity entity) {
         root.push_back(serializeEntity(*this, entity));
     });
+#endif
     return root;
 }
 

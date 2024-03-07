@@ -1,6 +1,6 @@
 #pragma once
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 #include <mtl/mtl.hpp>
 #include <utl/vector.hpp>
 #include <yaml-cpp/yaml.h>

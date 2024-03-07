@@ -70,8 +70,8 @@ void ForwardRenderer::populateFramebuffer(
 /// MARK: Initialization
 ///
 ///
-ForwardRenderer::ForwardRenderer(bloom::Receiver reciever):
-    Renderer(std::move(reciever)) {
+ForwardRenderer::ForwardRenderer(bloom::Receiver receiver):
+    Renderer(std::move(receiver)) {
     listen([this](ReloadShadersCommand) {
         device().reloadDefaultLibrary();
         createGPUState(device());

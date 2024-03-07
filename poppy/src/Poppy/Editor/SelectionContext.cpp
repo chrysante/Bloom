@@ -6,8 +6,8 @@ using namespace bloom;
 
 using namespace poppy;
 
-SelectionContext::SelectionContext(bloom::Receiver reciever):
-    bloom::Receiver(std::move(reciever)) {
+SelectionContext::SelectionContext(bloom::Receiver receiver):
+    bloom::Receiver(std::move(receiver)) {
     listen([this](UnloadSceneEvent event) {
         mEntities.erase(std::remove_if(mEntities.begin(), mEntities.end(),
                                        [&](EntityHandle entity) {

@@ -1,6 +1,6 @@
 #include "Poppy/Editor/Views/MaterialInstanceViewer.hpp"
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 #include "Bloom/Asset/AssetManager.hpp"
 #include "Bloom/Graphics/Material/MaterialInstance.hpp"

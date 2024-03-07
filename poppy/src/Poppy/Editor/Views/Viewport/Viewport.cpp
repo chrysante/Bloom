@@ -2,10 +2,9 @@
 
 #include "Poppy/Editor/Views/Viewport/Viewport.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 #include <utl/stack.hpp>
-#include <utl/stdio.hpp>
 
 #include "Bloom/Application/Application.hpp"
 #include "Bloom/Application/InputEvent.hpp"
@@ -130,7 +129,7 @@ void Viewport::frame() {
                                ImGui::GetContentRegionAvail() -
                                    ImVec2{ spacing, spacing });
         ImGui::PopItemFlag();
-        recieveSceneDragDrop();
+        receiveSceneDragDrop();
     }
     ImGui::EndChild();
 }
@@ -272,7 +271,7 @@ void Viewport::debugPanel() {
     auto matrix = [](float4x4 const& m) {
         withFont(Font::UIDefault().setMonospaced(true), [&] {
             for (int i = 0; i < 4; ++i) {
-                ImGui::TextUnformatted(utl::format("{}", m.row(i)).data());
+                ImGui::TextUnformatted(utl::strcat(m.row(i)).data());
             }
         });
     };
@@ -423,7 +422,7 @@ bloom::EntityHandle Viewport::readEntityID(mtl::float2 const mousePosition) {
     return {};
 }
 
-void Viewport::recieveSceneDragDrop() {
+void Viewport::receiveSceneDragDrop() {
     auto payload = acceptAssetDragDrop(AssetType::scene);
     if (payload) {
         AssetHandle const handle = *payload;

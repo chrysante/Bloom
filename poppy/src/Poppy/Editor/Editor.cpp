@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 #include "Bloom/Application/ResourceUtil.hpp"
 #include "Bloom/Asset/AssetManager.hpp"
@@ -27,7 +27,7 @@ struct EditorWindowDelegate: public bloom::WindowDelegate {
     utl::function<void()> onFrame;
 };
 
-Editor::Editor(): mSelection(makeReciever()) {
+Editor::Editor(): mSelection(makeReceiver()) {
     // clang-format off
     dockspace.setLeftToolbar({
         ToolbarDropdownMenu()
@@ -99,7 +99,7 @@ void Editor::openView(std::string name, utl::function<void(View&)> completion) {
 /// MARK: Init
 void Editor::init() {
     auto editorRenderer =
-        std::make_unique<EditorRenderer>(makeReciever(),
+        std::make_unique<EditorRenderer>(makeReceiver(),
                                          coreSystems().getRenderer());
     editorRenderer->init(device());
     coreSystems().setRenderer(std::move(editorRenderer));
@@ -313,7 +313,7 @@ void Editor::populateView(View& view, bloom::Window& window) {
     desc.window = &window;
 
     view.Emitter::operator=(makeEmitter());
-    view.Receiver::operator=(makeReciever());
+    view.Receiver::operator=(makeReceiver());
 }
 
 void Editor::clearClosingViews() {

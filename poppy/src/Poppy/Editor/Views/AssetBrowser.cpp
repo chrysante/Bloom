@@ -1,11 +1,12 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #define UTL_DEFER_MACROS
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
+#include <iostream>
+
+#include <imgui.h>
+#include <imgui_internal.h>
 #include <utl/common.hpp>
 #include <utl/filesystem_ext.hpp>
-#include <utl/stdio.hpp>
 
 #include "Bloom/Application/Application.hpp"
 #include "Bloom/Application/ResourceUtil.hpp"
@@ -216,7 +217,7 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
     }
     case AssetType::script: {
         auto const command =
-            utl::format("open -a Visual\\ Studio\\ Code.app {}",
+            utl::strcat("open -a Visual\\ Studio\\ Code.app ",
                         assetManager->getAbsoluteFilepath(handle));
         std::system(command.data());
         break;

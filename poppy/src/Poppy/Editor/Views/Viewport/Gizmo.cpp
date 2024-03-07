@@ -2,8 +2,8 @@
 
 #include <array>
 
-#include <imgui/ImGuizmo.h>
-#include <imgui/imgui.h>
+#include <ImGuizmo.h>
+#include <imgui.h>
 #include <mtl/mtl.hpp>
 
 #include "Bloom/Scene/Components/Transform.hpp"

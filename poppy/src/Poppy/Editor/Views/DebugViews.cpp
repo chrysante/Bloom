@@ -1,6 +1,6 @@
 #include "Poppy/Editor/Views/DebugViews.hpp"
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 #include "Poppy/UI/Appearance.hpp"
 

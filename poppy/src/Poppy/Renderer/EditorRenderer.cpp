@@ -43,9 +43,9 @@ std::unique_ptr<EditorFramebuffer> EditorRenderer::createEditorFramebuffer(
 }
 
 /// MARK: Initialization
-EditorRenderer::EditorRenderer(bloom::Receiver reciever,
+EditorRenderer::EditorRenderer(bloom::Receiver receiver,
                                std::shared_ptr<Renderer> renderer):
-    Renderer(std::move(reciever)), mRenderer(std::move(renderer)) {}
+    Renderer(std::move(receiver)), mRenderer(std::move(renderer)) {}
 
 void EditorRenderer::init(HardwareDevice& device) {
     mDevice = &device;

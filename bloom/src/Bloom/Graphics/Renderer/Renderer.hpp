@@ -29,7 +29,7 @@ protected:
 
 class BLOOM_API Renderer: protected Receiver {
 public:
-    explicit Renderer(Receiver reciever): Receiver(std::move(reciever)) {}
+    explicit Renderer(Receiver receiver): Receiver(std::move(receiver)) {}
     virtual ~Renderer() = default;
 
     virtual void init(HardwareDevice&){};

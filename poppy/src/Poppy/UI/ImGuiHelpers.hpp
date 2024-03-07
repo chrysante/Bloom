@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 #include <utl/scope_guard.hpp>
 
 #include "Poppy/UI/Font.hpp"

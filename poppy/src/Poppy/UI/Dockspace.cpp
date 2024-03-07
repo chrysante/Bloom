@@ -3,8 +3,8 @@
 #include <set>
 #include <unordered_set>
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 #include <mtl/mtl.hpp>
 #include <utl/scope_guard.hpp>
 #include <utl/stack.hpp>
@@ -149,7 +149,9 @@ utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
         makeUnique(positions);
 
         positions.erase(positions.begin());
-        positions.erase(positions.end() - 1);
+        if (!positions.empty()) {
+            positions.erase(positions.end() - 1);
+        }
 
         for (int i = 0; auto& p: positions) {
             if (i++ % 2 == 0) {

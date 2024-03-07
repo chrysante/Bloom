@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 #include <mtl/mtl.hpp>
 
 #include "Poppy/UI/Appearance.hpp"

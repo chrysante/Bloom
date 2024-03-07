@@ -1,12 +1,12 @@
 #pragma once
 
 #include <mtl/mtl.hpp>
-#include <yaml-cpp/helpers.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include "Bloom/Application/Input.hpp"
 #include "Bloom/Core/Serialize.hpp"
 #include "Bloom/Core/Time.hpp"
+#include "Bloom/Core/Yaml.hpp"
 #include "Bloom/Graphics/Camera.hpp"
 
 namespace poppy {

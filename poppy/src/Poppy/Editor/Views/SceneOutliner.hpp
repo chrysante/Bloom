@@ -8,8 +8,8 @@
 
 #include "Bloom/Scene/Entity.hpp"
 #include "Poppy/Editor/Views/BasicSceneInspector.hpp"
+#include "Poppy/Editor/Views/EntityInspector.hpp"
 #include "Poppy/UI/View.hpp"
-#include "PropertiesView.hpp"
 
 namespace bloom {
 

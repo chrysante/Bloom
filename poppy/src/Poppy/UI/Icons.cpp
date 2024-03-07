@@ -3,9 +3,8 @@
 #include <fstream>
 #include <sstream>
 
-#include <imgui/imgui_internal.h>
+#include <imgui_internal.h>
 #include <rapidjson/document.h>
-#include <utl/stdio.hpp>
 
 #include "Bloom/Application.hpp"
 #include "Poppy/Core/Debug.hpp"

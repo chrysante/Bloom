@@ -2,8 +2,8 @@
 
 #include "Poppy/Editor/Views/RendererDebuggerView.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 
 #include "Poppy/Editor/Editor.hpp"
 #include "Poppy/Renderer/EditorRenderer.hpp"

@@ -1,8 +1,8 @@
-#include "SystemAppearance.hpp"
-
-#include "Poppy/Core/Debug.hpp"
+#include "Poppy/UI/SystemAppearance.hpp"
 
 #import <Appkit/NSColor.h>
+
+#include "Poppy/Core/Debug.hpp"
 
 using namespace poppy;
 	

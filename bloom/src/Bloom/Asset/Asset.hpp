@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Bloom/Core/Base.hpp"
-#include "Bloom/Core/Debug.hpp"
-
 #include <filesystem>
 #include <iosfwd>
 #include <utl/common.hpp>
 #include <utl/uuid.hpp>
-#include <yaml-cpp/helpers.hpp>
 #include <yaml-cpp/yaml.h>
+
+#include "Bloom/Core/Base.hpp"
+#include "Bloom/Core/Debug.hpp"
+#include "Bloom/Core/Yaml.hpp"
 
 namespace bloom {
 

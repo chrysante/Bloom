@@ -2,7 +2,6 @@
 
 #include <fstream>
 
-#include <scatha/Runtime/Compiler.h>
 #include <utl/filesystem_ext.hpp>
 #include <utl/strcat.hpp>
 
@@ -224,16 +223,16 @@ AssetHandle AssetManager::getHandleFromFile(std::filesystem::path path) const {
 
 void AssetManager::compileScripts() {
     dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
-    scatha::Compiler compiler;
-    for (auto&& [id, internal]: assets) {
-        if (internal.handle.type() != AssetType::script) {
-            continue;
-        }
-        auto const script = as<Script>(get(internal.handle));
-        makeAvailable(internal.handle, AssetRepresentation::CPU, true);
-        compiler.addSource(script->text);
-    }
-    program = compiler.compile();
+    //    scatha::Compiler compiler;
+    //    for (auto&& [id, internal]: assets) {
+    //        if (internal.handle.type() != AssetType::script) {
+    //            continue;
+    //        }
+    //        auto const script = as<Script>(get(internal.handle));
+    //        makeAvailable(internal.handle, AssetRepresentation::CPU, true);
+    //        compiler.addSource(script->text);
+    //    }
+    //    program = compiler.compile();
     dispatch(DispatchToken::Now, ScriptsDidLoadEvent{});
 }
 

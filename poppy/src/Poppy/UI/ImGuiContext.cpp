@@ -1,8 +1,8 @@
 #include "Poppy/UI/ImGuiContext.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
-#include <utl/format.hpp>
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <utl/strcat.hpp>
 
 #include "Bloom/Application.hpp"
 #include "Bloom/Core.hpp"
@@ -241,7 +241,7 @@ void poppy::ImGuiContext::init(bloom::Application& application,
     mApplication = &application;
     auto& device = application.device();
     desc = ds;
-    this->bloom::Receiver::operator=(application.makeReciever());
+    this->bloom::Receiver::operator=(application.makeReceiver());
 
     IMGUI_CHECKVERSION();
 

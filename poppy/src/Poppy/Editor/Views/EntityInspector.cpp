@@ -2,11 +2,11 @@
 
 #include "Poppy/Editor/Views/EntityInspector.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 #include <mtl/mtl.hpp>
-#include <scatha/Sema/Entity.h>
-#include <scatha/Sema/SymbolTable.h>
+// #include <scatha/Sema/Entity.h>
+// #include <scatha/Sema/SymbolTable.h>
 #include <utl/typeinfo.hpp>
 
 #include "Bloom/Asset/AssetManager.hpp"
@@ -247,7 +247,7 @@ void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
                                   .data() :
                               "No mesh assigned",
                           { ImGui::GetContentRegionAvail().x, 0 });
-            recieveMeshDragDrop(entity);
+            receiveMeshDragDrop(entity);
 
             beginProperty("Material");
             ImGui::Button(meshRenderer.materialInstance ?
@@ -257,20 +257,20 @@ void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
                                   .data() :
                               "No material assigned",
                           { ImGui::GetContentRegionAvail().x, 0 });
-            recieveMaterialDragDrop(entity);
+            receiveMaterialDragDrop(entity);
         });
         endSection();
     }
 }
 
-void EntityInspector::recieveMeshDragDrop(bloom::EntityHandle entity) {
+void EntityInspector::receiveMeshDragDrop(bloom::EntityHandle entity) {
     using namespace bloom;
     auto const payload = acceptAssetDragDrop(AssetType::staticMesh);
     if (!payload) {
         return;
     }
     auto const handle = *payload;
-    Logger::trace("Recieved Asset: ", assetManager().getName(handle));
+    Logger::trace("Received Asset: ", assetManager().getName(handle));
 
     auto asset = as<StaticMesh>(assetManager().get(handle));
     assert(!!asset);
@@ -281,14 +281,14 @@ void EntityInspector::recieveMeshDragDrop(bloom::EntityHandle entity) {
     meshRenderer.mesh = std::move(asset);
 }
 
-void EntityInspector::recieveMaterialDragDrop(bloom::EntityHandle entity) {
+void EntityInspector::receiveMaterialDragDrop(bloom::EntityHandle entity) {
     using namespace bloom;
     auto const payload = acceptAssetDragDrop(AssetType::materialInstance);
     if (!payload) {
         return;
     }
     auto const handle = *payload;
-    Logger::trace("Recieved Asset: ", assetManager().getName(handle));
+    Logger::trace("Received Asset: ", assetManager().getName(handle));
 
     auto materialInstance = as<MaterialInstance>(assetManager().get(handle));
     assert((bool)materialInstance);
@@ -496,7 +496,7 @@ void editDataField(std::string_view id, float* value) {
 
 void EntityInspector::inspectScript(bloom::EntityHandle entity) {
     using namespace propertiesView;
-
+#if 0
     auto& scriptSystem = editor().coreSystems().scriptSystem();
     auto* program = assetManager().getProgram();
     if (!program) {
@@ -555,6 +555,7 @@ void EntityInspector::inspectScript(bloom::EntityHandle entity) {
         });
         endSection();
     }
+#endif
 }
 
 /// MARK: - Helpers

@@ -6,5 +6,5 @@ format_dir() {
 }
 
 format_dir bloom/src
-format_dir bloom/tests
+format_dir bloom/test
 format_dir poppy/src

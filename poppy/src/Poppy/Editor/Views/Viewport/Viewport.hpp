@@ -45,7 +45,7 @@ public:
 
     bloom::EntityHandle readEntityID(mtl::float2 mousePositionInView);
 
-    void recieveSceneDragDrop();
+    void receiveSceneDragDrop();
 
     //	public:
     struct Parameters {

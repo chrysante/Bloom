@@ -1,10 +1,10 @@
 #include "Poppy/Editor/Views/DirectoryView.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 #include <utl/filesystem_ext.hpp>
-#include <utl/format.hpp>
 #include <utl/scope_guard.hpp>
+#include <utl/strcat.hpp>
 
 #include "Bloom/Asset/AssetManager.hpp"
 #include "Poppy/Core/Debug.hpp"
@@ -17,7 +17,7 @@ using namespace mtl::short_types;
 using namespace poppy;
 
 static std::string toDragDropType(bloom::AssetType type) {
-    return utl::format("DD-Asset-{}", type);
+    return utl::strcat("DD-Asset-", type);
 }
 
 std::optional<bloom::AssetHandle> poppy::acceptAssetDragDrop(
@@ -32,9 +32,9 @@ std::optional<bloom::AssetHandle> poppy::acceptAssetDragDrop(
         }
         if (payload && payload->IsDelivery()) {
             Logger::info("Delivered");
-            AssetHandle recievedAsset;
-            std::memcpy(&recievedAsset, payload->Data, sizeof recievedAsset);
-            return recievedAsset;
+            AssetHandle receivedAsset;
+            std::memcpy(&receivedAsset, payload->Data, sizeof receivedAsset);
+            return receivedAsset;
         }
     }
     return std::nullopt;

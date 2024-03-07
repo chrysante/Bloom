@@ -3,11 +3,11 @@
 #include "Poppy/UI/Font.hpp"
 #include "Poppy/UI/ImGuiHelpers.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
-#include <utl/format.hpp>
+#include <imgui.h>
+#include <imgui_internal.h>
 #include <utl/hashset.hpp>
 #include <utl/scope_guard.hpp>
+#include <utl/strcat.hpp>
 
 using namespace bloom;
 using namespace mtl::short_types;
@@ -131,7 +131,7 @@ void View::doFrame() {
     };
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
 
-    std::string displayTitle = utl::format("{}###{}-{}", title(), name(), id());
+    std::string displayTitle = utl::strcat(title(), "###", name(), "-", id());
     if (maximized) {
         displayTitle += "-FS";
     }

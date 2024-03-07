@@ -60,7 +60,7 @@ public:
 
     using MessageSystem::makeEmitter;
 
-    using MessageSystem::makeReciever;
+    using MessageSystem::makeReceiver;
 
     /// Creates a new window with from window description \p desc and window
     /// delegate \p delegate

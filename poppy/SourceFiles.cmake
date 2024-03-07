@@ -1,0 +1,96 @@
+
+set(poppy_sources
+  src/Poppy/Core/Debug.hpp
+  src/Poppy/Core/Common.hpp
+  src/Poppy/Core/Profile.cpp
+  src/Poppy/Core/Profile.hpp
+
+  src/Poppy/Editor/Editor.cpp
+  src/Poppy/Editor/Editor.hpp
+  src/Poppy/Editor/EditorWindowDelegate.cpp
+  src/Poppy/Editor/EditorWindowDelegate.hpp
+  src/Poppy/Editor/SelectionContext.cpp
+  src/Poppy/Editor/SelectionContext.hpp
+  src/Poppy/Editor/Views/AssetBrowser.cpp
+  src/Poppy/Editor/Views/AssetBrowser.hpp
+  src/Poppy/Editor/Views/BasicSceneInspector.cpp
+  src/Poppy/Editor/Views/BasicSceneInspector.hpp
+  src/Poppy/Editor/Views/DebugViews.cpp
+  src/Poppy/Editor/Views/DebugViews.hpp
+  src/Poppy/Editor/Views/DirectoryView.cpp
+  src/Poppy/Editor/Views/DirectoryView.hpp
+  src/Poppy/Editor/Views/EntityInspector.cpp
+  src/Poppy/Editor/Views/EntityInspector.hpp
+  src/Poppy/Editor/Views/MaterialInstanceViewer.cpp
+  src/Poppy/Editor/Views/MaterialInstanceViewer.hpp
+  src/Poppy/Editor/Views/RendererDebuggerView.cpp
+  src/Poppy/Editor/Views/RendererDebuggerView.hpp
+  src/Poppy/Editor/Views/RendererSettingsView.cpp
+  src/Poppy/Editor/Views/RendererSettingsView.hpp
+  src/Poppy/Editor/Views/SceneOutliner.cpp
+  src/Poppy/Editor/Views/SceneOutliner.hpp
+  src/Poppy/Editor/Views/Viewport/Gizmo.cpp
+  src/Poppy/Editor/Views/Viewport/Gizmo.hpp
+  src/Poppy/Editor/Views/Viewport/Viewport.cpp
+  src/Poppy/Editor/Views/Viewport/Viewport.hpp
+  src/Poppy/Editor/Views/Viewport/ViewportCameraController.cpp
+  src/Poppy/Editor/Views/Viewport/ViewportCameraController.hpp
+  src/Poppy/Editor/Views/Viewport/ViewportOverlays.cpp
+  src/Poppy/Editor/Views/Viewport/ViewportOverlays.hpp
+
+  src/Poppy/Platform/MacOS/ImGuiContext.mm
+  src/Poppy/Platform/MacOS/SystemAppearance.mm
+  src/Poppy/Platform/MacOS/imgui_impl_metal.h
+  src/Poppy/Platform/MacOS/imgui_impl_metal.mm
+  src/Poppy/Platform/MacOS/imgui_impl_osx.h
+  src/Poppy/Platform/MacOS/imgui_impl_osx.mm
+
+  src/Poppy/Renderer/EditorDrawData.hpp
+  src/Poppy/Renderer/EditorRenderer.cpp
+  src/Poppy/Renderer/EditorRenderer.hpp
+  src/Poppy/Renderer/EditorSceneRenderer.cpp
+  src/Poppy/Renderer/EditorSceneRenderer.hpp
+
+  src/Poppy/UI/Appearance.cpp
+  src/Poppy/UI/Appearance.hpp
+  src/Poppy/UI/Dockspace.cpp
+  src/Poppy/UI/Dockspace.hpp
+  src/Poppy/UI/Font.cpp
+  src/Poppy/UI/Font.hpp
+  src/Poppy/UI/Icons.cpp
+  src/Poppy/UI/Icons.hpp
+  src/Poppy/UI/ImGuiContext.cpp
+  src/Poppy/UI/ImGuiContext.hpp
+  src/Poppy/UI/ImGuiHelpers.cpp
+  src/Poppy/UI/ImGuiHelpers.hpp
+  src/Poppy/UI/PropertiesView.cpp
+  src/Poppy/UI/PropertiesView.hpp
+  src/Poppy/UI/SystemAppearance.hpp
+  src/Poppy/UI/Toolbar.cpp
+  src/Poppy/UI/Toolbar.hpp
+  src/Poppy/UI/View.cpp
+  src/Poppy/UI/View.hpp
+
+  src/Poppy/UI/ImGui/ImGuizmo.cpp
+  src/Poppy/UI/ImGui/imgui.cpp
+  src/Poppy/UI/ImGui/imgui_demo.cpp
+  src/Poppy/UI/ImGui/imgui_draw.cpp
+  src/Poppy/UI/ImGui/imgui_tables.cpp
+  src/Poppy/UI/ImGui/imgui_widgets.cpp
+)
+
+set(poppy_shader_sources
+  src/Poppy/Shaders/BloomShader.h
+  src/Poppy/Shaders/BloomShader.metal
+  src/Poppy/Shaders/Lights.h
+  src/Poppy/Shaders/Lights.metal
+  src/Poppy/Shaders/OutlinePass.metal
+  src/Poppy/Shaders/PBRShader.h
+  src/Poppy/Shaders/PBRShader.metal
+  src/Poppy/Shaders/PCSSTest.metal
+  src/Poppy/Shaders/PostProcess.h
+  src/Poppy/Shaders/PostProcess.metal
+  src/Poppy/Shaders/ShadowPassShader.metal
+  src/Poppy/Shaders/editorPasses.metal
+  src/Poppy/Shaders/mainPass.metal
+)

@@ -1,0 +1,25 @@
+
+if(PROJECT_IS_TOP_LEVEL)
+  set(extensive_build TRUE)
+else()
+  set(extensive_build FALSE)
+endif()
+
+option(BLOOM_VERBOSE "Enable configuration logging" ON)
+option(BLOOM_ENABLE_INSTALL "Generate the install target" ON)
+option(BLOOM_BUILD_EXAMPLES "Enable to build examples" ${extensive_build})
+option(BLOOM_BUILD_TESTS "Enable to build tests" ${extensive_build})
+option(BLOOM_DEV_MODE "Enable sanitizers and more compiler warnings" ${extensive_build})
+
+function(logConfigureOption option message)
+  if(${option})
+    message("-- Bloom: ${message}")
+  endif()
+endfunction()
+
+if(BLOOM_VERBOSE)
+  logConfigureOption(BLOOM_ENABLE_INSTALL "Generating install target")
+  logConfigureOption(BLOOM_BUILD_EXAMPLES "Building examples")
+  logConfigureOption(BLOOM_BUILD_TESTS "Building tests")
+  logConfigureOption(BLOOM_DEV_MODE "Dev mode enabled")
+endif()

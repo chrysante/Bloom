@@ -1,6 +1,6 @@
 #include "Poppy/Editor/Views/Viewport/ViewportOverlays.hpp"
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 #include "Bloom/Graphics/Camera.hpp"
 #include "Bloom/Runtime/SceneSystem.hpp"

@@ -5,7 +5,6 @@
 #include <optional>
 #include <span>
 
-#include <scatha/Runtime/Program.h>
 #include <utl/hashmap.hpp>
 #include <utl/vector.hpp>
 
@@ -133,8 +132,6 @@ public:
 
     void compileScripts();
 
-    scatha::Program* getProgram() const { return program.get(); }
-
 private:
     struct InternalAsset {
         WeakReference<Asset> theAsset;
@@ -201,7 +198,6 @@ private:
 private:
     utl::hashmap<utl::uuid, InternalAsset> assets;
     std::filesystem::path _workingDir;
-    std::unique_ptr<scatha::Program> program;
 };
 
 } // namespace bloom

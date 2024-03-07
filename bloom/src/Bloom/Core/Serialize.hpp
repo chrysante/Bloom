@@ -1,8 +1,9 @@
 #pragma once
 
 #include <utl/common.hpp>
-#include <yaml-cpp/helpers.hpp>
 #include <yaml-cpp/yaml.h>
+
+#include "Bloom/Core/Yaml.hpp"
 
 /// MARK: Serialize Fields
 #define _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                 \

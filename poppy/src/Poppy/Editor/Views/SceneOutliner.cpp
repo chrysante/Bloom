@@ -3,8 +3,8 @@
 
 #include "Poppy/Editor/Views/SceneOutliner.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 #include <utl/scope_guard.hpp>
 #include <utl/stack.hpp>
 #include <utl/utility.hpp>
@@ -66,7 +66,7 @@ void SceneOutliner::displayScene(bloom::Scene& scene) {
     desc.id = (std::size_t)&scene;
     desc.selected = false;
     desc.expanded = expanded(&scene);
-    desc.isLeaf = scene.empty();
+    desc.isLeaf = true; // scene.empty();
     desc.name = scene.name();
 
     treeNode(desc, [&](bool isExpanded) {

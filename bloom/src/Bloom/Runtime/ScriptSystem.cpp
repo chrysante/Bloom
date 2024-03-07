@@ -1,6 +1,5 @@
 #include "Bloom/Runtime/ScriptSystem.hpp"
 
-#include <scatha/Runtime.h>
 #include <scatha/Sema/Entity.h>
 #include <scatha/Sema/SymbolTable.h>
 #include <utl/scope_guard.hpp>
@@ -17,8 +16,8 @@
 using namespace bloom;
 
 struct ScriptSystem::Impl {
-    scatha::Program program;
-    utl::hashmap<scatha::sema::StructureType const*, std::string> typenameMap;
+    // scatha::Program program;
+    utl::hashmap<scatha::sema::StructType const*, std::string> typenameMap;
 };
 
 ScriptSystem::ScriptSystem(): impl(std::make_unique<Impl>()) {}
@@ -31,12 +30,6 @@ void ScriptSystem::init() {
 }
 
 void ScriptSystem::onSceneConstruction() {
-    //    auto& engine = *mEngine;
-    //    initFn = engine.eval<std::function<void(ScriptObject&)>>("init");
-    //    updateFn  = engine.eval<std::function<void(ScriptObject&,
-    //    Timestep)>>("update"); renderFn =
-    //    engine.eval<std::function<void(ScriptObject&)>>("render");
-
     forEach([&](EntityID id, ScriptComponent& script) {
 
     });
@@ -63,6 +56,7 @@ void ScriptSystem::onSceneRender() {
 void ScriptSystem::scriptsWillLoad() {
     impl->typenameMap.clear();
     auto& assetManager = application().coreSystems().assetManager();
+#if 0
     auto* program = assetManager.getProgram();
     if (!program) {
         return;
@@ -71,11 +65,13 @@ void ScriptSystem::scriptsWillLoad() {
     for (auto* type: sym.structDependencyOrder()) {
         impl->typenameMap[type] = std::string(type->name());
     }
+#endif
 }
 
 void ScriptSystem::scriptsDidLoad() {
     auto& scriptSystem = application().coreSystems().scriptSystem();
     auto& assetManager = application().coreSystems().assetManager();
+#if 0
     auto* program = assetManager.getProgram();
     if (!program) {
         return;
@@ -100,13 +96,14 @@ void ScriptSystem::scriptsDidLoad() {
             script.object = scriptSystem.instantiateObject(newType);
         }
     });
+#endif
 }
 
-void* ScriptSystem::instantiateObject(
-    scatha::sema::StructureType const* classType) {
-    assert(classType);
-    return malloc(classType->size());
-}
+// void* ScriptSystem::instantiateObject(
+//     scatha::sema::StructType const* classType) {
+//     assert(classType);
+//     return malloc(classType->size());
+// }
 
 void ScriptSystem::forEach(auto&& fn) {
     auto& sceneSystem = application().coreSystems().sceneSystem();

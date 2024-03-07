@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 #include <utl/hash.hpp>
 #include <utl/hashmap.hpp>
 

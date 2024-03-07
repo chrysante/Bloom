@@ -4,9 +4,9 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <yaml-cpp/helpers.hpp>
 #include <yaml-cpp/yaml.h>
 
+#include "Bloom/Core/Yaml.hpp"
 #include "Poppy/Core/Debug.hpp"
 #include "Poppy/UI/SystemAppearance.hpp"
 

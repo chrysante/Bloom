@@ -4,8 +4,9 @@
 #include "Bloom/Scene/Components/AllComponents.hpp"
 #include "Bloom/Scene/Entity.hpp"
 #include "Poppy/Editor/Views/BasicSceneInspector.hpp"
+#include "Poppy/UI/Font.hpp"
+#include "Poppy/UI/PropertiesView.hpp"
 #include "Poppy/UI/View.hpp"
-#include "PropertiesView.hpp"
 
 namespace poppy {
 
@@ -22,8 +23,8 @@ private:
     void inspectTransform(bloom::EntityHandle);
 
     void inspectMesh(bloom::EntityHandle);
-    void recieveMeshDragDrop(bloom::EntityHandle);
-    void recieveMaterialDragDrop(bloom::EntityHandle);
+    void receiveMeshDragDrop(bloom::EntityHandle);
+    void receiveMaterialDragDrop(bloom::EntityHandle);
 
     void inspectLight(bloom::EntityHandle);
     void inspectLightType(LightType&, bloom::EntityHandle);

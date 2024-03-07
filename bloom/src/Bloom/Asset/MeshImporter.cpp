@@ -1,14 +1,14 @@
 #include "MeshImporter.hpp"
 
-#include "Bloom/Graphics/StaticMesh.hpp"
+#include <fstream>
+#include <sstream>
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
+#include <utl/strcat.hpp>
 
-#include <fstream>
-#include <sstream>
-#include <utl/format.hpp>
+#include "Bloom/Graphics/StaticMesh.hpp"
 
 namespace bloom {
 
@@ -20,7 +20,7 @@ bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
 
     std::fstream file(path, std::ios::in | std::ios::binary);
     if (!file) {
-        throw std::runtime_error(utl::format("Failed to open File {}", path));
+        throw std::runtime_error(utl::strcat("Failed to open file ", path));
     }
 
     std::stringstream sstr;

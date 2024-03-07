@@ -7,6 +7,8 @@ namespace bloom {
 
 class BLOOM_API WindowDelegate {
 public:
+    virtual ~WindowDelegate() = default;
+
     virtual void init() {}
     virtual void shutdown() {}
 

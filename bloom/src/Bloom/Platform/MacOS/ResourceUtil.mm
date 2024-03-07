@@ -1,10 +1,15 @@
 #include "Bloom/Application/ResourceUtil.hpp"
 
+#include <cstdlib>
+
 #import <Appkit/Appkit.h>
 
 using namespace bloom;
 	
 std::filesystem::path bloom::resourceDir() {
+    if (auto* dir = std::getenv("POPPY_RESOURCE_DIR")) {
+        return dir;
+    }
     return std::filesystem::path(
         [NSBundle mainBundle].resourceURL.path.UTF8String);
 }

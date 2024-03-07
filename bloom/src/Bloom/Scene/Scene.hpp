@@ -67,7 +67,7 @@ public:
 
     void clear() { _registry.clear(); }
 
-    bool empty() const { return _registry.empty(); }
+    //    bool empty() const { return _registry.empty(); }
 
     template <typename... Components>
     auto view() {
@@ -78,12 +78,12 @@ public:
         return _registry.view<Components...>();
     }
 
-    auto each(std::invocable<entt::entity> auto&& f) {
-        _registry.each(UTL_FORWARD(f));
-    }
-    auto each(std::invocable<entt::entity> auto&& f) const {
-        _registry.each(UTL_FORWARD(f));
-    }
+    //    auto each(std::invocable<entt::entity> auto&& f) {
+    //        _registry.each(UTL_FORWARD(f));
+    //    }
+    //    auto each(std::invocable<entt::entity> auto&& f) const {
+    //        _registry.each(UTL_FORWARD(f));
+    //    }
 
     Scene copy();
 

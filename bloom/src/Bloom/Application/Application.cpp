@@ -22,7 +22,7 @@ std::unique_ptr<bloom::Application> bloom::createApplication() {
 }
 
 Application::Application():
-    Receiver(makeReciever()), Emitter(makeEmitter()), mCoreSystems(this) {}
+    Receiver(makeReceiver()), Emitter(makeEmitter()), mCoreSystems(this) {}
 
 Application::~Application() = default;
 

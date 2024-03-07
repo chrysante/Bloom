@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <scatha/Sema/Fwd.h>
+// #include <scatha/Sema/Fwd.h>
 
 #include "Bloom/Application/CoreSystem.hpp"
 #include "Bloom/Core/Time.hpp"
@@ -26,7 +26,7 @@ public:
 
     void onSceneRender();
 
-    void* instantiateObject(scatha::sema::StructureType const* classType);
+    //    void* instantiateObject(scatha::sema::StructType const* classType);
 
 private:
     struct Impl;

@@ -46,16 +46,16 @@ public:
 
 /// Message receiver. Classes that want to receive messages should privately
 /// inherit from this class
-class Receiver: private utl::reciever<utl::buffered_messenger> {
+class Receiver: private utl::receiver<utl::buffered_messenger> {
 public:
     friend class Messenger;
 
-    using MyBase = utl::reciever<utl::buffered_messenger>;
+    using MyBase = utl::receiver<utl::buffered_messenger>;
 
-    using reciever::reciever;
+    using receiver::receiver;
 
 public:
-    using reciever::listen;
+    using receiver::listen;
 };
 
 class MessageSystem {
@@ -64,7 +64,7 @@ public:
 
     Emitter makeEmitter() { return Emitter(m); }
 
-    Receiver makeReciever() { return Receiver(m); }
+    Receiver makeReceiver() { return Receiver(m); }
 
     void flush() { m->flush(); }
 

@@ -10,13 +10,12 @@
 #include "Bloom/Core.hpp"
 #include "Bloom/GPU.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 
 using namespace bloom;
 
 namespace poppy {
-	
 	
 	struct TestView: View {
 		TestView(): View("Test View") {}
@@ -29,8 +28,6 @@ namespace poppy {
 			ImGui::Text("%s", utl::format("Window Size:   {}", windowSize()).data());
 		}
 	};
-	
-	
 	
 	void EditorWindowDelegate::init() {
 		ImGuiContextDescription desc;

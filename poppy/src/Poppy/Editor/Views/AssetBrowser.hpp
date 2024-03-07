@@ -3,9 +3,9 @@
 #include <filesystem>
 
 #include <mtl/mtl.hpp>
-#include <yaml-cpp/helpers.hpp>
 
 #include "Bloom/Asset/Asset.hpp"
+#include "Bloom/Core/Yaml.hpp"
 #include "Poppy/Editor/Views/DirectoryView.hpp"
 #include "Poppy/UI/Toolbar.hpp"
 #include "Poppy/UI/View.hpp"

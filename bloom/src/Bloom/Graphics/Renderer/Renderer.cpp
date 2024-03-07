@@ -6,7 +6,7 @@
 namespace bloom {
 
 std::unique_ptr<Renderer> createForwardRenderer(Application& application) {
-    return std::make_unique<ForwardRenderer>(application.makeReciever());
+    return std::make_unique<ForwardRenderer>(application.makeReceiver());
 }
 
 } // namespace bloom

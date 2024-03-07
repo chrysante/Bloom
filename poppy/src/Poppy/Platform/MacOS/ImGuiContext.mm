@@ -1,8 +1,8 @@
 #include "Poppy/UI/ImGuiContext.hpp"
 
 #import <AppKit/AppKit.h>
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 
 #include "Poppy/Platform/MacOS/imgui_impl_osx.h"
 #include "Poppy/Platform/MacOS/imgui_impl_metal.h"

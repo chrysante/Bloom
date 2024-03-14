@@ -170,8 +170,7 @@ YAML::Node Scene::serialize() const {
     return root;
 }
 
-void Scene::deserialize(YAML::Node const& root,
-                                  AssetManager& assetManager) {
+void Scene::deserialize(YAML::Node const& root, AssetManager& assetManager) {
     if (!root.IsSequence()) {
         Logger::Info("Failed to deserialize Scene: Scene is empty.");
         return;

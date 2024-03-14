@@ -14,9 +14,11 @@ class CoreSystem: public Emitter, public Receiver {
 
 public:
     /// Systems are polymorphic and thus not copyable
+    /// @{
     CoreSystem(CoreSystem const&) = delete;
     CoreSystem& operator=(CoreSystem const&) = delete;
-    
+    /// @}
+
     ///
     virtual ~CoreSystem() = default;
 

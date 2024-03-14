@@ -102,14 +102,13 @@ InputEvent bloom::inputEventFromGLFWScroll(Input const& input, double xoffset,
 }
 
 InputEvent bloom::inputEventFromGLFWKey(Input const& input, int keyCode,
-                                        int /* scancode */, int action,
-                                        int mods) {
+                                        [[maybe_unused]] int scancode,
+                                        int action, [[maybe_unused]] int mods) {
     Key key = keyFromGLFW(keyCode);
     KeyEvent event;
     event.modifierFlags = input.modFlags();
     event.repeat = input.keyDownRepeatCount(key); // TODO: Fix this
     event.key = key;
-
     switch (action) {
     case GLFW_PRESS:
     case GLFW_REPEAT:

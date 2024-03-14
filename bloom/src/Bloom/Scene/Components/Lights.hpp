@@ -6,25 +6,25 @@
 namespace bloom {
 
 struct BLOOM_API PointLightComponent {
-    BLOOM_REGISTER_COMPONENT("Point Light");
+    BLOOM_REGISTER_COMPONENT("Point Light")
 
     PointLight light;
 };
 
 struct BLOOM_API SpotLightComponent {
-    BLOOM_REGISTER_COMPONENT("Spot Light");
+    BLOOM_REGISTER_COMPONENT("Spot Light")
 
     SpotLight light;
 };
 
 struct BLOOM_API DirectionalLightComponent {
-    BLOOM_REGISTER_COMPONENT("Directional Light");
+    BLOOM_REGISTER_COMPONENT("Directional Light")
 
     DirectionalLight light;
 };
 
 struct BLOOM_API SkyLightComponent {
-    BLOOM_REGISTER_COMPONENT("Sky Light");
+    BLOOM_REGISTER_COMPONENT("Sky Light")
 
     SkyLight light;
 };

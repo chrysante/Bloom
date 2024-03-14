@@ -24,7 +24,7 @@ void Window::pollEvents() {
 void Window::initWindowSystem() {
     int const status = glfwInit();
     if (status != GLFW_TRUE) {
-        Logger::fatal("Failed to initialize GLFW");
+        Logger::Fatal("Failed to initialize GLFW");
         std::terminate();
     }
 }
@@ -275,7 +275,8 @@ void Window::setCallbacks() {
         }
     });
 
-    glfwSetCursorEnterCallback(GLFW_WND, [](GLFWwindow* w, int entered) {
+    glfwSetCursorEnterCallback(GLFW_WND,
+                               [](GLFWwindow* w, [[maybe_unused]] int entered) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
     });
 

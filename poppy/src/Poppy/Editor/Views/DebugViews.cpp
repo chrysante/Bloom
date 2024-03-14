@@ -32,7 +32,6 @@ void DebugViews::menubar() {
         }
         if (ImGui::MenuItem("Reset style")) {
             ImGui::StyleColorsDark();
-            //                appearance.
         }
         ImGui::EndMenu();
     }

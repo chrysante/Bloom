@@ -3,6 +3,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "Bloom/Asset/Asset.hpp"
+#include "Bloom/Asset/Serialization.hpp"
 #include "Bloom/GPU/HardwarePrimitives.hpp"
 #include "Bloom/Graphics/Material/Material.hpp"
 #include "Bloom/Graphics/Material/MaterialParameters.hpp"
@@ -16,7 +17,7 @@ class BLOOM_API MaterialInstance: public Asset {
     friend class AssetManager;
 
 public:
-    using Asset::Asset;
+    BL_DEFINE_ASSET_CTOR(MaterialInstance, Asset)
 
     Material* material() { return mMaterial.get(); }
     void setMaterial(Reference<Material>);

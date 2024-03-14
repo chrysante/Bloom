@@ -112,7 +112,7 @@ void SceneOutliner::displayScene(bloom::Scene& scene) {
 
                 if (ImGui::MenuItem("Unload")) {
                     editor().coreSystems().sceneSystem().unloadScene(
-                        scene.handle().id());
+                        scene.handle().ID());
                     return;
                 }
             }
@@ -210,7 +210,7 @@ void SceneOutliner::dragDropTarget(bloom::EntityHandle parent) {
         /// descendend
         auto& scene = child.scene();
         if (!child || scene.descendsFrom(parent, child)) {
-            Logger::warn("Hierarchy Error");
+            Logger::Warn("Hierarchy Error");
             return;
         }
         scene.unparent(child);

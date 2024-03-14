@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Base.hpp"
+#include "Bloom/Core/Base.hpp"
 
 #ifdef BLOOM_CPP
 
-#include <assert.h>
+#include <cassert>
 #include <string_view>
 
 #include <utl/strcat.hpp>
@@ -18,27 +18,35 @@
 #endif
 
 #define BL_DEBUGBREAK(msg) __builtin_debugtrap()
-#define BL_DEBUGFAIL(msg)  __builtin_trap()
+
+#define BL_DEBUGFAIL(msg) __builtin_trap()
+
+#define BL_UNIMPLEMENTED() __builtin_trap()
+
+#define BL_UNREACHABLE() __builtin_trap()
+
+#define BL_EXPECT(cond) assert(cond)
 
 namespace bloom {
 
+/// Static logger that provides several "severity" modes
 class BLOOM_API Logger {
+public:
     enum class Level { Trace, Info, Debug, Warning, Error, Fatal };
 
-public:
-    static void trace(auto const&... args) { log(Level::Trace, args...); }
-    static void info(auto const&... args) { log(Level::Info, args...); }
-    static void debug(auto const&... args) { log(Level::Debug, args...); }
-    static void warn(auto const&... args) { log(Level::Warning, args...); }
-    static void error(auto const&... args) { log(Level::Error, args...); }
-    static void fatal(auto const&... args) { log(Level::Fatal, args...); }
+    static void Trace(auto const&... args) { doLog(Level::Trace, args...); }
+    static void Info(auto const&... args) { doLog(Level::Info, args...); }
+    static void Debug(auto const&... args) { doLog(Level::Debug, args...); }
+    static void Warn(auto const&... args) { doLog(Level::Warning, args...); }
+    static void Error(auto const&... args) { doLog(Level::Error, args...); }
+    static void Fatal(auto const&... args) { doLog(Level::Fatal, args...); }
 
 private:
-    static void log(Level level, auto const&... args) {
-        logImpl(level, utl::strcat(args...));
+    static void doLog(Level level, auto const&... args) {
+        doLogImpl(level, utl::strcat(args...));
     }
 
-    static void logImpl(Level level, std::string_view msg);
+    static void doLogImpl(Level level, std::string_view msg);
 };
 
 } // namespace bloom

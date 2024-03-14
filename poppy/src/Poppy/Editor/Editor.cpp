@@ -51,11 +51,11 @@ Editor::Editor(): mSelection(makeReceiver()) {
 
     dockspace.setCenterToolbar({
         ToolbarIconButton("plus").onClick([] {
-            Logger::trace("Some Button Pressed");
+            Logger::Trace("Some Button Pressed");
         }),
         ToolbarIconButton("bank")
             .onClick([] {
-                Logger::trace("Some Button Pressed");
+                Logger::Trace("Some Button Pressed");
             }),
         ToolbarSpacer{},
         ToolbarIconButton("cw")
@@ -84,7 +84,7 @@ utl::vector<View*> Editor::getViews() {
 void Editor::openView(std::string name, utl::function<void(View&)> completion) {
     auto const entry = ViewRegistry::get(name);
     if (!entry) {
-        Logger::warn("Could not find View '", name, "'");
+        Logger::Warn("Could not find View '", name, "'");
         return;
     }
 
@@ -252,7 +252,7 @@ void Editor::saveStateToDisk() {
     auto const filename = settingsFile();
     std::fstream file(filename, std::ios::out);
     if (!file) {
-        Logger::error("Failed to save to file: ", filename);
+        Logger::Error("Failed to save to file: ", filename);
         return;
     }
     file << out.c_str();
@@ -265,6 +265,8 @@ void Editor::loadStateFromDisk() {
     }
     YAML::Node root = YAML::Load(*text);
     appearance.deserialize(root["Appearance"]);
+    Logger::Warn("Resetting style colors on startup");
+    ImGui::StyleColorsDark();
     loadViews(root["Views"]);
 }
 

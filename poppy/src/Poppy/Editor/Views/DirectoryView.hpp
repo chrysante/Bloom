@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <span>
 #include <string>
 
 #include <mtl/mtl.hpp>
@@ -17,7 +18,13 @@ class AssetManager;
 
 namespace poppy {
 
-std::optional<bloom::AssetHandle> acceptAssetDragDrop(bloom::AssetType);
+///
+std::optional<bloom::AssetHandle> acceptAssetDragDrop(
+    std::span<bloom::AssetType const> types);
+
+/// \overload
+std::optional<bloom::AssetHandle> acceptAssetDragDrop(
+    std::initializer_list<bloom::AssetType> types);
 
 class AssetBrowser;
 

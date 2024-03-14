@@ -5,7 +5,7 @@
 namespace bloom {
 
 struct AssetFileHeader {
-    static constexpr std::size_t customDataSize = 256;
+    static constexpr std::size_t CustomDataSize = 256;
 
     AssetFileHeader() = default;
     AssetFileHeader(AssetHandle const& handle, FileFormat format,
@@ -14,11 +14,12 @@ struct AssetFileHeader {
         std::strncpy(nameBuffer, name.data(), 127);
     }
     template <typename T>
-        requires(sizeof(T) <= customDataSize)
+        requires(sizeof(T) <= CustomDataSize) && std::is_trivial_v<T>
     AssetFileHeader(AssetHandle const& handle, FileFormat format,
-                    std::string_view name, T&& t):
+                    std::string_view name, T const& t):
         AssetFileHeader(handle, format, name) {
-        ::new ((void*)customData) T(std::forward<T>(t));
+        std::memset(customData, 0, CustomDataSize);
+        std::memcpy(customData, &t, sizeof t);
     }
 
     AssetHandle handle() const { return _handle; }
@@ -28,7 +29,7 @@ struct AssetFileHeader {
     std::string name() const { return nameBuffer; }
 
     template <typename T>
-        requires(sizeof(T) <= customDataSize)
+        requires(sizeof(T) <= CustomDataSize)
     T customDataAs() const {
         std::aligned_storage_t<sizeof(T), alignof(T)> storage;
         std::memcpy(&storage, customData, sizeof(T));
@@ -38,12 +39,12 @@ struct AssetFileHeader {
     AssetHandle _handle;
     FileFormat _format;
     char nameBuffer[128];
-    char customData[customDataSize];
+    char customData[CustomDataSize];
 };
 
 struct MeshFileHeader {
-    std::size_t vertexDataSize;
-    std::size_t indexDataSize;
+    size_t vertexDataSize;
+    size_t indexDataSize;
 };
 
 struct MaterialFileHeader {};

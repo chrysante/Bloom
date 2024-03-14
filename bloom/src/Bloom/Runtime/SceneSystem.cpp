@@ -8,9 +8,9 @@ using namespace bloom;
 
 void SceneSystem::loadScene(Reference<Scene> scene) {
     auto const [_, success] =
-        mScenes.insert({ scene->handle().id(), std::move(scene) });
+        mScenes.insert({ scene->handle().ID(), std::move(scene) });
     if (!success) {
-        Logger::error("Failed to load scene. Scene is already loaded.");
+        Logger::Error("Failed to load scene. Scene is already loaded.");
         return;
     }
     setPointers();
@@ -20,7 +20,7 @@ void SceneSystem::unloadScene(utl::uuid id) {
     auto const itr = mScenes.find(id);
     auto* const scene = itr->second.get();
     if (itr == mScenes.end()) {
-        Logger::error("Failed to unload scene. Scene was not loaded.");
+        Logger::Error("Failed to unload scene. Scene was not loaded.");
         return;
     }
     mScenes.erase(itr);
@@ -47,10 +47,8 @@ void SceneSystem::applyTransformHierarchy() {
                       TransformMatrixComponent& transformMatrix) {
             transformMatrix.matrix = transform.calculate();
         });
-
         utl::stack<EntityID> stack(scene->gatherRoots());
-
-        while (stack) {
+        while (!stack.empty()) {
             auto const current = stack.pop();
             auto const& currentTransform =
                 scene->getComponent<TransformMatrixComponent>(current);

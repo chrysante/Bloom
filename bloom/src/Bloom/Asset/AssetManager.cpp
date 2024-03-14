@@ -3,10 +3,11 @@
 #include <fstream>
 
 #include <utl/filesystem_ext.hpp>
+#include <utl/overload.hpp>
 #include <utl/strcat.hpp>
 
 #include "Bloom/Application/Application.hpp"
-#include "Bloom/Asset/MeshImporter.hpp"
+#include "Bloom/Asset/MeshImport.hpp"
 #include "Bloom/Core/Core.hpp"
 #include "Bloom/Core/Debug.hpp"
 #include "Bloom/GPU/HardwareDevice.hpp"
@@ -16,130 +17,238 @@
 
 using namespace bloom;
 
+namespace {
+
+/// Object stored by the asset manager for each asset
+struct TableEntry {
+    ///
+    WeakReference<Asset> asset;
+
+    /// Handle of the asset
+    AssetHandle handle;
+
+    /// Name of the asset
+    std::string name;
+
+    /// Location on disk relative to working directory
+    std::filesystem::path diskLocation;
+};
+
+} // namespace
+
+struct AssetManager::Impl {
+    AssetManager* assetManager;
+    utl::hashmap<utl::uuid, TableEntry> assets;
+    std::filesystem::path workingDir;
+
+    explicit Impl(AssetManager* assetManager): assetManager(assetManager) {}
+
+    Reference<Asset> allocateAsset(AssetHandle, std::string name) const;
+
+    TableEntry* find(AssetHandle);
+
+    TableEntry const* find(AssetHandle) const;
+
+    void readAssetMetaData(std::filesystem::path const& diskLocation,
+                           bool forceOverride = false);
+
+    bool makeAvailImpl(StaticMesh&, TableEntry const& entry,
+                       AssetRepresentation repr, bool force);
+    bool makeAvailImpl(SkeletalMesh&, TableEntry const& entry,
+                       AssetRepresentation repr, bool force);
+    bool makeAvailImpl(Material&, TableEntry const& entry,
+                       AssetRepresentation repr, bool force);
+    bool makeAvailImpl(MaterialInstance&, TableEntry const& entry,
+                       AssetRepresentation repr, bool force);
+    bool makeAvailImpl(Scene&, TableEntry const& entry,
+                       AssetRepresentation repr, bool force);
+    bool makeAvailImpl(ScriptSource&, TableEntry const& entry,
+                       AssetRepresentation repr, bool force);
+
+    Reference<StaticMeshData> readStaticMeshFromDisk(
+        std::filesystem::path const& source);
+    void loadMaterialInstanceFromDisk(MaterialInstance& inst,
+                                      std::filesystem::path const& source);
+    void loadSceneFromDisk(Scene& scene, std::filesystem::path const& source);
+    std::string loadTextFromDisk(std::filesystem::path const& source);
+
+    void loadStaticMeshRenderer(StaticMesh& mesh, TableEntry const& entry);
+
+    void flushToDisk(AssetHandle handle);
+
+    void flushToDiskImpl(StaticMesh const&, std::filesystem::path const& dest);
+    void flushToDiskImpl(SkeletalMesh const&,
+                         std::filesystem::path const& dest);
+    void flushToDiskImpl(Material const&, std::filesystem::path const& dest);
+    void flushToDiskImpl(MaterialInstance const&,
+                         std::filesystem::path const& dest);
+    void flushToDiskImpl(Scene const&, std::filesystem::path const& dest);
+    void flushToDiskImpl(ScriptSource const&,
+                         std::filesystem::path const& dest);
+
+    /// Deduces the asset type from the file extension \p ext of the source
+    /// asset file
+    std::optional<AssetType> deduceImportedAssetType(
+        std::string_view ext) const;
+    AssetHandle store(Reference<Asset> asset, std::string_view name,
+                      std::filesystem::path dest);
+
+    ///
+    void doImport(Asset& dest, std::filesystem::path const& source) const;
+    void doImportImpl(Asset const&, std::filesystem::path const&) const {
+        BL_UNIMPLEMENTED();
+    }
+    void doImportImpl(StaticMesh& dest,
+                      std::filesystem::path const& source) const;
+
+    std::filesystem::path makeRelative(std::filesystem::path const& path) const;
+    std::filesystem::path makeAbsolute(std::filesystem::path const& path) const;
+    AssetFileHeader readHeader(std::filesystem::path const& path) const;
+    AssetFileHeader readHeader(std::fstream& file) const;
+    std::fstream openFile(std::filesystem::path const& path,
+                          std::ios_base::openmode mode =
+                              std::ios_base::in | std::ios_base::out) const;
+};
+
+namespace {
+
+template <AssetRepresentation>
+struct Tag {};
+
+} // namespace
+
+template <typename Callback>
+static void visitRepr(AssetRepresentation repr, Callback&& callback) {
+#define VISIT_CASE(KIND)                                                       \
+    if (test(repr & KIND) && std::is_invocable_v<Callback, Tag<KIND>>)         \
+    std::invoke(callback, Tag<KIND>{})
+    VISIT_CASE(AssetRepresentation::CPU);
+    VISIT_CASE(AssetRepresentation::GPU);
+#undef VISIT_CASE
+}
+
+using Impl = AssetManager::Impl;
+
+AssetManager::AssetManager(): impl(std::make_unique<Impl>(this)) {}
+
 AssetManager::~AssetManager() = default;
 
 HardwareDevice& AssetManager::device() const { return application().device(); };
 
-/// MARK: - Environment
 void AssetManager::setWorkingDir(std::filesystem::path path) {
-    _workingDir = path.lexically_normal();
-    if (!std::filesystem::exists(_workingDir)) {
-        std::filesystem::create_directories(_workingDir);
+    impl->workingDir = path.lexically_normal();
+    if (!std::filesystem::exists(impl->workingDir)) {
+        std::filesystem::create_directories(impl->workingDir);
     }
     /// Load working dir
-    assets.clear();
+    impl->assets.clear();
     refreshWorkingDir();
 }
 
 void AssetManager::refreshWorkingDir(bool forceOverrides) {
-    if (_workingDir.empty()) {
+    if (impl->workingDir.empty()) {
         return;
     }
     auto dirItr = std::filesystem::recursive_directory_iterator(workingDir());
     for (auto const& entry: dirItr) {
-        if (!std::filesystem::is_regular_file(entry.path())) {
+        if (!std::filesystem::is_regular_file(entry.path()) ||
+            utl::is_hidden(entry.path()))
+        {
             continue;
         }
-        if (utl::is_hidden(entry.path())) {
-            continue;
-        }
-        readAssetMetaData(entry.path(), forceOverrides);
+        impl->readAssetMetaData(entry.path(), forceOverrides);
     }
     compileScripts();
 }
 
-/// MARK: - Create
-Reference<Asset> AssetManager::create(AssetType type, std::string_view name,
-                                      std::filesystem::path dest) {
-    auto const handle = AssetHandle::generate(type);
-    Reference<Asset> const ref = allocateAsset(handle, std::string(name));
-    InternalAsset asset{ .theAsset = ref,
-                         .name = std::string(name),
-                         .diskLocation =
-                             dest / utl::strcat(name, toExtension(type)),
-                         .handle = handle };
-    assets.insert({ handle.id(), asset });
-    flushToDisk(handle);
+std::filesystem::path AssetManager::workingDir() const {
+    return impl->workingDir;
+}
+
+Reference<Asset> AssetManager::create(AssetType type, std::string name,
+                                      std::filesystem::path destDir) {
+    BL_EXPECT(std::filesystem::is_directory(destDir));
+    auto handle = AssetHandle::generate(type);
+    Reference<Asset> ref = impl->allocateAsset(handle, name);
+    TableEntry entry{ .asset = ref,
+                      .name = name,
+                      .diskLocation = destDir / append(name, toExtension(type)),
+                      .handle = handle };
+    impl->assets.insert({ handle.ID(), std::move(entry) });
+    impl->flushToDisk(handle);
     return ref;
 }
 
 /// MARK: - Import
 AssetHandle AssetManager::import(std::filesystem::path source,
                                  std::filesystem::path dest) {
-    std::string const name = source.filename().replace_extension();
-    AssetType const type = getImportType(source.extension().string());
-    if (type != AssetType::staticMesh) {
-        Logger::error("Failed to import resource ", source);
+    std::string name = source.filename().replace_extension();
+    std::optional type =
+        impl->deduceImportedAssetType(source.extension().string());
+    /// Only static meshes can be imported for now
+    if (!type || *type != AssetType::StaticMesh) {
+        Logger::Error("Failed to import resource ", source);
         return {};
     }
-    auto const diskLocation = dest / (name + toExtension(type));
-    auto const [asset, assetRef] = [&]() {
+    auto diskLocation = dest / append(name, toExtension(*type));
+    auto [entry, asset] = [&]() -> std::tuple<TableEntry&, Reference<Asset>> {
         if (std::filesystem::exists(diskLocation)) {
-            auto const handle = readHeader(diskLocation).handle();
-            auto* const asset = find(handle);
-            assert(asset);
-            auto assetRef = asset->theAsset.lock();
-            if (!assetRef) {
-                assetRef = allocateAsset(handle, name);
-                asset->theAsset = assetRef;
+            auto handle = impl->readHeader(diskLocation).handle();
+            auto* entry = impl->find(handle);
+            assert(entry);
+            auto asset = entry->asset.lock();
+            if (!asset) {
+                asset = impl->allocateAsset(handle, name);
+                entry->asset = asset;
             }
-            return std::tuple<InternalAsset&, Reference<Asset>>{ *asset,
-                                                                 assetRef };
+            return { *entry, std::move(asset) };
         }
         else {
-            auto const handle = AssetHandle::generate(type);
-            auto const assetRef = allocateAsset(handle, name);
-            auto [itr, success] = assets.insert(
-                { handle.id(), InternalAsset{ .theAsset = assetRef,
-                                              .name = name,
-                                              .diskLocation = diskLocation } });
-            return std::tuple<InternalAsset&, Reference<Asset>>{ itr->second,
-                                                                 assetRef };
+            auto handle = AssetHandle::generate(*type);
+            auto asset = impl->allocateAsset(handle, name);
+            auto [itr, success] = impl->assets.insert(
+                { handle.ID(), TableEntry{ .asset = asset,
+                                           .name = name,
+                                           .diskLocation = diskLocation } });
+            return { itr->second, std::move(asset) };
         }
     }();
-    auto const handle = assetRef->handle();
-    switch (type) {
-    case AssetType::staticMesh:
-        importStaticMesh(utl::down_cast<StaticMesh*>(assetRef.get()), source);
-        break;
-    default:
-        BL_DEBUGBREAK();
-    }
-    flushToDisk(handle);
+    auto handle = asset->handle();
+    impl->doImport(*asset, source);
+    impl->flushToDisk(handle);
     return handle;
 }
 
 /// MARK: - Remove
 void AssetManager::remove(AssetHandle handle) {
-    auto const itr = assets.find(handle.id());
-    if (itr == assets.end()) {
-        Logger::warn("Failed to remove asset: Asset does not exist.");
+    auto const itr = impl->assets.find(handle.ID());
+    if (itr == impl->assets.end()) {
+        Logger::Warn("Failed to remove asset: does not exist.");
         return;
     }
     std::filesystem::remove(itr->second.diskLocation);
-    assets.erase(itr);
+    impl->assets.erase(itr);
 }
 
 /// MARK: - Access
 Reference<Asset> AssetManager::get(AssetHandle handle) {
-    auto const itr = assets.find(handle.id());
-    if (itr == assets.end()) {
-        Logger::error("Failed to get Asset");
+    auto itr = impl->assets.find(handle.ID());
+    if (itr == impl->assets.end()) {
+        Logger::Error("Failed to get asset ", handle);
         return nullptr;
     }
-    auto& weakAsset = itr->second.theAsset;
-    if (auto const asset = weakAsset.lock()) {
-        assert(handle == asset->handle());
+    auto& entry = itr->second;
+    if (auto asset = entry.asset.lock()) {
         return asset;
     }
-    auto const asset = allocateAsset(handle, itr->second.name);
-    weakAsset = asset;
+    auto asset = impl->allocateAsset(handle, entry.name);
+    entry.asset = asset;
     return asset;
 }
 
 std::string AssetManager::getName(AssetHandle handle) const {
-    if (auto const* asset = find(handle)) {
-        return asset->name;
+    if (auto* entry = impl->find(handle)) {
+        return entry->name;
     }
     return std::string{};
 }
@@ -147,225 +256,206 @@ std::string AssetManager::getName(AssetHandle handle) const {
 std::filesystem::path AssetManager::getAbsoluteFilepath(
     AssetHandle handle) const {
     auto rel = getRelativeFilepath(handle);
-    return rel.empty() ? rel : makeAbsolute(rel);
+    return rel.empty() ? rel : impl->makeAbsolute(rel);
 }
 
 std::filesystem::path AssetManager::getRelativeFilepath(
     AssetHandle handle) const {
-    if (auto const* asset = find(handle)) {
-        return asset->diskLocation;
+    if (auto* entry = impl->find(handle)) {
+        return entry->diskLocation;
     }
     return std::filesystem::path{};
 }
 
-void AssetManager::makeAvailable(AssetHandle handle, AssetRepresentation rep,
+bool AssetManager::makeAvailable(AssetHandle handle, AssetRepresentation repr,
                                  bool force) {
-    auto const itr = assets.find(handle.id());
-    if (itr == assets.end()) {
-        Logger::error("Failed to make available: ID not found [ID = {}]",
-                      handle.id());
-        return;
+    static constexpr std::string_view ErrorPrelude =
+        "Failed to make asset available: ";
+    auto* entry = impl->find(handle);
+    if (!entry) {
+        Logger::Error(ErrorPrelude, "ID ", handle.ID(), " not found");
+        return false;
     }
-    auto const assetRef = itr->second.theAsset.lock();
-    if (!assetRef) {
-        Logger::error("Failed to make available: No references to asset \"{}\"",
-                      itr->second.name);
-        return;
+    auto asset = entry->asset.lock();
+    if (!asset) {
+        Logger::Error(ErrorPrelude, "No references to asset \"", entry->name,
+                      "\"");
+        return false;
     }
-    assert(handle == assetRef->handle());
     try {
-        switch (handle.type()) {
-        case AssetType::staticMesh:
-            makeStaticMeshAvailable(itr->second, rep, force);
-            break;
-
-        case AssetType::material:
-            makeMaterialAvailable(itr->second, rep, force);
-            break;
-
-        case AssetType::materialInstance:
-            makeMaterialInstanceAvailable(itr->second, rep, force);
-            break;
-
-        case AssetType::scene:
-            makeSceneAvailable(itr->second, rep, force);
-            break;
-
-        case AssetType::script:
-            makeScriptAvailable(itr->second, rep, force);
-            break;
-
-        default:
-            BL_DEBUGFAIL("Unimplemented");
-            break;
-        }
+        return visit(*asset, [&](auto& asset) {
+            return impl->makeAvailImpl(asset, *entry, repr, force);
+        });
     }
     catch (std::exception const& e) {
-        Logger::error("Failed to make Asset Available: ", e.what());
+        Logger::Error(ErrorPrelude, e.what());
+        return false;
     }
 }
 
-bool AssetManager::isValid(AssetHandle handle) const { return !!find(handle); }
+bool Impl::makeAvailImpl(StaticMesh& mesh, TableEntry const& entry,
+                         AssetRepresentation repr, bool force) {
+    // clang-format off
+    visitRepr(repr, utl::overload{
+        [&](Tag<AssetRepresentation::CPU>) {
+            if (mesh.mData && !force) {
+                return;
+            }
+            mesh.mData = readStaticMeshFromDisk(entry.diskLocation);
+        },
+        [&](Tag<AssetRepresentation::GPU>) {
+            loadStaticMeshRenderer(mesh, entry);
+        },
+    }); // clang-format on
+    return true;
+}
 
-/// MARK: - Save
-void AssetManager::saveToDisk(AssetHandle handle) { flushToDisk(handle); }
+bool Impl::makeAvailImpl(SkeletalMesh&, TableEntry const&, AssetRepresentation,
+                         bool) {
+    BL_UNIMPLEMENTED();
+}
+
+bool Impl::makeAvailImpl(Material& mat, TableEntry const&,
+                         AssetRepresentation repr, bool force) {
+    // clang-format off
+    visitRepr(repr, utl::overload{
+        [&](Tag<AssetRepresentation::CPU>) {
+            Logger::Warn("No CPU Representation for materials yet");
+        },
+        [&](Tag<AssetRepresentation::GPU>) {
+            if (mat.mainPass && !force) {
+                return;
+            }
+            mat.makeDefault(assetManager->device());
+        },
+    }); // clang-format on
+    return true;
+}
+
+bool Impl::makeAvailImpl(MaterialInstance& inst, TableEntry const& entry,
+                         AssetRepresentation repr, bool) {
+    loadMaterialInstanceFromDisk(inst, entry.diskLocation);
+    // clang-format off
+    visitRepr(repr, utl::overload{
+        [&](Tag<AssetRepresentation::CPU>) {
+            Logger::Warn("No CPU Representation for materials yet");
+        },
+        [&](Tag<AssetRepresentation::GPU>) {
+            assetManager->makeAvailable(inst.material()->handle(),
+                                        AssetRepresentation::GPU);
+        },
+    }); // clang-format on
+    return true;
+}
+
+bool Impl::makeAvailImpl(Scene& scene, TableEntry const& entry,
+                         AssetRepresentation repr, bool) {
+    // clang-format off
+    visitRepr(repr, utl::overload{
+        [&](Tag<AssetRepresentation::CPU>) {
+            loadSceneFromDisk(scene, entry.diskLocation);
+        },
+        [&](Tag<AssetRepresentation::GPU>) {
+            Logger::Error("No GPU Representation for scenes");
+        },
+    }); // clang-format on
+    return true;
+}
+
+bool Impl::makeAvailImpl(ScriptSource&, TableEntry const&,
+                         AssetRepresentation repr, bool) {
+    // clang-format off
+    visitRepr(repr, utl::overload{
+        [&](Tag<AssetRepresentation::CPU>) {
+            Logger::Error("No GPU Representation for script source files");
+        },
+        [&](Tag<AssetRepresentation::GPU>) {
+            Logger::Error("No GPU Representation for script source files");
+        },
+    }); // clang-format on
+    return false;
+}
+
+bool AssetManager::isValid(AssetHandle handle) const {
+    return impl->find(handle);
+}
+
+void AssetManager::saveToDisk(AssetHandle handle) { impl->flushToDisk(handle); }
 
 void AssetManager::saveAll() {
-    for (auto&& [id, ia]: assets) {
-        saveToDisk(ia.handle);
+    for (auto& [ID, entry]: impl->assets) {
+        saveToDisk(entry.handle);
     }
 }
 
-/// MARK: - Uncategorized
 AssetHandle AssetManager::getHandleFromFile(std::filesystem::path path) const {
-    return readHeader(path).handle();
+    return impl->readHeader(path).handle();
 }
 
 void AssetManager::compileScripts() {
     dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
-    //    scatha::Compiler compiler;
-    //    for (auto&& [id, internal]: assets) {
-    //        if (internal.handle.type() != AssetType::script) {
-    //            continue;
-    //        }
-    //        auto const script = as<Script>(get(internal.handle));
-    //        makeAvailable(internal.handle, AssetRepresentation::CPU, true);
-    //        compiler.addSource(script->text);
-    //    }
-    //    program = compiler.compile();
+#if 0
+    scatha::Compiler compiler;
+    for (auto&& [id, internal]: assets) {
+        if (internal.handle.type() != AssetType::script) {
+            continue;
+        }
+        auto const script = as<Script>(get(internal.handle));
+        makeAvailable(internal.handle, AssetRepresentation::CPU, true);
+        compiler.addSource(script->text);
+    }
+    program = compiler.compile();
+#endif
     dispatch(DispatchToken::Now, ScriptsDidLoadEvent{});
 }
 
-/// MARK: - Internals
-Reference<Asset> AssetManager::allocateAsset(AssetHandle handle,
-                                             std::string name) const {
+Reference<Asset> Impl::allocateAsset(AssetHandle handle,
+                                     std::string name) const {
     return dispatchAssetType(handle.type(),
                              [&]<typename A>(utl::tag<A>) -> Reference<Asset> {
         return allocateRef<A>(handle, std::move(name));
     });
 }
 
-AssetManager::InternalAsset* AssetManager::find(AssetHandle handle) {
-    return const_cast<InternalAsset*>(utl::as_const(*this).find(handle));
+TableEntry* Impl::find(AssetHandle handle) {
+    return const_cast<TableEntry*>(utl::as_const(*this).find(handle));
 }
 
-AssetManager::InternalAsset const* AssetManager::find(
-    AssetHandle handle) const {
+TableEntry const* Impl::find(AssetHandle handle) const {
     if (!handle) {
         return nullptr;
     }
-    auto const itr = assets.find(handle.id());
+    auto const itr = assets.find(handle.ID());
     if (itr == assets.end()) {
         return nullptr;
     }
     return &itr->second;
 }
 
-void AssetManager::readAssetMetaData(std::filesystem::path diskLocation,
-                                     bool forceOverride) {
+void Impl::readAssetMetaData(std::filesystem::path const& diskLocation,
+                             bool forceOverride) {
     AssetFileHeader const header = readHeader(makeAbsolute(diskLocation));
     auto const handle = header.handle();
     if (find(handle)) {
         if (!forceOverride) return;
     }
-    auto iAsset =
-        InternalAsset{ .theAsset = allocateAsset(handle, header.name()),
-                       .name = header.name(),
-                       .diskLocation = diskLocation,
-                       .handle = handle };
-    auto const [itr, success] = assets.insert({ handle.id(), iAsset });
-    if (!success) {
-        itr->second = iAsset;
-    }
+    assets[handle.ID()] = { .asset = allocateAsset(handle, header.name()),
+                            .name = header.name(),
+                            .diskLocation = diskLocation,
+                            .handle = handle };
 }
 
-/// MARK: - Make Available
-void AssetManager::makeStaticMeshAvailable(InternalAsset& ia,
-                                           AssetRepresentation rep,
-                                           bool force) {
-    StaticMesh* smAsset = utl::down_cast<StaticMesh*>(ia.theAsset.lock().get());
-    if (test(rep & AssetRepresentation::CPU) && (!smAsset->mData || force)) {
-        smAsset->mData = readStaticMeshFromDisk(ia.diskLocation);
+Reference<StaticMeshData> Impl::readStaticMeshFromDisk(
+    std::filesystem::path const& source) {
+    assert(toExtension(source) == FileExtension::Bmesh);
+    auto file = openFile(makeAbsolute(source), std::ios::in | std::ios::binary);
+    auto header = readHeader(file);
+    if (header.handle().type() != AssetType::StaticMesh) {
+        Logger::Error("File was not a static mesh");
+        return nullptr;
     }
-    if (test(rep & AssetRepresentation::GPU) && (!smAsset->mRenderer || force))
-    {
-        loadStaticMeshRenderer(ia);
-    }
-}
-
-void AssetManager::makeMaterialAvailable(InternalAsset& ia,
-                                         AssetRepresentation rep, bool force) {
-    auto ref = ia.theAsset.lock();
-    assert((bool)ref);
-    Material& material = utl::down_cast<Material&>(*ref);
-    if (test(rep & AssetRepresentation::CPU)) {
-        Logger::warn("No CPU Representation for materials yet");
-    }
-    if (test(rep & AssetRepresentation::GPU)) {
-        if (!material.mainPass || force) {
-            material =
-                Material::makeDefaultMaterial(device(),
-                                              static_cast<Asset&>(material));
-        }
-    }
-}
-
-void AssetManager::makeMaterialInstanceAvailable(InternalAsset& ia,
-                                                 AssetRepresentation rep,
-                                                 bool force) {
-    auto ref = ia.theAsset.lock();
-    assert((bool)ref);
-    MaterialInstance& inst = utl::down_cast<MaterialInstance&>(*ref);
-    if (true || test(rep & AssetRepresentation::CPU)) {
-        inst = loadMaterialInstanceFromDisk(ia.handle, ia.diskLocation);
-    }
-    if (test(rep & AssetRepresentation::GPU)) {
-        makeAvailable(inst.material()->handle(), AssetRepresentation::GPU);
-        Logger::trace("Renderer is responsible for uploading material instance "
-                      "data to GPU");
-    }
-}
-
-void AssetManager::makeSceneAvailable(InternalAsset& ia,
-                                      AssetRepresentation rep, bool force) {
-    auto ref = ia.theAsset.lock();
-    assert((bool)ref);
-    Scene& scene = utl::down_cast<Scene&>(*ref);
-    if (test(rep & AssetRepresentation::CPU)) {
-        scene = loadSceneFromDisk(ia.handle, ia.diskLocation);
-    }
-    if (test(rep & AssetRepresentation::GPU)) {
-        Logger::warn("No GPU Representation for scenes");
-        return;
-    }
-}
-
-void AssetManager::makeScriptAvailable(InternalAsset& ia,
-                                       AssetRepresentation rep, bool force) {
-    Script* asset = utl::down_cast<Script*>(ia.theAsset.lock().get());
-    if (test(rep & AssetRepresentation::CPU)) {
-        asset->text = loadTextFromDisk(ia.diskLocation);
-    }
-    if (test(rep & AssetRepresentation::GPU)) {
-        Logger::warn("No GPU Representation for scripts");
-    }
-}
-
-/// MARK: Disk -> Memory
-Reference<StaticMeshData> AssetManager::readStaticMeshFromDisk(
-    std::filesystem::path source) {
-    assert(toExtension(source) == FileExtension::bmesh);
-    source = makeAbsolute(source);
-    std::fstream file(source, std::ios::in | std::ios::binary);
-    handleFileError(file, source);
-    auto const header = readHeader(file);
-    if (header.handle().type() != AssetType::staticMesh) {
-        Logger::error("File was not a Mesh");
-        BL_DEBUGBREAK();
-        return {};
-    }
-    auto const meshHeader = header.customDataAs<MeshFileHeader>();
-    auto const result = allocateRef<StaticMeshData>();
+    auto meshHeader = header.customDataAs<MeshFileHeader>();
+    auto result = allocateRef<StaticMeshData>();
     result->vertices.resize(meshHeader.vertexDataSize / sizeof(Vertex3D),
                             utl::no_init);
     result->indices.resize(meshHeader.indexDataSize / sizeof(uint32_t),
@@ -375,258 +465,190 @@ Reference<StaticMeshData> AssetManager::readStaticMeshFromDisk(
     return result;
 }
 
-MaterialInstance AssetManager::loadMaterialInstanceFromDisk(
-    AssetHandle handle, std::filesystem::path source) {
-    assert(toExtension(source) == FileExtension::bmatinst);
-    source = makeAbsolute(source);
-    std::fstream file(source, std::ios::in | std::ios::binary);
-    handleFileError(file, source);
-    auto const header = readHeader(file);
-    if (header.handle().type() != AssetType::materialInstance) {
-        Logger::error("File was not a Material Instance");
-        BL_DEBUGBREAK();
-        return MaterialInstance(handle, header.name());
+void Impl::loadMaterialInstanceFromDisk(MaterialInstance& inst,
+                                        std::filesystem::path const& source) {
+    assert(toExtension(source) == FileExtension::Bmatinst);
+    auto file = openFile(makeAbsolute(source), std::ios::in | std::ios::binary);
+    auto header = readHeader(file);
+    if (header.handle().type() != AssetType::MaterialInstance) {
+        Logger::Error("File was not a Material Instance");
+        // TODO: Throw exception here
+        BL_UNIMPLEMENTED();
     }
-    auto const materialInstanceHeader =
+    auto materialInstanceHeader =
         header.customDataAs<MaterialInstanceFileHeader>();
     (void)materialInstanceHeader;
-    std::stringstream sstr;
-    sstr << file.rdbuf();
-    YAML::Node root = YAML::Load(sstr.str());
-    MaterialInstance inst(handle, header.name());
-    inst.deserialize(root, *this);
-    return inst;
+    YAML::Node root = YAML::Load(file);
+    inst.deserialize(root, *assetManager);
 }
 
-Scene AssetManager::loadSceneFromDisk(AssetHandle handle,
-                                      std::filesystem::path source) {
-    assert(toExtension(source) == FileExtension::bscene);
-    source = makeAbsolute(source);
-    std::fstream file(source, std::ios::in | std::ios::binary);
-    handleFileError(file, source);
-    auto const header = readHeader(file);
-    if (header.handle().type() != AssetType::scene) {
-        Logger::error("File was not a Scene");
-        BL_DEBUGBREAK();
-        return Scene(handle, header.name());
+void Impl::loadSceneFromDisk(Scene& scene,
+                             std::filesystem::path const& source) {
+    assert(toExtension(source) == FileExtension::Bscene);
+    auto file = openFile(makeAbsolute(source), std::ios::in | std::ios::binary);
+    if (readHeader(file).handle().type() != AssetType::Scene) {
+        Logger::Error("File was not a Scene");
+        // TODO: Throw exception here
+        BL_UNIMPLEMENTED();
     }
-    auto const sceneHeader = header.customDataAs<SceneFileHeader>();
-    (void)sceneHeader;
-    std::stringstream sstr;
-    sstr << file.rdbuf();
-    YAML::Node root = YAML::Load(sstr.str());
-    Scene scene(handle, header.name());
-    scene.deserialize(root, *this);
-    return scene;
+    YAML::Node root = YAML::Load(file);
+    scene.deserialize(root, *assetManager);
 }
 
-std::string AssetManager::loadTextFromDisk(std::filesystem::path source) {
-    assert(toExtension(source) == FileExtension::chai);
-    source = makeAbsolute(source);
-    std::fstream file(source, std::ios::in);
-    handleFileError(file, source);
+std::string Impl::loadTextFromDisk(std::filesystem::path const& source) {
+    assert(toExtension(source) == FileExtension::Scatha);
+    auto file = openFile(makeAbsolute(source), std::ios::in);
     std::stringstream sstr;
     sstr << file.rdbuf();
     return sstr.str();
 }
 
 /// MARK: - Memory -> GPU
-void AssetManager::loadStaticMeshRenderer(InternalAsset& ia) {
-    auto* const asset = utl::down_cast<StaticMesh*>(ia.theAsset.lock().get());
-    if (asset->mRenderer) {
+void Impl::loadStaticMeshRenderer(StaticMesh& mesh, TableEntry const& entry) {
+    if (mesh.mRenderer) {
         return;
     }
-    Reference<StaticMeshData> smData = asset->mData;
-    if (!smData) {
-        smData = readStaticMeshFromDisk(ia.diskLocation);
+    if (!mesh.mData) {
+        mesh.mData = readStaticMeshFromDisk(entry.diskLocation);
     }
-    asset->mRenderer = allocateRef<StaticMeshRenderer>();
-    auto* const mesh = asset->mRenderer.get();
+    mesh.mRenderer = allocateRef<StaticMeshRenderer>();
+    auto* renderer = mesh.mRenderer.get();
     BufferDescription desc;
-    desc.data = smData->vertices.data();
-    desc.size = smData->vertices.size() * sizeof(smData->vertices[0]);
+    auto& vertices = mesh.mData->vertices;
+    desc.data = vertices.data();
+    desc.size = vertices.size() * sizeof(vertices[0]);
     desc.storageMode = StorageMode::shared;
-    mesh->mVertexBuffer = device().createBuffer(desc);
-    desc.data = smData->indices.data();
-    desc.size = smData->indices.size() * 4;
-    mesh->mIndexBuffer = device().createBuffer(desc);
+    renderer->mVertexBuffer = assetManager->device().createBuffer(desc);
+    desc.data = mesh.mData->indices.data();
+    desc.size = mesh.mData->indices.size() * 4;
+    renderer->mIndexBuffer = assetManager->device().createBuffer(desc);
 }
 
-/// MARK: - Memory -> Disk
-void AssetManager::flushToDisk(AssetHandle handle) {
-    switch (handle.type()) {
-    case AssetType::staticMesh:
-        flushStaticMeshToDisk(handle);
-        break;
-    case AssetType::material:
-        flushMaterialToDisk(handle);
-        break;
-    case AssetType::materialInstance:
-        flushMaterialInstanceToDisk(handle);
-        break;
-    case AssetType::scene:
-        flushSceneToDisk(handle);
-        break;
-    case AssetType::script:
-        flushScriptToDisk(handle);
-        break;
-
-    default:
-        BL_DEBUGBREAK();
-        break;
-    }
-}
-
-void AssetManager::flushStaticMeshToDisk(AssetHandle handle) {
-    auto const* const asset = find(handle);
-    assert(asset);
-    auto const assetRef = asset->theAsset.lock();
-    if (!assetRef) {
+void Impl::flushToDisk(AssetHandle handle) {
+    auto* entry = find(handle);
+    if (!entry) {
+        Logger::Error("Failed to write asset ", handle, " to disk");
         return;
     }
-    assert(assetRef->handle() == handle);
-    auto const* mesh =
-        utl::down_cast<StaticMesh const*>(assetRef.get())->mData.get();
-    if (!mesh) {
-        return;
-    }
-    std::uint64_t const vertexDataSize =
-        mesh->vertices.size() * sizeof(bloom::Vertex3D);
-    std::uint64_t const indexDataSize = mesh->indices.size() * sizeof(uint32_t);
-    /// Make header
-    AssetFileHeader const header(handle, FileFormat::binary, asset->name,
-                                 MeshFileHeader{
-                                     .vertexDataSize = vertexDataSize,
-                                     .indexDataSize = indexDataSize });
-    std::ios::sync_with_stdio(false);
-    auto const dest = makeAbsolute(asset->diskLocation);
-    std::fstream file(dest, std::ios::out | std::ios::trunc | std::ios::binary);
-    handleFileError(file, dest);
-    file.write((char*)&header, sizeof(AssetFileHeader));
-    file.write((char*)mesh->vertices.data(), vertexDataSize);
-    file.write((char*)mesh->indices.data(), indexDataSize);
-}
-
-void AssetManager::flushMaterialToDisk(AssetHandle handle) {
-    auto const* const asset = find(handle);
-    assert(asset);
-    auto const assetRef = asset->theAsset.lock();
-    assert(!!assetRef);
-    assert(assetRef->handle() == handle);
-    /// Make header
-    AssetFileHeader const header(handle, FileFormat::binary, asset->name,
-                                 MaterialFileHeader{});
-    std::ios::sync_with_stdio(false);
-    auto const dest = makeAbsolute(asset->diskLocation);
-    auto const destLocation = std::filesystem::path{ dest }.remove_filename();
-    if (!std::filesystem::exists(destLocation)) {
-        std::filesystem::create_directory(destLocation);
-    }
-    std::fstream file(dest, std::ios::out | std::ios::trunc | std::ios::binary);
-    handleFileError(file, dest);
-
-    file.write((char*)&header, sizeof(AssetFileHeader));
-}
-
-void AssetManager::flushMaterialInstanceToDisk(AssetHandle handle) {
-    InternalAsset const* const ia = find(handle);
-    assert(ia);
-    auto const asset = ia->theAsset.lock();
+    auto asset = entry->asset.lock();
     if (!asset) {
         return;
     }
-    assert(asset->handle() == handle);
-    auto const& inst = utl::down_cast<MaterialInstance const&>(*asset);
-    // Make header
-    AssetFileHeader const header(handle, FileFormat::text, ia->name,
-                                 MaterialInstanceFileHeader{});
+    visit(*asset, [&](auto& asset) {
+        flushToDiskImpl(asset, makeAbsolute(entry->diskLocation));
+    });
+}
+
+void Impl::flushToDiskImpl(StaticMesh const& mesh,
+                           std::filesystem::path const& dest) {
+    auto* data = mesh.mData.get();
+    if (!data) {
+        return;
+    }
+    std::uint64_t vertexDataSize =
+        data->vertices.size() * sizeof(bloom::Vertex3D);
+    std::uint64_t indexDataSize = data->indices.size() * sizeof(uint32_t);
+    /// Make header
+    AssetFileHeader header(mesh.handle(), FileFormat::Binary, mesh.name(),
+                           MeshFileHeader{ .vertexDataSize = vertexDataSize,
+                                           .indexDataSize = indexDataSize });
     std::ios::sync_with_stdio(false);
-    auto const dest = makeAbsolute(ia->diskLocation);
-    std::fstream file(dest, std::ios::out | std::ios::trunc | std::ios::binary);
-    handleFileError(file, dest);
-    file.write((char*)&header, sizeof(AssetFileHeader));
+    auto file =
+        openFile(dest, std::ios::out | std::ios::trunc | std::ios::binary);
+    file.write((char*)&header, sizeof header);
+    file.write((char*)data->vertices.data(), vertexDataSize);
+    file.write((char*)data->indices.data(), indexDataSize);
+}
+
+void Impl::flushToDiskImpl(SkeletalMesh const&, std::filesystem::path const&) {
+    BL_UNIMPLEMENTED();
+}
+
+void Impl::flushToDiskImpl(Material const& mat,
+                           std::filesystem::path const& dest) {
+    AssetFileHeader header(mat.handle(), FileFormat::Binary, mat.name(),
+                           MaterialFileHeader{});
+    std::ios::sync_with_stdio(false);
+    auto file =
+        openFile(dest, std::ios::out | std::ios::trunc | std::ios::binary);
+    file.write((char*)&header, sizeof header);
+}
+
+void Impl::flushToDiskImpl(MaterialInstance const& inst,
+                           std::filesystem::path const& dest) {
+    AssetFileHeader header(inst.handle(), FileFormat::Text, inst.name(),
+                           MaterialInstanceFileHeader{});
+    std::ios::sync_with_stdio(false);
+    auto file =
+        openFile(dest, std::ios::out | std::ios::trunc | std::ios::binary);
+    file.write((char*)&header, sizeof header);
     YAML::Emitter out;
     out << inst.serialize();
     file << out.c_str();
 }
 
-void AssetManager::flushSceneToDisk(AssetHandle handle) {
-    InternalAsset const* const ia = find(handle);
-    assert(ia);
-    auto const asset = ia->theAsset.lock();
-    assert(!!asset);
-    assert(asset->handle() == handle);
-    auto const& scene = utl::down_cast<Scene const&>(*asset);
-    /// Make header
-    AssetFileHeader const header(handle, FileFormat::text, ia->name,
-                                 SceneFileHeader{});
+void Impl::flushToDiskImpl(Scene const& scene,
+                           std::filesystem::path const& dest) {
+    AssetFileHeader header(scene.handle(), FileFormat::Text, scene.name(),
+                           SceneFileHeader{});
     std::ios::sync_with_stdio(false);
-    auto const dest = makeAbsolute(ia->diskLocation);
-    std::fstream file(dest, std::ios::out | std::ios::trunc | std::ios::binary);
-    handleFileError(file, dest);
-    file.write((char*)&header, sizeof(AssetFileHeader));
+    auto file =
+        openFile(dest, std::ios::out | std::ios::trunc | std::ios::binary);
+    file.write((char*)&header, sizeof header);
     YAML::Emitter out;
     out << scene.serialize();
     file << out.c_str();
 }
 
-void AssetManager::flushScriptToDisk(AssetHandle handle) {
-    auto const* const asset = find(handle);
-    assert(asset);
-    auto const assetRef = asset->theAsset.lock();
-    if (!assetRef) {
-        return;
-    }
-    assert(assetRef->handle() == handle);
-    auto const& script = utl::down_cast<Script const&>(*assetRef).text;
-    auto const dest = makeAbsolute(asset->diskLocation);
-    std::fstream file(dest, std::ios::out | std::ios::trunc);
-    handleFileError(file, dest);
-    file << script;
+void Impl::flushToDiskImpl(ScriptSource const&,
+                           std::filesystem::path const& dest) {
+    Logger::Warn(
+        "Script source is not written to disk because we don't have memory representation");
 }
 
-/// MARK: - Import
-AssetType AssetManager::getImportType(std::string_view extView) const {
+std::optional<AssetType> Impl::deduceImportedAssetType(
+    std::string_view extView) const {
     std::string ext(extView);
     std::transform(ext.begin(), ext.end(), ext.begin(),
                    [](auto c) { return std::toupper(c); });
     if (ext == ".FBX") {
-        return AssetType::staticMesh;
+        return AssetType::StaticMesh;
     }
-    return AssetType::none;
+    return std::nullopt;
 }
 
-void AssetManager::importStaticMesh(StaticMesh* meshOut,
-                                    std::filesystem::path source) const {
-    assert(source.has_filename());
-    assert(source.has_extension());
-    MeshImporter importer;
-    meshOut->mData = allocateRef<StaticMeshData>(importer.import(source));
+void Impl::doImport(Asset& asset, std::filesystem::path const& source) const {
+    visit(asset, [&](auto& asset) { doImportImpl(asset, source); });
 }
 
-/// MARK: - File Handling
-std::filesystem::path AssetManager::makeRelative(
+void Impl::doImportImpl(StaticMesh& dest,
+                        std::filesystem::path const& source) const {
+    BL_EXPECT(source.has_filename());
+    BL_EXPECT(source.has_extension());
+    dest.mData = allocateRef<StaticMeshData>(importStaticMesh(source));
+}
+
+std::filesystem::path Impl::makeRelative(
     std::filesystem::path const& path) const {
     if (path.is_absolute()) {
-        return std::filesystem::relative(path, workingDir());
+        return std::filesystem::relative(path, workingDir);
     }
     return path;
 }
 
-std::filesystem::path AssetManager::makeAbsolute(
+std::filesystem::path Impl::makeAbsolute(
     std::filesystem::path const& path) const {
     if (path.is_relative()) {
-        return (workingDir() / path).lexically_normal();
+        return (workingDir / path).lexically_normal();
     }
     return path;
 }
 
-AssetFileHeader AssetManager::readHeader(std::filesystem::path path) const {
-    FileExtension const extension = toExtension(path);
+AssetFileHeader Impl::readHeader(std::filesystem::path const& path) const {
+    FileExtension extension = toExtension(path).value();
     if (hasHeader(extension)) {
         path = makeAbsolute(path);
-        std::fstream file(path);
-        handleFileError(file, path);
+        auto file = openFile(path);
         return readHeader(file);
     }
     return AssetFileHeader{
@@ -636,16 +658,17 @@ AssetFileHeader AssetManager::readHeader(std::filesystem::path path) const {
     };
 }
 
-AssetFileHeader AssetManager::readHeader(std::fstream& file) const {
+AssetFileHeader Impl::readHeader(std::fstream& file) const {
     AssetFileHeader header;
     file.read((char*)&header, sizeof(AssetFileHeader));
     return header;
 }
 
-void AssetManager::handleFileError(std::fstream& file,
-                                   std::filesystem::path const& path) const {
+std::fstream Impl::openFile(std::filesystem::path const& path,
+                            std::ios_base::openmode mode) const {
+    std::fstream file(path, mode);
     if (!file) {
-        BL_DEBUGBREAK();
         throw std::runtime_error(utl::strcat("Failed to open file ", path));
     }
+    return file;
 }

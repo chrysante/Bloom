@@ -1,4 +1,4 @@
-#include "MeshImporter.hpp"
+#include "Bloom/Asset/MeshImport.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -10,14 +10,12 @@
 
 #include "Bloom/Graphics/StaticMesh.hpp"
 
-namespace bloom {
+using namespace bloom;
 
 /// Maybe move this somewhere else
-static float baseWorldScale() { return 100; }
+static float BaseWorldScale() { return 100; }
 
-bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
-    using namespace bloom;
-
+StaticMeshData bloom::importStaticMesh(std::filesystem::path const& path) {
     std::fstream file(path, std::ios::in | std::ios::binary);
     if (!file) {
         throw std::runtime_error(utl::strcat("Failed to open file ", path));
@@ -35,7 +33,7 @@ bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
                                         aiProcess_JoinIdenticalVertices |
                                         aiProcess_FlipWindingOrder);
         auto* const scene = importer.GetScene();
-        Logger::trace("File ", path, " contains ", scene->mNumMeshes,
+        Logger::Trace("File ", path, " contains ", scene->mNumMeshes,
                       " mesh(es)");
         assert(scene->mNumMeshes);
 
@@ -58,7 +56,7 @@ bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
             for (std::size_t i = 0; i < vertexCount; ++i) {
                 auto& v = result.vertices[i];
                 if (position)
-                    v.position = baseWorldScale() *
+                    v.position = BaseWorldScale() *
                                  mtl::float3{ position[i].x, position[i].y,
                                               position[i].z };
                 if (normal)
@@ -89,5 +87,3 @@ bloom::StaticMeshData MeshImporter::import(std::filesystem::path path) {
         return result;
     }
 }
-
-} // namespace bloom

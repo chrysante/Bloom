@@ -13,6 +13,10 @@ class CoreSystem: public Emitter, public Receiver {
     friend class CoreSystemManager;
 
 public:
+    /// Systems are polymorphic and thus not copyable
+    CoreSystem(CoreSystem const&) = delete;
+    CoreSystem& operator=(CoreSystem const&) = delete;
+    
     ///
     virtual ~CoreSystem() = default;
 

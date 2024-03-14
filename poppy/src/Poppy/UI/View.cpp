@@ -170,14 +170,14 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
     try {
         ViewDescription const desc = node["View Base"].as<ViewDescription>();
         if (desc.id < 0) {
-            Logger::error("Negative View ID");
+            Logger::Error("Negative View ID");
             BL_DEBUGBREAK();
             return nullptr;
         }
 
         auto const entry = ViewRegistry::get(desc.name());
         if (!entry) {
-            Logger::error("Failed to deserialize View named '", desc.name(),
+            Logger::Error("Failed to deserialize View named '", desc.name(),
                           "'");
             return nullptr;
         }
@@ -190,7 +190,7 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
         return result;
     }
     catch (std::exception const& e) {
-        Logger::error(e.what());
+        Logger::Error(e.what());
     }
 
     return nullptr;

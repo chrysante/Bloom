@@ -22,6 +22,7 @@ target_link_libraries(bloom
     scatha
     utility
     yaml-cpp
+    termfmt
     "-framework AppKit"
     "-framework Metal"
     "-framework IOKit"

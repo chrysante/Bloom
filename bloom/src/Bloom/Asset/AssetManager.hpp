@@ -1,7 +1,9 @@
-#pragma once
+#ifndef BLOOM_ASSET_ASSETMANAGER_H
+#define BLOOM_ASSET_ASSETMANAGER_H
 
 #include <filesystem>
 #include <future>
+#include <memory>
 #include <optional>
 #include <span>
 
@@ -19,13 +21,17 @@
 namespace bloom {
 
 class HardwareDevice;
-class StaticMeshData;
-class StaticMesh;
+struct StaticMeshData;
 
+/// Manages lifetime and representation of all assets.
+/// Assets can be loaded from disk to CPU or GPU memory and vice versa
 class BLOOM_API AssetManager: public CoreSystem {
 public:
-    AssetManager() = default;
-    virtual ~AssetManager();
+    /// Construct an empty asset manager
+    AssetManager();
+
+    ///
+    ~AssetManager();
 
     /// MARK: Environment
     ///
@@ -34,13 +40,11 @@ public:
     /// not existent.
     void setWorkingDir(std::filesystem::path path);
 
+    /// ???
     void refreshWorkingDir(bool forceOverrides = false);
 
     /// @returns	Absolute path to working directory.
-    std::filesystem::path const& workingDir() const { return _workingDir; };
-
-    /// @brief	Reload working directory into memory.
-    //		void refreshFromWorkingDir();
+    std::filesystem::path workingDir() const;
 
     /// @brief	Retrieves the device.
     HardwareDevice& device() const;
@@ -52,8 +56,8 @@ public:
     /// @param name	Name of the asset.
     /// @param dest	Path to directory relative to current working directory.
     /// @returns	Reference to the created asset.
-    Reference<Asset> create(AssetType type, std::string_view name,
-                            std::filesystem::path dest);
+    Reference<Asset> create(AssetType type, std::string name,
+                            std::filesystem::path destDir);
 
     /// MARK: Import
     ///
@@ -88,28 +92,38 @@ public:
     /// invalid.
     std::string getName(AssetHandle handle) const;
 
-    /// @brief Retrieves the filepath of an asset.
-    /// @param handle 	Handle to an Asset. May be null or invalid.
-    /// @returns		Filepath to the Asset. Will be empty if handle was null
-    /// or invalid.
+    /// Retrieves the absolute filepath of the asset \p handle
+    ///
+    /// \param handle Handle to an Asset. May be null or invalid.
+    ///
+    /// \Returns the filepath of the asset referred to by \p handle. Will be
+    /// empty if \p handle was null or invalid.
     std::filesystem::path getAbsoluteFilepath(AssetHandle handle) const;
 
-    /// @brief Retrieves the filepath of an asset.
-    /// @param handle 	Handle to an Asset. May be null or invalid.
-    /// @returns		Filepath to the Asset. Will be empty if handle was null
-    /// or invalid.
+    /// Retrieves the filepath of the asset \p handle relative to the current
+    /// working directory
+    ///
+    /// \param handle Handle to an asset. May be null or invalid.
+    ///
+    /// \Returns the filepath of the asset \p handle. Will be empty if \p handle
+    /// was null or invalid.
     std::filesystem::path getRelativeFilepath(AssetHandle handle) const;
 
-    /// @brief 			Loads an asset from disk into CPU and/or GPU
-    /// memory.
-    /// @param handle 	Handle to an asset. May be null or invalid.
-    /// @param rep		Representation. Shall be any combination of
-    /// AssetRepresentation::CPU and AssetRepresentation::GPU.
+    /// Loads an asset from disk into CPU and/or GPU memory.
+    ///
     /// Does nothing if specified representation is not compatible with asset
     /// type.
-    /// @param force	If true, reloads asset into memory even if already
+    ///
+    /// \Returns `true` if operation was successful.
+    ///
+    /// \param handle Handle to an asset. May be null or invalid.
+    ///
+    /// \param rep Representation. Shall be any combination of
+    /// `AssetRepresentation::CPU` and `AssetRepresentation::GPU`.
+
+    /// \param force If true, reloads asset into memory even if already
     /// available.
-    void makeAvailable(AssetHandle handle, AssetRepresentation rep,
+    bool makeAvailable(AssetHandle handle, AssetRepresentation rep,
                        bool force = false);
 
     /// @brief 		Check if an AssetHandle is valid.
@@ -130,74 +144,16 @@ public:
     // path can be relative or absolute
     AssetHandle getHandleFromFile(std::filesystem::path path) const;
 
+    ///
     void compileScripts();
 
-private:
-    struct InternalAsset {
-        WeakReference<Asset> theAsset;
-        std::string name;
-        /// relative to working directory
-        std::filesystem::path diskLocation;
-        AssetHandle handle;
-    };
-
-    Reference<Asset> allocateAsset(AssetHandle, std::string name) const;
-    InternalAsset* find(AssetHandle);
-    InternalAsset const* find(AssetHandle) const;
-
-    void readAssetMetaData(std::filesystem::path diskLocation,
-                           bool forceOverride = false);
-
-    /// MARK: Make Available
-    void makeStaticMeshAvailable(InternalAsset&, AssetRepresentation rep,
-                                 bool force);
-    void makeMaterialAvailable(InternalAsset&, AssetRepresentation rep,
-                               bool force);
-    void makeMaterialInstanceAvailable(InternalAsset&, AssetRepresentation rep,
-                                       bool force);
-    void makeSceneAvailable(InternalAsset&, AssetRepresentation rep,
-                            bool force);
-    void makeScriptAvailable(InternalAsset&, AssetRepresentation rep,
-                             bool force);
-
-    /// MARK: Disk -> Memory
-    Reference<StaticMeshData> readStaticMeshFromDisk(
-        std::filesystem::path source);
-    MaterialInstance loadMaterialInstanceFromDisk(AssetHandle,
-                                                  std::filesystem::path source);
-    Scene loadSceneFromDisk(AssetHandle, std::filesystem::path source);
-    std::string loadTextFromDisk(std::filesystem::path source);
-
-    /// MARK: Memory -> GPU
-    void loadStaticMeshRenderer(InternalAsset&);
-
-    /// MARK: Memory -> Disk
-    void flushToDisk(AssetHandle);
-    void flushStaticMeshToDisk(AssetHandle);
-    void flushMaterialToDisk(AssetHandle);
-    void flushMaterialInstanceToDisk(AssetHandle);
-    void flushSceneToDisk(AssetHandle);
-    void flushScriptToDisk(AssetHandle);
-
-    /// MARK: Import
-    AssetType getImportType(std::string_view extension) const;
-    AssetHandle store(Reference<Asset> asset, std::string_view name,
-                      std::filesystem::path dest);
-    void importStaticMesh(StaticMesh* meshOut,
-                          std::filesystem::path source) const;
-
-    /// MARK: File Handling
-    [[nodiscard]] std::filesystem::path makeRelative(
-        std::filesystem::path const&) const;
-    [[nodiscard]] std::filesystem::path makeAbsolute(
-        std::filesystem::path const&) const;
-    AssetFileHeader readHeader(std::filesystem::path) const;
-    AssetFileHeader readHeader(std::fstream&) const;
-    void handleFileError(std::fstream&, std::filesystem::path const&) const;
+    /// Public to make implementation easier
+    struct Impl;
 
 private:
-    utl::hashmap<utl::uuid, InternalAsset> assets;
-    std::filesystem::path _workingDir;
+    std::unique_ptr<Impl> impl;
 };
 
 } // namespace bloom
+
+#endif // BLOOM_ASSET_ASSETMANAGER_H

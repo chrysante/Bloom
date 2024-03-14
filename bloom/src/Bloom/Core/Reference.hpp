@@ -1,11 +1,13 @@
-#pragma once
+#ifndef BLOOM_CORE_REFERENCE_H
+#define BLOOM_CORE_REFERENCE_H
 
 #include <concepts>
 #include <memory>
 #include <utl/common.hpp>
 
-#include "Base.hpp"
-#include "Debug.hpp"
+#include "Bloom/Core/Base.hpp"
+#include "Bloom/Core/Debug.hpp"
+#include "Bloom/Core/Dyncast.hpp"
 
 namespace bloom {
 
@@ -17,18 +19,19 @@ using WeakReference = std::weak_ptr<T>;
 
 template <typename Derived, typename Base>
     requires std::derived_from<Derived, Base>
-Reference<Derived> as(Reference<Base> const& baseRef) {
-    assert(baseRef == nullptr ||
-           dynamic_cast<Derived*>(baseRef.get()) != nullptr);
-    return std::static_pointer_cast<Derived>(baseRef);
-}
-
-template <typename Derived, typename Base>
-    requires std::derived_from<Derived, Base>
-Reference<Derived> as(Reference<Base>&& baseRef) {
-    assert(baseRef == nullptr ||
-           dynamic_cast<Derived*>(baseRef.get()) != nullptr);
-    return std::static_pointer_cast<Derived>(std::move(baseRef));
+Reference<Derived> as(Reference<Base> const& base) {
+    if constexpr (std::is_polymorphic_v<Base>) {
+        return std::dynamic_pointer_cast<Derived>(base);
+    }
+    else if constexpr (utl::dc::Dynamic<Base>) {
+        if (auto* p = dyncast<Derived*>(base.get())) {
+            return Reference<Derived>(base, p);
+        }
+        return nullptr;
+    }
+    else {
+        return std::static_pointer_cast<Derived>(base);
+    }
 }
 
 template <typename T, typename... Args>
@@ -38,3 +41,5 @@ Reference<T> allocateRef(Args&&... args) {
 }
 
 } // namespace bloom
+
+#endif // BLOOM_CORE_REFERENCE_H

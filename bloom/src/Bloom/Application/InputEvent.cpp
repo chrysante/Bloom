@@ -22,7 +22,7 @@ std::ostream& operator<<(std::ostream& str, InputEventType e) {
 
 InputEvent bloom::inputEventFromGLFWMouseButton(Input const& input,
                                                 int buttonCode, int action,
-                                                int mods) {
+                                                [[maybe_unused]] int mods) {
     auto const [type, button] = [&] {
         switch (buttonCode) {
         case GLFW_MOUSE_BUTTON_LEFT:
@@ -52,15 +52,15 @@ InputEvent bloom::inputEventFromGLFWMouseButton(Input const& input,
 
     switch (action) {
     case GLFW_PRESS: {
-        MouseDownEvent downEvent{ event };
-        downEvent.button = button;
-        downEvent.clickCount = 1; // TODO: get correct click count
+        MouseDownEvent downEvent{
+            event, .button = button,
+            .clickCount = 1 // TODO: get correct click count
+        };
         return InputEvent(type, downEvent);
     }
 
     case GLFW_RELEASE: {
-        MouseUpEvent upEvent{ event };
-        upEvent.button = button;
+        MouseUpEvent upEvent{ event, .button = button };
         return InputEvent(type, upEvent);
     }
     default:
@@ -68,15 +68,13 @@ InputEvent bloom::inputEventFromGLFWMouseButton(Input const& input,
     }
 }
 
-InputEvent bloom::inputEventFromGLFWCursorPos(Input const& input, double xpos,
-                                              double ypos) {
+InputEvent bloom::inputEventFromGLFWCursorPos(Input const& input, double,
+                                              double) {
     MouseMoveEvent event;
     event.modifierFlags = input.modFlags();
     event.locationInWindow = input.mousePosition();
     event.offset = input.mouseOffset();
-
-    MouseDragEvent dragEvent{ event };
-
+    MouseDragEvent dragEvent{ event, .button = MouseButton::None };
     if (input.mouseDown(MouseButton::Left)) {
         dragEvent.button = MouseButton::Left;
         return InputEvent(InputEventType::leftMouseDragged, dragEvent);

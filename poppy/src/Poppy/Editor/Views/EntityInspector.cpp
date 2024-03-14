@@ -265,12 +265,12 @@ void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
 
 void EntityInspector::receiveMeshDragDrop(bloom::EntityHandle entity) {
     using namespace bloom;
-    auto const payload = acceptAssetDragDrop(AssetType::staticMesh);
+    auto const payload = acceptAssetDragDrop({ AssetType::StaticMesh });
     if (!payload) {
         return;
     }
     auto const handle = *payload;
-    Logger::trace("Received Asset: ", assetManager().getName(handle));
+    Logger::Trace("Received Asset: ", assetManager().getName(handle));
 
     auto asset = as<StaticMesh>(assetManager().get(handle));
     assert(!!asset);
@@ -283,12 +283,12 @@ void EntityInspector::receiveMeshDragDrop(bloom::EntityHandle entity) {
 
 void EntityInspector::receiveMaterialDragDrop(bloom::EntityHandle entity) {
     using namespace bloom;
-    auto const payload = acceptAssetDragDrop(AssetType::materialInstance);
+    auto const payload = acceptAssetDragDrop({ AssetType::MaterialInstance });
     if (!payload) {
         return;
     }
     auto const handle = *payload;
-    Logger::trace("Received Asset: ", assetManager().getName(handle));
+    Logger::Trace("Received Asset: ", assetManager().getName(handle));
 
     auto materialInstance = as<MaterialInstance>(assetManager().get(handle));
     assert((bool)materialInstance);

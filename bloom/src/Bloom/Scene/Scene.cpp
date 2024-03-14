@@ -17,9 +17,7 @@ EntityHandle Scene::createEmptyEntity() {
 }
 
 EntityHandle Scene::createEmptyEntity(EntityID hint) {
-    EntityHandle const entity =
-        EntityHandle(_registry.create(hint.value()), this);
-    return entity;
+    return EntityHandle(_registry.create(hint.value()), this);
 }
 
 EntityHandle Scene::createEntity(std::string_view name) {
@@ -53,13 +51,12 @@ EntityHandle Scene::cloneEntity(EntityID from) {
 
 void Scene::deleteEntity(EntityID id) { _registry.destroy(id.value()); }
 
-Scene Scene::copy() {
-    utl::hashmap<EntityID, EntityID> idMap;
-
-    Scene result(handle(), std::string(name()));
-    assert(false);
+Reference<Scene> Scene::clone() {
+    BL_UNIMPLEMENTED();
 #if 0
-    _registry.each([&](EntityID fromID) {
+    utl::hashmap<EntityID, EntityID> idMap;
+    Scene result(handle(), std::string(name()));
+    each([&](EntityID fromID) {
         auto const fromHandle = this->getHandle(fromID);
         EntityID const toID = result.createEmptyEntity(fromID);
         auto const toHandle = result.getHandle(toID);
@@ -70,8 +67,6 @@ Scene Scene::copy() {
             }
         });
     });
-#endif
-
     /// Copy hierarchy
     for (auto [from, to]: idMap) {
         if (from == to) {
@@ -101,8 +96,8 @@ Scene Scene::copy() {
             }
         }
     }
-
     return result;
+#endif
 }
 
 /// MARK: Serialize
@@ -156,8 +151,8 @@ static YAML::Node serializeEntity(Scene const& scene, EntityID id) {
 
 static void deserializeEntity(YAML::Node const& node, Scene& scene,
                               AssetManager& assetManager) {
-    EntityID const reference(node["ID"].as<EntityID::RawType>());
-    EntityID const id = scene.createEmptyEntity(reference);
+    EntityID reference(node["ID"].as<EntityID::RawType>());
+    EntityID id = scene.createEmptyEntity(reference);
     auto entity = scene.getHandle(id);
     entity.add(TransformMatrixComponent{});
     assert(reference == entity);
@@ -167,24 +162,21 @@ static void deserializeEntity(YAML::Node const& node, Scene& scene,
     });
 }
 
-BLOOM_API YAML::Node Scene::serialize() const {
+YAML::Node Scene::serialize() const {
     YAML::Node root;
-    assert(false);
-#if 0
-    each([&](entt::entity entity) {
+    each([&](EntityID entity) {
         root.push_back(serializeEntity(*this, entity));
     });
-#endif
     return root;
 }
 
-BLOOM_API void Scene::deserialize(YAML::Node const& root,
+void Scene::deserialize(YAML::Node const& root,
                                   AssetManager& assetManager) {
     if (!root.IsSequence()) {
-        Logger::info("Failed to deserialize Scene: Scene is empty.");
+        Logger::Info("Failed to deserialize Scene: Scene is empty.");
         return;
     }
-
+    clear();
     for (YAML::Node const& node: root) {
         deserializeEntity(node, *this, assetManager);
     }
@@ -202,7 +194,7 @@ BLOOM_API void Scene::deserialize(YAML::Node const& root,
             if (std::find(parentsChildren.begin(), parentsChildren.end(),
                           entityID) == parentsChildren.end())
             {
-                Logger::fatal("Entity ", entityID, " [",
+                Logger::Fatal("Entity ", entityID, " [",
                               scene->getComponent<TagComponent>(entityID).name,
                               "] thinks Entity ", parentID, " [",
                               scene->getComponent<TagComponent>(parentID).name,
@@ -221,7 +213,7 @@ BLOOM_API void Scene::deserialize(YAML::Node const& root,
                 auto const child =
                     scene->getComponent<HierarchyComponent>(childID);
                 if (child.parent != entityID) {
-                    Logger::fatal(
+                    Logger::Fatal(
                         "Entity ", entityID, " [",
                         scene->getComponent<TagComponent>(entityID).name,
                         "] thinks it's a parent but "

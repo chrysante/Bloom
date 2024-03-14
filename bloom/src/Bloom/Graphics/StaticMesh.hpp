@@ -1,22 +1,23 @@
-#pragma once
+#ifndef BLOOM_GRAPHICS_STATICMESH_H
+#define BLOOM_GRAPHICS_STATICMESH_H
 
 #include <utl/vector.hpp>
 
-#include "Bloom/Asset/Asset.hpp"
 #include "Bloom/Core/Core.hpp"
 #include "Bloom/GPU/HardwarePrimitives.hpp"
+#include "Bloom/Graphics/Mesh.hpp"
 #include "Bloom/Graphics/Vertex.hpp"
 
 namespace bloom {
 
-class StaticMeshData;
+struct StaticMeshData;
 class StaticMeshRenderer;
 
-class BLOOM_API StaticMesh: public Asset {
+class BLOOM_API StaticMesh: public Mesh {
     friend class AssetManager;
 
 public:
-    using Asset::Asset;
+    BL_DEFINE_ASSET_CTOR(StaticMesh, Mesh)
 
     Reference<StaticMeshData> getData() { return mData; }
     Reference<StaticMeshRenderer> getRenderer() { return mRenderer; }
@@ -26,7 +27,7 @@ private:
     Reference<StaticMeshRenderer> mRenderer;
 };
 
-struct BLOOM_API StaticMeshData {
+struct StaticMeshData {
     utl::vector<Vertex3D> vertices;
     utl::vector<std::uint32_t> indices;
 };
@@ -43,3 +44,5 @@ private:
 };
 
 } // namespace bloom
+
+#endif // BLOOM_GRAPHICS_STATICMESH_H

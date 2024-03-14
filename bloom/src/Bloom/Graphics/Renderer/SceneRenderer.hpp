@@ -14,11 +14,13 @@ class Camera;
 
 class BLOOM_API SceneRenderer {
 public:
-    SceneRenderer() = default;
+    explicit SceneRenderer(Renderer* renderer = nullptr) {
+        mRenderer = renderer;
+    }
 
-    SceneRenderer(Renderer&);
+    virtual ~SceneRenderer() = default;
 
-    void setRenderer(Renderer& renderer);
+    void setRenderer(Renderer* renderer) { mRenderer = renderer; }
 
     Renderer& renderer() const { return *mRenderer; }
 
@@ -27,12 +29,10 @@ public:
     void draw(std::span<Scene const* const>, Camera const&, Framebuffer&,
               CommandQueue&);
 
-protected:
-    /// Overridable
+private:
     virtual void submitScene(Scene const&);
     virtual void submitExtra() {}
 
-private:
     Renderer* mRenderer = nullptr;
 };
 

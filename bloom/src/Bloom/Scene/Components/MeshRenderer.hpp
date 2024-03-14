@@ -9,7 +9,7 @@ namespace bloom {
 class AssetManager;
 
 struct BLOOM_API MeshRendererComponent {
-    BLOOM_REGISTER_COMPONENT("Mesh Renderer");
+    BLOOM_REGISTER_COMPONENT("Mesh Renderer")
 
     Reference<MaterialInstance> materialInstance;
     Reference<StaticMesh> mesh;

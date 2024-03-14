@@ -7,7 +7,7 @@
 namespace bloom {
 
 struct BLOOM_API Transform {
-    BLOOM_REGISTER_COMPONENT("Transform");
+    BLOOM_REGISTER_COMPONENT("Transform")
 
     mtl::float3 position = 0;
     mtl::quaternion_float orientation = 1;
@@ -24,7 +24,7 @@ struct BLOOM_API Transform {
 };
 
 struct BLOOM_API TransformMatrixComponent {
-    BLOOM_REGISTER_COMPONENT("Transform Matrix");
+    BLOOM_REGISTER_COMPONENT("Transform Matrix")
     mtl::float4x4 matrix;
 };
 

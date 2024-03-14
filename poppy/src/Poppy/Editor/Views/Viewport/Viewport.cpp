@@ -61,9 +61,8 @@ Viewport::Viewport(): BasicSceneInspector(this) {
         ToolbarIconButton([this] {
         return maximized() ? "resize-small" : "resize-full";
     }).onClick([this] {
-        bool const isMaximized = maximized();
-        dispatch(DispatchToken::NextFrame, [=] {
-            if (isMaximized) {
+        dispatch(DispatchToken::NextFrame, [maximized = maximized(), this] {
+            if (maximized) {
                 restore();
                 window().makeWindowed();
             }
@@ -84,7 +83,7 @@ void Viewport::init() {
         .buttonAlphaHovered = 1,
         .buttonAlphaActive = 1,
     });
-    sceneRenderer.setRenderer(editor().coreSystems().renderer());
+    sceneRenderer.setRenderer(&editor().coreSystems().renderer());
     gizmo.setInput(window().input());
     overlays.init(this);
 }
@@ -423,16 +422,17 @@ bloom::EntityHandle Viewport::readEntityID(mtl::float2 const mousePosition) {
 }
 
 void Viewport::receiveSceneDragDrop() {
-    auto payload = acceptAssetDragDrop(AssetType::scene);
-    if (payload) {
-        AssetHandle const handle = *payload;
-        auto asset = assetManager().get(handle);
-        assetManager().makeAvailable(handle, AssetRepresentation::CPU);
-
-        auto& sceneSystem = editor().coreSystems().sceneSystem();
-        sceneSystem.unloadAll();
-        sceneSystem.loadScene(as<Scene>(asset));
+    auto payload = acceptAssetDragDrop({ AssetType::Scene });
+    if (!payload) {
+        return;
     }
+    AssetHandle const handle = *payload;
+    auto& AM = assetManager();
+    auto asset = AM.get(handle);
+    AM.makeAvailable(handle, AssetRepresentation::CPU);
+    auto& sceneSystem = editor().coreSystems().sceneSystem();
+    sceneSystem.unloadAll();
+    sceneSystem.loadScene(as<Scene>(asset));
 }
 
 mtl::float3 Viewport::worldSpaceToViewSpace(mtl::float3 const positionWS) {

@@ -138,7 +138,7 @@ public:
     static void add(std::string name, Entry entry) {
         auto [_, success] = instance().entries.insert({ name, entry });
         if (!success) {
-            Logger::fatal("View '", name, "' is already registered.");
+            Logger::Fatal("View '", name, "' is already registered.");
             BL_DEBUGFAIL();
         }
     }

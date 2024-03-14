@@ -1,0 +1,16 @@
+// No include guards
+
+#ifndef BLOOM_ASSET_TYPE_DEF
+#define BLOOM_ASSET_TYPE_DEF(Name, Parent, Corporeality)
+#endif
+
+BLOOM_ASSET_TYPE_DEF(Asset,            VoidParent, Abstract)
+BLOOM_ASSET_TYPE_DEF(Mesh,             Asset,      Abstract)
+BLOOM_ASSET_TYPE_DEF(StaticMesh,       Mesh,       Concrete)
+BLOOM_ASSET_TYPE_DEF(SkeletalMesh,     Mesh,       Concrete)
+BLOOM_ASSET_TYPE_DEF(Material,         Asset,      Concrete)
+BLOOM_ASSET_TYPE_DEF(MaterialInstance, Asset,      Concrete)
+BLOOM_ASSET_TYPE_DEF(Scene,            Asset,      Concrete)
+BLOOM_ASSET_TYPE_DEF(ScriptSource,     Asset,      Concrete) // Update LAST enum case if this changes!
+
+#undef BLOOM_ASSET_TYPE_DEF

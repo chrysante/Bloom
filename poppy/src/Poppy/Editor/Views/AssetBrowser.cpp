@@ -31,16 +31,16 @@ AssetBrowser::AssetBrowser(): dirView(this) {
     toolbar = {
         ToolbarIconButton("up-open")
             .onClick([] {
-                Logger::trace("Going Up");
+                Logger::Trace("Going Up");
             })
             .tooltip("Go Up"),
 
         ToolbarIconButton("left-open")
-            .onClick([] { Logger::trace("Going Back"); })
+            .onClick([] { Logger::Trace("Going Back"); })
             .tooltip("Go Back"),
 
         ToolbarIconButton("right-open")
-            .onClick([] { Logger::trace("Going Forward"); })
+            .onClick([] { Logger::Trace("Going Forward"); })
             .tooltip("Go Forward"),
 
         ToolbarSpacer{},
@@ -64,7 +64,7 @@ AssetBrowser::AssetBrowser(): dirView(this) {
 
         ToolbarIconButton("delicious")
             .onClick([this] {
-                assetManager->create(bloom::AssetType::material,
+                assetManager->create(bloom::AssetType::Material,
                                      "Default Material",
                                      data.currentDir);
                 refreshFilesystem();
@@ -121,11 +121,11 @@ void AssetBrowser::frame() {
 void AssetBrowser::newAssetPopup() {
     if (ImGui::BeginPopupModal("New Asset", NULL, ImGuiWindowFlags_NoTitleBar))
     {
-        static AssetType type = AssetType::none;
+        static AssetType type = InvalidAssetType;
         if (ImGui::BeginCombo("Type", toString(type).data())) {
-            for (int i = 0; i < (std::size_t)AssetType::itemCount; ++i) {
-                auto const t = (AssetType)(1 << i);
-                bool const selected = type == t;
+            for (unsigned i = 0; i < EnumCount<AssetType>; ++i) {
+                AssetType t{ i };
+                bool selected = type == t;
                 if (ImGui::Selectable(toString(t).data(), selected)) {
                     type = t;
                 }
@@ -133,12 +133,10 @@ void AssetBrowser::newAssetPopup() {
                     ImGui::SetItemDefaultFocus();
                 }
             }
-
             ImGui::EndCombo();
         }
         static char nameBuffer[256]{};
         ImGui::InputText("Name", nameBuffer, std::size(nameBuffer));
-
         if (ImGui::Button("Cancel")) {
             ImGui::CloseCurrentPopup();
         }
@@ -179,7 +177,7 @@ void AssetBrowser::displayNoOpenProject() {
         desc.allowsMultipleSelection = false;
         showOpenPanel(desc, [this](std::filesystem::path const& dir) {
             if (!std::filesystem::exists(dir)) {
-                Logger::error("Directory does not exist: ", dir);
+                Logger::Error("Directory does not exist: ", dir);
             }
             openProject(dir);
         });
@@ -189,8 +187,8 @@ void AssetBrowser::displayNoOpenProject() {
 
 void AssetBrowser::openAsset(bloom::AssetHandle handle) {
     switch (handle.type()) {
-    case AssetType::materialInstance: {
-        editor().openView("Material Instance Viewer", [=](View& view) {
+    case AssetType::MaterialInstance: {
+        editor().openView("Material Instance Viewer", [=, this](View& view) {
             auto* const pMatInstViewer =
                 dynamic_cast<MaterialInstanceViewer*>(&view);
             if (!pMatInstViewer) {
@@ -207,7 +205,7 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
 
         break;
     }
-    case AssetType::scene: {
+    case AssetType::Scene: {
         auto scene = as<Scene>(assetManager->get(handle));
         assetManager->makeAvailable(handle, AssetRepresentation::CPU);
         auto& sceneSystem = editor().coreSystems().sceneSystem();
@@ -215,10 +213,9 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
         sceneSystem.loadScene(std::move(scene));
         break;
     }
-    case AssetType::script: {
-        auto const command =
-            utl::strcat("open -a Visual\\ Studio\\ Code.app ",
-                        assetManager->getAbsoluteFilepath(handle));
+    case AssetType::ScriptSource: {
+        auto command =
+            utl::strcat("open ", assetManager->getAbsoluteFilepath(handle));
         std::system(command.data());
         break;
     }
@@ -259,7 +256,7 @@ void AssetBrowser::importAsset(std::filesystem::path source) {
 
 void AssetBrowser::openProject(std::filesystem::path const& path) {
     if (!path.is_absolute()) {
-        Logger::error("Can't open Project: ", path);
+        Logger::Error("Can't open Project: ", path);
         return;
     }
 

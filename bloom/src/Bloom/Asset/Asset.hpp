@@ -1,126 +1,58 @@
-#pragma once
+#ifndef BLOOM_ASSET_ASSET_H
+#define BLOOM_ASSET_ASSET_H
 
+#include <concepts>
 #include <filesystem>
 #include <iosfwd>
-#include <utl/common.hpp>
-#include <utl/uuid.hpp>
-#include <yaml-cpp/yaml.h>
 
+#include <utl/common.hpp>
+
+#include "Bloom/Asset/AssetHandle.hpp"
+#include "Bloom/Asset/Fwd.hpp"
 #include "Bloom/Core/Base.hpp"
 #include "Bloom/Core/Debug.hpp"
-#include "Bloom/Core/Yaml.hpp"
+
+/// Defines the constructor for the derived asset type \p Type
+#define BL_DEFINE_ASSET_CTOR(Type, Parent)                                     \
+    explicit Type(AssetHandle handle, std::string name):                       \
+        Parent(handle, std::move(name)) {                                      \
+        assert(handle.type() == AssetType::Type && "Mismatched asset type");   \
+    }
 
 namespace bloom {
 
-enum class FileFormat { binary, text };
-
-/// MARK: - AssetType
-enum class AssetType : unsigned {
-    none = 0,
-
-    staticMesh = 1 << 0,
-    skeletalMesh = 1 << 1, /// Not supported yet...
-    mesh = staticMesh | skeletalMesh,
-
-    material = 1 << 2,
-    materialInstance = 1 << 3,
-
-    scene = 1 << 4,
-
-    script = 1 << 5,
-
-    itemCount = 6
-};
-
-UTL_ENUM_OPERATORS(AssetType);
-
-enum class FileExtension { invalid = 0, bmesh, bmat, bmatinst, bscene, chai };
-
-FileExtension toExtension(std::filesystem::path const&);
-FileExtension toExtension(std::string_view);
-
-bool hasHeader(FileExtension);
-
-utl::uuid toUUID(std::string_view);
-
-BLOOM_API std::string toString(AssetType);
-BLOOM_API AssetType assetTypeFromString(std::string_view);
-BLOOM_API std::ostream& operator<<(std::ostream&, AssetType);
-
-BLOOM_API std::string toExtension(AssetType);
-BLOOM_API AssetType toAssetType(FileExtension);
-BLOOM_API FileFormat toFileFormat(FileExtension);
-
-/// MARK: - AssetRepresentation
-enum class AssetRepresentation { CPU = 1 << 0, GPU = 1 << 1 };
-UTL_ENUM_OPERATORS(AssetRepresentation);
-
-/// MARK: - AssetHandle
-class BLOOM_API AssetHandle {
-public:
-    AssetHandle() = default;
-    AssetHandle(AssetType type, utl::uuid id): _type(type), _id(id) {}
-
-    AssetType type() const { return _type; }
-    utl::uuid id() const { return _id; }
-
-    static AssetHandle generate(AssetType);
-
-    friend bool operator==(AssetHandle const&, AssetHandle const&);
-    operator bool() const;
-
-private:
-    AssetType _type = AssetType::none;
-    utl::uuid _id;
-};
-
-/// MARK: - Asset
-/// Base Class for all assets
+/// Base Class of all assets
 class BLOOM_API Asset {
 public:
+    Asset(Asset const&) = delete;
+    Asset& operator=(Asset const&) = delete;
+
+    /// \Returns the handle of this asset
+    AssetHandle handle() const { return mHandle; }
+
+    /// \Returns the name of this asset
+    std::string const& name() const { return mName; }
+
+protected:
     explicit Asset(AssetHandle handle, std::string name):
         mHandle(handle), mName(std::move(name)) {}
-
-    virtual ~Asset() = default;
-
-    AssetHandle handle() const { return mHandle; }
-    std::string_view name() const { return mName; }
 
 private:
     AssetHandle mHandle;
     std::string mName;
 };
 
-class StaticMesh;
-class Material;
-class MaterialInstance;
-class Scene;
-
-class Script: public Asset {
-public:
-    using Asset::Asset;
-
-    std::string text;
-};
-
-auto dispatchAssetType(AssetType type, auto&& f) {
-    switch (type) {
-    case AssetType::staticMesh:
-        return f(utl::tag<StaticMesh>{});
-    case AssetType::material:
-        return f(utl::tag<Material>{});
-    case AssetType::materialInstance:
-        return f(utl::tag<MaterialInstance>{});
-    case AssetType::scene:
-        return f(utl::tag<Scene>{});
-    case AssetType::script:
-        return f(utl::tag<Script>{});
-
-    default:
-        BL_DEBUGBREAK();
-        std::terminate();
-    }
+/// For `dyncast` to work
+inline AssetType dyncast_get_type(std::derived_from<Asset> auto const& asset) {
+    return asset.handle().type();
 }
+
+/// Represents a script source file
+/// TODO: Move this to its own file
+class ScriptSource: public Asset {
+public:
+    BL_DEFINE_ASSET_CTOR(ScriptSource, Asset)
+};
 
 /// Kind of misplaced here but we'll go with it for now
 
@@ -129,20 +61,4 @@ struct BLOOM_API ScriptsDidLoadEvent {};
 
 } // namespace bloom
 
-template <>
-struct YAML::convert<bloom::AssetHandle> {
-    static Node encode(bloom::AssetHandle const& h) {
-        Node node;
-        node["Type"] = std::string(toString(h.type()));
-        node["ID"] = h.id();
-        return node;
-    }
-
-    static bool decode(Node const& node, bloom::AssetHandle& h) {
-        auto const type =
-            bloom::assetTypeFromString(node["Type"].as<std::string>());
-        auto const id = node["ID"].as<utl::uuid>();
-        h = bloom::AssetHandle(type, id);
-        return true;
-    }
-};
+#endif // BLOOM_ASSET_ASSET_H

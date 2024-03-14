@@ -9,9 +9,9 @@
 using namespace bloom;
 using namespace mtl::short_types;
 
-int main(int argc, char* argv[]) {
-    auto theApp = createApplication();
-    theApp->run();
+int main(int, char*[]) {
+    auto app = createApplication();
+    app->run();
 }
 
 std::unique_ptr<bloom::Application> bloom::createApplication() {
@@ -42,8 +42,8 @@ Window& Application::createWindow(WindowDescription const& windowDesc,
                                   std::unique_ptr<WindowDelegate> delegate) {
     auto window = std::make_unique<Window>(windowDesc);
     window->desc.application = this;
-    window->onResizePrivateFn = [this](int2 newSize) { doFrame(); };
-    window->onMovePrivateFn = [this](int2 newSize) { doFrame(); };
+    window->onResizePrivateFn = [this](int2) { doFrame(); };
+    window->onMovePrivateFn = [this](int2) { doFrame(); };
     delegate->theWindow = window.get();
     delegate->init();
     mWindows.push_back({ std::move(window), std::move(delegate) });
@@ -72,7 +72,7 @@ void Application::doInit() {
 }
 
 void Application::registerListeners() {
-    listen([this](CustomCommand const& cmd) {
+    listen([](CustomCommand const& cmd) {
         if (cmd.function) {
             cmd.function();
         }

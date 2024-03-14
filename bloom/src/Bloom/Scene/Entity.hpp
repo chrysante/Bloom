@@ -53,7 +53,7 @@ public:
 
     SceneT& scene() const { return *_scene; }
 
-    EntityID id() const { return *this; }
+    EntityID ID() const { return *this; }
 
     using EntityID::operator=;
 
@@ -113,7 +113,7 @@ struct std::hash<bloom::EntityID> {
 template <bool IsConst>
 struct std::hash<bloom::EntityHandleEx<IsConst>> {
     std::size_t operator()(bloom::EntityHandleEx<IsConst> const& entity) const {
-        return utl::hash_combine(entity.id(), &entity.scene());
+        return utl::hash_combine(entity.ID(), &entity.scene());
     }
 };
 

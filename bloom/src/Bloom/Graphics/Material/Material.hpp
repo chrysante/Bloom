@@ -11,10 +11,12 @@ class HardwareDevice;
 
 class BLOOM_API Material: public Asset {
 public:
-    static Material makeDefaultMaterial(HardwareDevice&, Asset base);
+    BL_DEFINE_ASSET_CTOR(Material, Asset)
 
-    using Asset::Asset;
-    Material(Asset asset): Asset(std::move(asset)) {}
+    /// Reset this material to be the default material.
+    /// We will probably change this in the future but for now the default
+    /// material is the only material there really is
+    void makeDefault(HardwareDevice& device);
 
     RenderPipelineHandle mainPass;
     RenderPipelineHandle editorPass;

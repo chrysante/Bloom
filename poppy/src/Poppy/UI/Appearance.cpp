@@ -143,7 +143,7 @@ void Appearance::deserialize(YAML::Node root) {
         mStyle.vars = root["Style Vars"].as<StyleVars>();
     }
     catch (...) {
-        Logger::error("Failed to load Appearance");
+        Logger::Error("Failed to load Appearance");
     }
     update();
 }
@@ -156,9 +156,43 @@ YAML::Node Appearance::serialize() const {
     return root;
 }
 
+static StyleColorDescription toColorDesc(SystemAppearance const& a) {
+    StyleColorDescription desc;
+    desc.controlFrame = a.labelColor;
+    desc.controlFrameHovered = desc.controlFrame;
+    desc.controlFrameDown = desc.controlFrame;
+    desc.highlightControlFrame = {};
+    desc.highlightControlFrameHovered = {};
+    desc.highlightControlFrameDown = {};
+    desc.checkMark = {};
+    desc.tab = {};
+    desc.tabActive = {};
+    desc.tabUnfocused = {};
+    desc.tabUnfocusedActive = {};
+    desc.text = a.labelColor;
+    desc.textDisabled = a.quaternaryLabelColor;
+    desc.windowBG = a.windowBackgroundColor;
+    desc.popupBG = a.windowBackgroundColor;
+    desc.menubarBG = {};
+    desc.border = {};
+    desc.windowTitleBar = {};
+    desc.activeWindowTitleBar = {};
+    desc.separator = {};
+    desc.scrollbar = {};
+    desc.dockPreview = {};
+    return desc;
+}
+
 void Appearance::showInspector(bool* open) {
     ImGui::Begin("Style Editor");
     bool update = false;
+    if (ImGui::Button("Reset")) {
+        lightColorDesc =
+            toColorDesc(SystemAppearance::get(AppearanceType::light));
+        darkColorDesc =
+            toColorDesc(SystemAppearance::get(AppearanceType::dark));
+        this->update(/* force  = */ true);
+    }
     char const* const names[2] = { "Dark", "Light" };
     update |= ImGui::Combo("Style", (int*)&mType, names, 2);
     if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None)) {
@@ -582,7 +616,7 @@ void poppy::systemStyleInspector(bool* open) {
 			}
 		}
 		catch (...) {
-            Logger::warn("Failed to load Style Colors");
+            Logger::Warn("Failed to load Style Colors");
 		}
 	}
 #endif // 0

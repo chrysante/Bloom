@@ -23,9 +23,7 @@ void MaterialInstanceViewer::frame() {
                                            "No Material Assigned";
     ImGui::Button(materialName.data(),
                   { ImGui::GetContentRegionAvail().x, 30 });
-    if (auto const assetHandle =
-            acceptAssetDragDrop(bloom::AssetType::material))
-    {
+    if (auto const assetHandle = acceptAssetDragDrop({ AssetType::Material })) {
         auto& assetManager = editor().coreSystems().assetManager();
         auto mat = as<Material>(assetManager.get(*assetHandle));
         assetManager.makeAvailable(*assetHandle, AssetRepresentation::GPU);
@@ -73,7 +71,7 @@ void MaterialInstanceViewer::frame() {
 }
 
 void MaterialInstanceViewer::setMaterialInstance(
-    bloom::Reference<MaterialInstance> _) {
+    Reference<MaterialInstance> _) {
     inst = std::move(_);
     editor()
         .coreSystems()

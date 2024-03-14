@@ -16,22 +16,27 @@ using namespace bloom;
 using namespace mtl::short_types;
 using namespace poppy;
 
-static std::string toDragDropType(bloom::AssetType type) {
+static std::string toDragDropType(AssetType type) {
     return utl::strcat("DD-Asset-", type);
 }
 
-std::optional<bloom::AssetHandle> poppy::acceptAssetDragDrop(
-    bloom::AssetType type) {
-    using namespace bloom;
-    if (ImGui::BeginDragDropTarget()) {
-        utl::scope_guard endDDTarget = [] { ImGui::EndDragDropTarget(); };
-        auto* const payload =
+std::optional<AssetHandle> poppy::acceptAssetDragDrop(
+    std::span<AssetType const> types) {
+    if (!ImGui::BeginDragDropTarget()) {
+        return std::nullopt;
+    }
+    utl::scope_guard endTarget = [] { ImGui::EndDragDropTarget(); };
+    for (auto type: types) {
+        auto* payload =
             ImGui::AcceptDragDropPayload(toDragDropType(type).data());
-        if (payload && payload->IsPreview()) {
-            Logger::info("Preview");
+        if (!payload) {
+            continue;
         }
-        if (payload && payload->IsDelivery()) {
-            Logger::info("Delivered");
+        if (payload->IsPreview()) {
+            Logger::Info("Preview");
+        }
+        if (payload->IsDelivery()) {
+            Logger::Info("Delivered");
             AssetHandle receivedAsset;
             std::memcpy(&receivedAsset, payload->Data, sizeof receivedAsset);
             return receivedAsset;
@@ -40,7 +45,11 @@ std::optional<bloom::AssetHandle> poppy::acceptAssetDragDrop(
     return std::nullopt;
 }
 
-/// MARK: - DirectoryView
+std::optional<AssetHandle> poppy::acceptAssetDragDrop(
+    std::initializer_list<AssetType> types) {
+    return acceptAssetDragDrop(std::span(types));
+}
+
 void DirectoryView::display() {
     ImGui::BeginChild("Asset Browser DirView");
     {
@@ -71,30 +80,30 @@ void DirectoryView::display() {
     ImGui::EndChild();
 }
 
-static auto selectIcon(bloom::AssetType t) -> std::string_view {
-    using bloom::AssetType;
-
-    switch (t) {
-    case AssetType::staticMesh:
+static std::string selectIcon(std::optional<AssetType> type) {
+    if (!type) {
+        return "doc";
+    }
+    switch (*type) {
+    case AssetType::StaticMesh:
         return "cube";
-    case AssetType::skeletalMesh:
+    case AssetType::SkeletalMesh:
         return "cube";
-    case AssetType::material:
+    case AssetType::Material:
         return "delicious";
-        //			case AssetType::materialInstance:
-        //				return "delicious";
-    case AssetType::scene:
+    case AssetType::MaterialInstance:
+        return "delicious";
+    case AssetType::Scene:
         return "cubes";
-    case AssetType::script:
+    case AssetType::ScriptSource:
         return "file-code";
-
     default:
         return "doc";
     }
 }
 
 bool DirectoryView::displayItem(std::string_view label,
-                                std::optional<bloom::AssetHandle> asset) {
+                                std::optional<AssetHandle> asset) {
     mtl::float2 const labelSize = ImGui::CalcTextSize(label.data());
     auto const uniqueID = generateUniqueID(label, itemIndex, true);
 
@@ -139,8 +148,8 @@ bool DirectoryView::displayItem(std::string_view label,
 
             ImGui::PushFont((ImFont*)icons.font(iconSize));
 
-            auto const iconText = icons.unicodeStr(std::string(
-                selectIcon(asset ? asset->type() : AssetType::none)));
+            auto const iconText = icons.unicodeStr(selectIcon(
+                asset ? std::optional(asset->type()) : std::nullopt));
             ImGui::Text("%s", iconText.data());
             ImGui::PopFont();
 
@@ -194,7 +203,7 @@ bool DirectoryView::displayItem(std::string_view label,
             renaming = -1;
             renameBuffer = {};
         }
-        Logger::trace("ItemID: ", ImGui::GetItemID(),
+        Logger::Trace("ItemID: ", ImGui::GetItemID(),
                       ", FocusID: ", ImGui::GetFocusID());
     }
     else {

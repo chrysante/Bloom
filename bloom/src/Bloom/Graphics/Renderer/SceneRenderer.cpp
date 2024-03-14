@@ -11,10 +11,6 @@
 
 using namespace bloom;
 
-SceneRenderer::SceneRenderer(Renderer& renderer) { setRenderer(renderer); }
-
-void SceneRenderer::setRenderer(Renderer& renderer) { mRenderer = &renderer; }
-
 void SceneRenderer::draw(Scene const& scene, Camera const& camera,
                          Framebuffer& framebuffer, CommandQueue& commandQueue) {
     assert(mRenderer);
@@ -44,7 +40,8 @@ static void submitLights(Renderer& renderer, Scene const& scene,
                          auto&& lightModifier) {
     auto view =
         scene.view<TransformMatrixComponent const, LightComponent const>();
-    view.each([&](auto id, TransformMatrixComponent const& transform,
+    view.each([&]([[maybe_unused]] auto ID,
+                  TransformMatrixComponent const& transform,
                   LightComponent light) {
         lightModifier(transform, light);
         renderer.submit(light.light);

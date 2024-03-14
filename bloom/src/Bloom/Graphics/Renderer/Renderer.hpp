@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BLOOM_RENDERER_RENDERER_H
+#define BLOOM_RENDERER_RENDERER_H
 
 #include <mtl/mtl.hpp>
 
@@ -44,7 +45,7 @@ public:
 
     virtual void submit(Reference<StaticMeshRenderer>,
                         Reference<MaterialInstance>,
-                        mtl::float4x4 const& transform){};
+                        [[maybe_unused]] mtl::float4x4 const& transform){};
     virtual void submit(PointLight const&){};
     virtual void submit(SpotLight const&){};
     virtual void submit(DirectionalLight const&){};
@@ -61,3 +62,5 @@ BLOOM_API std::unique_ptr<Renderer> createForwardRenderer(Application&);
 struct BLOOM_API ReloadShadersCommand {};
 
 } // namespace bloom
+
+#endif // BLOOM_RENDERER_RENDERER_H

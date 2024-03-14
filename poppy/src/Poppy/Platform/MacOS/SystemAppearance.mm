@@ -88,29 +88,5 @@ SystemAppearance SystemAppearance::get(AppearanceType type) {
         result.highlightColor                             = convertColor(NSColor.highlightColor);
         result.shadowColor                                = convertColor(NSColor.shadowColor);
     }];
-    
-    switch (result.type) {
-    case AppearanceType::light:
-//				result.logTextColors[utl::log2((uint)utl::log_level::trace)]    = mtl::colors<mtl::double4>::hex(0x0000007F);
-//				result.logTextColors[utl::log2((uint)utl::log_level::info)]     = mtl::colors<mtl::double4>::hex(0x03CC4FFF);
-//				result.logTextColors[utl::log2((uint)utl::log_level::debug)]    = mtl::colors<mtl::double4>::hex(0x9200FFFF);
-//				result.logTextColors[utl::log2((uint)utl::log_level::warning)]  = mtl::colors<mtl::double4>::hex(0xD89400FF);
-//				result.logTextColors[utl::log2((uint)utl::log_level::error)]    = mtl::colors<mtl::double4>::hex(0xFF0000FF);
-//				result.logTextColors[utl::log2((uint)utl::log_level::fatal)]    = mtl::colors<mtl::double4>::hex(0xFF0000FF);
-        break;
-        
-    case AppearanceType::dark:
-//				result.logTextColors[utl::log2((uint)utl::log_level::trace)]    = mtl::colors<mtl::double4>::hex(0xFFFFFF7F);
-//				result.logTextColors[utl::log2((uint)utl::log_level::info)]     = mtl::colors<mtl::double4>::hex(0x28E570FF);
-//				result.logTextColors[utl::log2((uint)utl::log_level::debug)]    = mtl::colors<mtl::double4>::hex(0xC16EFFFF);
-//				result.logTextColors[utl::log2((uint)utl::log_level::warning)]  = mtl::colors<mtl::double4>::hex(0xFFD65FFF);
-//				result.logTextColors[utl::log2((uint)utl::log_level::error)]    = mtl::colors<mtl::double4>::hex(0xFF4545FF);
-//				result.logTextColors[utl::log2((uint)utl::log_level::fatal)]    = mtl::colors<mtl::double4>::hex(0xFF4545FF);
-        break;
-        
-    default:
-        BL_DEBUGBREAK("???");
-        break;
-    }
     return result;
 }

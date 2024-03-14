@@ -20,11 +20,17 @@ set(bloom_sources
 
   src/Bloom/Asset/Asset.cpp
   src/Bloom/Asset/Asset.hpp
+  src/Bloom/Asset/AssetHandle.cpp
+  src/Bloom/Asset/AssetHandle.hpp
+  src/Bloom/Asset/Assets.def
   src/Bloom/Asset/AssetFileHeader.hpp
   src/Bloom/Asset/AssetManager.cpp
   src/Bloom/Asset/AssetManager.hpp
-  src/Bloom/Asset/MeshImporter.cpp
-  src/Bloom/Asset/MeshImporter.hpp
+  src/Bloom/Asset/Fwd.cpp
+  src/Bloom/Asset/Fwd.hpp
+  src/Bloom/Asset/MeshImport.cpp
+  src/Bloom/Asset/MeshImport.hpp
+  src/Bloom/Asset/Serialization.hpp
 
   src/Bloom/Core.hpp
   src/Bloom/Core/Autorelease.hpp
@@ -32,6 +38,7 @@ set(bloom_sources
   src/Bloom/Core/Core.hpp
   src/Bloom/Core/Debug.cpp
   src/Bloom/Core/Debug.hpp
+  src/Bloom/Core/Dyncast.hpp
   src/Bloom/Core/EnumCount.hpp
   src/Bloom/Core/Profile.cpp
   src/Bloom/Core/Profile.hpp
@@ -75,8 +82,9 @@ set(bloom_sources
   src/Bloom/Graphics/Camera.hpp
   src/Bloom/Graphics/Lights.cpp
   src/Bloom/Graphics/Lights.hpp
-  src/Bloom/Graphics/Material
   src/Bloom/Graphics/MaterialProperties.hpp
+  src/Bloom/Graphics/Mesh.cpp
+  src/Bloom/Graphics/Mesh.hpp
   src/Bloom/Graphics/Renderer
   src/Bloom/Graphics/Renderer.hpp
   src/Bloom/Graphics/ShaderBase.hpp

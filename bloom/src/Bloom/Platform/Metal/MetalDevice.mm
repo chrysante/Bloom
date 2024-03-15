@@ -5,6 +5,7 @@
 #include "Bloom/Platform/Metal/MetalRenderContext.h"
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 #include "Bloom/Platform/Metal/MetalCommandQueue.h"
+#include "Bloom/Platform/Metal/ObjCBridging.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Application/ResourceUtil.h"
 
@@ -13,10 +14,6 @@ using namespace bloom;
 
 std::unique_ptr<HardwareDevice> bloom::createMetalDevice() {
     return std::make_unique<MetalDevice>();
-}
-
-static void MTLDeleter(void* handle) {
-    CFBridgingRelease(handle);
 }
 
 MetalDevice::MetalDevice() {
@@ -47,13 +44,13 @@ BufferHandle MetalDevice::createBuffer(BufferDescription const& desc) {
                                                    length: desc.size
                                                   options: MTLResourceHazardTrackingModeTracked | mtlStorageMode];
         
-        return BufferHandle((void*)CFBridgingRetain(buffer), MTLDeleter, desc);
+        return BufferHandle(bloom_retain(buffer), bloom_release, desc);
     }
     else {
         id<MTLBuffer> buffer = [device newBufferWithLength: desc.size
                                                    options: MTLResourceHazardTrackingModeTracked | mtlStorageMode];
         
-        return BufferHandle((void*)CFBridgingRetain(buffer), MTLDeleter, desc);
+        return BufferHandle(bloom_retain(buffer), bloom_release, desc);
     }
 }
 
@@ -70,7 +67,7 @@ TextureHandle MetalDevice::createTexture(TextureDescription const& desc) {
     mtlDesc.storageMode = (MTLStorageMode)desc.storageMode;
     mtlDesc.usage = (MTLTextureUsage)desc.usage;
     id<MTLTexture> texture = [device newTextureWithDescriptor: mtlDesc];
-    return TextureHandle((void*)CFBridgingRetain(texture), MTLDeleter, desc);
+    return TextureHandle(bloom_retain(texture), bloom_release, desc);
 }
 
 SamplerHandle MetalDevice::createSampler(SamplerDescription const& desc) {
@@ -93,7 +90,7 @@ SamplerHandle MetalDevice::createSampler(SamplerDescription const& desc) {
     
 
     id<MTLSamplerState> sampler = [device newSamplerStateWithDescriptor: mtlDesc];
-    return SamplerHandle((void*)CFBridgingRetain(sampler), MTLDeleter);
+    return SamplerHandle(bloom_retain(sampler), bloom_release);
 }
 
 TextureHandle MetalDevice::createSharedTextureView(TextureView texture,
@@ -114,7 +111,7 @@ TextureHandle MetalDevice::createSharedTextureView(TextureView texture,
     desc.mipmapLevelCount = numMipLevels;
     desc.arrayLength = numSlices;
     
-    return TextureHandle((void*)CFBridgingRetain(sharedView), MTLDeleter, desc);
+    return TextureHandle(bloom_retain(sharedView), bloom_release, desc);
 }
 
 static MTLStencilDescriptor* toMTL(StencilDescription const& desc) {
@@ -141,12 +138,12 @@ DepthStencilHandle MetalDevice::createDepthStencil(DepthStencilDescription const
     
     id<MTLDepthStencilState> result = [device newDepthStencilStateWithDescriptor: mtlDesc];
     
-    return DepthStencilHandle((void*)CFBridgingRetain(result), MTLDeleter);
+    return DepthStencilHandle(bloom_retain(result), bloom_release);
 }
 
 ShaderFunctionHandle MetalDevice::createFunction(std::string_view name) {
     id<MTLFunction> function = [shaderLib newFunctionWithName:[NSString stringWithUTF8String:name.data()]];
-    return ShaderFunctionHandle((void*)CFBridgingRetain(function), MTLDeleter);
+    return ShaderFunctionHandle(bloom_retain(function), bloom_release);
 }
 
 RenderPipelineHandle MetalDevice::createRenderPipeline(RenderPipelineDescription const& desc) {
@@ -185,7 +182,7 @@ RenderPipelineHandle MetalDevice::createRenderPipeline(RenderPipelineDescription
         Logger::Error( "Failed to create Pipeline State");
         BL_DEBUGBREAK();
     }
-    return RenderPipelineHandle((void*)CFBridgingRetain(pipelineState), MTLDeleter);
+    return RenderPipelineHandle(bloom_retain(pipelineState), bloom_release);
 }
 
 ComputePipelineHandle MetalDevice::createComputePipeline(ComputePipelineDescription const& desc) {
@@ -196,7 +193,7 @@ ComputePipelineHandle MetalDevice::createComputePipeline(ComputePipelineDescript
         Logger::Error( "Failed to create Pipeline State");
         BL_DEBUGBREAK();
     }
-    auto result = ComputePipelineHandle((void*)CFBridgingRetain(pipelineState), MTLDeleter);
+    auto result = ComputePipelineHandle(bloom_retain(pipelineState), bloom_release);
     
     result.maxTotalThreadsPerThreadgroup = pipelineState.maxTotalThreadsPerThreadgroup;
     result.threadExecutionWidth = pipelineState.threadExecutionWidth;

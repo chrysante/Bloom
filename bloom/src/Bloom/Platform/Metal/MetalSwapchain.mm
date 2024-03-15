@@ -1,19 +1,16 @@
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 
+#include "Bloom/Platform/Metal/ObjCBridging.h"
 #include "Bloom/Core/Debug.h"
 
 using namespace bloom;
-
-static void MTLDeleter(void* handle) {
-    CFBridgingRelease(handle);
-}
 
 MetalBackbuffer::MetalBackbuffer(id<CAMetalDrawable> drawable) {
     this->drawable = drawable;
 }
 
 TextureHandle MetalBackbuffer::texture() {
-    return TextureHandle((void*)CFBridgingRetain(drawable.texture), MTLDeleter, TextureDescription{});
+    return TextureHandle(bloom_retain(drawable.texture), bloom_release, TextureDescription{});
 }
 
 MetalSwapchain::MetalSwapchain(id<MTLDevice> device, SwapchainDescription const& desc) {

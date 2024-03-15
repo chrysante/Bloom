@@ -107,6 +107,7 @@ set(bloom_sources
   src/Bloom/Platform/Metal/MetalRenderContext.mm
   src/Bloom/Platform/Metal/MetalSwapchain.h
   src/Bloom/Platform/Metal/MetalSwapchain.mm
+  src/Bloom/Platform/Metal/ObjCBridging.h
 
   src/Bloom/Runtime/CoreRuntime.cpp
   src/Bloom/Runtime/CoreRuntime.h

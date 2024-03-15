@@ -408,40 +408,40 @@ void Viewport::dropdownMenu() {
     }
 }
 
-bloom::EntityHandle Viewport::readEntityID(mtl::float2 const mousePosition) {
+bloom::EntityHandle Viewport::readEntityID(mtl::float2 mousePosition) {
+    Logger::Warn("Mouse picking is not implemented");
+    return {};
+    /// This doesn't work right now because we don't render the entity ID framebuffer
+#if 0
     static_assert(
         std::is_same_v<std::underlying_type_t<entt::entity>, std::uint32_t>);
+    if (scenes().empty()) {
+        return {};
+    }
+    if (mousePosition.x < 0 || mousePosition.y < 0) {
+        return {};
+    }
+    auto const viewSize = this->size();
+    if (mousePosition.x >= viewSize.x || mousePosition.y >= viewSize.y) {
+        return {};
+    }
+    auto* entityTexture = (MTL::Texture*)framebuffer.entityID.nativeHandle();
+    auto* mtlRenderContext = utl::down_cast<bloom::MetalRenderContext*>(
+        renderer->getRenderContext());
+    auto* commandBuffer = mtlRenderContext->commandQueue()->commandBuffer();
+    auto* encoder = commandBuffer->blitCommandEncoder();
+    encoder->synchronizeTexture(entityTexture, 0, 0);
+    encoder->endEncoding();
+    commandBuffer->commit();
+    commandBuffer->waitUntilCompleted();
 
-//		if (!scene()) {
-//			return {};
-//		}
-//
-//		if (mousePosition.x < 0 || mousePosition.y < 0) {
-//			return {};
-//		}
-//		auto const viewSize = this->size();
-//		if (mousePosition.x >= viewSize.x || mousePosition.y >=
-// viewSize.y) { 			return {};
-//		}
-#warning !!
-    //		auto* entityTexture =
-    //(MTL::Texture*)framebuffer.entityID.nativeHandle(); 		auto*
-    // mtlRenderContext =
-    // utl::down_cast<bloom::MetalRenderContext*>(renderer->getRenderContext());
-    //		auto* commandBuffer =
-    // mtlRenderContext->commandQueue()->commandBuffer(); 		auto* encoder =
-    // commandBuffer->blitCommandEncoder();
-    //		encoder->synchronizeTexture(entityTexture, 0, 0);
-    //		encoder->endEncoding();
-    //		commandBuffer->commit();
-    //		commandBuffer->waitUntilCompleted();
-    //
-    //		std::uint32_t id = -1;
-    //		auto const region = MTL::Region(mousePosition.x * 2, mousePosition.y
-    //* 2, 1, 1); 		entityTexture->getBytes(&id, 4, region, 0);
-    //
-    //		return bloom::EntityID((entt::entity)id);
-    return {};
+    std::uint32_t id = -1;
+    auto const region =
+        MTL::Region(mousePosition.x * 2, mousePosition.y * 2, 1, 1);
+    entityTexture->getBytes(&id, 4, region, 0);
+
+    return bloom::EntityID((entt::entity)id);
+#endif
 }
 
 void Viewport::receiveSceneDragDrop() {

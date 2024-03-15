@@ -20,6 +20,7 @@ class MaterialInstance;
 class BLOOM_API Framebuffer {
 public:
     Framebuffer(Framebuffer const&) = delete;
+
     virtual ~Framebuffer() = default;
 
     mtl::int2 size = 0;

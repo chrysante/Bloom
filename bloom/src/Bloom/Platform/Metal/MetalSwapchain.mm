@@ -1,5 +1,7 @@
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 
+#include "Bloom/Core/Debug.h"
+
 using namespace bloom;
 
 static void MTLDeleter(void* handle) {
@@ -17,15 +19,10 @@ TextureHandle MetalBackbuffer::texture() {
 MetalSwapchain::MetalSwapchain(id<MTLDevice> device, SwapchainDescription const& desc) {
     layer = [[CAMetalLayer alloc] init];
     layer.device = device;
-    
     layer.pixelFormat = (MTLPixelFormat)desc.pixelFormat;
-    
     layer.drawableSize = CGSize{ static_cast<CGFloat>(desc.size.x), static_cast<CGFloat>(desc.size.y) };
-    
     layer.maximumDrawableCount = desc.backBufferCount;
-    
     layer.displaySyncEnabled = desc.displaySync;
-    
     this->desc = desc;
 }
 
@@ -35,6 +32,5 @@ std::unique_ptr<Backbuffer> MetalSwapchain::nextBackbuffer() {
 
 void MetalSwapchain::resize(mtl::usize2 newSize) {
     [layer setDrawableSize: CGSize{ (CGFloat)newSize.x, (CGFloat)newSize.y }];
-    
     desc.size = newSize;
 }

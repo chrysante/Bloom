@@ -19,7 +19,6 @@ std::unique_ptr<Framebuffer> ForwardRenderer::createFramebuffer(
     mtl::int2 size) const {
     auto framebuffer = std::make_unique<ForwardRendererFramebuffer>();
     populateFramebuffer(device(), *framebuffer, size);
-
     return std::move(framebuffer);
 }
 

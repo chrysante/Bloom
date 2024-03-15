@@ -111,7 +111,7 @@ void Viewport::shutdown() {}
 void Viewport::frame() {
     ImGui::BeginChild("Viewport Child");
     if (scenes().empty()) {
-        displayEmptyWithReason("No active Scene");
+        displayEmptyWithReason("No Active Scene");
     }
     else {
         displayScene();
@@ -225,16 +225,15 @@ void Viewport::drawScene() {
 }
 
 void Viewport::updateFramebuffer() {
-    auto const framebufferTargetSize = size() * window().contentScaleFactor();
-    if (!framebuffer || framebuffer->size != framebufferTargetSize) {
-        framebuffer =
-            sceneRenderer.renderer().createFramebuffer(framebufferTargetSize);
-        if (auto* const editorRenderer =
-                dynamic_cast<EditorRenderer*>(&sceneRenderer.renderer()))
-        {
-            editorFramebuffer =
-                editorRenderer->createEditorFramebuffer(framebufferTargetSize);
-        }
+    auto fbTargetSize = size() * window().contentScaleFactor();
+    if (framebuffer && framebuffer->size == fbTargetSize) {
+        return;
+    }
+    Logger::Trace("Resizing framebuffer to ", fbTargetSize);
+    framebuffer = sceneRenderer.renderer().createFramebuffer(fbTargetSize);
+    auto* renderer = dynamic_cast<EditorRenderer*>(&sceneRenderer.renderer());
+    if (renderer) {
+        editorFramebuffer = renderer->createEditorFramebuffer(fbTargetSize);
     }
 }
 

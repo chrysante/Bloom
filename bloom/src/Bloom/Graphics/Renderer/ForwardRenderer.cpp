@@ -1,13 +1,13 @@
-#include "Bloom/Graphics/Renderer/ForwardRenderer.hpp"
+#include "Bloom/Graphics/Renderer/ForwardRenderer.h"
 
 #include <numeric>
 
 #include <utl/utility.hpp>
 
-#include "Bloom/GPU/HardwareDevice.hpp"
-#include "Bloom/Graphics/Material/Material.hpp"
-#include "Bloom/Graphics/Material/MaterialInstance.hpp"
-#include "Bloom/Graphics/StaticMesh.hpp"
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Graphics/Material/Material.h"
+#include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Bloom/Graphics/StaticMesh.h"
 
 using namespace mtl::short_types;
 using namespace bloom;

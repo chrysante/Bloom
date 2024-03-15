@@ -1,11 +1,11 @@
 #include <metal_stdlib>
 
-#include "Poppy/Renderer/EditorDrawData.hpp"
+#include "Poppy/Renderer/EditorDrawData.h"
 #include "Poppy/Shaders/PostProcess.h"
 #include "Poppy/Shaders/Lights.h"
-#include "Bloom/Graphics/MaterialProperties.hpp"
-#include "Bloom/Graphics/Renderer/ShaderParameters.hpp"
-#include "Bloom/Graphics/Vertex.hpp"
+#include "Bloom/Graphics/MaterialProperties.h"
+#include "Bloom/Graphics/Renderer/ShaderParameters.h"
+#include "Bloom/Graphics/Vertex.h"
 
 using namespace metal;
 using namespace bloom;

@@ -1,8 +1,9 @@
-#pragma once
+#ifndef BLOOM_PLATFORM_METAL_METALDEVICE_H
+#define BLOOM_PLATFORM_METAL_METALDEVICE_H
 
 #include <memory>
 
-#include "Bloom/GPU/HardwareDevice.hpp"
+#include "Bloom/GPU/HardwareDevice.h"
 
 namespace bloom {
 
@@ -58,3 +59,5 @@ public:
 } // namespace bloom
 
 #endif
+
+#endif // BLOOM_PLATFORM_METAL_METALDEVICE_H

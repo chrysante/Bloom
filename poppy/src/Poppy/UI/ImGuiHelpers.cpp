@@ -1,13 +1,13 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <mtl/mtl.hpp>
 #include <utl/strcat.hpp>
 
-#include "Poppy/Core/Debug.hpp"
+#include "Poppy/Core/Debug.h"
 
 using namespace poppy;
 

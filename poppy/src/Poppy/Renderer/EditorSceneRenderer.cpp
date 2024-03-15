@@ -1,11 +1,11 @@
-#include "Poppy/Renderer/EditorSceneRenderer.hpp"
+#include "Poppy/Renderer/EditorSceneRenderer.h"
 
-#include "Bloom/Graphics/StaticMesh.hpp"
-#include "Bloom/Scene/Components/MeshRenderer.hpp"
-#include "Bloom/Scene/Components/Transform.hpp"
-#include "Bloom/Scene/Scene.hpp"
-#include "Poppy/Editor/SelectionContext.hpp"
-#include "Poppy/Renderer/EditorRenderer.hpp"
+#include "Bloom/Graphics/StaticMesh.h"
+#include "Bloom/Scene/Components/MeshRenderer.h"
+#include "Bloom/Scene/Components/Transform.h"
+#include "Bloom/Scene/Scene.h"
+#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Renderer/EditorRenderer.h"
 
 using namespace bloom;
 using namespace poppy;

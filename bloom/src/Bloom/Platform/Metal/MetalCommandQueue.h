@@ -1,8 +1,9 @@
-#pragma once
+#ifndef BLOOM_PLATFORM_METAL_METALCOMMANDQUEUE_H
+#define BLOOM_PLATFORM_METAL_METALCOMMANDQUEUE_H
 
 #import <Metal/Metal.h>
 
-#include "Bloom/GPU/CommandQueue.hpp"
+#include "Bloom/GPU/CommandQueue.h"
 
 namespace bloom {
 
@@ -18,3 +19,5 @@ public:
 };
 
 } // namespace bloom
+
+#endif // BLOOM_PLATFORM_METAL_METALCOMMANDQUEUE_H

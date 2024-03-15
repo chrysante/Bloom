@@ -1,14 +1,14 @@
-#include "Bloom/Runtime/CoreRuntime.hpp"
+#include "Bloom/Runtime/CoreRuntime.h"
 
 #include <utl/scope_guard.hpp>
 
-#include "Bloom/Application/Application.hpp"
-#include "Bloom/Core/Profile.hpp"
-#include "Bloom/Core/Reference.hpp"
-#include "Bloom/Graphics/Renderer/Renderer.hpp"
-#include "Bloom/Runtime/ScriptSystem.hpp"
-#include "Bloom/Scene/Components/AllComponents.hpp"
-#include "Bloom/Scene/Scene.hpp"
+#include "Bloom/Application/Application.h"
+#include "Bloom/Core/Profile.h"
+#include "Bloom/Core/Reference.h"
+#include "Bloom/Graphics/Renderer/Renderer.h"
+#include "Bloom/Runtime/ScriptSystem.h"
+#include "Bloom/Scene/Components/AllComponents.h"
+#include "Bloom/Scene/Scene.h"
 
 using namespace bloom;
 

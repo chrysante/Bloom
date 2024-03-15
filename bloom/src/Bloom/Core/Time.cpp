@@ -1,4 +1,4 @@
-#include "Bloom/Core/Time.hpp"
+#include "Bloom/Core/Time.h"
 
 using namespace bloom;
 

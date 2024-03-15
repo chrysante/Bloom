@@ -1,4 +1,4 @@
-#include "Poppy/UI/Dockspace.hpp"
+#include "Poppy/UI/Dockspace.h"
 
 #include <set>
 #include <unordered_set>
@@ -9,9 +9,9 @@
 #include <utl/scope_guard.hpp>
 #include <utl/stack.hpp>
 
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/Editor/Editor.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Editor.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace bloom;
 using namespace mtl::short_types;

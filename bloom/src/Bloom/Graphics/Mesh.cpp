@@ -1,3 +1,3 @@
-#include "Bloom/Graphics/Mesh.hpp"
+#include "Bloom/Graphics/Mesh.h"
 
 using namespace bloom;

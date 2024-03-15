@@ -3,12 +3,12 @@
 #include "EditorWindowDelegate.hpp"
 
 #include "Editor.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/UI/ImGuiContext.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/UI/ImGuiContext.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
-#include "Bloom/Core.hpp"
-#include "Bloom/GPU.hpp"
+#include "Bloom/Core.h"
+#include "Bloom/GPU.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

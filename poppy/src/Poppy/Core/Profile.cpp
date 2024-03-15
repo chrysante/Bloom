@@ -1,4 +1,4 @@
-#include "Poppy/Core/Profile.hpp"
+#include "Poppy/Core/Profile.h"
 
 namespace poppy {
 

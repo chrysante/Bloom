@@ -2,7 +2,7 @@
 
 #include "PostProcess.h"
 #include "BloomShader.h"
-#include "Bloom/Graphics/Renderer/ShaderParameters.hpp"
+#include "Bloom/Graphics/Renderer/ShaderParameters.h"
 
 using namespace metal;
 using namespace bloom;

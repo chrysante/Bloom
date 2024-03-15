@@ -1,4 +1,4 @@
-#include "Bloom/Core/Debug.hpp"
+#include "Bloom/Core/Debug.h"
 
 #include <iostream>
 

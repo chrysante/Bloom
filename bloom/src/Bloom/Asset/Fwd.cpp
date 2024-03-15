@@ -1,6 +1,6 @@
-#include "Bloom/Asset/Fwd.hpp"
+#include "Bloom/Asset/Fwd.h"
 
-#include "Bloom/Core/Debug.hpp"
+#include "Bloom/Core/Debug.h"
 
 using namespace bloom;
 

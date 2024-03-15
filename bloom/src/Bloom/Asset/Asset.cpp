@@ -1,8 +1,8 @@
-#include "Bloom/Asset/Asset.hpp"
+#include "Bloom/Asset/Asset.h"
 
 #include <utl/math.hpp>
 
-#include "Bloom/Core/Debug.hpp"
+#include "Bloom/Core/Debug.h"
 
 using namespace bloom;
 

@@ -1,8 +1,8 @@
-#include "Poppy/Editor/Views/Viewport/ViewportCameraController.hpp"
+#include "Poppy/Editor/Views/Viewport/ViewportCameraController.h"
 
 #include <utl/functional.hpp>
 
-#include "Poppy/Core/Debug.hpp"
+#include "Poppy/Core/Debug.h"
 
 using namespace poppy;
 

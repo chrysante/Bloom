@@ -1,17 +1,17 @@
-#include "Bloom/Runtime/ScriptSystem.hpp"
+#include "Bloom/Runtime/ScriptSystem.h"
 
 #include <scatha/Sema/Entity.h>
 #include <scatha/Sema/SymbolTable.h>
 #include <utl/scope_guard.hpp>
 #include <utl/strcat.hpp>
 
-#include "Bloom/Application/Application.hpp"
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/Runtime/SceneSystem.hpp"
-#include "Bloom/Scene/Components/Script.hpp"
-#include "Bloom/Scene/Components/Transform.hpp"
-#include "Bloom/Scene/Entity.hpp"
-#include "Bloom/Scene/Scene.hpp"
+#include "Bloom/Application/Application.h"
+#include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Scene/Components/Script.h"
+#include "Bloom/Scene/Components/Transform.h"
+#include "Bloom/Scene/Entity.h"
+#include "Bloom/Scene/Scene.h"
 
 using namespace bloom;
 

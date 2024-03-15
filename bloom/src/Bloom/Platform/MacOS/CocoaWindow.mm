@@ -1,4 +1,4 @@
-#include "Bloom/Core/Base.hpp"
+#include "Bloom/Core/Base.h"
 
 #ifdef BLOOM_PLATFORM_APPLE
 #	define GLFW_EXPOSE_NATIVE_COCOA
@@ -8,7 +8,7 @@
 #include <GLFW/glfw3native.h>
 #include <utl/utility.hpp>
 
-#include "Bloom/Application/Window.hpp"
+#include "Bloom/Application/Window.h"
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 
 using namespace bloom;

@@ -1,4 +1,4 @@
-#include "Bloom/Graphics/Camera.hpp"
+#include "Bloom/Graphics/Camera.h"
 
 using namespace bloom;
 

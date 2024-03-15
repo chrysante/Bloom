@@ -1,4 +1,5 @@
-#pragma once
+#ifndef POPPY_SHADERS_POSTPROCESS_H
+#define POPPY_SHADERS_POSTPROCESS_H
 
 #include <metal_stdlib>
 
@@ -20,3 +21,5 @@ constant PPRasterOutput postProcessQuadVertices[] = {
 };
 
 } // namespace bloom
+
+#endif // POPPY_SHADERS_POSTPROCESS_H

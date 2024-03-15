@@ -1,3 +1,3 @@
-#include "Bloom/Graphics/StaticMesh.hpp"
+#include "Bloom/Graphics/StaticMesh.h"
 
 namespace bloom {}

@@ -1,13 +1,13 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "Poppy/UI/PropertiesView.hpp"
+#include "Poppy/UI/PropertiesView.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <mtl/mtl.hpp>
 
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace mtl::short_types;
 using namespace poppy;

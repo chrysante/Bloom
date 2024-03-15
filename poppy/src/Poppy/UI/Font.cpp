@@ -1,13 +1,13 @@
-#include "Poppy/UI/Font.hpp"
+#include "Poppy/UI/Font.h"
 
 #include <array>
 
 #include <utl/strcat.hpp>
 #include <utl/utility.hpp>
 
-#include "Bloom/Application.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/UI/ImGuiContext.hpp"
+#include "Bloom/Application.h"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/UI/ImGuiContext.h"
 
 using namespace bloom;
 using namespace poppy;

@@ -1,9 +1,10 @@
-#pragma once
+#ifndef BLOOM_PLATFORM_METAL_METALSWAPCHAIN_H
+#define BLOOM_PLATFORM_METAL_METALSWAPCHAIN_H
 
 #include <Metal/Metal.h>
 #include <QuartzCore/CAMetalLayer.h>
 
-#include "Bloom/GPU/Swapchain.hpp"
+#include "Bloom/GPU/Swapchain.h"
 
 namespace bloom {
 
@@ -27,3 +28,5 @@ public:
 };
 
 } // namespace bloom
+
+#endif // BLOOM_PLATFORM_METAL_METALSWAPCHAIN_H

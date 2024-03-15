@@ -1,8 +1,8 @@
 //#include <metal_stdlib>
-//#include "Bloom/Graphics/SceneRenderData.hpp"
-//#include "Bloom/Graphics/MaterialProperties.hpp"
-//#include "Bloom/Graphics/Vertex.hpp"
-//#include "Bloom/Graphics/EntityRenderData.hpp"
+//#include "Bloom/Graphics/SceneRenderData.h"
+//#include "Bloom/Graphics/MaterialProperties.h"
+//#include "Bloom/Graphics/Vertex.h"
+//#include "Bloom/Graphics/EntityRenderData.h"
 //
 //using namespace metal;
 //using namespace bloom;

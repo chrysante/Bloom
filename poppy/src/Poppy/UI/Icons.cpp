@@ -1,4 +1,4 @@
-#include "Poppy/UI/Icons.hpp"
+#include "Poppy/UI/Icons.h"
 
 #include <fstream>
 #include <sstream>
@@ -6,8 +6,8 @@
 #include <imgui_internal.h>
 #include <rapidjson/document.h>
 
-#include "Bloom/Application.hpp"
-#include "Poppy/Core/Debug.hpp"
+#include "Bloom/Application.h"
+#include "Poppy/Core/Debug.h"
 
 namespace rapidjson {
 

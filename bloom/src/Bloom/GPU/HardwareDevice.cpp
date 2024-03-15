@@ -1,4 +1,4 @@
-#include "Bloom/GPU/HardwareDevice.hpp"
+#include "Bloom/GPU/HardwareDevice.h"
 
 #include "Bloom/Platform/Metal/MetalDevice.h"
 

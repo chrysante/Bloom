@@ -1,4 +1,4 @@
-#include "Poppy/Editor/Views/Viewport/Gizmo.hpp"
+#include "Poppy/Editor/Views/Viewport/Gizmo.h"
 
 #include <array>
 
@@ -6,9 +6,9 @@
 #include <imgui.h>
 #include <mtl/mtl.hpp>
 
-#include "Bloom/Scene/Components/Transform.hpp"
-#include "Bloom/Scene/Scene.hpp"
-#include "Poppy/Editor/SelectionContext.hpp"
+#include "Bloom/Scene/Components/Transform.h"
+#include "Bloom/Scene/Scene.h"
+#include "Poppy/Editor/SelectionContext.h"
 
 using namespace bloom;
 using namespace mtl::short_types;

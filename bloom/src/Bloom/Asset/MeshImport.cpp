@@ -1,4 +1,4 @@
-#include "Bloom/Asset/MeshImport.hpp"
+#include "Bloom/Asset/MeshImport.h"
 
 #include <fstream>
 #include <sstream>
@@ -8,7 +8,7 @@
 #include <assimp/scene.h>
 #include <utl/strcat.hpp>
 
-#include "Bloom/Graphics/StaticMesh.hpp"
+#include "Bloom/Graphics/StaticMesh.h"
 
 using namespace bloom;
 

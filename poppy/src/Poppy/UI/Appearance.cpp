@@ -1,4 +1,4 @@
-#include "Poppy/UI/Appearance.hpp"
+#include "Poppy/UI/Appearance.h"
 
 #include <span>
 
@@ -6,9 +6,9 @@
 #include <imgui_internal.h>
 #include <yaml-cpp/yaml.h>
 
-#include "Bloom/Core/Yaml.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/UI/SystemAppearance.hpp"
+#include "Bloom/Core/Yaml.h"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/UI/SystemAppearance.h"
 
 using namespace mtl::short_types;
 using namespace poppy;

@@ -1,5 +1,0 @@
-#include "Bloom/Core/Base.hpp"
-#include "Bloom/Core/Debug.hpp"
-#include "Bloom/Core/Profile.hpp"
-#include "Bloom/Core/Reference.hpp"
-#include "Bloom/Core/Time.hpp"

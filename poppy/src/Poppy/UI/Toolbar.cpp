@@ -1,7 +1,7 @@
 #define UTL_DEFER_MACROS
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "Poppy/UI/Toolbar.hpp"
+#include "Poppy/UI/Toolbar.h"
 
 #include <algorithm>
 #include <numeric>
@@ -11,8 +11,8 @@
 #include <utl/scope_guard.hpp>
 #include <utl/uuid.hpp>
 
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace mtl::short_types;
 using namespace poppy;

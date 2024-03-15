@@ -1,8 +1,8 @@
-#include "SceneSystem.hpp"
+#include "Bloom/Runtime/SceneSystem.h"
 
 #include <utl/stack.hpp>
 
-#include "Bloom/Scene/Scene.hpp"
+#include "Bloom/Scene/Scene.h"
 
 using namespace bloom;
 

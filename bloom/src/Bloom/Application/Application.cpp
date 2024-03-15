@@ -1,10 +1,10 @@
-#include "Bloom/Application/Application.hpp"
+#include "Bloom/Application/Application.h"
 
 #include <iostream>
 
-#include "Bloom/Application/Window.hpp"
-#include "Bloom/Core/Autorelease.hpp"
-#include "Bloom/Core/Debug.hpp"
+#include "Bloom/Application/Window.h"
+#include "Bloom/Core/Autorelease.h"
+#include "Bloom/Core/Debug.h"
 
 using namespace bloom;
 using namespace mtl::short_types;

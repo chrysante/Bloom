@@ -1,4 +1,4 @@
-#include "Bloom/Asset/AssetManager.hpp"
+#include "Bloom/Asset/AssetManager.h"
 
 #include <fstream>
 
@@ -6,14 +6,14 @@
 #include <utl/overload.hpp>
 #include <utl/strcat.hpp>
 
-#include "Bloom/Application/Application.hpp"
-#include "Bloom/Asset/MeshImport.hpp"
-#include "Bloom/Core/Core.hpp"
-#include "Bloom/Core/Debug.hpp"
-#include "Bloom/GPU/HardwareDevice.hpp"
-#include "Bloom/Graphics/Material/Material.hpp"
-#include "Bloom/Graphics/Material/MaterialInstance.hpp"
-#include "Bloom/Graphics/StaticMesh.hpp"
+#include "Bloom/Application/Application.h"
+#include "Bloom/Asset/MeshImport.h"
+#include "Bloom/Core/Core.h"
+#include "Bloom/Core/Debug.h"
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Graphics/Material/Material.h"
+#include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Bloom/Graphics/StaticMesh.h"
 
 using namespace bloom;
 

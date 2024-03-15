@@ -1,7 +1,7 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #define UTL_DEFER_MACROS
 
-#include "Poppy/Editor/Views/SceneOutliner.hpp"
+#include "Poppy/Editor/Views/SceneOutliner.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -10,12 +10,12 @@
 #include <utl/utility.hpp>
 #include <utl/vector.hpp>
 
-#include "Bloom/Runtime/SceneSystem.hpp"
-#include "Bloom/Scene/Scene.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/Editor/Editor.hpp"
-#include "Poppy/Editor/SelectionContext.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Scene/Scene.h"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace bloom;
 using namespace mtl::short_types;

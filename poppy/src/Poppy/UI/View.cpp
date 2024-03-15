@@ -1,7 +1,7 @@
-#include "Poppy/UI/View.hpp"
+#include "Poppy/UI/View.h"
 
-#include "Poppy/UI/Font.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Poppy/UI/Font.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

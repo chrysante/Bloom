@@ -1,7 +1,7 @@
 #include <metal_stdlib>
-#include "Bloom/Graphics/Renderer/ShaderParameters.hpp"
-#include "Bloom/Graphics/MaterialProperties.hpp"
-#include "Bloom/Graphics/Vertex.hpp"
+#include "Bloom/Graphics/Renderer/ShaderParameters.h"
+#include "Bloom/Graphics/MaterialProperties.h"
+#include "Bloom/Graphics/Vertex.h"
 
 using namespace metal;
 

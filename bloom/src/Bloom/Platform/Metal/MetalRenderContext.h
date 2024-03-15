@@ -1,8 +1,9 @@
-#pragma once
+#ifndef BLOOM_PLATFORM_METAL_METALRENDERCONTEXT_H
+#define BLOOM_PLATFORM_METAL_METALRENDERCONTEXT_H
 
 #include <Metal/Metal.h>
 
-#include "Bloom/GPU/RenderContext.hpp"
+#include "Bloom/GPU/RenderContext.h"
 
 namespace bloom {
 
@@ -44,3 +45,5 @@ public:
 };
 
 } // namespace bloom
+
+#endif // BLOOM_PLATFORM_METAL_METALRENDERCONTEXT_H

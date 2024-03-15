@@ -1,13 +1,13 @@
-#include "Bloom/Graphics/Renderer/SceneRenderer.hpp"
+#include "Bloom/Graphics/Renderer/SceneRenderer.h"
 
 #include <utl/functional.hpp>
 
-#include "Bloom/Core/Core.hpp"
-#include "Bloom/Graphics/Renderer/Renderer.hpp"
-#include "Bloom/Scene/Components/Lights.hpp"
-#include "Bloom/Scene/Components/MeshRenderer.hpp"
-#include "Bloom/Scene/Components/Transform.hpp"
-#include "Bloom/Scene/Scene.hpp"
+#include "Bloom/Core/Core.h"
+#include "Bloom/Graphics/Renderer/Renderer.h"
+#include "Bloom/Scene/Components/Lights.h"
+#include "Bloom/Scene/Components/MeshRenderer.h"
+#include "Bloom/Scene/Components/Transform.h"
+#include "Bloom/Scene/Scene.h"
 
 using namespace bloom;
 

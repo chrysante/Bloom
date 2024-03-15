@@ -1,8 +1,8 @@
-#include "Poppy/Renderer/EditorRenderer.hpp"
+#include "Poppy/Renderer/EditorRenderer.h"
 
-#include "Bloom/GPU/HardwareDevice.hpp"
-#include "Bloom/Graphics/Renderer/ForwardRenderer.hpp"
-#include "Bloom/Graphics/StaticMesh.hpp"
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Graphics/Renderer/ForwardRenderer.h"
+#include "Bloom/Graphics/StaticMesh.h"
 
 using namespace bloom;
 using namespace mtl::short_types;

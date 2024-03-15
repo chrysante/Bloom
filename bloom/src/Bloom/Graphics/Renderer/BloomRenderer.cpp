@@ -1,9 +1,9 @@
-#include "Bloom/Graphics/Renderer/BloomRenderer.hpp"
+#include "Bloom/Graphics/Renderer/BloomRenderer.h"
 
 #include <utl/utility.hpp>
 
-#include "Bloom/GPU/CommandQueue.hpp"
-#include "Bloom/GPU/HardwareDevice.hpp"
+#include "Bloom/GPU/CommandQueue.h"
+#include "Bloom/GPU/HardwareDevice.h"
 
 using namespace mtl::short_types;
 using namespace bloom;

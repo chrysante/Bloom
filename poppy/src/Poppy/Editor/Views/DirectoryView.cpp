@@ -1,4 +1,4 @@
-#include "Poppy/Editor/Views/DirectoryView.hpp"
+#include "Poppy/Editor/Views/DirectoryView.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -6,11 +6,11 @@
 #include <utl/scope_guard.hpp>
 #include <utl/strcat.hpp>
 
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/Editor/Views/AssetBrowser.hpp"
-#include "Poppy/UI/ImGuiContext.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Bloom/Asset/AssetManager.h"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Views/AssetBrowser.h"
+#include "Poppy/UI/ImGuiContext.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace bloom;
 using namespace mtl::short_types;

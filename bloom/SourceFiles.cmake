@@ -1,100 +1,98 @@
 
 set(bloom_sources
-  src/Bloom/Application.hpp
+  src/Bloom/Application.h
   src/Bloom/Application/Application.cpp
-  src/Bloom/Application/Application.hpp
-  src/Bloom/Application/CoreSystem.hpp
+  src/Bloom/Application/Application.h
+  src/Bloom/Application/CoreSystem.h
   src/Bloom/Application/CoreSystemManager.cpp
-  src/Bloom/Application/CoreSystemManager.hpp
+  src/Bloom/Application/CoreSystemManager.h
   src/Bloom/Application/Input.cpp
-  src/Bloom/Application/Input.hpp
+  src/Bloom/Application/Input.h
   src/Bloom/Application/InputEvent.cpp
-  src/Bloom/Application/InputEvent.hpp
-  src/Bloom/Application/MessageSystem.hpp
+  src/Bloom/Application/InputEvent.h
+  src/Bloom/Application/MessageSystem.h
   src/Bloom/Application/ResourceUtil.cpp
-  src/Bloom/Application/ResourceUtil.hpp
+  src/Bloom/Application/ResourceUtil.h
   src/Bloom/Application/Window.cpp
-  src/Bloom/Application/Window.hpp
+  src/Bloom/Application/Window.h
   src/Bloom/Application/WindowDelegate.cpp
-  src/Bloom/Application/WindowDelegate.hpp
+  src/Bloom/Application/WindowDelegate.h
 
   src/Bloom/Asset/Asset.cpp
-  src/Bloom/Asset/Asset.hpp
+  src/Bloom/Asset/Asset.h
   src/Bloom/Asset/AssetHandle.cpp
-  src/Bloom/Asset/AssetHandle.hpp
+  src/Bloom/Asset/AssetHandle.h
   src/Bloom/Asset/Assets.def
-  src/Bloom/Asset/AssetFileHeader.hpp
+  src/Bloom/Asset/AssetFileHeader.h
   src/Bloom/Asset/AssetManager.cpp
-  src/Bloom/Asset/AssetManager.hpp
+  src/Bloom/Asset/AssetManager.h
   src/Bloom/Asset/Fwd.cpp
-  src/Bloom/Asset/Fwd.hpp
+  src/Bloom/Asset/Fwd.h
   src/Bloom/Asset/MeshImport.cpp
-  src/Bloom/Asset/MeshImport.hpp
-  src/Bloom/Asset/Serialization.hpp
+  src/Bloom/Asset/MeshImport.h
+  src/Bloom/Asset/Serialization.h
 
-  src/Bloom/Core.hpp
-  src/Bloom/Core/Autorelease.hpp
-  src/Bloom/Core/Base.hpp
-  src/Bloom/Core/Core.hpp
+  src/Bloom/Core.h
+  src/Bloom/Core/Autorelease.h
+  src/Bloom/Core/Base.h
+  src/Bloom/Core/Core.h
   src/Bloom/Core/Debug.cpp
-  src/Bloom/Core/Debug.hpp
-  src/Bloom/Core/Dyncast.hpp
-  src/Bloom/Core/EnumCount.hpp
+  src/Bloom/Core/Debug.h
+  src/Bloom/Core/Dyncast.h
+  src/Bloom/Core/EnumCount.h
   src/Bloom/Core/Profile.cpp
-  src/Bloom/Core/Profile.hpp
-  src/Bloom/Core/Reference.hpp
+  src/Bloom/Core/Profile.h
+  src/Bloom/Core/Reference.h
   src/Bloom/Core/Serialize.cpp
-  src/Bloom/Core/Serialize.hpp
+  src/Bloom/Core/Serialize.h
   src/Bloom/Core/Time.cpp
-  src/Bloom/Core/Time.hpp
-  src/Bloom/Core/Yaml.hpp
+  src/Bloom/Core/Time.h
+  src/Bloom/Core/Yaml.h
 
-  src/Bloom/GPU.hpp
-  src/Bloom/GPU/BlitContext.hpp
-  src/Bloom/GPU/CommandQueue.hpp
-  src/Bloom/GPU/ComputeContext.hpp
+  src/Bloom/GPU.h
+  src/Bloom/GPU/BlitContext.h
+  src/Bloom/GPU/CommandQueue.h
+  src/Bloom/GPU/ComputeContext.h
   src/Bloom/GPU/HardwareDevice.cpp
-  src/Bloom/GPU/HardwareDevice.hpp
-  src/Bloom/GPU/HardwarePrimitives.hpp
-  src/Bloom/GPU/HardwareResourceHandle.hpp
-  src/Bloom/GPU/RenderContext.hpp
-  src/Bloom/GPU/Swapchain.hpp
+  src/Bloom/GPU/HardwareDevice.h
+  src/Bloom/GPU/HardwarePrimitives.h
+  src/Bloom/GPU/HardwareResourceHandle.h
+  src/Bloom/GPU/RenderContext.h
+  src/Bloom/GPU/Swapchain.h
 
   src/Bloom/Graphics/Material/Material.cpp
-  src/Bloom/Graphics/Material/Material.hpp
+  src/Bloom/Graphics/Material/Material.h
   src/Bloom/Graphics/Material/MaterialInstance.cpp
-  src/Bloom/Graphics/Material/MaterialInstance.hpp
-  src/Bloom/Graphics/Material/MaterialParameters.hpp
+  src/Bloom/Graphics/Material/MaterialInstance.h
+  src/Bloom/Graphics/Material/MaterialParameters.h
 
-  src/Bloom/Graphics/Renderer/BloomFramebuffer.hpp
+  src/Bloom/Graphics/Renderer/BloomFramebuffer.h
   src/Bloom/Graphics/Renderer/BloomRenderer.cpp
-  src/Bloom/Graphics/Renderer/BloomRenderer.hpp
+  src/Bloom/Graphics/Renderer/BloomRenderer.h
   src/Bloom/Graphics/Renderer/ForwardRenderer.cpp
-  src/Bloom/Graphics/Renderer/ForwardRenderer.hpp
+  src/Bloom/Graphics/Renderer/ForwardRenderer.h
   src/Bloom/Graphics/Renderer/Renderer.cpp
-  src/Bloom/Graphics/Renderer/Renderer.hpp
-  src/Bloom/Graphics/Renderer/RendererSanitizer.hpp
+  src/Bloom/Graphics/Renderer/Renderer.h
+  src/Bloom/Graphics/Renderer/RendererSanitizer.h
   src/Bloom/Graphics/Renderer/SceneRenderer.cpp
-  src/Bloom/Graphics/Renderer/SceneRenderer.hpp
-  src/Bloom/Graphics/Renderer/ShaderParameters.hpp
+  src/Bloom/Graphics/Renderer/SceneRenderer.h
+  src/Bloom/Graphics/Renderer/ShaderParameters.h
 
   src/Bloom/Graphics/Camera.cpp
-  src/Bloom/Graphics/Camera.hpp
+  src/Bloom/Graphics/Camera.h
   src/Bloom/Graphics/Lights.cpp
-  src/Bloom/Graphics/Lights.hpp
-  src/Bloom/Graphics/MaterialProperties.hpp
+  src/Bloom/Graphics/Lights.h
+  src/Bloom/Graphics/MaterialProperties.h
   src/Bloom/Graphics/Mesh.cpp
-  src/Bloom/Graphics/Mesh.hpp
-  src/Bloom/Graphics/Renderer
-  src/Bloom/Graphics/Renderer.hpp
-  src/Bloom/Graphics/ShaderBase.hpp
+  src/Bloom/Graphics/Mesh.h
+  src/Bloom/Graphics/Renderer.h
+  src/Bloom/Graphics/ShaderBase.h
   src/Bloom/Graphics/StaticMesh.cpp
-  src/Bloom/Graphics/StaticMesh.hpp
-  src/Bloom/Graphics/Vertex.hpp
+  src/Bloom/Graphics/StaticMesh.h
+  src/Bloom/Graphics/Vertex.h
 
   src/Bloom/Platform/MacOS/Autorelease.mm
   src/Bloom/Platform/MacOS/CocoaWindow.mm
-  #src/Bloom/Platform/MacOS/Resource.mm
   src/Bloom/Platform/MacOS/ResourceUtil.mm
 
   src/Bloom/Platform/Metal/MetalBlitContext.h
@@ -111,29 +109,29 @@ set(bloom_sources
   src/Bloom/Platform/Metal/MetalSwapchain.mm
 
   src/Bloom/Runtime/CoreRuntime.cpp
-  src/Bloom/Runtime/CoreRuntime.hpp
+  src/Bloom/Runtime/CoreRuntime.h
   src/Bloom/Runtime/SceneSystem.cpp
-  src/Bloom/Runtime/SceneSystem.hpp
+  src/Bloom/Runtime/SceneSystem.h
   src/Bloom/Runtime/ScriptSystem.cpp
-  src/Bloom/Runtime/ScriptSystem.hpp
+  src/Bloom/Runtime/ScriptSystem.h
 
-  src/Bloom/Scene/Components/AllComponents.hpp
-  src/Bloom/Scene/Components/ComponentBase.hpp
-  src/Bloom/Scene/Components/Hierarchy.hpp
-  src/Bloom/Scene/Components/Lights.hpp
+  src/Bloom/Scene/Components/AllComponents.h
+  src/Bloom/Scene/Components/ComponentBase.h
+  src/Bloom/Scene/Components/Hierarchy.h
+  src/Bloom/Scene/Components/Lights.h
   src/Bloom/Scene/Components/MeshRenderer.cpp
-  src/Bloom/Scene/Components/MeshRenderer.hpp
+  src/Bloom/Scene/Components/MeshRenderer.h
   src/Bloom/Scene/Components/Script.cpp
-  src/Bloom/Scene/Components/Script.hpp
-  src/Bloom/Scene/Components/Tag.hpp
-  src/Bloom/Scene/Components/Transform.hpp
+  src/Bloom/Scene/Components/Script.h
+  src/Bloom/Scene/Components/Tag.h
+  src/Bloom/Scene/Components/Transform.h
 
   src/Bloom/Scene/Entity.cpp
-  src/Bloom/Scene/Entity.hpp
+  src/Bloom/Scene/Entity.h
   src/Bloom/Scene/Scene.cpp
-  src/Bloom/Scene/Scene.hpp
+  src/Bloom/Scene/Scene.h
   src/Bloom/Scene/SceneCamera.cpp
-  src/Bloom/Scene/SceneCamera.hpp
+  src/Bloom/Scene/SceneCamera.h
 )
 
 set(bloom_test_sources

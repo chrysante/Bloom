@@ -1,4 +1,5 @@
-#pragma once
+#ifndef POPPY_SHADERS_BLOOMSHADER_H
+#define POPPY_SHADERS_BLOOMSHADER_H
 
 #include <metal_stdlib>
 
@@ -9,3 +10,5 @@ metal::half4 upsampleTent(metal::texture2d<half, metal::access::sample> tex,
                           metal::float4 sampleScale);
 
 };
+
+#endif // POPPY_SHADERS_BLOOMSHADER_H

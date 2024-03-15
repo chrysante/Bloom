@@ -1,12 +1,12 @@
-#include "Bloom/Application/Window.hpp"
+#include "Bloom/Application/Window.h"
 
 #include <optional>
 
 #include <GLFW/glfw3.h>
 
-#include "Bloom/Core/Debug.hpp"
-#include "Bloom/GPU/HardwareDevice.hpp"
-#include "Bloom/GPU/Swapchain.hpp"
+#include "Bloom/Core/Debug.h"
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/Swapchain.h"
 
 #define GLFW_WND ((GLFWwindow*)glfwWindowPtr.get())
 

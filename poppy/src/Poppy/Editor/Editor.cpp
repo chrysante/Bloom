@@ -1,17 +1,17 @@
-#include "Poppy/Editor/Editor.hpp"
+#include "Poppy/Editor/Editor.h"
 
 #include <fstream>
 
 #include <imgui.h>
 
-#include "Bloom/Application/ResourceUtil.hpp"
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/Core/Autorelease.hpp"
-#include "Bloom/GPU/HardwareDevice.hpp"
-#include "Bloom/Runtime/SceneSystem.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/Renderer/EditorRenderer.hpp"
-#include "Poppy/UI/Appearance.hpp"
+#include "Bloom/Application/ResourceUtil.h"
+#include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Core/Autorelease.h"
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Runtime/SceneSystem.h"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/Renderer/EditorRenderer.h"
+#include "Poppy/UI/Appearance.h"
 
 using namespace bloom;
 using namespace mtl::short_types;

@@ -1,7 +1,7 @@
-#include "Bloom/Graphics/Renderer/Renderer.hpp"
+#include "Bloom/Graphics/Renderer/Renderer.h"
 
-#include "Bloom/Application/Application.hpp"
-#include "Bloom/Graphics/Renderer/ForwardRenderer.hpp"
+#include "Bloom/Application/Application.h"
+#include "Bloom/Graphics/Renderer/ForwardRenderer.h"
 
 namespace bloom {
 

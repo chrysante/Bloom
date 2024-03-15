@@ -1,10 +1,10 @@
-#include "Poppy/Editor/Views/BasicSceneInspector.hpp"
+#include "Poppy/Editor/Views/BasicSceneInspector.h"
 
-#include "Bloom/Runtime/SceneSystem.hpp"
-#include "Bloom/Scene/Components/AllComponents.hpp"
-#include "Bloom/Scene/Scene.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/Editor/Editor.hpp"
+#include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Scene/Components/AllComponents.h"
+#include "Bloom/Scene/Scene.h"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Editor.h"
 
 using namespace bloom;
 using namespace poppy;

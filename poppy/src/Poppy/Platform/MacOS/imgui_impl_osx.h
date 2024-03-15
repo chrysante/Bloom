@@ -1,3 +1,6 @@
+#ifndef POPPY_PLATFORM_MACOS_IMGUI_IMPL_OSX_H
+#define POPPY_PLATFORM_MACOS_IMGUI_IMPL_OSX_H
+
 // dear imgui: Platform Backend for OSX / Cocoa
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan,
 // Metal..) [ALPHA] Early backend, not well tested. If you want a portable
@@ -35,3 +38,5 @@ IMGUI_IMPL_API void ImGui_ImplOSX_Shutdown();
 IMGUI_IMPL_API void ImGui_ImplOSX_NewFrame(NSView* _Nullable view);
 IMGUI_IMPL_API bool ImGui_ImplOSX_HandleEvent(NSEvent* _Nonnull event,
                                               NSView* _Nullable view);
+
+#endif // POPPY_PLATFORM_MACOS_IMGUI_IMPL_OSX_H

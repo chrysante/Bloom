@@ -1,8 +1,8 @@
 #include <metal_stdlib>
-#include "Bloom/Graphics/Renderer/ShaderParameters.hpp"
-#include "Bloom/Graphics/Material/MaterialParameters.hpp"
-#include "Bloom/Graphics/MaterialProperties.hpp" // not really useful
-#include "Bloom/Graphics/Vertex.hpp"
+#include "Bloom/Graphics/Renderer/ShaderParameters.h"
+#include "Bloom/Graphics/Material/MaterialParameters.h"
+#include "Bloom/Graphics/MaterialProperties.h" // not really useful
+#include "Bloom/Graphics/Vertex.h"
 
 #include "PBRShader.h"
 #include "Lights.h"

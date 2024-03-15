@@ -5,8 +5,8 @@
 #include "Bloom/Platform/Metal/MetalRenderContext.h"
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 #include "Bloom/Platform/Metal/MetalCommandQueue.h"
-#include "Bloom/Core/Debug.hpp"
-#include "Bloom/Application/ResourceUtil.hpp"
+#include "Bloom/Core/Debug.h"
+#include "Bloom/Application/ResourceUtil.h"
 
 using namespace mtl::short_types;
 using namespace bloom;

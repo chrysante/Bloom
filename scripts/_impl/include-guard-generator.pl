@@ -62,6 +62,7 @@ sub has_include_guard {
         }
         if ($line =~ /\s*#\s*ifndef\s+${alpha}${alnum}*\s*/) {
             $have_ifndef = 1;
+            next;
         }
         if ($line =~ /\s*#\s*define\s+${alpha}${alnum}*\s*/) {
             if (not $have_ifndef) {
@@ -70,6 +71,7 @@ sub has_include_guard {
             $have_define = 1;
             last;
         }
+        return 0;
     }
     if (not $have_define) {
         return 0;

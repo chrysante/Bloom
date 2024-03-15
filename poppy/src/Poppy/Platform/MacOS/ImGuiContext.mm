@@ -1,4 +1,4 @@
-#include "Poppy/UI/ImGuiContext.hpp"
+#include "Poppy/UI/ImGuiContext.h"
 
 #import <AppKit/AppKit.h>
 #include <imgui.h>
@@ -6,12 +6,12 @@
 
 #include "Poppy/Platform/MacOS/imgui_impl_osx.h"
 #include "Poppy/Platform/MacOS/imgui_impl_metal.h"
-#include "Bloom/Application.hpp"
-#include "Bloom/GPU.hpp"
+#include "Bloom/Application.h"
+#include "Bloom/GPU.h"
 #include "Bloom/Platform/Metal/MetalDevice.h"
 #include "Bloom/Platform/Metal/MetalCommandQueue.h"
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
-#include "Poppy/Core/Debug.hpp"
+#include "Poppy/Core/Debug.h"
 
 using namespace bloom;
 using namespace mtl::short_types;

@@ -1,6 +1,6 @@
 // #include "RendererSettingsView.hpp"
 //
-// #include "Poppy/Editor/Editor.hpp"
+// #include "Poppy/Editor/Editor.h"
 //
 // #include <imgui.h>
 //

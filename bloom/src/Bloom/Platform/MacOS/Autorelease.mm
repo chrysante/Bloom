@@ -1,4 +1,4 @@
-#include "Bloom/Core/Autorelease.hpp"
+#include "Bloom/Core/Autorelease.h"
 
 namespace bloom {
 

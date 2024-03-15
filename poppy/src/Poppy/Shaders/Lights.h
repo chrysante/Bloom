@@ -1,7 +1,8 @@
-#pragma once
+#ifndef POPPY_SHADERS_LIGHTS_H
+#define POPPY_SHADERS_LIGHTS_H
 
-#include "Bloom/Graphics/Lights.hpp"
-#include "Bloom/Graphics/MaterialProperties.hpp"
+#include "Bloom/Graphics/Lights.h"
+#include "Bloom/Graphics/MaterialProperties.h"
 #include "PBRShader.h"
 #include <metal_stdlib>
 
@@ -35,3 +36,5 @@ metal::float3 visualizeShadowCascade(
     metal::float4 worldPosition);
 
 } // namespace bloom
+
+#endif // POPPY_SHADERS_LIGHTS_H

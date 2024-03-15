@@ -1,8 +1,8 @@
-#include "Bloom/Application/Input.hpp"
+#include "Bloom/Application/Input.h"
 
 #include <GLFW/glfw3.h>
 
-#include "Bloom/Application/InputEvent.hpp"
+#include "Bloom/Application/InputEvent.h"
 
 using namespace bloom;
 

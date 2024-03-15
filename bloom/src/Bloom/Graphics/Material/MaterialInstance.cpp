@@ -1,7 +1,7 @@
-#include "Bloom/Graphics/Material/MaterialInstance.hpp"
+#include "Bloom/Graphics/Material/MaterialInstance.h"
 
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/Asset/Serialization.hpp"
+#include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Asset/Serialization.h"
 
 namespace bloom {
 

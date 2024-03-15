@@ -1,6 +1,6 @@
-#include "Poppy/Editor/SelectionContext.hpp"
+#include "Poppy/Editor/SelectionContext.h"
 
-#include "Bloom/Runtime/SceneSystem.hpp"
+#include "Bloom/Runtime/SceneSystem.h"
 
 using namespace bloom;
 

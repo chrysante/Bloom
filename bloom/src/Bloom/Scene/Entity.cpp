@@ -1,4 +1,4 @@
-#include "Bloom/Scene/Entity.hpp"
+#include "Bloom/Scene/Entity.h"
 
 #include <ostream>
 

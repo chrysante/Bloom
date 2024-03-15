@@ -1,6 +1,6 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "Poppy/Editor/Views/EntityInspector.hpp"
+#include "Poppy/Editor/Views/EntityInspector.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -9,15 +9,15 @@
 // #include <scatha/Sema/SymbolTable.h>
 #include <utl/typeinfo.hpp>
 
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/Runtime/ScriptSystem.hpp"
-#include "Bloom/Scene/Scene.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/Editor/Editor.hpp"
-#include "Poppy/Editor/SelectionContext.hpp"
-#include "Poppy/Editor/Views/AssetBrowser.hpp"
-#include "Poppy/UI/Appearance.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Runtime/ScriptSystem.h"
+#include "Bloom/Scene/Scene.h"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Editor/Views/AssetBrowser.h"
+#include "Poppy/UI/Appearance.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace mtl::short_types;
 using namespace bloom;

@@ -1,4 +1,4 @@
-#include "Bloom/Application/ResourceUtil.hpp"
+#include "Bloom/Application/ResourceUtil.h"
 
 #include <algorithm>
 #include <fstream>

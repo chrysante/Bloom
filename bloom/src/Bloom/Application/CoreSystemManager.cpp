@@ -1,12 +1,12 @@
-#include "Bloom/Application/CoreSystemManager.hpp"
+#include "Bloom/Application/CoreSystemManager.h"
 
-#include "Bloom/Application/Application.hpp"
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/GPU/HardwareDevice.hpp"
-#include "Bloom/Graphics/Renderer/Renderer.hpp"
-#include "Bloom/Runtime/CoreRuntime.hpp"
-#include "Bloom/Runtime/SceneSystem.hpp"
-#include "Bloom/Runtime/ScriptSystem.hpp"
+#include "Bloom/Application/Application.h"
+#include "Bloom/Asset/AssetManager.h"
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Graphics/Renderer/Renderer.h"
+#include "Bloom/Runtime/CoreRuntime.h"
+#include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Runtime/ScriptSystem.h"
 
 using namespace bloom;
 

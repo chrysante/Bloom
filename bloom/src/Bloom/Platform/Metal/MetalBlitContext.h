@@ -1,8 +1,9 @@
-#pragma once
+#ifndef BLOOM_PLATFORM_METAL_METALBLITCONTEXT_H
+#define BLOOM_PLATFORM_METAL_METALBLITCONTEXT_H
 
 #include <Metal/Metal.h>
 
-#include "Bloom/GPU/BlitContext.hpp"
+#include "Bloom/GPU/BlitContext.h"
 
 namespace bloom {
 
@@ -15,3 +16,5 @@ public:
 };
 
 } // namespace bloom
+
+#endif // BLOOM_PLATFORM_METAL_METALBLITCONTEXT_H

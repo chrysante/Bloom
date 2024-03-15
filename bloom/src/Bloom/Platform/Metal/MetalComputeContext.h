@@ -1,8 +1,9 @@
-#pragma once
+#ifndef BLOOM_PLATFORM_METAL_METALCOMPUTECONTEXT_H
+#define BLOOM_PLATFORM_METAL_METALCOMPUTECONTEXT_H
 
 #include <Metal/Metal.h>
 
-#include "Bloom/GPU/ComputeContext.hpp"
+#include "Bloom/GPU/ComputeContext.h"
 
 namespace bloom {
 
@@ -33,3 +34,5 @@ public:
 };
 
 } // namespace bloom
+
+#endif // BLOOM_PLATFORM_METAL_METALCOMPUTECONTEXT_H

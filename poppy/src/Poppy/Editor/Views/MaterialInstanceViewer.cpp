@@ -1,12 +1,12 @@
-#include "Poppy/Editor/Views/MaterialInstanceViewer.hpp"
+#include "Poppy/Editor/Views/MaterialInstanceViewer.h"
 
 #include <imgui.h>
 
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/Graphics/Material/MaterialInstance.hpp"
-#include "Poppy/Editor/Editor.hpp"
-#include "Poppy/Editor/Views/AssetBrowser.hpp"
-#include "Poppy/UI/PropertiesView.hpp"
+#include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/Views/AssetBrowser.h"
+#include "Poppy/UI/PropertiesView.h"
 
 using namespace bloom;
 using namespace poppy;

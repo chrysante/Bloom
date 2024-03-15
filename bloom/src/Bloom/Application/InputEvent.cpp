@@ -1,4 +1,4 @@
-#include "Bloom/Application/InputEvent.hpp"
+#include "Bloom/Application/InputEvent.h"
 
 #include <ostream>
 

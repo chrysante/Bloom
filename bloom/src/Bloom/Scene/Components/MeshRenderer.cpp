@@ -1,7 +1,7 @@
-#include "Bloom/Scene/Components/MeshRenderer.hpp"
+#include "Bloom/Scene/Components/MeshRenderer.h"
 
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/Asset/Serialization.hpp"
+#include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Asset/Serialization.h"
 
 using namespace bloom;
 

@@ -1,24 +1,24 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "Poppy/Editor/Views/Viewport/Viewport.hpp"
+#include "Poppy/Editor/Views/Viewport/Viewport.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <utl/stack.hpp>
 
-#include "Bloom/Application/Application.hpp"
-#include "Bloom/Application/InputEvent.hpp"
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/Graphics/Renderer/ForwardRenderer.hpp"
-#include "Bloom/Runtime/SceneSystem.hpp"
-#include "Bloom/Scene/Components/AllComponents.hpp"
-#include "Bloom/Scene/Scene.hpp"
-#include "Poppy/Core/Profile.hpp"
-#include "Poppy/Editor/Editor.hpp"
-#include "Poppy/Editor/SelectionContext.hpp"
-#include "Poppy/Editor/Views/AssetBrowser.hpp"
-#include "Poppy/Renderer/EditorRenderer.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Bloom/Application/Application.h"
+#include "Bloom/Application/InputEvent.h"
+#include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Graphics/Renderer/ForwardRenderer.h"
+#include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Scene/Components/AllComponents.h"
+#include "Bloom/Scene/Scene.h"
+#include "Poppy/Core/Profile.h"
+#include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Editor/Views/AssetBrowser.h"
+#include "Poppy/Renderer/EditorRenderer.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace mtl::short_types;
 using namespace bloom;

@@ -8,17 +8,17 @@
 #include <utl/common.hpp>
 #include <utl/filesystem_ext.hpp>
 
-#include "Bloom/Application/Application.hpp"
-#include "Bloom/Application/ResourceUtil.hpp"
-#include "Bloom/Asset/AssetManager.hpp"
-#include "Bloom/Runtime/SceneSystem.hpp"
-#include "Bloom/Scene/Components/Script.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/Editor/Editor.hpp"
-#include "Poppy/Editor/Views/AssetBrowser.hpp"
-#include "Poppy/Editor/Views/MaterialInstanceViewer.hpp"
-#include "Poppy/UI/Icons.hpp"
-#include "Poppy/UI/ImGuiHelpers.hpp"
+#include "Bloom/Application/Application.h"
+#include "Bloom/Application/ResourceUtil.h"
+#include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Scene/Components/Script.h"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/Views/AssetBrowser.h"
+#include "Poppy/Editor/Views/MaterialInstanceViewer.h"
+#include "Poppy/UI/Icons.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace bloom;
 using namespace mtl::short_types;

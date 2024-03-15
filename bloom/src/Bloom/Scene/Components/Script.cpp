@@ -1,6 +1,6 @@
-#include "Bloom/Scene/Components/Script.hpp"
+#include "Bloom/Scene/Components/Script.h"
 
-#include "Bloom/Application/Application.hpp"
+#include "Bloom/Application/Application.h"
 
 using namespace bloom;
 

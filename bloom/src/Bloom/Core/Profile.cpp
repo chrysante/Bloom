@@ -1,4 +1,4 @@
-#include "Bloom/Core/Profile.hpp"
+#include "Bloom/Core/Profile.h"
 
 namespace bloom {
 

@@ -1,14 +1,14 @@
-#include "Bloom/Scene/Scene.hpp"
+#include "Bloom/Scene/Scene.h"
 
 #include <utl/hashmap.hpp>
 #include <utl/stack.hpp>
 #include <utl/strcat.hpp>
 
-#include "Bloom/Core/Debug.hpp"
-#include "Bloom/Core/Yaml.hpp"
-#include "Bloom/Scene/Components/Hierarchy.hpp"
-#include "Bloom/Scene/Components/Tag.hpp"
-#include "Bloom/Scene/Components/Transform.hpp"
+#include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Yaml.h"
+#include "Bloom/Scene/Components/Hierarchy.h"
+#include "Bloom/Scene/Components/Tag.h"
+#include "Bloom/Scene/Components/Transform.h"
 
 using namespace bloom;
 

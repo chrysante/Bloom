@@ -1,8 +1,8 @@
-#include "Poppy/Editor/Views/DebugViews.hpp"
+#include "Poppy/Editor/Views/DebugViews.h"
 
 #include <imgui.h>
 
-#include "Poppy/UI/Appearance.hpp"
+#include "Poppy/UI/Appearance.h"
 
 using namespace poppy;
 

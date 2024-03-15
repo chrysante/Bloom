@@ -1,15 +1,15 @@
-#include "Poppy/UI/ImGuiContext.hpp"
+#include "Poppy/UI/ImGuiContext.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <utl/strcat.hpp>
 
-#include "Bloom/Application.hpp"
-#include "Bloom/Core.hpp"
-#include "Bloom/GPU.hpp"
-#include "Poppy/Core/Debug.hpp"
-#include "Poppy/UI/Font.hpp"
-#include "Poppy/UI/Icons.hpp"
+#include "Bloom/Application.h"
+#include "Bloom/Core.h"
+#include "Bloom/GPU.h"
+#include "Poppy/Core/Debug.h"
+#include "Poppy/UI/Font.h"
+#include "Poppy/UI/Icons.h"
 
 using namespace bloom;
 using namespace poppy;

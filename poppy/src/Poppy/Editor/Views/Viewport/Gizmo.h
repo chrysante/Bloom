@@ -12,9 +12,9 @@ namespace poppy {
 
 class Gizmo {
 public:
-    enum class Operation { translate, rotate, scale, _count };
+    enum class Operation { Translate, Rotate, Scale, LAST = Scale };
 
-    enum class Space { world, local, _count };
+    enum class Space { World, Local, LAST = Local };
 
 public:
     Gizmo();
@@ -43,8 +43,8 @@ private:
     std::unique_ptr<ImGuizmoCtx, ImGuizmoDeleter> context;
     bloom::Input const* _input = nullptr;
 
-    Operation _operation = Operation::translate;
-    Space _space[3] = { Space::world, Space::world, Space::local };
+    Operation _operation = Operation::Translate;
+    Space _space[3] = { Space::World, Space::World, Space::Local };
     bool _hovered = false;
     bool _using = false;
 };

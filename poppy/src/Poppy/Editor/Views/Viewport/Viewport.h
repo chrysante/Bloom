@@ -51,16 +51,18 @@ public:
     //	public:
     struct Parameters {
         enum class FramebufferElements {
-            depth,
-            raw,
-            postprocessed,
-            _count
-        } framebufferSlot = FramebufferElements::postprocessed;
+            Depth,
+            Raw,
+            Postprocessed,
+            LAST = Postprocessed
+        };
+        FramebufferElements framebufferSlot =
+            FramebufferElements::Postprocessed;
     };
 
     struct DebugDrawOptions {
-        enum class Mode { lit = 0, wireframe, _count };
-        Mode mode = Mode::lit;
+        enum class Mode { Lit = 0, Wireframe, LAST = Wireframe };
+        Mode mode = Mode::Lit;
 
         bool visualizeShadowCascades = false;
         bloom::EntityHandle lightVizEntity;

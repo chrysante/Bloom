@@ -35,14 +35,14 @@ void Gizmo::setOperation(Operation op) {
 }
 
 void Gizmo::setSpace(Space sp) {
-    if (_operation == Operation::scale) {
+    if (_operation == Operation::Scale) {
         return;
     }
     _space[(std::size_t)_operation] = sp;
 }
 
 void Gizmo::cycleSpace() {
-    auto const newSpace = space() == Space::world ? Space::local : Space::world;
+    auto const newSpace = space() == Space::World ? Space::Local : Space::World;
     setSpace(newSpace);
 }
 
@@ -62,7 +62,7 @@ static std::pair<bool, mtl::float4x4> manipulateGizmo(
     transform = mtl::transpose(transform);
 
     auto const imguizmoOperation = (ImGuizmo::OPERATION)operation;
-    auto const imguizmoMode = operation == Gizmo::Operation::scale ?
+    auto const imguizmoMode = operation == Gizmo::Operation::Scale ?
                                   ImGuizmo::MODE::LOCAL :
                                   (ImGuizmo::MODE)(1 - (int)space);
 

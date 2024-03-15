@@ -6,6 +6,7 @@
 #include <imgui.h>
 #include <utl/scope_guard.hpp>
 
+#include "Bloom/Core/EnumCount.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/Icons.h"
 
@@ -16,8 +17,6 @@ struct ViewportInput {
 };
 
 ViewportInput detectViewportInput(int mouseButtons);
-
-//	bool dragFloat3Pretty(float*, char const* labelID, float speed = 1);
 
 bool dragFloat3Pretty(char const* label, float v[3], float v_speed = 1.0f,
                       float v_min = 0.0f, float v_max = 0.0f,
@@ -59,14 +58,13 @@ std::array<char, 64> generateUniqueID(std::string_view, int,
                                       bool prepentDoubleHash = false);
 
 template <typename E>
-bool enumCombo(E& e, std::size_t count = (std::size_t)E::_count) {
+bool enumCombo(E& e, std::size_t count = bloom::EnumCount<E>) {
     bool result = false;
     for (size_t j = 0; j < count; ++j) {
-        E const i = (E)j;
-        bool const selected = e == i;
-        auto const label = toString(i);
-        bool const pressed = ImGui::Selectable(label.data(), selected);
-        //, ImGuiSelectableFlags_SpanAvailWidth);
+        E i = (E)j;
+        bool selected = e == i;
+        auto label = toString(i);
+        bool pressed = ImGui::Selectable(label.data(), selected);
         if (pressed) {
             e = i;
             result = true;
@@ -76,6 +74,16 @@ bool enumCombo(E& e, std::size_t count = (std::size_t)E::_count) {
         }
     }
     return result;
+}
+
+template <typename E>
+bool enumCombo(E e, std::invocable<E> auto set,
+               std::size_t count = bloom::EnumCount<E>) {
+    if (enumCombo(e, count)) {
+        set(e);
+        return true;
+    }
+    return false;
 }
 
 void displayEmptyWithReason(

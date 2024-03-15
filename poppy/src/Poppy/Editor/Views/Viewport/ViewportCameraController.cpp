@@ -7,7 +7,7 @@
 using namespace poppy;
 
 std::string poppy::toString(Projection proj) {
-    return std::array{ "Perspective", "Orthogonal" }[(std::size_t)proj];
+    return std::array{ "Perspective", "Orthogonal" }[(size_t)proj];
 }
 
 void ViewportCameraController::update(bloom::Timestep time,
@@ -47,20 +47,20 @@ void ViewportCameraController::update(bloom::Timestep time,
 }
 
 void ViewportCameraController::applyTransform() {
-    camera.setTransform(data.position, front());
+    cam.setTransform(data.position, front());
 }
 
 void ViewportCameraController::applyProjection(mtl::float2 screenSize) {
-    if (data.projection == Projection::perspective) {
-        camera.setProjection(mtl::to_radians(data.fieldOfView), screenSize,
-                             data.nearClip);
+    if (data.projection == Projection::Perspective) {
+        cam.setProjection(mtl::to_radians(data.fieldOfView), screenSize,
+                          data.nearClip);
     }
     else {
         float const width = 1000; // ??
         float const aspect = screenSize.y / screenSize.x;
         float const height = width * aspect;
-        camera.setProjectionOrtho(-width / 2, width / 2, -height / 2,
-                                  height / 2, 0, 5000);
+        cam.setProjectionOrtho(-width / 2, width / 2, -height / 2, height / 2,
+                               0, 5000);
     }
 }
 
@@ -69,4 +69,18 @@ mtl::float3 ViewportCameraController::front() const {
     using std::sin;
     return { sin(data.angleUD) * cos(data.angleLR),
              sin(data.angleUD) * sin(data.angleLR), cos(data.angleUD) };
+}
+
+BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewportCameraController::Data, angleLR,
+                           angleUD, speed, position, projection, fieldOfView,
+                           nearClip);
+
+YAML::Node ViewportCameraController::serialize() const {
+    return YAML::Node(data);
+}
+
+bool ViewportCameraController::deserialize(YAML::Node const& node) {
+    data = node.as<Data>();
+    applyTransform();
+    return true;
 }

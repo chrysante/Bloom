@@ -27,52 +27,70 @@ using namespace poppy;
 POPPY_REGISTER_VIEW(Viewport, "Viewport", {});
 
 Viewport::Viewport(): BasicSceneInspector(this) {
+    // clang-format off
     toolbar = {
-        ToolbarDropdownMenu().content([this] { dropdownMenu(); }).minWidth(400),
+        ToolbarDropdownMenu()
+            .content([this] {
+                dropdownMenu();
+            }).minWidth(400),
 
         ToolbarSpacer{},
 
-        ToolbarDropdownMenu().content([this] {
-        enumCombo(drawOptions.mode);
-    }).previewValue([this] { return toString(drawOptions.mode); }),
         ToolbarDropdownMenu()
             .content([this] {
-        auto operation = gizmo.operation();
-        if (enumCombo(operation)) {
-            gizmo.setOperation(operation);
-        }
-    }).previewValue([this] { return toString(gizmo.operation()); }),
+                enumCombo(drawOptions.mode);
+            })
+            .previewValue([this] {
+                return toString(drawOptions.mode);
+            }),
+        ToolbarDropdownMenu()
+            .content([this] {
+                auto operation = gizmo.operation();
+                if (enumCombo(operation)) {
+                    gizmo.setOperation(operation);
+                }
+            })
+            .previewValue([this] {
+                return toString(gizmo.operation());
+            }),
 
         ToolbarDropdownMenu()
             .content([this] {
-        auto space = gizmo.space();
-        if (enumCombo(space)) {
-            gizmo.setSpace(space);
-        }
-    }).previewValue([this] { return toString(gizmo.space()); }),
+                auto space = gizmo.space();
+                if (enumCombo(space)) {
+                    gizmo.setSpace(space);
+                }
+            }).previewValue([this] {
+                return toString(gizmo.space());
+            }),
 
         ToolbarDropdownMenu()
             .content([this] {
-        enumCombo(camera.data.projection);
-    }).previewValue([this] { return toString(camera.data.projection); }),
+                enumCombo(camera.projection(),
+                          [&](auto proj) { camera.setProjection(proj); });
+            })
+            .previewValue([this] {
+                return toString(camera.projection());
+            }),
 
         ToolbarSpacer{},
 
         ToolbarIconButton([this] {
-        return maximized() ? "resize-small" : "resize-full";
-    }).onClick([this] {
-        dispatch(DispatchToken::NextFrame, [maximized = maximized(), this] {
-            if (maximized) {
-                restore();
-                window().makeWindowed();
-            }
-            else {
-                maximize();
-                window().makeFullscreen();
-            }
-        });
-    })
-    };
+            return maximized() ? "resize-small" : "resize-full";
+        })
+        .onClick([this] {
+            dispatch(DispatchToken::NextFrame, [maximized = maximized(), this] {
+                if (maximized) {
+                    restore();
+                    window().makeWindowed();
+                }
+                else {
+                    maximize();
+                    window().makeFullscreen();
+                }
+            });
+        })
+    }; // clang-format on
 }
 
 void Viewport::init() {
@@ -143,19 +161,17 @@ YAML::Node Viewport::serialize() const {
 void Viewport::deserialize(YAML::Node node) {
     params = node["Parameters"].as<Parameters>();
     camera = node["Camera"].as<ViewportCameraController>();
-    camera.applyTransform();
 }
 
 void* Viewport::selectImage() const {
     auto* const fwFramebuffer =
         dynamic_cast<ForwardRendererFramebuffer*>(framebuffer.get());
-    if (fwFramebuffer && params.framebufferSlot !=
-                             Parameters::FramebufferElements::postprocessed)
-    {
+    using enum Parameters::FramebufferElements;
+    if (fwFramebuffer && params.framebufferSlot != Postprocessed) {
         switch (params.framebufferSlot) {
-        case Parameters::FramebufferElements::depth:
+        case Parameters::FramebufferElements::Depth:
             return fwFramebuffer->depth.nativeHandle();
-        case Parameters::FramebufferElements::raw:
+        case Parameters::FramebufferElements::Raw:
             return fwFramebuffer->rawColor.nativeHandle();
         default:
             break;
@@ -183,7 +199,7 @@ void Viewport::displayScene() {
     ImGui::Image(image, ImGui::GetWindowSize());
     if (!gameView) {
         overlays.display();
-        gizmo.display(camera.camera, selection());
+        gizmo.display(camera.camera(), selection());
     }
 }
 
@@ -196,13 +212,13 @@ void Viewport::drawScene() {
     auto& sceneSystem = editor().coreSystems().sceneSystem();
     sceneSystem.applyTransformHierarchy();
     if (gameView) {
-        sceneRenderer.draw(sceneSystem.scenes(), camera.camera, *framebuffer,
+        sceneRenderer.draw(sceneSystem.scenes(), camera.camera(), *framebuffer,
                            window().commandQueue());
     }
     else {
         OverlayDrawDescription desc;
         sceneRenderer.drawWithOverlays(sceneSystem.scenes(),
-                                       editor().selection(), camera.camera,
+                                       editor().selection(), camera.camera(),
                                        desc, *framebuffer, *editorFramebuffer,
                                        window().commandQueue());
     }
@@ -248,13 +264,13 @@ void Viewport::onInput(bloom::InputEvent& event) {
             gizmo.cycleSpace();
             break;
         case Key::_1:
-            gizmo.setOperation(Gizmo::Operation::translate);
+            gizmo.setOperation(Gizmo::Operation::Translate);
             break;
         case Key::_2:
-            gizmo.setOperation(Gizmo::Operation::rotate);
+            gizmo.setOperation(Gizmo::Operation::Rotate);
             break;
         case Key::_3:
-            gizmo.setOperation(Gizmo::Operation::scale);
+            gizmo.setOperation(Gizmo::Operation::Scale);
             break;
         case Key::Escape:
             restore();
@@ -275,8 +291,8 @@ void Viewport::debugPanel() {
         });
     };
     ImGui::Begin("Viewport Debug");
-    float4x4 const view = camera.camera.view();
-    float4x4 const proj = camera.camera.projection();
+    float4x4 view = camera.camera().view();
+    float4x4 proj = camera.camera().projection();
     withFont(Font::UIDefault().setWeight(FontWeight::semibold),
              [&] { ImGui::Text("View Matrix:"); });
     matrix(view);
@@ -307,12 +323,19 @@ void Viewport::dropdownMenu() {
 
         beginProperty("Field Of View");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        ImGui::SliderFloat("##field-of-view", &camera.data.fieldOfView, 30,
-                           180);
+        if (float fov = camera.fieldOfView();
+            ImGui::SliderFloat("##field-of-view", &fov, 30, 180))
+        {
+            camera.setFieldOfView(fov);
+        }
 
         beginProperty("Near Clip Plane");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        ImGui::SliderFloat("##near-clip-plane", &camera.data.nearClip, 0, 1);
+        if (float clip = camera.nearClipPlane();
+            ImGui::SliderFloat("##near-clip-plane", &clip, 0, 1))
+        {
+            camera.setNearClipPlane(clip);
+        }
 
         beginProperty("Visualize Shadow Cascades");
         if (ImGui::Checkbox("##viz-shadow-cascades",
@@ -436,7 +459,7 @@ void Viewport::receiveSceneDragDrop() {
 }
 
 mtl::float3 Viewport::worldSpaceToViewSpace(mtl::float3 const positionWS) {
-    auto const viewProj = camera.camera.viewProjection();
+    auto const viewProj = camera.camera().viewProjection();
     auto const tmp = viewProj * mtl::float4(positionWS, 1);
     auto const ndc = tmp.xyz / tmp.w;
 
@@ -454,7 +477,7 @@ mtl::float3 Viewport::worldSpaceToWindowSpace(mtl::float3 position) {
 }
 
 mtl::float2 Viewport::worldSpaceDirToViewSpace(mtl::float3 const positionWS) {
-    auto const viewProj = camera.camera.viewProjection();
+    auto const viewProj = camera.camera().viewProjection();
     auto const tmp = viewProj * mtl::float4(positionWS, 0);
     auto const ndc = tmp.xyz / tmp.w;
 

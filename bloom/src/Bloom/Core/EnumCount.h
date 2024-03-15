@@ -3,6 +3,8 @@
 
 #include <type_traits>
 
+#include "Bloom/Core/Debug.h"
+
 namespace bloom {
 
 template <typename E>
@@ -17,6 +19,7 @@ inline constexpr std::size_t EnumCount = []() -> std::size_t {
     else {
         static_assert(!std::is_same_v<E, E>,
                       "EnumCount requires either E::COUNT or E::LAST");
+        BL_UNREACHABLE();
     }
 }();
 

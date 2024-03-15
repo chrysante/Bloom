@@ -9,9 +9,14 @@
 using namespace bloom;
 using namespace mtl::short_types;
 
+class bloom::AppRunner {
+public:
+    static void run(Application& app) { app.run(); }
+};
+
 int main(int, char*[]) {
     auto app = createApplication();
-    app->run();
+    AppRunner::run(*app);
 }
 
 std::unique_ptr<bloom::Application> bloom::createApplication() {

@@ -17,6 +17,8 @@ using namespace bloom;
 using namespace mtl::short_types;
 using namespace poppy;
 
+float poppy::saveStateInterval() { return 5; }
+
 std::unique_ptr<Application> bloom::createApplication() {
     return std::make_unique<poppy::Editor>();
 }
@@ -27,6 +29,10 @@ struct EditorWindowDelegate: public bloom::WindowDelegate {
     utl::function<void()> onFrame;
 };
 
+static char const* playButton(Editor const* editor) {
+    return editor->isSimulating() ? "stop" : "play";
+}
+
 Editor::Editor(): mSelection(makeReceiver()) {
     // clang-format off
     dockspace.setLeftToolbar({
@@ -36,23 +42,20 @@ Editor::Editor(): mSelection(makeReceiver()) {
                 ImGui::Text("fndsjsnsaf");
             }),
         ToolbarSpacer{},
-        ToolbarIconButton([this] {
-            return "play";
-//            return sceneSystem().isSimulating() ? "stop" : "play";
-        })
-            .onClick([this] {
-//                sceneSystem().isSimulating() ? stopSimulation() :
-//                                               startSimulation();
-              })
-              .enabled([this] {
-                  return false;
-//                  return !!sceneSystem().getScene();
-              }) });
-
+        ToolbarIconButton(std::bind_front(playButton, this))
+            .onClick([&] {
+                isSimulating() ? stopSimulation() :
+                                 startSimulation();
+            })
+            .enabled([&] {
+                return !coreSystems().sceneSystem().scenes().empty();
+            })
+    });
     dockspace.setCenterToolbar({
-        ToolbarIconButton("plus").onClick([] {
-            Logger::Trace("Some Button Pressed");
-        }),
+        ToolbarIconButton("plus")
+            .onClick([] {
+                Logger::Trace("Some Button Pressed");
+            }),
         ToolbarIconButton("bank")
             .onClick([] {
                 Logger::Trace("Some Button Pressed");
@@ -87,8 +90,7 @@ void Editor::openView(std::string name, utl::function<void(View&)> completion) {
         Logger::Warn("Could not find View '", name, "'");
         return;
     }
-
-    dispatch(DispatchToken::NextFrame, [=] {
+    dispatch(DispatchToken::NextFrame, [=, this] {
         auto& view = createView(*entry, *getWindows().front());
         if (completion) {
             completion(view);
@@ -96,11 +98,18 @@ void Editor::openView(std::string name, utl::function<void(View&)> completion) {
     });
 }
 
-/// MARK: Init
+void Editor::startSimulation() { coreSystems().runtime().run(); }
+
+void Editor::stopSimulation() { coreSystems().runtime().stop(); }
+
+bool Editor::isSimulating() const {
+    return coreSystems().runtime().state() == RuntimeState::Running;
+}
+
 void Editor::init() {
     auto editorRenderer =
         std::make_unique<EditorRenderer>(makeReceiver(),
-                                         coreSystems().getRenderer());
+                                         coreSystems().takeRenderer());
     editorRenderer->init(device());
     coreSystems().setRenderer(std::move(editorRenderer));
 
@@ -141,7 +150,7 @@ void Editor::frame() {
     saveStateDirtyTimer -= time().delta;
     if (saveStateDirtyTimer <= 0) {
         saveStateToDisk();
-        saveStateDirtyTimer = saveStateInterval;
+        saveStateDirtyTimer = saveStateInterval();
     }
     clearClosingViews();
     auto const windows = getWindows();
@@ -206,8 +215,6 @@ void Editor::displayViews() {
     }
 }
 
-/// MARK: Serialization
-
 void Editor::onInput(bloom::InputEvent e) {
     imguiCtx.onInput(e);
     e.dispatch<InputEventType::keyUp>([&](KeyEvent event) {
@@ -242,7 +249,6 @@ void Editor::onInput(bloom::InputEvent e) {
     }
 }
 
-/// MARK: Serialization
 void Editor::saveStateToDisk() {
     YAML::Node root;
     root["Appearance"] = appearance.serialize();
@@ -286,8 +292,6 @@ void Editor::loadViews(YAML::Node const& node) {
     }
 }
 
-/// MARK: Misc
-
 std::filesystem::path Editor::settingsFile() const {
     return libraryDir() / "Poppy.settings";
 }
@@ -309,7 +313,6 @@ void Editor::populateView(View& view, bloom::Window& window) {
     auto& desc = view.desc;
     desc.editor = this;
     desc.window = &window;
-
     view.Emitter::operator=(makeEmitter());
     view.Receiver::operator=(makeReceiver());
 }

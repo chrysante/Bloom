@@ -28,7 +28,7 @@ void CoreSystemManager::init() {
 
 void CoreSystemManager::shutdown() {}
 
-std::unique_ptr<Renderer> CoreSystemManager::getRenderer() {
+std::unique_ptr<Renderer> CoreSystemManager::takeRenderer() {
     return std::move(mRenderer);
 }
 

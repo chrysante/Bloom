@@ -23,26 +23,55 @@ public:
     /// Construct with reference to the running application
     CoreSystemManager(Application* app);
 
+    ///
     ~CoreSystemManager();
 
+    ///
     void init();
 
+    ///
     void shutdown();
 
+    ///
     HardwareDevice& device() { return *mDevice; }
 
+    /// \overload
+    HardwareDevice const& device() const { return *mDevice; }
+
+    ///
     Renderer& renderer() { return *mRenderer; }
 
+    /// \overload
+    Renderer const& renderer() const { return *mRenderer; }
+
+    ///
     AssetManager& assetManager() { return *mAssetManager; }
 
+    /// \overload
+    AssetManager const& assetManager() const { return *mAssetManager; }
+
+    ///
     CoreRuntime& runtime() { return *mRuntime; }
 
+    /// \overload
+    CoreRuntime const& runtime() const { return *mRuntime; }
+
+    ///
     SceneSystem& sceneSystem() { return *mSceneSystem; }
 
+    /// \overload
+    SceneSystem const& sceneSystem() const { return *mSceneSystem; }
+
+    ///
     ScriptSystem& scriptSystem() { return *mScriptSystem; }
 
-    [[nodiscard]] std::unique_ptr<Renderer> getRenderer();
+    /// \overload
+    ScriptSystem const& scriptSystem() const { return *mScriptSystem; }
 
+    ///
+    [[nodiscard]] std::unique_ptr<Renderer> takeRenderer();
+
+    ///
     void setRenderer(std::unique_ptr<Renderer> renderer);
 
 private:

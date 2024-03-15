@@ -9,7 +9,6 @@
 #include "Bloom/Scene/Components/Lights.h"
 #include "Bloom/Scene/Entity.h"
 #include "Poppy/Core/Debug.h"
-#include "Poppy/UI/View.h"
 
 namespace bloom {
 
@@ -22,6 +21,7 @@ class Application;
 namespace poppy {
 
 class Editor;
+class View;
 class SelectionContext;
 
 enum struct LightType {

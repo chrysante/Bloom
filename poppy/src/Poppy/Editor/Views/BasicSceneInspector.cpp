@@ -5,6 +5,7 @@
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/UI/View.h"
 
 using namespace bloom;
 using namespace poppy;
@@ -31,8 +32,7 @@ bool BasicSceneInspector::hasLightComponent(bloom::EntityHandle entity) const {
 }
 
 bool BasicSceneInspector::isSimulating() const {
-    return view->editor().coreSystems().runtime().state() ==
-           RuntimeState::running;
+    return view->editor().isSimulating();
 }
 
 LightType BasicSceneInspector::getLightType(bloom::EntityHandle entity) const {

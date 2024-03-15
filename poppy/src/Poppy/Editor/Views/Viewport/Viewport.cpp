@@ -138,7 +138,7 @@ void Viewport::frame() {
             camera.update(Timestep{ 0, 0.166 }, window().input());
         }
     }
-    if (/*!isSimulating() && */ GImGui->DragDropActive) {
+    if (!isSimulating() && GImGui->DragDropActive) {
         float const spacing = 6.5;
         ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
         ImGui::SetCursorPos({ spacing, spacing });
@@ -411,7 +411,8 @@ void Viewport::dropdownMenu() {
 bloom::EntityHandle Viewport::readEntityID(mtl::float2 mousePosition) {
     Logger::Warn("Mouse picking is not implemented");
     return {};
-    /// This doesn't work right now because we don't render the entity ID framebuffer
+    /// This doesn't work right now because we don't render the entity ID
+    /// framebuffer
 #if 0
     static_assert(
         std::is_same_v<std::underlying_type_t<entt::entity>, std::uint32_t>);

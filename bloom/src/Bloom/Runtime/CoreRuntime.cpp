@@ -17,34 +17,32 @@ CoreRuntime::CoreRuntime(std::shared_ptr<RuntimeDelegate> delegate):
 
 CoreRuntime::~CoreRuntime() { stop(); }
 
-/// MARK: Modifiers
-void CoreRuntime::setDelegate(std::shared_ptr<RuntimeDelegate> delegate) {
+bool CoreRuntime::setDelegate(std::shared_ptr<RuntimeDelegate> delegate) {
     std::unique_lock lock(mMutex);
-    if (mState != RuntimeState::inactive) {
-        return;
+    if (mState != RuntimeState::Inactive) {
+        return false;
     }
     mDelegate = std::move(delegate);
+    return true;
 }
 
 void CoreRuntime::run() {
     std::unique_lock lock(mMutex);
-    if (state() == RuntimeState::running) {
+    if (state() == RuntimeState::Running) {
         return;
     }
-    if (state() == RuntimeState::paused) {
+    if (state() == RuntimeState::Paused) {
         return;
     }
-
-    assert(state() == RuntimeState::inactive);
-
-    setState(RuntimeState::running);
+    assert(state() == RuntimeState::Inactive);
+    setState(RuntimeState::Running);
     lock.unlock();
     mUpdateThread = std::thread([this] { updateThread(); });
 }
 
 void CoreRuntime::stop() {
     std::unique_lock lock(mMutex);
-    setState(RuntimeState::inactive);
+    setState(RuntimeState::Inactive);
     lock.unlock();
     if (mUpdateThread.joinable()) {
         mUpdateThread.join();
@@ -53,57 +51,54 @@ void CoreRuntime::stop() {
 
 void CoreRuntime::pause() {
     std::unique_lock lock(mMutex);
-    if (mState != RuntimeState::running) {
+    if (mState != RuntimeState::Running) {
         return;
     }
     mTimer.pause();
-    setState(RuntimeState::paused);
+    setState(RuntimeState::Paused);
 }
 
 void CoreRuntime::resume() {
     std::unique_lock lock(mMutex);
-    if (mState != RuntimeState::paused) {
+    if (mState != RuntimeState::Paused) {
         return;
     }
     mTimer.resume();
-    setState(RuntimeState::running);
+    setState(RuntimeState::Running);
 }
 
 /// MARK: Private
 void CoreRuntime::updateThread() {
     mTimer.reset();
-
     if (mDelegate) {
         mDelegate->start();
     }
-
     utl::scope_guard onStop = [this] {
         if (mDelegate) {
             mDelegate->stop();
         }
     };
-
     while (true) {
         std::unique_lock lock(mMutex);
         switch (mState) {
-        case RuntimeState::running:
+        case RuntimeState::Running:
             lock.unlock();
             mTimer.update();
             if (mDelegate) {
                 mDelegate->step(Timestep{});
             }
             break;
-        case RuntimeState::paused:
+        case RuntimeState::Paused:
             if (mDelegate) {
                 mDelegate->pause();
             }
-            mCV.wait(lock, [&] { return mState != RuntimeState::paused; });
-            if (mState == RuntimeState::running && mDelegate) {
+            mCV.wait(lock, [&] { return mState != RuntimeState::Paused; });
+            if (mState == RuntimeState::Running && mDelegate) {
                 mDelegate->resume();
             }
             break;
 
-        case RuntimeState::inactive:
+        case RuntimeState::Inactive:
             return;
         }
     }

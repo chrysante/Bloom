@@ -13,55 +13,76 @@
 
 namespace bloom {
 
-struct BLOOM_API UpdateOptions {
+struct UpdateOptions {
     std::size_t stepsPerSecond = 50;
 };
 
-enum class BLOOM_API RuntimeState { inactive = 0, paused = 1, running = 2 };
+enum class RuntimeState { Inactive = 0, Paused = 1, Running = 2 };
 
+/// Callback class to customize the runtime behaviour
 class BLOOM_API RuntimeDelegate {
 public:
     virtual ~RuntimeDelegate() = default;
+
+    ///
     virtual void start(){};
+
+    ///
     virtual void stop(){};
+
+    ///
     virtual void pause(){};
+
+    ///
     virtual void resume(){};
+
+    ///
     virtual void step(Timestep){};
 };
 
+/// Manages the update thread
 class BLOOM_API CoreRuntime: public CoreSystem {
 public:
-    CoreRuntime() = default;
-    explicit CoreRuntime(std::shared_ptr<RuntimeDelegate>);
+    explicit CoreRuntime(std::shared_ptr<RuntimeDelegate> = nullptr);
 
     ~CoreRuntime();
 
+    ///
     void init();
 
-    /// MARK: Queries
+    ///
     UpdateOptions updateOptions() const { return mUpdateOptions; }
+
+    ///
     RuntimeState state() const { return mState; }
 
-    /// MARK: Modifiers
-    void setDelegate(std::shared_ptr<RuntimeDelegate>);
+    ///
+    bool setDelegate(std::shared_ptr<RuntimeDelegate>);
+
+    ///
     void setUpdateOptions(UpdateOptions options) { mUpdateOptions = options; }
 
+    ///
     void run();
+
+    ///
     void stop();
+
+    ///
     void pause();
+
+    ///
     void resume();
 
 private:
-    /// MARK: Private
     void updateThread();
     void setState(RuntimeState target);
 
-private:
     std::thread mUpdateThread;
     std::mutex mMutex;
     std::condition_variable mCV;
 
-    RuntimeState mState = RuntimeState::inactive;
+    RuntimeState mState = RuntimeState::Inactive;
     Timer mTimer;
     UpdateOptions mUpdateOptions;
 

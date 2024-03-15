@@ -12,13 +12,11 @@
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Time.h"
 
-/// Bloom provides the main function
-BLOOM_API int main(int argc, char* argv[]);
-
 namespace bloom {
 
 class Application;
 class HardwareDevice;
+class AppRunner;
 
 /// Users are expected to provide an implementation of this function in their
 /// code, that returns a derived application
@@ -31,8 +29,6 @@ class BLOOM_API Application:
     protected Receiver,
     protected Emitter {
 public:
-    /// MARK: Virtual Interface
-    ///
     virtual ~Application();
 
     /// Called by the framework after core systems have been initialized.
@@ -51,6 +47,9 @@ public:
 
     /// \Returns the core system manager
     CoreSystemManager& coreSystems() { return mCoreSystems; }
+
+    /// \overload
+    CoreSystemManager const& coreSystems() const { return mCoreSystems; }
 
     /// \Returns the current timestep
     Timestep time() const { return mTimer.timestep(); }
@@ -72,7 +71,7 @@ protected:
     Application();
 
 private:
-    friend int ::main(int, char*[]);
+    friend class AppRunner;
 
     /// Main function of the application. Runs initialization, main loop and
     /// shutdown
@@ -102,8 +101,7 @@ private:
     utl::vector<WindowWrapper> mWindows;
     CoreSystemManager mCoreSystems;
     Timer mTimer;
-    std::size_t mFrameCounter = 0;
-    bool skipFrame = false; // used to skip frames on resize and move events to
+    bool skipFrame = false; // Used to skip frames on resize and move events to
                             // avoid visual glitches
 };
 

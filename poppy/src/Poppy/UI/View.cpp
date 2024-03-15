@@ -174,14 +174,11 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
             BL_DEBUGBREAK();
             return nullptr;
         }
-
-        auto const entry = ViewRegistry::get(desc.name());
+        auto entry = ViewRegistry::get(desc.name());
         if (!entry) {
-            Logger::Error("Failed to deserialize View named '", desc.name(),
-                          "'");
+            Logger::Error("Failed to deserialize '", desc.name(), "'");
             return nullptr;
         }
-
         auto result = entry->factory();
         ViewDescPrivate privDesc{ desc };
         result->desc = privDesc;
@@ -192,6 +189,5 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
     catch (std::exception const& e) {
         Logger::Error(e.what());
     }
-
     return nullptr;
 }

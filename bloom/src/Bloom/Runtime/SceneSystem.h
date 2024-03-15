@@ -17,33 +17,42 @@ namespace bloom {
 
 class Scene;
 
+/// Manages the runtime behaviour of scenes.
+/// Can have multiple scenes loaded at the same time .
 class BLOOM_API SceneSystem: public CoreSystem, public RuntimeDelegate {
 public:
-    void loadScene(Reference<Scene>);
+    /// Loads the scene \p scene into the system
+    void loadScene(Reference<Scene> scene);
 
-    void unloadScene(utl::uuid id);
+    /// Unloads the scene with ID \p ID
+    void unloadScene(utl::uuid ID);
 
+    /// Unloads all scenes
     void unloadAll();
 
+    ///
     std::unique_lock<std::mutex> lock();
 
+    /// \Returns a view over all loaded scenes
     std::span<Scene* const> scenes() const { return mScenePtrs; }
 
+    /// Computes the transform matrices for all entities based on the hierarchy
     void applyTransformHierarchy();
 
 private:
+    /// Implementation of `RuntimeDelegate` interface
+    /// @{
     void start() override;
-
     void stop() override;
-
     void pause() override;
-
     void resume() override;
-
     void step(Timestep) override;
+    /// @}
 
+    ///
     void tryCopyOut();
 
+    ///
     void setPointers();
 
 private:

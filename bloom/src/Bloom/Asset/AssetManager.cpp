@@ -647,8 +647,7 @@ std::filesystem::path Impl::makeAbsolute(
 AssetFileHeader Impl::readHeader(std::filesystem::path const& path) const {
     FileExtension extension = toExtension(path).value();
     if (hasHeader(extension)) {
-        path = makeAbsolute(path);
-        auto file = openFile(path);
+        auto file = openFile(makeAbsolute(path));
         return readHeader(file);
     }
     return AssetFileHeader{

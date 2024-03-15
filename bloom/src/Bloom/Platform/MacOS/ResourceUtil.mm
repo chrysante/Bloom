@@ -1,6 +1,7 @@
 #include "Bloom/Application/ResourceUtil.hpp"
 
 #include <cstdlib>
+#include <vector>
 
 #import <Appkit/Appkit.h>
 
@@ -26,7 +27,7 @@ std::filesystem::path bloom::libraryDir() {
 }
 
 void bloom::showSavePanel(
-    utl::function<void(std::filesystem::path const&)> completion) {
+    std::function<void(std::filesystem::path const&)> completion) {
     NSSavePanel* panel = [NSSavePanel savePanel];
     [panel beginWithCompletionHandler:^(NSInteger result){
         if (result == NSModalResponseOK) {
@@ -38,7 +39,7 @@ void bloom::showSavePanel(
 
 void bloom::showOpenPanel(
     OpenPanelDescription const& desc,
-    utl::function<void(utl::vector<std::filesystem::path> const&)> completion) {
+    std::function<void(std::span<std::filesystem::path const>)> completion) {
     NSOpenPanel* panel = [NSOpenPanel openPanel];
     [panel setResolvesAliases: desc.resolvesAliases];
     [panel setCanChooseDirectories: desc.canChooseDirectories];
@@ -47,7 +48,7 @@ void bloom::showOpenPanel(
     [panel beginWithCompletionHandler:^(NSInteger result){
         if (result == NSModalResponseOK) {
             NSArray* urls = [panel URLs];
-            utl::vector<std::filesystem::path> paths;
+            std::vector<std::filesystem::path> paths;
             paths.resize(urls.count);
             for (size_t index = 0; auto& path: paths) {
                 path = ((NSURL*)[urls objectAtIndex: index]).path.UTF8String;

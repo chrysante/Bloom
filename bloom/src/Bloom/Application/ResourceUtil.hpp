@@ -1,46 +1,47 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <optional>
-
-#include <utl/functional.hpp>
-#include <utl/vector.hpp>
+#include <span>
 
 #include "Bloom/Core/Base.hpp"
 
 namespace bloom {
 
+/// \Returns the path of the resource directory
 BLOOM_API std::filesystem::path resourceDir();
 
+/// \Returns the path of the library directory
 BLOOM_API std::filesystem::path libraryDir();
 
+/// Displays a system "save" panel
 BLOOM_API void showSavePanel(
-    utl::function<void(std::filesystem::path const&)> completion);
+    std::function<void(std::filesystem::path const&)> completion);
 
+/// Options for `showOpenPanel()`
 struct OpenPanelDescription {
+    ///
     bool resolvesAliases = true;
+
+    ///
     bool canChooseDirectories = false;
+
+    /// Set to `true` to only allow selecting multiple files
     bool allowsMultipleSelection = false;
+
+    /// Set to `false` to only allow choosing directories
     bool canChooseFiles = true;
 };
 
+/// Displays a system "open" panel
 BLOOM_API void showOpenPanel(
     OpenPanelDescription const& desc,
-    utl::function<void(utl::vector<std::filesystem::path> const&)> completion);
+    std::function<void(std::span<std::filesystem::path const>)> completion);
 
-BLOOM_API inline void showOpenPanel(
+/// \overload
+BLOOM_API void showOpenPanel(
     OpenPanelDescription const& desc,
-    utl::function<void(std::filesystem::path const&)> completion) {
-    utl::function<void(utl::vector<std::filesystem::path> const&)> callback =
-        [=](utl::vector<std::filesystem::path> const& paths) {
-        completion(paths.empty() ? std::filesystem::path{} : paths.front());
-    };
-    showOpenPanel(desc, callback);
-}
-
-BLOOM_API std::optional<std::string> readFileText(std::filesystem::path const&);
-
-BLOOM_API std::optional<utl::vector<char>> readFileBinary(
-    std::filesystem::path const&);
+    std::function<void(std::filesystem::path const&)> completion);
 
 } // namespace bloom

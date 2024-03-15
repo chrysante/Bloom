@@ -259,11 +259,7 @@ void Editor::saveStateToDisk() {
 }
 
 void Editor::loadStateFromDisk() {
-    auto const text = readFileText(settingsFile());
-    if (!text) {
-        return;
-    }
-    YAML::Node root = YAML::Load(*text);
+    YAML::Node root = YAML::LoadFile(settingsFile());
     appearance.deserialize(root["Appearance"]);
     Logger::Warn("Resetting style colors on startup");
     ImGui::StyleColorsDark();

@@ -20,6 +20,7 @@ enum class BLOOM_API RuntimeState { inactive = 0, paused = 1, running = 2 };
 
 class BLOOM_API RuntimeDelegate {
 public:
+    virtual ~RuntimeDelegate() = default;
     virtual void start(){};
     virtual void stop(){};
     virtual void pause(){};

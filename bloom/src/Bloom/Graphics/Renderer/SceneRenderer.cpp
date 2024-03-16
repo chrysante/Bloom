@@ -11,28 +11,15 @@
 
 using namespace bloom;
 
-void SceneRenderer::draw(Scene const& scene, Camera const& camera,
-                         Framebuffer& framebuffer, CommandQueue& commandQueue) {
-    assert(mRenderer);
-    std::array const scenes{ &scene };
-    draw(scenes, camera, framebuffer, commandQueue);
-}
-
-void SceneRenderer::draw(std::span<Scene const* const> scenes,
-                         Camera const& camera, Framebuffer& framebuffer,
-                         CommandQueue& commandQueue) {
+void SceneRenderer::submitScenes(std::span<Scene const* const> scenes,
+                                 Camera const& camera) {
     assert(mRenderer);
     renderer().beginScene(camera);
-
     for (auto* scene: scenes) {
         submitScene(*scene);
     }
-
     submitExtra();
-
     renderer().endScene();
-
-    renderer().draw(framebuffer, commandQueue);
 }
 
 template <typename LightComponent>
@@ -40,8 +27,7 @@ static void submitLights(Renderer& renderer, Scene const& scene,
                          auto&& lightModifier) {
     auto view =
         scene.view<TransformMatrixComponent const, LightComponent const>();
-    view.each([&]([[maybe_unused]] auto ID,
-                  TransformMatrixComponent const& transform,
+    view.each([&](auto /* ID */, TransformMatrixComponent const& transform,
                   LightComponent light) {
         lightModifier(transform, light);
         renderer.submit(light.light);
@@ -57,7 +43,7 @@ void SceneRenderer::submitScene(Scene const& scene) {
     /* submit meshes */ {
         auto view = scene.view<TransformMatrixComponent const,
                                MeshRendererComponent const>();
-        view.each([&](auto const id, TransformMatrixComponent const& transform,
+        view.each([&](auto /* ID */, TransformMatrixComponent const& transform,
                       MeshRendererComponent const& meshRenderer) {
             if (!meshRenderer.mesh || !meshRenderer.materialInstance ||
                 !meshRenderer.materialInstance->material())
@@ -68,7 +54,6 @@ void SceneRenderer::submitScene(Scene const& scene) {
                               meshRenderer.materialInstance, transform.matrix);
         });
     }
-
     submitLights<PointLightComponent>(renderer(), scene,
                                       [](auto& transform, auto& light) {
         light.light.position = transform.matrix.column(3).xyz;

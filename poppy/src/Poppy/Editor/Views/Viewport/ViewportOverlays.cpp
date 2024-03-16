@@ -18,8 +18,8 @@ static std::uint32_t toUCol32(mtl::float4 color) {
     return ImGui::ColorConvertFloat4ToU32(color);
 }
 
-static std::uint32_t toUCol32(mtl::float3 color) {
-    return toUCol32(mtl::float4{ color, 1 });
+static std::uint32_t toUCol32(mtl::float3 color, float alpha = 1.0f) {
+    return toUCol32(mtl::float4{ color, alpha });
 }
 
 static void drawArrow(mtl::float2 from, mtl::float2 to, float headSize,
@@ -105,7 +105,7 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
                                            bool selected,
                                            Transform const& transform,
                                            PointLight const& light) {
-    drawPointLightIcon(positionInWindow, light.common.color);
+    drawPointLightIcon(positionInWindow, light.common.color, selected);
 }
 
 template <>
@@ -142,11 +142,17 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
 }
 
 void ViewportOverlays::drawPointLightIcon(mtl::float2 position,
-                                          mtl::float3 color) {
-    float const size = 20;
-    auto* const drawList = ImGui::GetWindowDrawList();
-    drawList->AddCircle(position, size, toUCol32({ 0, 0, 0, 0.5 }), 0, 4);
-    drawList->AddCircle(position, size, toUCol32(color), 0, 2);
+                                          mtl::float3 color, bool selected) {
+    float size = 20;
+    float alphaFactor = selected ? 1.0 : 0.5;
+    auto* drawList = ImGui::GetWindowDrawList();
+    drawList->AddCircle(position, size,
+                        toUCol32({ 0, 0, 0, alphaFactor * 0.5 }),
+                        /* segments = */ 0,
+                        /* thickness = */ 4);
+    drawList->AddCircle(position, size, toUCol32(color, alphaFactor),
+                        /* segments = */ 0,
+                        /* thickness = */ 2);
 }
 
 void ViewportOverlays::drawSpotLightIcon(mtl::float2 position,
@@ -169,9 +175,7 @@ void ViewportOverlays::drawDirectionalLightIcon(mtl::float2 position,
                                                 mtl::float3 directionWS,
                                                 mtl::float3 color) {
     float const size = 18;
-
     float2 const line = float2(-1, 2) * size;
-
     auto doDraw = [&](float4 color, float thickness) {
         for (auto offset: { -1, 0, 1 }) {
             float2 const p = position + float2(offset + 0.5, -1) * size;

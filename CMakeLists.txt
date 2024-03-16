@@ -14,6 +14,11 @@ set(CMAKE_CXX_STANDARD 20)
 
 # Dependencies
 
+# To make range-v3 happy
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+CPMAddPackage("gh:ericniebler/range-v3#0.12.0")
 set(ASSIMP_INSTALL OFF)
 set(ASSIMP_BUILD_TESTS OFF)
 set(ASSIMP_WARNINGS_AS_ERRORS OFF)

@@ -52,14 +52,13 @@ EntityHandle Scene::cloneEntity(EntityID from) {
 void Scene::deleteEntity(EntityID id) { _registry.destroy(id.value()); }
 
 Reference<Scene> Scene::clone() {
-    BL_UNIMPLEMENTED();
-#if 0
     utl::hashmap<EntityID, EntityID> idMap;
-    Scene result(handle(), std::string(name()));
+    auto result = allocateRef<Scene>(handle(), name());
     each([&](EntityID fromID) {
-        auto const fromHandle = this->getHandle(fromID);
-        EntityID const toID = result.createEmptyEntity(fromID);
-        auto const toHandle = result.getHandle(toID);
+        EntityHandle fromHandle = this->getHandle(fromID);
+        EntityID toID = result->createEmptyEntity(fromID);
+        BL_EXPECT(fromID == toID);
+        EntityHandle toHandle = result->getHandle(toID);
         idMap.insert({ fromID, toID });
         forEachComponent([&]<typename C>(utl::tag<C>) {
             if (fromHandle.has<C>()) {
@@ -72,13 +71,13 @@ Reference<Scene> Scene::clone() {
         if (from == to) {
             continue;
         }
-        BL_DEBUGBREAK("Probably not going to happen");
-        auto fromHandle = this->getHandle(from);
-        auto toHandle = result.getHandle(to);
+        /// See `(BL_EXPECTfromID == toID)` above
+        BL_DEBUGBREAK("");
+        EntityHandle fromHandle = this->getHandle(from);
+        EntityHandle toHandle = result->getHandle(to);
         if (toHandle.has<HierarchyComponent>()) {
-            auto const& fromHierarchy = fromHandle.get<HierarchyComponent>();
+            auto& fromHierarchy = fromHandle.get<HierarchyComponent const>();
             auto& toHierarchy = toHandle.get<HierarchyComponent>();
-
             if (fromHierarchy.parent) {
                 toHierarchy.parent = idMap[fromHierarchy.parent];
             }
@@ -97,7 +96,6 @@ Reference<Scene> Scene::clone() {
         }
     }
     return result;
-#endif
 }
 
 /// MARK: Serialize
@@ -119,7 +117,7 @@ static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
 
 template <typename T>
 static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
-                                 AssetManager& assetManager, utl::tag<T>) {
+                                 AssetManager&, utl::tag<T>) {
     YAML::Node componentNode = node[T::staticName()];
     if (componentNode.IsDefined()) {
         entity.add(componentNode.as<T>());

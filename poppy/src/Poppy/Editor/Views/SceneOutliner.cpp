@@ -35,40 +35,34 @@ void SceneOutliner::frame() {
     }
 }
 
-void SceneOutliner::onInput(bloom::InputEvent& e) {}
+void SceneOutliner::onInput(bloom::InputEvent&) {}
 
 void SceneOutliner::treeNode(TreeNodeDescription const& desc, auto&& block) {
     ImGuiTreeNodeFlags flags = 0;
     flags |= ImGuiTreeNodeFlags_OpenOnArrow;
     flags |= ImGuiTreeNodeFlags_OpenOnDoubleClick;
     flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
-
     if (desc.selected) {
         flags |= ImGuiTreeNodeFlags_Selected;
     }
-
     if (desc.expanded) {
         flags |= ImGuiTreeNodeFlags_DefaultOpen;
     }
-
     if (desc.isLeaf) {
         flags |= ImGuiTreeNodeFlags_Leaf;
     }
-
-    bool const nodeExpanded =
+    bool nodeExpanded =
         ImGui::TreeNodeEx((void*)desc.id, flags, "%s", desc.name.data());
-
     block(nodeExpanded);
 }
 
 void SceneOutliner::displayScene(bloom::Scene& scene) {
     TreeNodeDescription desc;
-    desc.id = (std::size_t)&scene;
+    desc.id = (size_t)&scene;
     desc.selected = false;
     desc.expanded = expanded(&scene);
-    desc.isLeaf = true; // scene.empty();
+    desc.isLeaf = false;
     desc.name = scene.name();
-
     treeNode(desc, [&](bool isExpanded) {
         utl_defer {
             if (isExpanded) ImGui::TreePop();
@@ -84,32 +78,25 @@ void SceneOutliner::displayScene(bloom::Scene& scene) {
                         auto entity = scene.createEntity("Mesh Renderer");
                         entity.add(MeshRendererComponent{});
                     }
-
                     ImGui::Separator();
-
                     if (ImGui::MenuItem("Point Light")) {
                         auto entity = scene.createEntity("Point Light");
                         entity.add(PointLightComponent{});
                     }
-
                     if (ImGui::MenuItem("Spotlight")) {
                         auto entity = scene.createEntity("Spotlight");
                         entity.add(SpotLightComponent{});
                     }
-
                     if (ImGui::MenuItem("Directional Light")) {
                         auto entity = scene.createEntity("Directional Light");
                         entity.add(DirectionalLightComponent{});
                     }
-
                     if (ImGui::MenuItem("Sky Light")) {
                         auto entity = scene.createEntity("Sky Light");
                         entity.add(SkyLightComponent{});
                     }
-
                     ImGui::EndMenu();
                 }
-
                 if (ImGui::MenuItem("Unload")) {
                     editor().coreSystems().sceneSystem().unloadScene(
                         scene.handle().ID());
@@ -117,11 +104,8 @@ void SceneOutliner::displayScene(bloom::Scene& scene) {
                 }
             }
         }
-
         setExpanded(&scene, isExpanded);
-
         dragDropTarget(EntityHandle(EntityID{}, &scene));
-
         if (isExpanded) {
             for (auto id: scene.gatherRoots()) {
                 displayEntity(scene.getHandle(id));
@@ -132,19 +116,16 @@ void SceneOutliner::displayScene(bloom::Scene& scene) {
 
 void SceneOutliner::displayEntity(bloom::EntityHandle e) {
     assert(!!e);
-
     TreeNodeDescription desc;
     desc.id = e.raw();
     desc.selected = selection().isSelected(e);
     desc.expanded = expanded(e);
     desc.isLeaf = e.scene().isLeaf(e);
     desc.name = e.get<bloom::TagComponent>().name;
-
     treeNode(desc, [&](bool isExpanded) {
         utl_defer {
             if (isExpanded) ImGui::TreePop();
         };
-
         /* Context Menu */ {
             ImGui::PushID(utl::narrow_cast<int>(desc.id));
             utl_defer { ImGui::PopID(); };
@@ -161,16 +142,12 @@ void SceneOutliner::displayEntity(bloom::EntityHandle e) {
                 }
             }
         }
-
         setExpanded(e, isExpanded);
-
         dragDropSource(e);
         dragDropTarget(e);
-
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
             selection().select(e);
         }
-
         if (isExpanded) {
             auto const children = e.scene().gatherChildren(e);
             for (auto c: children) {
@@ -194,8 +171,7 @@ void SceneOutliner::dragDropTarget(bloom::EntityHandle parent) {
     if (!ImGui::BeginDragDropTarget()) {
         return;
     }
-    auto* const payload =
-        ImGui::AcceptDragDropPayload("DD-Entity-Hierarchy-View");
+    auto* payload = ImGui::AcceptDragDropPayload("DD-Entity-Hierarchy-View");
     if (!payload || !payload->IsDelivery()) {
         return;
     }

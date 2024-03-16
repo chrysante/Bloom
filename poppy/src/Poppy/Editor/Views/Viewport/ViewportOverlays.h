@@ -25,7 +25,8 @@ private:
                              bool selected, bloom::Transform const&,
                              Light const&);
 
-    void drawPointLightIcon(mtl::float2 position, mtl::float3 color);
+    void drawPointLightIcon(mtl::float2 position, mtl::float3 color,
+                            bool selected);
     void drawSpotLightIcon(mtl::float2 position, mtl::float3 color);
     void drawDirectionalLightIcon(mtl::float2 position, mtl::float3 directionWS,
                                   mtl::float3 color);

@@ -73,15 +73,11 @@ private:
 
 private:
     std::shared_ptr<bloom::Renderer> mRenderer;
-
     utl::structure_of_arrays<RenderObjectData> selectedObjects;
-
     bloom::BufferHandle editorDrawDataBuffer;
     bloom::RenderPipelineHandle compositionPipeline;
-
     bloom::BufferHandle selectedTransformsBuffer;
     bloom::RenderPipelineHandle selectedPipeline;
-
     bloom::DepthStencilHandle depthStencil;
 };
 

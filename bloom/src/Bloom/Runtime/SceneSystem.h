@@ -4,6 +4,7 @@
 #include <mutex>
 #include <span>
 
+#include <utl/function_view.hpp>
 #include <utl/hashmap.hpp>
 #include <utl/utility.hpp>
 #include <utl/uuid.hpp>
@@ -50,17 +51,13 @@ private:
     /// @}
 
     ///
-    void tryCopyOut();
-
-    ///
-    void setPointers();
+    void setPointers(auto const& sceneMap);
 
 private:
     std::mutex mMutex;
-    utl::hashmap<utl::uuid, Reference<Scene>> mBackupScenes;
     utl::hashmap<utl::uuid, Reference<Scene>> mSimScenes;
     utl::hashmap<utl::uuid, Reference<Scene>> mScenes;
-    utl::vector<Scene*> mScenePtrs;
+    utl::small_vector<Scene*> mScenePtrs;
 };
 
 struct BLOOM_API UnloadSceneEvent {

@@ -18,6 +18,7 @@ target_link_libraries(bloom
   PUBLIC
     utility
   PRIVATE
+    range-v3
     assimp
     glfw
     scatha

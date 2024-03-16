@@ -61,7 +61,8 @@ void poppy::ImGuiContext::doDrawFramePlatform(bloom::HardwareDevice&, bloom::Win
 }
 
 void poppy::ImGuiContext::doShutdownPlatform() {
-    
+    ImGui_ImplOSX_Shutdown();
+    ImGui_ImplMetal_Shutdown();
 }
 
 void poppy::ImGuiContext::createFontAtlasPlatform(ImFontAtlas* atlas, bloom::HardwareDevice& device) {

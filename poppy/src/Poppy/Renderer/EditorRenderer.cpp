@@ -144,7 +144,6 @@ void EditorRenderer::drawOverlays(Framebuffer& framebuffer,
     if (drawDesc.drawSelection) {
         selectedObjectsPass(editorFramebuffer, commandQueue);
     }
-
     compositionPass(framebuffer, editorFramebuffer, commandQueue, drawDesc);
 }
 
@@ -226,24 +225,18 @@ void EditorRenderer::compositionPass(Framebuffer& framebuffer,
         device().fillManagedBuffer(editorDrawDataBuffer, &drawData,
                                    sizeof drawData);
     }
-
     std::unique_ptr _ctx = commandQueue.createRenderContext();
     auto& ctx = *_ctx;
-
     RenderPassDescription desc{};
     RenderPassColorAttachmentDescription caDesc{};
     caDesc.texture = editorFramebuffer.composed;
     caDesc.loadAction = LoadAction::DontCare;
     desc.colorAttachments.push_back(caDesc);
-
     ctx.begin(desc);
-
     auto& renderer = utl::down_cast<ForwardRenderer&>(*mRenderer);
     auto& fwFramebuffer =
         utl::down_cast<ForwardRendererFramebuffer&>(framebuffer);
-
     ctx.setPipeline(compositionPipeline);
-
     ctx.setFragmentBuffer(renderer.renderObjects.parameterBuffer, 0,
                           offsetof(RendererParameters, scene));
     ctx.setFragmentBuffer(editorDrawDataBuffer, 1);
@@ -252,9 +245,7 @@ void EditorRenderer::compositionPass(Framebuffer& framebuffer,
     ctx.setFragmentTexture(editorFramebuffer.selected, 2);
     ctx.setFragmentTexture(editorFramebuffer.selectedDepth, 3);
     ctx.setFragmentSampler(renderer.renderObjects.postprocessSampler, 0);
-
     ctx.draw(0, 6);
     ctx.end();
-
     ctx.commit();
 }

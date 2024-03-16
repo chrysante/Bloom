@@ -32,11 +32,7 @@ std::optional<AssetHandle> poppy::acceptAssetDragDrop(
         if (!payload) {
             continue;
         }
-        if (payload->IsPreview()) {
-            Logger::Info("Preview");
-        }
         if (payload->IsDelivery()) {
-            Logger::Info("Delivered");
             AssetHandle receivedAsset;
             std::memcpy(&receivedAsset, payload->Data, sizeof receivedAsset);
             return receivedAsset;
@@ -56,7 +52,6 @@ void DirectoryView::display() {
         contentSize = ImGui::GetWindowSize();
         cursor = 0;
         itemIndex = 0;
-
         for (auto&& folderName: foldersInCurrentDir) {
             if (displayItem(folderName)) {
             }
@@ -66,8 +61,7 @@ void DirectoryView::display() {
                 browser->openAsset(asset);
             }
         }
-
-        // add spacing at the end
+        /// Add spacing at the end
         if (cursor.x > 0) {
             bool const forceLineBreak = true;
             advanceCursor(forceLineBreak);
@@ -104,31 +98,25 @@ static std::string selectIcon(std::optional<AssetType> type) {
 
 bool DirectoryView::displayItem(std::string_view label,
                                 std::optional<AssetHandle> asset) {
-    mtl::float2 const labelSize = ImGui::CalcTextSize(label.data());
-    auto const uniqueID = generateUniqueID(label, itemIndex, true);
-
-    auto const popupID = generateUniqueID(uniqueID.data(), itemIndex);
-
+    mtl::float2 labelSize = ImGui::CalcTextSize(label.data());
+    auto uniqueID = generateUniqueID(label, itemIndex, true);
+    auto popupID = generateUniqueID(uniqueID.data(), itemIndex);
     mtl::float2 localCursor = cursor;
-
     // Button
     localCursor += params.itemSpacing;
     params.itemSize = 96;
-    auto const iconSize = IconSize::_32;
-
-    // button
+    auto iconSize = IconSize::_32;
     ImGui::PushStyleColor(ImGuiCol_Button, 0);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0x20FFffFF);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0x20FFffFF);
     ImGuiButtonFlags flags = 0;
-    //		flags |= ImGuiButtonFlags_PressedOnDoubleClick;
-
+#if 0 // Does not work well with drag and drop
+    flags |= ImGuiButtonFlags_PressedOnDoubleClick;
+#endif
     ImGui::SetCursorPos(localCursor);
-    bool const result =
-        ImGui::ButtonEx(uniqueID.data(), params.itemSize, flags);
+    bool result = ImGui::ButtonEx(uniqueID.data(), params.itemSize, flags);
     ImGui::PopStyleColor(3);
-
-    // popup
+    // Popup
     ImGui::OpenPopupOnItemClick(popupID.data());
     if (ImGui::BeginPopup(popupID.data())) {
         if (ImGui::Selectable("Rename")) {
@@ -138,40 +126,29 @@ bool DirectoryView::displayItem(std::string_view label,
         }
         ImGui::EndPopup();
     }
-
-    // dragdrop
-    if (asset) {
-        if (ImGui::BeginDragDropSource()) {
-            auto const handle = *asset;
-            ImGui::SetDragDropPayload(toDragDropType(asset->type()).data(),
-                                      &handle, sizeof handle);
-
-            ImGui::PushFont((ImFont*)icons.font(iconSize));
-
-            auto const iconText = icons.unicodeStr(selectIcon(
-                asset ? std::optional(asset->type()) : std::nullopt));
-            ImGui::Text("%s", iconText.data());
-            ImGui::PopFont();
-
-            ImGui::EndDragDropSource();
-        }
+    // Drag-drop
+    if (asset && ImGui::BeginDragDropSource()) {
+        ImGui::SetDragDropPayload(toDragDropType(asset->type()).data(),
+                                  &asset.value(), sizeof *asset);
+        ImGui::PushFont((ImFont*)icons.font(iconSize));
+        auto iconText = icons.unicodeStr(
+            selectIcon(asset ? std::optional(asset->type()) : std::nullopt));
+        ImGui::Text("%s", iconText.data());
+        ImGui::PopFont();
+        ImGui::EndDragDropSource();
     }
-
-    // icon
+    // Icon
     {
         ImGui::PushFont((ImFont*)icons.font(iconSize));
         auto const iconText = icons.unicodeStr(std::string(
             asset ? selectIcon(asset->type()) : "folder-open-empty"));
-
         auto iconCursor = localCursor;
         iconCursor.y += (params.itemSize.y - params.labelHeight) / 2;
         iconCursor.x += params.itemSize.x / 2;
         mtl::float2 const iconSize = ImGui::CalcTextSize(iconText.data());
         iconCursor -= iconSize / 2;
         //			iconCursor -= framePadding / 2;
-
         ImGui::SetCursorPos(iconCursor);
-
         ImGui::Text("%s", iconText.data());
         ImGui::PopFont();
     }
@@ -213,9 +190,7 @@ bool DirectoryView::displayItem(std::string_view label,
         ImGui::SetCursorPos(localCursor);
         ImGui::Text("%s", label.data());
     }
-
     advanceCursor();
-
     return result;
 }
 

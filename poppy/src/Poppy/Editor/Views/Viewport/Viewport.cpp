@@ -164,7 +164,7 @@ void Viewport::deserialize(YAML::Node node) {
 }
 
 void* Viewport::selectImage() const {
-    auto* const fwFramebuffer =
+    auto* fwFramebuffer =
         dynamic_cast<ForwardRendererFramebuffer*>(framebuffer.get());
     using enum Parameters::FramebufferElements;
     if (fwFramebuffer && params.framebufferSlot != Postprocessed) {
@@ -192,12 +192,13 @@ void Viewport::displayScene() {
         return;
     }
     drawScene();
-    void* const image = selectImage();
+    void* image = selectImage();
     if (!image) {
         return;
     }
     ImGui::Image(image, ImGui::GetWindowSize());
     if (!gameView) {
+        auto lock = editor().coreSystems().sceneSystem().lock();
         overlays.display();
         gizmo.display(camera.camera(), selection());
     }
@@ -210,17 +211,15 @@ void Viewport::drawScene() {
     POPPY_PROFILE(frame);
     camera.applyProjection(framebuffer->size);
     auto& sceneSystem = editor().coreSystems().sceneSystem();
+    auto lock = sceneSystem.lock();
     sceneSystem.applyTransformHierarchy();
-    if (gameView) {
-        sceneRenderer.draw(sceneSystem.scenes(), camera.camera(), *framebuffer,
-                           window().commandQueue());
-    }
-    else {
+    sceneRenderer.submitScenes(sceneSystem.scenes(), camera.camera());
+    lock.unlock();
+    sceneRenderer.renderer().draw(*framebuffer, window().commandQueue());
+    if (!gameView) {
         OverlayDrawDescription desc;
-        sceneRenderer.drawWithOverlays(sceneSystem.scenes(),
-                                       editor().selection(), camera.camera(),
-                                       desc, *framebuffer, *editorFramebuffer,
-                                       window().commandQueue());
+        sceneRenderer.drawOverlays(editor().selection(), desc, *framebuffer,
+                                   *editorFramebuffer, window().commandQueue());
     }
 }
 
@@ -229,7 +228,6 @@ void Viewport::updateFramebuffer() {
     if (framebuffer && framebuffer->size == fbTargetSize) {
         return;
     }
-    Logger::Trace("Resizing framebuffer to ", fbTargetSize);
     framebuffer = sceneRenderer.renderer().createFramebuffer(fbTargetSize);
     auto* renderer = dynamic_cast<EditorRenderer*>(&sceneRenderer.renderer());
     if (renderer) {
@@ -407,7 +405,7 @@ void Viewport::dropdownMenu() {
     }
 }
 
-bloom::EntityHandle Viewport::readEntityID(mtl::float2 mousePosition) {
+bloom::EntityHandle Viewport::readEntityID(mtl::float2 /* mousePosition */) {
     Logger::Warn("Mouse picking is not implemented");
     return {};
     /// This doesn't work right now because we don't render the entity ID

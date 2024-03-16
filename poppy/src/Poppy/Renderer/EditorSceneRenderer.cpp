@@ -34,19 +34,17 @@ void EditorSceneRenderer::submitExtra() {
     }
 }
 
-void EditorSceneRenderer::drawWithOverlays(
-    std::span<Scene const* const> scenes, SelectionContext const& selection,
-    Camera const& camera, OverlayDrawDescription const& drawDesc,
-    Framebuffer& framebuffer, EditorFramebuffer& editorFramebuffer,
-    CommandQueue& commandQueue) {
+void EditorSceneRenderer::drawOverlays(SelectionContext const& selection,
+                                       OverlayDrawDescription const& drawDesc,
+                                       Framebuffer& framebuffer,
+                                       EditorFramebuffer& editorFramebuffer,
+                                       CommandQueue& commandQueue) {
     mSelection = &selection;
     mDrawDesc = drawDesc;
     if (selection.empty()) {
         mDrawDesc.drawSelection = false;
     }
-    SceneRenderer::draw(scenes, camera, framebuffer, commandQueue);
-    if (auto* const editorRenderer = dynamic_cast<EditorRenderer*>(&renderer()))
-    {
+    if (auto* editorRenderer = dynamic_cast<EditorRenderer*>(&renderer())) {
         editorRenderer->drawOverlays(framebuffer, editorFramebuffer,
                                      commandQueue, drawDesc);
     }

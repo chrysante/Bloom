@@ -21,6 +21,7 @@ target_link_libraries(poppy
     yaml-cpp
     ImGui
     ImGuizmo
+    scatha
     "-framework AppKit"
     "-framework Metal"
     "-framework GameController"

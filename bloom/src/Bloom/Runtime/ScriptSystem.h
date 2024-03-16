@@ -3,7 +3,7 @@
 
 #include <memory>
 
-// #include <scatha/Sema/Fwd.h>
+#include <scatha/Sema/Fwd.h>
 
 #include "Bloom/Application/CoreSystem.h"
 #include "Bloom/Core/Time.h"
@@ -11,6 +11,9 @@
 
 namespace bloom {
 
+class Scene;
+
+///
 class BLOOM_API ScriptSystem: public CoreSystem {
 public:
     ScriptSystem();
@@ -19,22 +22,24 @@ public:
 
     void init();
 
-    void onSceneConstruction();
+    void onSceneConstruction(Scene& scene);
 
-    void onSceneInit();
+    void onSceneInit(Scene& scene);
 
-    void onSceneUpdate(Timestep);
+    void onSceneUpdate(Scene& scene, Timestep timestep);
 
-    void onSceneRender();
+    void onSceneRender(Scene& scene);
 
-    //    void* instantiateObject(scatha::sema::StructType const* classType);
+    ///
+    scatha::sema::SymbolTable const* symbolTable() const;
 
-private:
     struct Impl;
 
-    void scriptsWillLoad();
-    void scriptsDidLoad();
-    void forEach(auto&& fn);
+private:
+    friend class AssetManager;
+
+    void scriptsWillCompile();
+    void scriptsDidCompile();
 
     std::unique_ptr<Impl> impl;
 };

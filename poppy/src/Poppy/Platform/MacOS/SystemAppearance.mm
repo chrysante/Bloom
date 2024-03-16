@@ -19,7 +19,6 @@ static mtl::double4 convertColor(NSColor* color) {
 
 AppearanceType SystemAppearance::getCurrentType() {
     auto appearance = NSApp.effectiveAppearance;
-    
     if (appearance.name == NSAppearanceNameAqua) {
         return AppearanceType::light;
     }
@@ -33,12 +32,12 @@ AppearanceType SystemAppearance::getCurrentType() {
 
 static NSAppearanceName toNSType(AppearanceType type) {
     switch (type) {
-        case AppearanceType::light:
-            return NSAppearanceNameAqua;
-        case AppearanceType::dark:
-            return NSAppearanceNameDarkAqua;
-        default:
-            BL_DEBUGFAIL();
+    case AppearanceType::light:
+        return NSAppearanceNameAqua;
+    case AppearanceType::dark:
+        return NSAppearanceNameDarkAqua;
+    default:
+        BL_UNREACHABLE();
     }
 }
 

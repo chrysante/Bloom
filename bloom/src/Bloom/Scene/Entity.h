@@ -63,6 +63,11 @@ public:
         return tScene<T>()->template hasComponent<T>(*this);
     }
 
+    template <ComponentType T, ComponentType... U>
+    bool hasAll() const {
+        return (has<T>() && ... && has<U>());
+    }
+
     template <ComponentType T>
     T& get() const
         requires(!IsConst)
@@ -75,11 +80,12 @@ public:
         return tScene<T>()->template getComponent<T>(*this);
     }
 
-    template <ComponentType T>
-    void add(T&& component) const
+    template <ComponentType T, ComponentType... U>
+    void add(T&& first, U&&... rest) const
         requires(!IsConst)
     {
-        tScene<T>()->template addComponent(*this, UTL_FORWARD(component));
+        tScene<T>()->template addComponent(*this, std::forward<T>(first));
+        (..., add(std::forward<U>(rest)));
     }
 
     template <ComponentType T>

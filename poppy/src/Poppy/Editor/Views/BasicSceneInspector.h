@@ -47,7 +47,7 @@ auto dispatchLightComponent(LightType type, auto&& f) {
     case LightType::skylight:
         return f(utl::tag<SkyLightComponent>{});
     default:
-        BL_DEBUGFAIL();
+        BL_UNREACHABLE();
     }
 }
 

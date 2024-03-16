@@ -155,7 +155,6 @@ void Editor::frame() {
     clearClosingViews();
     auto const windows = getWindows();
     if (windows.empty()) {
-        BL_DEBUGBREAK("Can this happen?");
         return;
     }
     appearance.update();

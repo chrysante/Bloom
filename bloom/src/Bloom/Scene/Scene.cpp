@@ -59,42 +59,12 @@ Reference<Scene> Scene::clone() {
         EntityID toID = result->createEmptyEntity(fromID);
         BL_EXPECT(fromID == toID);
         EntityHandle toHandle = result->getHandle(toID);
-        idMap.insert({ fromID, toID });
         forEachComponent([&]<typename C>(utl::tag<C>) {
             if (fromHandle.has<C>()) {
                 toHandle.add(fromHandle.get<C>());
             }
         });
     });
-    /// Copy hierarchy
-    for (auto [from, to]: idMap) {
-        if (from == to) {
-            continue;
-        }
-        /// See `(BL_EXPECTfromID == toID)` above
-        BL_DEBUGBREAK("");
-        EntityHandle fromHandle = this->getHandle(from);
-        EntityHandle toHandle = result->getHandle(to);
-        if (toHandle.has<HierarchyComponent>()) {
-            auto& fromHierarchy = fromHandle.get<HierarchyComponent const>();
-            auto& toHierarchy = toHandle.get<HierarchyComponent>();
-            if (fromHierarchy.parent) {
-                toHierarchy.parent = idMap[fromHierarchy.parent];
-            }
-            if (fromHierarchy.firstChild) {
-                toHierarchy.firstChild = idMap[fromHierarchy.firstChild];
-            }
-            if (fromHierarchy.lastChild) {
-                toHierarchy.lastChild = idMap[fromHierarchy.lastChild];
-            }
-            if (fromHierarchy.nextSibling) {
-                toHierarchy.nextSibling = idMap[fromHierarchy.nextSibling];
-            }
-            if (fromHierarchy.prevSibling) {
-                toHierarchy.prevSibling = idMap[fromHierarchy.prevSibling];
-            }
-        }
-    }
     return result;
 }
 
@@ -179,15 +149,14 @@ void Scene::deserialize(YAML::Node const& root, AssetManager& assetManager) {
     }
 }
 
-/// MARK: Hierarchy
 [[maybe_unused]] static void sanitizeHierachy(Scene* scene) {
     auto view = scene->view<HierarchyComponent>();
-    view.each([&](auto const e, HierarchyComponent entity) {
-        EntityID const entityID = e;
+    view.each([&](auto e, HierarchyComponent entity) {
+        EntityID entityID = e;
         /// Sanitize child -> parent relationship
         if (entity.parent) {
-            EntityID const parentID = entity.parent;
-            auto const parentsChildren = scene->gatherChildren(parentID);
+            EntityID parentID = entity.parent;
+            auto parentsChildren = scene->gatherChildren(parentID);
             if (std::find(parentsChildren.begin(), parentsChildren.end(),
                           entityID) == parentsChildren.end())
             {
@@ -198,17 +167,15 @@ void Scene::deserialize(YAML::Node const& root, AssetManager& assetManager) {
                               "] is its "
                               "parent but ",
                               parentID, " doesn't know about it.");
-                BL_DEBUGBREAK();
+                BL_UNREACHABLE();
             }
         }
-
         /// Sanitize parent -> children relationship
         if (entity.firstChild) {
-            assert(!!entity.lastChild);
-            auto const ourChildren = scene->gatherChildren(entityID);
-            for (auto const childID: ourChildren) {
-                auto const child =
-                    scene->getComponent<HierarchyComponent>(childID);
+            BL_ASSERT(entity.lastChild);
+            auto ourChildren = scene->gatherChildren(entityID);
+            for (auto childID: ourChildren) {
+                auto child = scene->getComponent<HierarchyComponent>(childID);
                 if (child.parent != entityID) {
                     Logger::Fatal(
                         "Entity ", entityID, " [",
@@ -218,22 +185,21 @@ void Scene::deserialize(YAML::Node const& root, AssetManager& assetManager) {
                         entityID, " [",
                         scene->getComponent<TagComponent>(entityID).name,
                         "] doesn't know about it.");
-                    BL_DEBUGBREAK();
+                    BL_UNREACHABLE();
                 }
             }
         }
-
         /// Sanitize relationship among siblings
         if (entity.prevSibling) {
-            assert(!!entity.nextSibling);
-            auto const leftSibling =
+            BL_ASSERT(entity.nextSibling);
+            auto leftSibling =
                 scene->getComponent<HierarchyComponent>(entity.prevSibling);
-            auto const rightSibling =
+            auto rightSibling =
                 scene->getComponent<HierarchyComponent>(entity.nextSibling);
-            assert(leftSibling.nextSibling == entityID &&
-                   "Our left sibling doesn't know about us");
-            assert(rightSibling.prevSibling == entityID &&
-                   "Our right sibling doesn't know about us");
+            BL_ASSERT(leftSibling.nextSibling == entityID,
+                      "Our left sibling doesn't know about us");
+            BL_ASSERT(rightSibling.prevSibling == entityID,
+                      "Our right sibling doesn't know about us");
         }
     });
 }
@@ -241,44 +207,35 @@ void Scene::deserialize(YAML::Node const& root, AssetManager& assetManager) {
 void Scene::parent(EntityID c, EntityID p) {
     HierarchyComponent& parent = getComponent<HierarchyComponent>(p);
     HierarchyComponent& newChild = getComponent<HierarchyComponent>(c);
-    assert(!newChild.parent);
-
+    BL_ASSERT(!newChild.parent);
     newChild.parent = p;
-
-    if (!parent.firstChild) { // case parent has no children yet
-        assert(!parent.lastChild);
+    // Parent has no children yet
+    if (!parent.firstChild) {
+        BL_ASSERT(!parent.lastChild);
         parent.firstChild = c;
         parent.lastChild = c;
         newChild.prevSibling = c;
         newChild.nextSibling = c;
     }
-    else { // parent already has children
-        EntityID const listBegin = parent.firstChild;
-        EntityID const listEnd = parent.lastChild;
-
+    // Parent already has children
+    else {
+        EntityID listBegin = parent.firstChild;
+        EntityID listEnd = parent.lastChild;
         HierarchyComponent& leftChild =
             getComponent<HierarchyComponent>(listBegin);
         HierarchyComponent& rightChild =
             getComponent<HierarchyComponent>(listEnd);
-
         rightChild.nextSibling = c;
         leftChild.prevSibling = c;
-
         newChild.prevSibling = listEnd;
         newChild.nextSibling = listBegin;
-
         parent.lastChild = c;
     }
-
     auto& t = getComponent<Transform>(c);
-
-    mtl::float4x4 const parentWorldTransform =
-        calculateTransformRelativeToWorld(p);
-    mtl::float4x4 const childLocalTransform =
+    mtl::float4x4 parentWorldTransform = calculateTransformRelativeToWorld(p);
+    mtl::float4x4 childLocalTransform =
         mtl::inverse(parentWorldTransform) * t.calculate();
-
     t = Transform::fromMatrix(childLocalTransform);
-
 #if BLOOM_DEBUGLEVEL
     sanitizeHierachy(this);
 #endif
@@ -308,7 +265,6 @@ void Scene::unparent(EntityID c) {
     if (parent.firstChild == c) {
         assert(c == child.prevSibling);
         assert(c == child.nextSibling);
-
         parent.lastChild = {};
         parent.firstChild = {};
     }
@@ -330,8 +286,8 @@ bool Scene::descendsFrom(EntityID descended, EntityID ancestor) const {
     if (!descended) {
         return false;
     }
-    assert(hasComponent<HierarchyComponent>(descended));
-    assert(hasComponent<HierarchyComponent>(ancestor));
+    BL_ASSERT(hasComponent<HierarchyComponent>(descended));
+    BL_ASSERT(hasComponent<HierarchyComponent>(ancestor));
     /// Walk up the tree until we find our potentil ancestor or the root
     do {
         if (descended == ancestor) {
@@ -356,10 +312,9 @@ utl::small_vector<EntityID> Scene::gatherChildren(EntityID parent) const {
     if (!hasComponent<HierarchyComponent>(parent)) {
         return {};
     }
-    auto const& hierarchy = getComponent<HierarchyComponent>(parent);
+    auto& hierarchy = getComponent<HierarchyComponent>(parent);
     auto current = hierarchy.firstChild;
-    auto const end = hierarchy.lastChild;
-
+    auto end = hierarchy.lastChild;
     utl::small_vector<EntityID> children;
     while (current) {
         children.push_back(current);
@@ -368,21 +323,20 @@ utl::small_vector<EntityID> Scene::gatherChildren(EntityID parent) const {
         }
         current = getComponent<HierarchyComponent>(current).nextSibling;
     }
-
     return children;
 }
 
 bool Scene::isLeaf(EntityID entity) const {
     bool const result = !getComponent<HierarchyComponent>(entity).firstChild;
-    assert(result == !getComponent<HierarchyComponent>(entity).lastChild);
+    BL_ASSERT(result == !getComponent<HierarchyComponent>(entity).lastChild);
     return result;
 }
 
 mtl::float4x4 Scene::calculateTransformRelativeToWorld(EntityID entity) const {
     mtl::float4x4 result = 1;
     while (entity) {
-        assert(hasComponent<HierarchyComponent>(entity) &&
-               "This API is supposed to be used with hierarchical entities");
+        BL_ASSERT(hasComponent<HierarchyComponent>(entity),
+                  "This API is supposed to be used with hierarchical entities");
         result *= getComponent<Transform>(entity).calculate();
         entity = getComponent<HierarchyComponent>(entity).parent;
     }

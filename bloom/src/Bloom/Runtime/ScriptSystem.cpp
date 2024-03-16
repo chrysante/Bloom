@@ -1,7 +1,11 @@
 #include "Bloom/Runtime/ScriptSystem.h"
 
+#include <scatha/Invocation/Target.h>
 #include <scatha/Sema/Entity.h>
+#include <scatha/Sema/LifetimeMetadata.h>
 #include <scatha/Sema/SymbolTable.h>
+#include <svm/VirtualMachine.h>
+#include <svm/VirtualMemory.h>
 #include <utl/scope_guard.hpp>
 #include <utl/strcat.hpp>
 
@@ -16,98 +20,103 @@
 using namespace bloom;
 
 struct ScriptSystem::Impl {
-    // scatha::Program program;
-    utl::hashmap<scatha::sema::StructType const*, std::string> typenameMap;
+    std::optional<scatha::Target> target;
+    svm::VirtualMachine VM;
 };
+
+namespace bloom {
+
+void ScriptSystem_setTarget(ScriptSystem::Impl& impl, scatha::Target target) {
+    impl.target = std::move(target);
+}
+
+} // namespace bloom
 
 ScriptSystem::ScriptSystem(): impl(std::make_unique<Impl>()) {}
 
 ScriptSystem::~ScriptSystem() = default;
 
 void ScriptSystem::init() {
-    listen([this](ScriptsWillLoadEvent) { this->scriptsWillLoad(); });
-    listen([this](ScriptsDidLoadEvent) { this->scriptsDidLoad(); });
+    listen([this](ScriptsWillLoadEvent) { this->scriptsWillCompile(); });
+    listen([this](ScriptsDidLoadEvent) { this->scriptsDidCompile(); });
 }
 
-void ScriptSystem::onSceneConstruction() {
-    forEach([&](EntityID id, ScriptComponent& script) {
-
-    });
+static uint64_t allocateObject(svm::VirtualMachine& VM,
+                               scatha::sema::StructType const* type) {
+    auto addr = VM.allocateMemory(type->size(), type->align());
+    auto bitAddr = std::bit_cast<uint64_t>(addr);
+    auto ctor = type->lifetimeMetadata().defaultConstructor();
+    using enum scatha::sema::LifetimeOperation::Kind;
+    switch (ctor.kind()) {
+    case Trivial:
+        std::memset(VM.derefPointer(addr, type->size()), 0, type->size());
+        return bitAddr;
+    case Nontrivial:
+        VM.execute(ctor.function()->binaryAddress().value(),
+                   std::array{ bitAddr });
+        return bitAddr;
+    default:
+        Logger::Error("Cannot instantiate type without default constructor");
+        return 0;
+    }
 }
 
-void ScriptSystem::onSceneInit() {
-    forEach([&](ScriptComponent& script) {
-
-    });
-}
-
-void ScriptSystem::onSceneUpdate(Timestep t) {
-    forEach([&](ScriptComponent& script) {
-
-    });
-}
-
-void ScriptSystem::onSceneRender() {
-    forEach([&](ScriptComponent& script) {
-
-    });
-}
-
-void ScriptSystem::scriptsWillLoad() {
-    impl->typenameMap.clear();
-    auto& assetManager = application().coreSystems().assetManager();
-#if 0
-    auto* program = assetManager.getProgram();
-    if (!program) {
+void ScriptSystem::onSceneConstruction(Scene& scene) {
+    if (!impl->target) {
         return;
     }
-    auto& sym = program->symbolTable();
-    for (auto* type: sym.structDependencyOrder()) {
-        impl->typenameMap[type] = std::string(type->name());
-    }
-#endif
-}
-
-void ScriptSystem::scriptsDidLoad() {
-    auto& scriptSystem = application().coreSystems().scriptSystem();
-    auto& assetManager = application().coreSystems().assetManager();
-#if 0
-    auto* program = assetManager.getProgram();
-    if (!program) {
-        return;
-    }
-    auto& sym = program->symbolTable();
-    utl::hashmap<scatha::sema::StructureType const*,
-                 scatha::sema::StructureType const*>
-        typemap;
-    for (auto [type, name]: impl->typenameMap) {
-        auto* newType = sym.lookup<scatha::sema::StructureType>(name);
-        typemap[type] = newType;
-    }
-    forEach([&](ScriptComponent& script) {
-        auto* oldType = script.classType;
-        auto* newType = typemap[oldType];
-        script.classType = newType;
-        if (!oldType || !newType) {
-            script.object = nullptr;
+    auto& target = *impl->target;
+    /// TODO: Put this into a seperate `onScriptReload()` function
+    scene.view<ScriptComponent, ScriptPreservedData const>().each(
+        [&](ScriptComponent& component,
+            ScriptPreservedData const& preservedData) {
+        auto types = target.symbolTable().globalScope().findEntities(
+            preservedData.typeName);
+        if (types.empty()) {
+            /// Set all pointers to null
+            component = ScriptComponent{};
             return;
         }
-        if (newType->size() != script.classType->size()) {
-            script.object = scriptSystem.instantiateObject(newType);
-        }
+        auto* type = dyncast<scatha::sema::StructType const*>(types.front());
+        assignType(component, type);
     });
-#endif
 }
 
-// void* ScriptSystem::instantiateObject(
-//     scatha::sema::StructType const* classType) {
-//     assert(classType);
-//     return malloc(classType->size());
-// }
-
-void ScriptSystem::forEach(auto&& fn) {
-    auto& sceneSystem = application().coreSystems().sceneSystem();
-    for (auto* scene: sceneSystem.scenes()) {
-        scene->view<ScriptComponent>().each(fn);
+void ScriptSystem::onSceneInit(Scene& scene) {
+    if (!impl->target) {
+        return;
     }
+    scene.view<ScriptComponent>().each([&](ScriptComponent& component) {
+        if (component.type) {
+            component.objectAddress = allocateObject(impl->VM, component.type);
+        }
+    });
+}
+
+void ScriptSystem::onSceneUpdate(Scene& scene, Timestep timestep) {
+    scene.view<ScriptComponent>().each([&](ScriptComponent& component) {
+        if (component.objectAddress && component.updateFunction) {
+            impl->VM.execute(component.updateFunction->binaryAddress().value(),
+                             std::array{ component.objectAddress });
+        }
+    });
+}
+
+void ScriptSystem::onSceneRender(Scene&) {}
+
+scatha::sema::SymbolTable const* ScriptSystem::symbolTable() const {
+    if (!impl->target) {
+        return nullptr;
+    }
+    return &impl->target->symbolTable();
+}
+
+void ScriptSystem::scriptsWillCompile() { impl->VM.reset(); }
+
+void ScriptSystem::scriptsDidCompile() {
+    if (!impl->target) {
+        return;
+    }
+    auto& target = *impl->target;
+    impl->VM.loadBinary(target.binary().data());
 }

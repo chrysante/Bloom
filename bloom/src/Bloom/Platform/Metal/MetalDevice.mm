@@ -32,24 +32,21 @@ std::unique_ptr<CommandQueue> MetalDevice::createCommandQueue() {
 BufferHandle MetalDevice::createBuffer(BufferDescription const& desc) {
     auto const mtlStorageMode = [&]{
         switch (desc.storageMode) {
-            case StorageMode::Shared: return MTLResourceStorageModeShared;
-            case StorageMode::Managed: return MTLResourceStorageModeManaged;
-            case StorageMode::GPUOnly: return MTLResourceStorageModePrivate;
-            default: BL_DEBUGFAIL();
+        case StorageMode::Shared: return MTLResourceStorageModeShared;
+        case StorageMode::Managed: return MTLResourceStorageModeManaged;
+        case StorageMode::GPUOnly: return MTLResourceStorageModePrivate;
+        default: BL_UNREACHABLE();
         };
     }();
-    
     if (desc.data != nullptr) {
         id<MTLBuffer> buffer = [device newBufferWithBytes: desc.data
                                                    length: desc.size
                                                   options: MTLResourceHazardTrackingModeTracked | mtlStorageMode];
-        
         return BufferHandle(bloom_retain(buffer), bloom_release, desc);
     }
     else {
         id<MTLBuffer> buffer = [device newBufferWithLength: desc.size
                                                    options: MTLResourceHazardTrackingModeTracked | mtlStorageMode];
-        
         return BufferHandle(bloom_retain(buffer), bloom_release, desc);
     }
 }
@@ -72,7 +69,6 @@ TextureHandle MetalDevice::createTexture(TextureDescription const& desc) {
 
 SamplerHandle MetalDevice::createSampler(SamplerDescription const& desc) {
     MTLSamplerDescriptor* mtlDesc = [[MTLSamplerDescriptor alloc] init];
-    
     mtlDesc.minFilter = (MTLSamplerMinMagFilter)desc.minFilter;
     mtlDesc.magFilter = (MTLSamplerMinMagFilter)desc.magFilter;
     mtlDesc.mipFilter = (MTLSamplerMipFilter)desc.mipFilter;
@@ -87,8 +83,6 @@ SamplerHandle MetalDevice::createSampler(SamplerDescription const& desc) {
     mtlDesc.lodAverage = desc.lodAverage;
     mtlDesc.compareFunction = (MTLCompareFunction)desc.compareFunction;
     mtlDesc.supportArgumentBuffers = desc.supportArgumentBuffers;
-    
-
     id<MTLSamplerState> sampler = [device newSamplerStateWithDescriptor: mtlDesc];
     return SamplerHandle(bloom_retain(sampler), bloom_release);
 }
@@ -104,13 +98,11 @@ TextureHandle MetalDevice::createSharedTextureView(TextureView texture,
                                                               textureType: (MTLTextureType)newType
                                                                    levels: NSRange{ firstMipLevel, numMipLevels }
                                                                    slices: NSRange{ firstSlice, numSlices }];
-    
     TextureDescription desc = texture.description();
     desc.type = newType;
     desc.pixelFormat = newFormat;
     desc.mipmapLevelCount = numMipLevels;
     desc.arrayLength = numSlices;
-    
     return TextureHandle(bloom_retain(sharedView), bloom_release, desc);
 }
 
@@ -125,19 +117,15 @@ static MTLStencilDescriptor* toMTL(StencilDescription const& desc) {
 
 DepthStencilHandle MetalDevice::createDepthStencil(DepthStencilDescription const& desc) {
     MTLDepthStencilDescriptor* mtlDesc = [[MTLDepthStencilDescriptor alloc] init];
-    
     mtlDesc.depthCompareFunction = (MTLCompareFunction)desc.depthCompareFunction;
     mtlDesc.depthWriteEnabled = desc.depthWrite;
-    
     if (desc.frontFaceStencil) {
         mtlDesc.frontFaceStencil = toMTL(*desc.frontFaceStencil);
     }
     if (desc.backFaceStencil) {
         mtlDesc.backFaceStencil = toMTL(*desc.backFaceStencil);
     }
-    
     id<MTLDepthStencilState> result = [device newDepthStencilStateWithDescriptor: mtlDesc];
-    
     return DepthStencilHandle(bloom_retain(result), bloom_release);
 }
 
@@ -148,39 +136,30 @@ ShaderFunctionHandle MetalDevice::createFunction(std::string_view name) {
 
 RenderPipelineHandle MetalDevice::createRenderPipeline(RenderPipelineDescription const& desc) {
     MTLRenderPipelineDescriptor* mtlDesc = [[MTLRenderPipelineDescriptor alloc] init];
-    
     for (size_t index = 0; auto const& caDesc: desc.colorAttachments) {
         MTLRenderPipelineColorAttachmentDescriptor* mtlCADesc = [[MTLRenderPipelineColorAttachmentDescriptor alloc] init];
         mtlCADesc.pixelFormat = (MTLPixelFormat)caDesc.pixelFormat;
         mtlCADesc.blendingEnabled = caDesc.blendingEnabled;
-
         mtlCADesc.sourceRGBBlendFactor      = (MTLBlendFactor)caDesc.sourceRGBBlendFactor;
         mtlCADesc.destinationRGBBlendFactor = (MTLBlendFactor)caDesc.destinationRGBBlendFactor;
         mtlCADesc.rgbBlendOperation         = (MTLBlendOperation)caDesc.rgbBlendOperation;
-
-        
         mtlCADesc.sourceAlphaBlendFactor      = (MTLBlendFactor)caDesc.sourceAlphaBlendFactor;
         mtlCADesc.destinationAlphaBlendFactor = (MTLBlendFactor)caDesc.destinationAlphaBlendFactor;
         mtlCADesc.alphaBlendOperation         = (MTLBlendOperation)caDesc.alphaBlendOperation;
-
         [mtlDesc.colorAttachments setObject: mtlCADesc
                          atIndexedSubscript: index];
         ++index;
     }
-    
     mtlDesc.depthAttachmentPixelFormat = (MTLPixelFormat)desc.depthAttachmentPixelFormat;
     mtlDesc.stencilAttachmentPixelFormat = (MTLPixelFormat)desc.stencilAttachmentPixelFormat;
-    
     mtlDesc.rasterSampleCount = desc.rasterSampleCount;
     mtlDesc.inputPrimitiveTopology = (MTLPrimitiveTopologyClass)desc.inputPrimitiveTopology;
-    
     [mtlDesc setVertexFunction: (__bridge id<MTLFunction>)desc.vertexFunction.nativeHandle()];
     [mtlDesc setFragmentFunction: (__bridge id<MTLFunction>)desc.fragmentFunction.nativeHandle()];
-    
     id<MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor: mtlDesc error: nil];
     if (!pipelineState) {
         Logger::Error( "Failed to create Pipeline State");
-        BL_DEBUGBREAK();
+        return RenderPipelineHandle();
     }
     return RenderPipelineHandle(bloom_retain(pipelineState), bloom_release);
 }
@@ -188,17 +167,14 @@ RenderPipelineHandle MetalDevice::createRenderPipeline(RenderPipelineDescription
 ComputePipelineHandle MetalDevice::createComputePipeline(ComputePipelineDescription const& desc) {
     id<MTLComputePipelineState> pipelineState = [device newComputePipelineStateWithFunction:(__bridge id<MTLFunction>)desc.computeFunction.nativeHandle()
                                                                                       error:nil];
-    
     if (!pipelineState) {
         Logger::Error( "Failed to create Pipeline State");
-        BL_DEBUGBREAK();
+        return ComputePipelineHandle();
     }
     auto result = ComputePipelineHandle(bloom_retain(pipelineState), bloom_release);
-    
     result.maxTotalThreadsPerThreadgroup = pipelineState.maxTotalThreadsPerThreadgroup;
     result.threadExecutionWidth = pipelineState.threadExecutionWidth;
     result.staticThreadgroupMemoryLength = pipelineState.staticThreadgroupMemoryLength;
-    
     return result;
 }
 
@@ -206,7 +182,6 @@ void MetalDevice::fillManagedBuffer(BufferView buffer, void const* data, std::si
     id<MTLBuffer> mtlBuffer = (__bridge id<MTLBuffer>)buffer.nativeHandle();
     char* const contents = (char*)[mtlBuffer contents];
     std::memcpy(contents + offset, data, size);
-    
     [mtlBuffer didModifyRange: NSRange{ offset, size }];
 }
 

@@ -3,8 +3,31 @@
 #include <iostream>
 
 #include <termfmt/termfmt.h>
+#include <utl/streammanip.hpp>
 
 using namespace bloom;
+
+void internal::debugErrorMessage(DebugErrorKind kind, int line,
+                                 char const* file, char const* function,
+                                 char const* expression, char const* message) {
+    Logger::Fatal(utl::streammanip([&](std::ostream& str) {
+        switch (kind) {
+        case Assert:
+            str << "Assertion failed: " << expression;
+        case Expect:
+            str << "Precondition failed: " << expression;
+        case Unreachable:
+            str << "Hit unreachable code path";
+        case Unimplemented:
+            str << "Hit unimplemented code path";
+        }
+        if (message) {
+            str << " with message: " << message;
+        }
+        str << "\nOn line " << line << " in function " << function
+            << " in file " << file;
+    }));
+}
 
 static void announceMessage(std::ostream& str, Logger::Level level) {
     using enum Logger::Level;
@@ -42,11 +65,14 @@ static tfmt::Modifier const& mod(Logger::Level level) {
     return mods[(size_t)level];
 };
 
-void Logger::doLogImpl(Level level, std::string_view msg) {
-    auto& str = std::cout;
+void Logger::beginLog(Level level) {
+    auto& str = ostream();
     if (!tfmt::isTermFormattable(str)) {
         announceMessage(str, level);
     }
-    tfmt::FormatGuard guard(mod(level), str);
-    str << msg << std::endl;
+    tfmt::pushModifier(mod(level), str);
 }
+
+void Logger::endLog() { tfmt::popModifier(ostream()); }
+
+std::ostream& Logger::ostream() { return std::cout; }

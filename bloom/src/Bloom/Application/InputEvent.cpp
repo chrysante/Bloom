@@ -64,7 +64,8 @@ InputEvent bloom::inputEventFromGLFWMouseButton(Input const& input,
         return InputEvent(type, upEvent);
     }
     default:
-        BL_DEBUGFAIL("Are these even generated?");
+        // TODO: Check if these are being genereated
+        BL_UNIMPLEMENTED();
     }
 }
 
@@ -118,6 +119,7 @@ InputEvent bloom::inputEventFromGLFWKey(Input const& input, int keyCode,
         return InputEvent(InputEventType::keyUp, event);
     }
     default:
-        BL_DEBUGFAIL("Are these even generated?");
+        // TODO: Check if these are being genereated
+        BL_UNIMPLEMENTED();
     }
 }

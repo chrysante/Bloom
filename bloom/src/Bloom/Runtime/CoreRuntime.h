@@ -7,6 +7,8 @@
 #include <mutex>
 #include <thread>
 
+#include <utl/hashtable.hpp>
+
 #include "Bloom/Application/CoreSystem.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Time.h"
@@ -43,7 +45,7 @@ public:
 /// Manages the update thread
 class BLOOM_API CoreRuntime: public CoreSystem {
 public:
-    explicit CoreRuntime(std::shared_ptr<RuntimeDelegate> = nullptr);
+    explicit CoreRuntime();
 
     ~CoreRuntime();
 
@@ -56,8 +58,11 @@ public:
     ///
     RuntimeState state() const { return mState; }
 
-    ///
-    bool setDelegate(std::shared_ptr<RuntimeDelegate>);
+    /// \pre `state()` must be `Inactive`
+    void addDelegate(std::shared_ptr<RuntimeDelegate> delegate);
+
+    /// \pre `state()` must be `Inactive`
+    void removeDelegate(RuntimeDelegate const* delegate);
 
     ///
     void setUpdateOptions(UpdateOptions options) { mUpdateOptions = options; }
@@ -86,7 +91,7 @@ private:
     Timer mTimer;
     UpdateOptions mUpdateOptions;
 
-    std::shared_ptr<RuntimeDelegate> mDelegate;
+    utl::hashset<std::shared_ptr<RuntimeDelegate>> mDelegates;
 };
 
 } // namespace bloom

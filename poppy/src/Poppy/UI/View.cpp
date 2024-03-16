@@ -168,12 +168,8 @@ YAML::Node View::doSerialize() const {
 
 std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
     try {
-        ViewDescription const desc = node["View Base"].as<ViewDescription>();
-        if (desc.id < 0) {
-            Logger::Error("Negative View ID");
-            BL_DEBUGBREAK();
-            return nullptr;
-        }
+        ViewDescription desc = node["View Base"].as<ViewDescription>();
+        BL_ASSERT(desc.id >= 0, "Invalid View ID");
         auto entry = ViewRegistry::get(desc.name());
         if (!entry) {
             Logger::Error("Failed to deserialize '", desc.name(), "'");

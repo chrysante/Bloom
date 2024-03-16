@@ -20,6 +20,9 @@ private:
 
     // Component Inspectors
     void inspectTag(bloom::EntityHandle);
+    template <typename... Components>
+    void addComponentButton(char const* name, bloom::EntityHandle entity,
+                            bool forceDisable = false);
 
     void inspectTransform(bloom::EntityHandle);
 
@@ -50,7 +53,6 @@ private:
     void endSection();
     void endSubSection();
 
-private:
     int editingNameState = 0;
     bool transformScaleLinked = false;
 };

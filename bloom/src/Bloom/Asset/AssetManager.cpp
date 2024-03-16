@@ -2,6 +2,9 @@
 
 #include <fstream>
 
+#include <range/v3/view.hpp>
+#include <scatha/Common/SourceFile.h>
+#include <scatha/Invocation/CompilerInvocation.h>
 #include <utl/filesystem_ext.hpp>
 #include <utl/overload.hpp>
 #include <utl/strcat.hpp>
@@ -14,8 +17,10 @@
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Bloom/Graphics/StaticMesh.h"
+#include "Bloom/Runtime/ScriptSystem.h"
 
 using namespace bloom;
+using namespace ranges::views;
 
 namespace {
 
@@ -392,20 +397,35 @@ AssetHandle AssetManager::getHandleFromFile(std::filesystem::path path) const {
     return impl->readHeader(path).handle();
 }
 
+namespace bloom {
+
+/// Defined in "ScriptSystem.cpp"
+void ScriptSystem_setTarget(ScriptSystem::Impl& impl, scatha::Target target);
+
+} // namespace bloom
+
 void AssetManager::compileScripts() {
+    Logger::Trace("Compiling scripts");
     dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
-#if 0
-    scatha::Compiler compiler;
-    for (auto&& [id, internal]: assets) {
-        if (internal.handle.type() != AssetType::script) {
-            continue;
-        }
-        auto const script = as<Script>(get(internal.handle));
-        makeAvailable(internal.handle, AssetRepresentation::CPU, true);
-        compiler.addSource(script->text);
+    using namespace scatha;
+    CompilerInvocation inv(TargetType::BinaryOnly, "main");
+    auto sources = impl->assets | values | filter([](auto& entry) {
+        return entry.handle.type() == AssetType::ScriptSource;
+    }) | transform([](auto& entry) {
+        return SourceFile::load(entry.diskLocation);
+    });
+    try {
+        inv.setInputs(sources | ranges::to<std::vector>);
     }
-    program = compiler.compile();
-#endif
+    catch (std::exception const& e) {
+        Logger::Error(e.what());
+    }
+    auto target = inv.run();
+    if (!target) {
+        return;
+    }
+    ScriptSystem_setTarget(*application().coreSystems().scriptSystem().impl,
+                           std::move(*target));
     dispatch(DispatchToken::Now, ScriptsDidLoadEvent{});
 }
 
@@ -602,8 +622,15 @@ void Impl::flushToDiskImpl(Scene const& scene,
 
 void Impl::flushToDiskImpl(ScriptSource const&,
                            std::filesystem::path const& dest) {
-    Logger::Warn(
-        "Script source is not written to disk because we don't have memory representation");
+    if (std::filesystem::exists(dest)) {
+        Logger::Warn(
+            "Script source is not written to disk because we don't have memory representation");
+        return;
+    }
+    std::fstream file(dest, std::ios::out);
+    if (!file) {
+        Logger::Warn("Failed to create file ", dest);
+    }
 }
 
 std::optional<AssetType> Impl::deduceImportedAssetType(

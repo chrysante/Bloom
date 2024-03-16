@@ -16,14 +16,28 @@ struct BLOOM_API PreciseTimestep {
     Duration absolute, delta;
 };
 
+///
 class BLOOM_API Timer {
 public:
+    ///
     Timer();
+
+    ///
     void reset();
+
+    ///
     void pause();
+
+    ///
     void resume();
+
+    ///
     void update();
+
+    ///
     Timestep timestep() const { return ts; }
+
+    ///
     PreciseTimestep preciseTimestep() const { return preciseTS; }
 
 private:

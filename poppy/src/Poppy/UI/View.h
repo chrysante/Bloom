@@ -17,7 +17,7 @@ namespace bloom {
 
 class Window;
 
-}
+} // namespace bloom
 
 namespace poppy {
 
@@ -138,10 +138,7 @@ public:
 
     static void add(std::string name, Entry entry) {
         auto [_, success] = instance().entries.insert({ name, entry });
-        if (!success) {
-            Logger::Fatal("View '", name, "' is already registered.");
-            BL_DEBUGFAIL();
-        }
+        BL_ASSERT(success, "View is already registered");
     }
 
     static std::optional<Entry> get(std::string name) {

@@ -14,8 +14,8 @@ namespace bloom {
 
 using ComponentList =
     std::tuple<TagComponent, Transform, TransformMatrixComponent,
-               HierarchyComponent, ScriptComponent, MeshRendererComponent,
-               PointLightComponent, SpotLightComponent,
+               HierarchyComponent, ScriptComponent, ScriptPreservedData,
+               MeshRendererComponent, PointLightComponent, SpotLightComponent,
                DirectionalLightComponent, SkyLightComponent>;
 
 template <typename... T>

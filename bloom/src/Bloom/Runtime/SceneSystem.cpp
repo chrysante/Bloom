@@ -3,9 +3,20 @@
 #include <range/v3/view.hpp>
 #include <utl/stack.hpp>
 
+#include "Bloom/Application/Application.h"
+#include "Bloom/Runtime/ScriptSystem.h"
 #include "Bloom/Scene/Scene.h"
 
 using namespace bloom;
+
+void SceneSystem::init() {
+    listen([this](ScriptsDidLoadEvent) {
+        for (auto* scene: scenes()) {
+            application().coreSystems().scriptSystem().onSceneConstruction(
+                *scene);
+        }
+    });
+}
 
 void SceneSystem::loadScene(Reference<Scene> scene) {
     auto [itr, success] =
@@ -68,16 +79,18 @@ void SceneSystem::applyTransformHierarchy() {
 
 void SceneSystem::start() {
     auto L = lock();
-    //    Logger::Trace("Starting");
     mSimScenes = mScenes | ranges::views::transform([](auto& p) {
         return std::pair{ p.first, p.second->clone() };
     }) | ranges::to<utl::hashmap<utl::uuid, Reference<Scene>>>;
     setPointers(mSimScenes);
+    auto& scriptSystem = application().coreSystems().scriptSystem();
+    for (auto* scene: scenes()) {
+        scriptSystem.onSceneInit(*scene);
+    }
 }
 
 void SceneSystem::stop() {
     auto L = lock();
-    //    Logger::Trace("Stopping");
     mSimScenes.clear();
     setPointers(mScenes);
 }
@@ -86,13 +99,11 @@ void SceneSystem::pause() {}
 
 void SceneSystem::resume() {}
 
-void SceneSystem::step(Timestep) {
+void SceneSystem::step(Timestep timestep) {
     auto L = lock();
-    //    Logger::Trace("Stepping");
-    for (auto& [id, scene]: mSimScenes) {
-        for (auto [id, transform]: scene->view<Transform>().each()) {
-            transform.position.x += 0.01;
-        }
+    auto& scriptSystem = application().coreSystems().scriptSystem();
+    for (auto* scene: scenes()) {
+        scriptSystem.onSceneUpdate(*scene, timestep);
     }
 }
 

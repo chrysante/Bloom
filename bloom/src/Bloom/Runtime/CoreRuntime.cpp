@@ -12,18 +12,26 @@
 
 using namespace bloom;
 
-CoreRuntime::CoreRuntime(std::shared_ptr<RuntimeDelegate> delegate):
-    mDelegate(std::move(delegate)) {}
+CoreRuntime::CoreRuntime() = default;
 
 CoreRuntime::~CoreRuntime() { stop(); }
 
-bool CoreRuntime::setDelegate(std::shared_ptr<RuntimeDelegate> delegate) {
+void CoreRuntime::addDelegate(std::shared_ptr<RuntimeDelegate> delegate) {
     std::unique_lock lock(mMutex);
-    if (mState != RuntimeState::Inactive) {
-        return false;
-    }
-    mDelegate = std::move(delegate);
-    return true;
+    BL_EXPECT(mState == RuntimeState::Inactive);
+    mDelegates.insert(std::move(delegate));
+}
+
+void CoreRuntime::removeDelegate(RuntimeDelegate const*) {
+    /// This function is very annoying to implement because shared pointers are
+    /// not directly comparable to raw pointers. Since we don't need this
+    /// function for new we leave it unimplemented.
+    BL_UNIMPLEMENTED();
+#if 0
+    std::unique_lock lock(mMutex);
+    BL_EXPECT(mState == RuntimeState::Inactive);
+    mDelegates.erase(delegate);
+#endif
 }
 
 void CoreRuntime::run() {
@@ -70,12 +78,12 @@ void CoreRuntime::resume() {
 /// MARK: Private
 void CoreRuntime::updateThread() {
     mTimer.reset();
-    if (mDelegate) {
-        mDelegate->start();
+    for (auto& del: mDelegates) {
+        del->start();
     }
     utl::scope_guard onStop = [this] {
-        if (mDelegate) {
-            mDelegate->stop();
+        for (auto& del: mDelegates) {
+            del->stop();
         }
     };
     while (true) {
@@ -84,20 +92,21 @@ void CoreRuntime::updateThread() {
         case RuntimeState::Running:
             lock.unlock();
             mTimer.update();
-            if (mDelegate) {
-                mDelegate->step(Timestep{});
+            for (auto& del: mDelegates) {
+                del->step(mTimer.timestep());
             }
             break;
         case RuntimeState::Paused:
-            if (mDelegate) {
-                mDelegate->pause();
+            for (auto& del: mDelegates) {
+                del->pause();
             }
             mCV.wait(lock, [&] { return mState != RuntimeState::Paused; });
-            if (mState == RuntimeState::Running && mDelegate) {
-                mDelegate->resume();
+            if (mState == RuntimeState::Running) {
+                for (auto& del: mDelegates) {
+                    del->resume();
+                }
             }
             break;
-
         case RuntimeState::Inactive:
             return;
         }

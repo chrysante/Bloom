@@ -22,6 +22,7 @@ target_link_libraries(bloom
     assimp
     glfw
     scatha
+    libsvm
     utility
     yaml-cpp
     termfmt

@@ -71,7 +71,7 @@ AssetBrowser::AssetBrowser(): dirView(this) {
             })
             .tooltip("Create Default Material"),
 
-        ToolbarButton("Reload Scripts")
+        ToolbarButton("Compile Scripts")
             .onClick([this] {
                 assetManager->compileScripts();
             })
@@ -189,20 +189,12 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
     switch (handle.type()) {
     case AssetType::MaterialInstance: {
         editor().openView("Material Instance Viewer", [=, this](View& view) {
-            auto* const pMatInstViewer =
-                dynamic_cast<MaterialInstanceViewer*>(&view);
-            if (!pMatInstViewer) {
-                BL_DEBUGBREAK("What?");
-                return;
-            }
-            auto& matInstViewer = *pMatInstViewer;
-
+            auto* matInstViewer = dynamic_cast<MaterialInstanceViewer*>(&view);
+            BL_ASSERT(matInstViewer);
             auto materialInstance =
                 as<MaterialInstance>(assetManager->get(handle));
-
-            matInstViewer.setMaterialInstance(std::move(materialInstance));
+            matInstViewer->setMaterialInstance(std::move(materialInstance));
         });
-
         break;
     }
     case AssetType::Scene: {
@@ -230,7 +222,7 @@ void AssetBrowser::init() {
     if (!data.projectDir.empty()) {
         openProject(data.projectDir);
     }
-    // Ignore subdirectory for now
+    // Ignore subdirectories for now
 }
 
 void AssetBrowser::shutdown() {}
@@ -259,14 +251,11 @@ void AssetBrowser::openProject(std::filesystem::path const& path) {
         Logger::Error("Can't open Project: ", path);
         return;
     }
-
     if (!assetManager) {
         return;
     }
-
     data.projectDir = path;
     assetManager->setWorkingDir(path);
-    //		assetManager->loadScripts(editor().coreSystems().scriptEngine());
     openSubdirectory(path);
 }
 
@@ -280,6 +269,5 @@ void AssetBrowser::openSubdirectory(std::filesystem::path const& path) {
 
 void AssetBrowser::refreshFilesystem() {
     assetManager->refreshWorkingDir();
-    //		assetManager->loadScripts(editor().coreSystems().scriptEngine());
     dirView.assignDirectory(data.currentDir);
 }

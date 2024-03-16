@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include <ImGuizmo.h>
+#include <ImGuizmo/ImGuizmo.h>
 #include <imgui.h>
 #include <mtl/mtl.hpp>
 

@@ -11,7 +11,6 @@ target_include_directories(poppy
     PRIVATE
       src/poppy
       ${rapidjson_SOURCE_DIR}/include
-      ${PROJECT_SOURCE_DIR}/external/imgui
 )
 
 target_link_libraries(poppy
@@ -20,10 +19,13 @@ target_link_libraries(poppy
   PRIVATE
     utility
     yaml-cpp
+    ImGui
+    ImGuizmo
     "-framework AppKit"
     "-framework Metal"
     "-framework GameController"
     "-framework CoreImage"
+    "-framework QuartzCore"
 )
 target_compile_options(poppy PRIVATE "-fobjc-arc")
 

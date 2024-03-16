@@ -17,33 +17,28 @@ static bool ViewportButtonBehavior(ImRect const& bb, ImGuiID id,
 
 ViewportInput poppy::detectViewportInput(ImGuiButtonFlags buttonFlags) {
     using namespace ImGui;
-
     buttonFlags |= ImGuiButtonFlags_NoNavFocus;
-
-    // save to restore later
-    ImVec2 const cursorPos = GetCursorPos();
+    // Save to restore later
+    ImVec2 cursorPos = GetCursorPos();
+    ImGuiID hovered = ImGui::GetCurrentContext()->HoveredId;
     SetCursorPos({ 0, 0 });
-
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems) return ViewportInput{};
-
-    ImGuiID const id = window->GetID("__Invisible_Button__");
-
+    ImGuiID id = window->GetID("__Invisible_Button__");
     ImVec2 size = CalcItemSize(window->Size, 0.0f, 0.0f);
-    ImRect const bb(window->DC.CursorPos,
-                    mtl::float2(window->DC.CursorPos) + mtl::float2(size));
+    ImRect bb(window->DC.CursorPos,
+              mtl::float2(window->DC.CursorPos) + mtl::float2(size));
     ItemSize(size);
     if (!ItemAdd(bb, id)) return {};
-
     ViewportInput result{};
-    result.pressed = ViewportButtonBehavior(bb, id, &result.hovered,
-                                            &result.held, buttonFlags);
-
+    result.pressed =
+        ButtonBehavior(bb, id, &result.hovered, &result.held, buttonFlags);
+    ImGui::SetHoveredID(hovered);
     SetCursorPos(cursorPos);
-
     return result;
 }
 
+#if 0
 static bool ViewportButtonBehavior(ImRect const& bb, ImGuiID id,
                                    bool* out_hovered, bool* out_held,
                                    ImGuiButtonFlags flags) {
@@ -255,6 +250,7 @@ static bool ViewportButtonBehavior(ImRect const& bb, ImGuiID id,
 
     return pressed;
 }
+#endif
 
 bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
                              float v_min, float v_max, char const* format,

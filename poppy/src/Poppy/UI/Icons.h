@@ -1,14 +1,14 @@
 #ifndef POPPY_UI_ICONS_H
 #define POPPY_UI_ICONS_H
 
-#include "Poppy/Core/Common.h"
-
 #include <filesystem>
 #include <string>
+#include <vector>
 
 #include <imgui.h>
 #include <utl/hashmap.hpp>
-#include <utl/vector.hpp>
+
+#include "Poppy/Core/Common.h"
 
 namespace poppy {
 
@@ -28,7 +28,7 @@ public:
 private:
     utl::hashmap<std::string, WChar> codes;
     utl::hashmap<IconSize, ImFont*> fonts;
-    utl::vector<WChar> glyphs;
+    std::vector<WChar> glyphs;
 };
 
 extern IconFontMap icons;

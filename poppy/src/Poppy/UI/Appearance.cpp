@@ -65,7 +65,6 @@ static void applyStyle(poppy::Style const& style) {
     imguiStyle.ChildRounding = style.vars.childWindowRounding;
     imguiStyle.PopupRounding = style.vars.popupRounding;
     imguiStyle.FrameRounding = style.vars.frameRounding;
-    imguiStyle.SelectableRounding = style.vars.selectableRounding;
     imguiStyle.TabRounding = style.vars.tabRounding;
     imguiStyle.GrabMinSize = style.vars.grabMinSize;
     imguiStyle.GrabRounding = style.vars.grabRounding;

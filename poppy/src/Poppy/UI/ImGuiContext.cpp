@@ -242,64 +242,54 @@ void poppy::ImGuiContext::init(bloom::Application& application,
     auto& device = application.device();
     desc = ds;
     this->bloom::Receiver::operator=(application.makeReceiver());
-
     IMGUI_CHECKVERSION();
-
-    float const scaleFactor = 2;
-
     fonts.init(application);
-    loadFonts(device, scaleFactor);
+    /// Scale factor values are figured out by trial-and-error and are hardcoded
+    /// for now.
+    static constexpr float ScaleFactor = 2.0;
+    loadFonts(device, ScaleFactor);
     context = ImGui::CreateContext(sFontAtlas);
-    context->IO.FontGlobalScale = 1.0 / scaleFactor;
+    context->IO.FontGlobalScale = 0.5 / ScaleFactor;
     context->IO.FontDefault = fonts.get(Font::UIDefault());
-
     ImGui::SetCurrentContext(context);
-
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
-    //		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
+#if 0
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+#endif
     io.IniFilename = desc.iniFilePath.c_str();
-
-    doInitPlatform(device);
+    doInitPlatform(device, *application.getWindows().front());
     createFontAtlasPlatform(sFontAtlas, device);
-
-    listen([this, scaleFactor](ReloadFontAtlasCommand) {
+    listen([this](ReloadFontAtlasCommand) {
         if (fontAtlasReloaded) {
             return;
         }
         fontAtlasReloaded = true;
-        loadFonts(mApplication->device(), scaleFactor);
+        loadFonts(mApplication->device(), ScaleFactor);
         createFontAtlasPlatform(sFontAtlas, mApplication->device());
         context->IO.FontDefault = fonts.get(Font::UIDefault());
     });
 }
 
-void poppy::ImGuiContext::loadFonts(bloom::HardwareDevice& device,
-                                    float scaleFactor) {
+void poppy::ImGuiContext::loadFonts(bloom::HardwareDevice&, float scaleFactor) {
     if (!sFontAtlas) {
         sFontAtlas = IM_NEW(ImFontAtlas);
     }
-
     sFontAtlas->Clear();
-
     icons.load(*sFontAtlas, scaleFactor,
                resourceDir() / "Icons/IconsConfig.json",
                resourceDir() / "Icons/Icons.ttf");
     fonts.loadFonts(*sFontAtlas, scaleFactor);
-
     sFontAtlas->Build();
     {
         auto* testFont = fonts.get(Font::UIDefault());
         assert(testFont->IsLoaded());
     }
-
     auto* const iconFont16 = icons.font(IconSize::_16);
     assert(iconFont16);
     assert(iconFont16->IsLoaded());
-
     assert(icons.font(IconSize::_16)->IsLoaded());
 }
 

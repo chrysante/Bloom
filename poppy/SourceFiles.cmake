@@ -40,10 +40,6 @@ set(poppy_sources
 
   src/Poppy/Platform/MacOS/ImGuiContext.mm
   src/Poppy/Platform/MacOS/SystemAppearance.mm
-  src/Poppy/Platform/MacOS/imgui_impl_metal.h
-  src/Poppy/Platform/MacOS/imgui_impl_metal.mm
-  src/Poppy/Platform/MacOS/imgui_impl_osx.h
-  src/Poppy/Platform/MacOS/imgui_impl_osx.mm
 
   src/Poppy/Renderer/EditorDrawData.h
   src/Poppy/Renderer/EditorRenderer.cpp
@@ -70,13 +66,6 @@ set(poppy_sources
   src/Poppy/UI/Toolbar.h
   src/Poppy/UI/View.cpp
   src/Poppy/UI/View.h
-
-  src/Poppy/UI/ImGui/ImGuizmo.cpp
-  src/Poppy/UI/ImGui/imgui.cpp
-  src/Poppy/UI/ImGui/imgui_demo.cpp
-  src/Poppy/UI/ImGui/imgui_draw.cpp
-  src/Poppy/UI/ImGui/imgui_tables.cpp
-  src/Poppy/UI/ImGui/imgui_widgets.cpp
 )
 
 set(poppy_shader_sources

@@ -1,5 +1,7 @@
 #include "Bloom/Platform/Metal/MetalComputeContext.h"
 
+#include <utl/functional.hpp>
+
 using namespace bloom;
 
 static MTLSize toMTLSize(mtl::usize3 const& size) {
@@ -55,6 +57,9 @@ void MetalComputeContext::setTexture(TextureView texture, std::size_t index) {
 void MetalComputeContext::dispatchThreads(mtl::usize3 threadsPerGrid,
                                           mtl::usize3 threadsPerThreadgroup)
 {
+    if (threadsPerGrid.map([](auto i) { return i == 0; }).any()) {
+        return;
+    }
     [commandEncoder dispatchThreads: toMTLSize(threadsPerGrid)
               threadsPerThreadgroup: toMTLSize(threadsPerThreadgroup)];
 }

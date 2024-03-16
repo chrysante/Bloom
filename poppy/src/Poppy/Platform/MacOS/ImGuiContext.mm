@@ -1,11 +1,11 @@
 #include "Poppy/UI/ImGuiContext.h"
 
-#import <AppKit/AppKit.h>
+#include <AppKit/AppKit.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <backends/imgui_impl_osx.h>
+#include <backends/imgui_impl_metal.h>
 
-#include "Poppy/Platform/MacOS/imgui_impl_osx.h"
-#include "Poppy/Platform/MacOS/imgui_impl_metal.h"
 #include "Bloom/Application.h"
 #include "Bloom/GPU.h"
 #include "Bloom/Platform/Metal/MetalDevice.h"
@@ -18,16 +18,19 @@ using namespace mtl::short_types;
 
 using namespace poppy;
 
-void poppy::ImGuiContext::doInitPlatform(bloom::HardwareDevice& device) {
-    // Setup Renderer backend
-    MetalDevice& mtlDevice = utl::down_cast<MetalDevice&>(device);
-    ImGui_ImplMetal_Init(mtlDevice.device);
-    ImGui_ImplOSX_Init();
+static NSView* getNativeView(bloom::Window& window) {
+    NSWindow* nsWindow = (__bridge NSWindow*)window.nativeHandle();
+    return nsWindow.contentView;
+}
+
+void poppy::ImGuiContext::doInitPlatform(bloom::HardwareDevice& device,
+                                         bloom::Window& window) {
+    ImGui_ImplMetal_Init(dynamic_cast<MetalDevice&>(device).device);
+    ImGui_ImplOSX_Init(getNativeView(window));
 }
 
 void poppy::ImGuiContext::doNewFramePlatform(bloom::Window& window) {
-    NSWindow* nsWindow = (__bridge NSWindow*)window.nativeHandle();
-    ImGui_ImplOSX_NewFrame(nsWindow.contentView);
+    ImGui_ImplOSX_NewFrame(getNativeView(window));
 }
 
 void poppy::ImGuiContext::doDrawFramePlatform(bloom::HardwareDevice&, bloom::Window& window) {

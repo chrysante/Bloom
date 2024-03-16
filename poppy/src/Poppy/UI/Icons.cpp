@@ -5,6 +5,8 @@
 
 #include <imgui_internal.h>
 #include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+#include <utl/utility.hpp>
 
 #include "Bloom/Application.h"
 #include "Poppy/Core/Debug.h"
@@ -26,40 +28,33 @@ IconFontMap icons{};
 void IconFontMap::load(ImFontAtlas& atlas, float scaleFactor,
                        std::filesystem::path configPath,
                        std::filesystem::path iconPath) {
-    std::fstream file(configPath, std::ios::in);
-    assert(!!file);
-    std::stringstream sstr;
-    sstr << file.rdbuf();
-    std::string const configText = sstr.str();
-    namespace rs = rapidjson;
-
-    rs::Document doc;
-    doc.Parse(configText.data());
-
     codes.clear();
-
-    for (auto&& i: doc["glyphs"]) {
-        codes.insert({ i["css"].GetString(), i["code"].GetUint() });
+    glyphs.clear();
+    fonts.clear();
+    std::fstream file(configPath, std::ios::in);
+    assert(file);
+    rapidjson::IStreamWrapper stream(file);
+    rapidjson::Document doc;
+    doc.ParseStream(stream);
+    for (auto const& glyph: doc["glyphs"]) {
+        auto cssName = glyph["css"].GetString();
+        auto code = glyph["code"].GetUint();
+        if (code > USHRT_MAX) {
+            continue;
+        }
+        codes.insert({ std::move(cssName), utl::narrow_cast<WChar>(code) });
     }
-
     glyphs.reserve(codes.size() + 1);
     std::transform(codes.begin(), codes.end(), std::back_inserter(glyphs),
-                   [](auto&& p) {
-        auto&& [_, code] = p;
-        return code;
-    });
-    glyphs.push_back(0); // null terminator
-
-    auto const iconSizes = { IconSize::_16, IconSize::_24, IconSize::_32,
-                             IconSize::_48 };
-
-    fonts.clear();
-
-    for (auto const size: iconSizes) {
+                   [](auto const& p) { return p.second; });
+    std::sort(glyphs.begin(), glyphs.end());
+    glyphs.push_back(0); // Null terminator
+    auto iconSizes = { IconSize::_16, IconSize::_24, IconSize::_32,
+                       IconSize::_48 };
+    for (auto size: iconSizes) {
         auto imguiFontPtr = atlas.AddFontFromFileTTF(iconPath.c_str(),
                                                      (int)size * scaleFactor,
                                                      nullptr, glyphs.data());
-
         addFont(size, imguiFontPtr);
     }
 }

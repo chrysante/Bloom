@@ -38,12 +38,14 @@ public:
     void onCharInput(unsigned int);
 
 private:
-    void doInitPlatform(bloom::HardwareDevice&);
+    void doInitPlatform(bloom::HardwareDevice& device, bloom::Window& window);
     void doShutdownPlatform();
-    void doNewFramePlatform(bloom::Window&);
-    void doDrawFramePlatform(bloom::HardwareDevice&, bloom::Window&);
-    void loadFonts(bloom::HardwareDevice&, float scaleFactor);
-    void createFontAtlasPlatform(ImFontAtlas*, bloom::HardwareDevice&);
+    void doNewFramePlatform(bloom::Window& window);
+    void doDrawFramePlatform(bloom::HardwareDevice& device,
+                             bloom::Window& window);
+    void loadFonts(bloom::HardwareDevice& device, float scaleFactor);
+    void createFontAtlasPlatform(ImFontAtlas* fontAtlas,
+                                 bloom::HardwareDevice& device);
 
 private:
     bloom::Application* mApplication = nullptr;

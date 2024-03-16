@@ -46,13 +46,12 @@ ImFont* FontMap::loadFont(Font const& font, ImFontAtlas& atlas,
     if (font.monospaced && (int)font.weight > (int)FontWeight::heavy) {
         return nullptr;
     }
-    std::string const name = utl::strcat(font.monospaced ? "SFMono" : "SFPro",
-                                         "-", toString(font.weight), "-",
-                                         toString(font.style), ".ttf");
-    auto const path = bloom::resourceDir() / "Font" / name;
-    auto* const imguiFontPtr =
-        atlas.AddFontFromFileTTF(path.c_str(), (int)font.size * scaleFactor,
-                                 nullptr, nullptr);
+    std::string name = utl::strcat(font.monospaced ? "SFMono" : "SFPro", "-",
+                                   toString(font.weight), "-",
+                                   toString(font.style), ".ttf");
+    auto path = bloom::resourceDir() / "Font" / name;
+    auto* imguiFontPtr =
+        atlas.AddFontFromFileTTF(path.c_str(), (int)font.size * scaleFactor);
     assert(imguiFontPtr);
     return imguiFontPtr;
 }

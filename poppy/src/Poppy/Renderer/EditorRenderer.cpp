@@ -25,9 +25,9 @@ std::unique_ptr<EditorFramebuffer> EditorRenderer::createEditorFramebuffer(
 
     TextureDescription desc;
     desc.size = { size, 1 };
-    desc.usage = TextureUsage::shaderRead | TextureUsage::renderTarget;
+    desc.usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget;
     desc.storageMode = StorageMode::GPUOnly;
-    desc.type = TextureType::texture2D;
+    desc.type = TextureType::Texture2D;
 
     desc.pixelFormat = PixelFormat::R8Unorm;
     framebuffer->selected = device().createTexture(desc);
@@ -52,7 +52,7 @@ void EditorRenderer::init(HardwareDevice& device) {
 
     /* Create Depth Stencil */ {
         DepthStencilDescription depthDesc;
-        depthDesc.depthCompareFunction = CompareFunction::lessEqual;
+        depthDesc.depthCompareFunction = CompareFunction::LessEqual;
         depthDesc.depthWrite = true;
         depthStencil = device.createDepthStencil(depthDesc);
     }
@@ -85,7 +85,7 @@ void EditorRenderer::init(HardwareDevice& device) {
     /* Create Editor Draw Data Buffer */ {
         BufferDescription desc;
         desc.size = sizeof(EditorDrawData);
-        desc.storageMode = StorageMode::managed;
+        desc.storageMode = StorageMode::Managed;
         editorDrawDataBuffer = device.createBuffer(desc);
     }
 }
@@ -159,7 +159,7 @@ void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
         if (selectedTransformsBuffer.size() < targetBufferSize) {
             BufferDescription desc;
             desc.size = targetBufferSize;
-            desc.storageMode = StorageMode::managed;
+            desc.storageMode = StorageMode::Managed;
             selectedTransformsBuffer = device().createBuffer(desc);
         }
         device().fillManagedBuffer(selectedTransformsBuffer,
@@ -174,7 +174,7 @@ void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
     RenderPassColorAttachmentDescription caDesc{};
     caDesc.texture = framebuffer.selected;
     caDesc.clearColor = { 0, 0, 0, 1 };
-    caDesc.loadAction = LoadAction::clear;
+    caDesc.loadAction = LoadAction::Clear;
     desc.colorAttachments.push_back(caDesc);
 
     RenderPassDepthAttachmentDescription dDesc{};
@@ -191,7 +191,7 @@ void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
     ctx.setVertexBuffer(selectedTransformsBuffer, 2);
 
     ctx.setPipeline(selectedPipeline);
-    ctx.setTriangleCullMode(TriangleCullMode::back);
+    ctx.setTriangleCullMode(TriangleCullMode::Back);
     ctx.setDepthStencil(depthStencil);
 
     StaticMeshRenderer* currentMesh = nullptr;
@@ -206,7 +206,7 @@ void EditorRenderer::selectedObjectsPass(EditorFramebuffer& framebuffer,
 
         DrawDescription desc{};
         desc.indexCount = indexBuffer.size() / 4;
-        desc.indexType = IndexType::uint32;
+        desc.indexType = IndexType::U32;
         desc.indexBuffer = indexBuffer;
         ctx.draw(desc);
         ++index;
@@ -233,7 +233,7 @@ void EditorRenderer::compositionPass(Framebuffer& framebuffer,
     RenderPassDescription desc{};
     RenderPassColorAttachmentDescription caDesc{};
     caDesc.texture = editorFramebuffer.composed;
-    caDesc.loadAction = LoadAction::dontCare;
+    caDesc.loadAction = LoadAction::DontCare;
     desc.colorAttachments.push_back(caDesc);
 
     ctx.begin(desc);

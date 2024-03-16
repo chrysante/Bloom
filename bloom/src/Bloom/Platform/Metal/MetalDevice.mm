@@ -32,8 +32,8 @@ std::unique_ptr<CommandQueue> MetalDevice::createCommandQueue() {
 BufferHandle MetalDevice::createBuffer(BufferDescription const& desc) {
     auto const mtlStorageMode = [&]{
         switch (desc.storageMode) {
-            case StorageMode::shared: return MTLResourceStorageModeShared;
-            case StorageMode::managed: return MTLResourceStorageModeManaged;
+            case StorageMode::Shared: return MTLResourceStorageModeShared;
+            case StorageMode::Managed: return MTLResourceStorageModeManaged;
             case StorageMode::GPUOnly: return MTLResourceStorageModePrivate;
             default: BL_DEBUGFAIL();
         };

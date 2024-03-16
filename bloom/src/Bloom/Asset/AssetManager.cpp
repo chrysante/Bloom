@@ -517,7 +517,7 @@ void Impl::loadStaticMeshRenderer(StaticMesh& mesh, TableEntry const& entry) {
     auto& vertices = mesh.mData->vertices;
     desc.data = vertices.data();
     desc.size = vertices.size() * sizeof(vertices[0]);
-    desc.storageMode = StorageMode::shared;
+    desc.storageMode = StorageMode::Shared;
     renderer->mVertexBuffer = assetManager->device().createBuffer(desc);
     desc.data = mesh.mData->indices.data();
     desc.size = mesh.mData->indices.size() * 4;

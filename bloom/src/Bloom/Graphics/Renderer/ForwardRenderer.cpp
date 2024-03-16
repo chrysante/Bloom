@@ -25,16 +25,13 @@ std::unique_ptr<Framebuffer> ForwardRenderer::createFramebuffer(
 std::unique_ptr<Framebuffer> ForwardRenderer::createDebugFramebuffer(
     mtl::int2 size) const {
     auto framebuffer = std::make_unique<ForwardRendererDebugFramebuffer>();
-
     populateFramebuffer(device(), *framebuffer, size);
-    ;
-
     TextureDescription desc;
     desc.size = { size, 1 };
-    desc.type = TextureType::texture2D;
+    desc.type = TextureType::Texture2D;
     desc.mipmapLevelCount = 1;
     desc.storageMode = StorageMode::GPUOnly;
-    desc.usage = TextureUsage::shaderRead | TextureUsage::renderTarget;
+    desc.usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget;
     desc.pixelFormat = PixelFormat::RGBA8Unorm;
     framebuffer->shadowCascade = device().createTexture(desc);
 
@@ -47,10 +44,10 @@ void ForwardRenderer::populateFramebuffer(
     framebuffer.size = size;
     TextureDescription desc;
     desc.size = { size, 1 };
-    desc.type = TextureType::texture2D;
+    desc.type = TextureType::Texture2D;
     desc.mipmapLevelCount = 1;
     desc.storageMode = StorageMode::GPUOnly;
-    desc.usage = TextureUsage::shaderRead | TextureUsage::renderTarget;
+    desc.usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget;
 
     desc.pixelFormat = PixelFormat::Depth32Float;
     framebuffer.depth = device.createTexture(desc);
@@ -59,7 +56,7 @@ void ForwardRenderer::populateFramebuffer(
     framebuffer.rawColor = device.createTexture(desc);
 
     desc.pixelFormat = PixelFormat::RGBA8Unorm;
-    desc.usage = TextureUsage::shaderRead | TextureUsage::shaderWrite;
+    desc.usage = TextureUsage::ShaderRead | TextureUsage::ShaderWrite;
     framebuffer.postProcessed = device.createTexture(desc);
 
     // Bloom / Veil
@@ -83,7 +80,7 @@ static RenderPipelineHandle createShadowPipeline(HardwareDevice& device) {
     desc.vertexFunction = device.createFunction("shadowVertexShader");
 
     desc.rasterSampleCount = 1;
-    desc.inputPrimitiveTopology = PrimitiveTopologyClass::triangle;
+    desc.inputPrimitiveTopology = PrimitiveTopologyClass::Triangle;
 
     return device.createRenderPipeline(desc);
 }
@@ -109,7 +106,7 @@ void ForwardRenderer::init(HardwareDevice& device) {
 void ForwardRenderer::createGPUState(HardwareDevice& device) {
     /* Buffers */ {
         BufferDescription desc{};
-        desc.storageMode = StorageMode::managed;
+        desc.storageMode = StorageMode::Managed;
 
         desc.size = sizeof(RendererParameters);
         renderObjects.parameterBuffer = device.createBuffer(desc);
@@ -117,7 +114,7 @@ void ForwardRenderer::createGPUState(HardwareDevice& device) {
     {
         DepthStencilDescription desc{};
         desc.depthWrite = true;
-        desc.depthCompareFunction = CompareFunction::lessEqual;
+        desc.depthCompareFunction = CompareFunction::LessEqual;
 
         renderObjects.depthStencil = device.createDepthStencil(desc);
     }
@@ -168,7 +165,7 @@ void ForwardRenderer::endScene() {
         if (renderObjects.transformBuffer.size() < size) {
             BufferDescription desc;
             desc.size = size;
-            desc.storageMode = StorageMode::managed;
+            desc.storageMode = StorageMode::Managed;
             renderObjects.transformBuffer = device().createBuffer(desc);
         }
         device().fillManagedBuffer(renderObjects.transformBuffer,
@@ -186,7 +183,7 @@ void ForwardRenderer::endScene() {
         if (renderObjects.shadows.lightSpaceTransforms.size() < size) {
             BufferDescription desc;
             desc.size = size;
-            desc.storageMode = StorageMode::managed;
+            desc.storageMode = StorageMode::Managed;
             renderObjects.shadows.lightSpaceTransforms =
                 device().createBuffer(desc);
         }
@@ -210,7 +207,7 @@ void ForwardRenderer::submit(Reference<StaticMeshRenderer> mesh,
         if (matInst->mParameterBuffer.size() < sizeof(MaterialParameters)) {
             matInst->mParameterBuffer =
                 device().createBuffer({ .size = sizeof(MaterialParameters),
-                                        .storageMode = StorageMode::managed });
+                                        .storageMode = StorageMode::Managed });
         }
         device().fillManagedBuffer(matInst->mParameterBuffer,
                                    &matInst->mParameters,
@@ -362,7 +359,7 @@ void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
     RenderPassColorAttachmentDescription caDesc{};
     caDesc.texture = framebuffer.rawColor;
     caDesc.clearColor = mtl::colors<>::black;
-    caDesc.loadAction = LoadAction::clear;
+    caDesc.loadAction = LoadAction::Clear;
     desc.colorAttachments.push_back(caDesc);
 
     RenderPassDepthAttachmentDescription dDesc{};
@@ -411,7 +408,7 @@ void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
 
         DrawDescription desc{};
         desc.indexCount = indexBuffer.size() / 4;
-        desc.indexType = IndexType::uint32;
+        desc.indexType = IndexType::U32;
         desc.indexBuffer = indexBuffer;
         ctx.draw(desc);
         ++index;
@@ -425,11 +422,11 @@ static TextureHandle createShadowMaps(HardwareDevice& device,
                                       size_t totalShadowMaps,
                                       ulong2 resolution) {
     TextureDescription desc;
-    desc.type = TextureType::texture2DArray;
+    desc.type = TextureType::Texture2DArray;
     desc.size = usize3(resolution, 1);
     desc.arrayLength = totalShadowMaps;
     desc.pixelFormat = PixelFormat::Depth32Float;
-    desc.usage = TextureUsage::renderTarget | TextureUsage::shaderRead;
+    desc.usage = TextureUsage::RenderTarget | TextureUsage::ShaderRead;
     desc.storageMode = StorageMode::GPUOnly;
 
     return device.createTexture(desc);
@@ -463,7 +460,7 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
     ctx.begin(desc);
 
     ctx.setPipeline(renderObjects.shadows.pipeline);
-    ctx.setTriangleCullMode(TriangleCullMode::front); /// TODO: temporary
+    ctx.setTriangleCullMode(TriangleCullMode::Front); /// TODO: temporary
     ctx.setDepthStencil(renderObjects.depthStencil);
     ctx.setVertexBuffer(renderObjects.parameterBuffer, 0,
                         offsetof(RendererParameters, scene));
@@ -479,7 +476,7 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
         BufferView indexBuffer = object.mesh->indexBuffer();
         DrawDescription desc{};
         desc.indexCount = indexBuffer.size() / 4;
-        desc.indexType = IndexType::uint32;
+        desc.indexType = IndexType::U32;
         desc.indexBuffer = indexBuffer;
         desc.instanceCount = numShadowMaps;
         ctx.draw(desc);

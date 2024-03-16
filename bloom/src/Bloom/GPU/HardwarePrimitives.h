@@ -13,80 +13,80 @@
 
 namespace bloom {
 
-enum class IndexType { uint16, uint32 };
+enum class IndexType { U16, U32 };
 
-enum class LoadAction { dontCare = 0, load = 1, clear = 2 };
+enum class LoadAction { DontCare = 0, Load = 1, Clear = 2 };
 
 enum class StoreAction {
-    dontCare = 0,
-    store = 1,
-    multisampleResolve = 2,
+    DontCare = 0,
+    Store = 1,
+    MultisampleResolve = 2,
 };
 
 enum class StorageMode {
-    shared = 0,
-    managed = 1,
+    Shared = 0,
+    Managed = 1,
     GPUOnly = 2,
 };
 
 enum class CompareFunction {
-    never = 0,
-    less = 1,
-    equal = 2,
-    lessEqual = 3,
-    greater = 4,
-    notEqual = 5,
-    greaterEqual = 6,
-    always = 7,
+    Never = 0,
+    Less = 1,
+    Equal = 2,
+    LessEqual = 3,
+    Greater = 4,
+    NotEqual = 5,
+    GreaterEqual = 6,
+    Always = 7,
 };
 
-enum class TriangleFillMode { fill = 0, lines = 1 };
+enum class TriangleFillMode { Fill = 0, Lines = 1 };
 
-enum class TriangleCullMode { none = 0, front = 1, back = 2 };
+enum class TriangleCullMode { None = 0, Front = 1, Back = 2 };
 
-enum class SamplerMinMagFilter { nearest = 0, linear = 1 };
+enum class SamplerMinMagFilter { Nearest = 0, Linear = 1 };
 
-enum class SamplerMipFilter { notMipmapped = 0, nearest = 1, linear = 2 };
+enum class SamplerMipFilter { NotMipmapped = 0, Nearest = 1, Linear = 2 };
 
 enum class SamplerAddressMode {
-    clampToEdge = 0,
-    mirrorClampToEdge = 1,
-    repeat = 2,
-    mirrorRepeat = 3,
-    clampToZero = 4,
-    clampToBorderColor = 5,
+    ClampToEdge = 0,
+    MirrorClampToEdge = 1,
+    Repeat = 2,
+    MirrorRepeat = 3,
+    ClampToZero = 4,
+    ClampToBorderColor = 5,
 };
 
 enum class SamplerBorderColor {
-    clear = 0,       // { 0, 0, 0, 0 }
-    opaqueBlack = 1, // { 0, 0, 0, 1 }
-    opaqueWhite = 2, // { 1, 1, 1, 1 }
+    Clear = 0,       // { 0, 0, 0, 0 }
+    OpaqueBlack = 1, // { 0, 0, 0, 1 }
+    OpaqueWhite = 2, // { 1, 1, 1, 1 }
 };
 
 enum class TextureUsage {
-    none = 0,
-    shaderRead = 1 << 0,
-    shaderWrite = 1 << 1,
-    renderTarget = 1 << 2,
-    pixelFormatView = 1 << 4,
+    None = 0,
+    ShaderRead = 1 << 0,
+    ShaderWrite = 1 << 1,
+    RenderTarget = 1 << 2,
+    PixelFormatView = 1 << 4,
 };
 UTL_ENUM_OPERATORS(TextureUsage);
 
 enum class TextureType {
-    texture1D = 0,
-    texture1DArray = 1,
-    texture2D = 2,
-    texture2DArray = 3,
-    texture2DMultisample = 4,
-    cubeTexture = 5,
-    cubeTextureArray = 6,
-    texture3D = 7,
-    texture2DMultisampleArray = 8,
-    textureBuffer = 9
+    Texture1D = 0,
+    Texture1DArray = 1,
+    Texture2D = 2,
+    Texture2DArray = 3,
+    Texture2DMultisample = 4,
+    CubeTexture = 5,
+    CubeTextureArray = 6,
+    Texture3D = 7,
+    Texture2DMultisampleArray = 8,
+    TextureBuffer = 9
 };
 
 enum class PixelFormat {
-    invalid = 0,
+    Invalid = 0,
     A8Unorm = 1,
     R8Unorm = 10,
     R8Unorm_sRGB = 11,
@@ -228,56 +228,56 @@ enum class PixelFormat {
 };
 
 enum class BlendFactor {
-    zero = 0,
-    one = 1,
-    sourceColor = 2,
-    oneMinusSourceColor = 3,
-    sourceAlpha = 4,
-    oneMinusSourceAlpha = 5,
-    destinationColor = 6,
-    oneMinusDestinationColor = 7,
-    destinationAlpha = 8,
-    oneMinusDestinationAlpha = 9,
-    sourceAlphaSaturated = 10,
-    blendColor = 11,
-    oneMinusBlendColor = 12,
-    blendAlpha = 13,
-    oneMinusBlendAlpha = 14
+    Zero = 0,
+    One = 1,
+    SourceColor = 2,
+    OneMinusSourceColor = 3,
+    SourceAlpha = 4,
+    OneMinusSourceAlpha = 5,
+    DestinationColor = 6,
+    OneMinusDestinationColor = 7,
+    DestinationAlpha = 8,
+    OneMinusDestinationAlpha = 9,
+    SourceAlphaSaturated = 10,
+    BlendColor = 11,
+    OneMinusBlendColor = 12,
+    BlendAlpha = 13,
+    OneMinusBlendAlpha = 14
 };
 
 enum class BlendOperation {
-    add = 0,
-    subtract = 1,
-    reverseSubtract = 2,
-    min = 3,
-    max = 4
+    Add = 0,
+    Subtract = 1,
+    ReverseSubtract = 2,
+    Min = 3,
+    Max = 4
 };
 
 enum class ColorWriteMask {
-    nne = 0,
-    red = 0x1 << 3,
-    green = 0x1 << 2,
-    blue = 0x1 << 1,
-    alpha = 0x1 << 0,
-    all = red | green | blue | alpha
+    None = 0,
+    Red = 0x1 << 3,
+    Green = 0x1 << 2,
+    Blue = 0x1 << 1,
+    Alpha = 0x1 << 0,
+    All = Red | Green | Blue | Alpha
 };
 
 enum class StencilOperation {
-    keep = 0,
-    zero = 1,
-    replace = 2,
-    incrementClamp = 3,
-    decrementClamp = 4,
-    invert = 5,
-    incrementWrap = 6,
-    decrementWrap = 7,
+    Keep = 0,
+    Zero = 1,
+    Replace = 2,
+    IncrementClamp = 3,
+    DecrementClamp = 4,
+    Invert = 5,
+    IncrementWrap = 6,
+    DecrementWrap = 7,
 };
 
 enum class PrimitiveTopologyClass {
-    unspecified = 0,
-    point = 1,
-    line = 2,
-    triangle = 3,
+    Unspecified = 0,
+    Point = 1,
+    Line = 2,
+    Triangle = 3,
 };
 
 /// MARK: - Buffer
@@ -317,14 +317,14 @@ public:
 
 /// MARK: - Texture
 struct BLOOM_API TextureDescription {
-    TextureType type = TextureType::texture2D;
+    TextureType type = TextureType::Texture2D;
     PixelFormat pixelFormat = PixelFormat::RGBA8Unorm;
     mtl::usize3 size = 1;
     std::size_t mipmapLevelCount = 1;
     std::size_t sampleCount = 1;
     std::size_t arrayLength = 1;
     StorageMode storageMode = StorageMode::GPUOnly;
-    TextureUsage usage = TextureUsage::shaderRead;
+    TextureUsage usage = TextureUsage::ShaderRead;
 };
 
 class BLOOM_API TextureHandle: public HardwareResourceHandle {
@@ -381,30 +381,30 @@ public:
 
 /// MARK: - RenderPipeline
 struct ColorAttachmentDescription {
-    PixelFormat pixelFormat = PixelFormat::invalid;
+    PixelFormat pixelFormat = PixelFormat::Invalid;
 
     bool blendingEnabled = false;
 
-    BlendFactor sourceRGBBlendFactor = BlendFactor::one;
-    BlendFactor destinationRGBBlendFactor = BlendFactor::zero;
-    BlendOperation rgbBlendOperation = BlendOperation::add;
+    BlendFactor sourceRGBBlendFactor = BlendFactor::One;
+    BlendFactor destinationRGBBlendFactor = BlendFactor::Zero;
+    BlendOperation rgbBlendOperation = BlendOperation::Add;
 
-    BlendFactor sourceAlphaBlendFactor = BlendFactor::one;
-    BlendFactor destinationAlphaBlendFactor = BlendFactor::zero;
-    BlendOperation alphaBlendOperation = BlendOperation::add;
+    BlendFactor sourceAlphaBlendFactor = BlendFactor::One;
+    BlendFactor destinationAlphaBlendFactor = BlendFactor::Zero;
+    BlendOperation alphaBlendOperation = BlendOperation::Add;
 };
 
 struct RenderPipelineDescription {
     utl::small_vector<ColorAttachmentDescription, 4> colorAttachments;
-    PixelFormat depthAttachmentPixelFormat = PixelFormat::invalid;
-    PixelFormat stencilAttachmentPixelFormat = PixelFormat::invalid;
+    PixelFormat depthAttachmentPixelFormat = PixelFormat::Invalid;
+    PixelFormat stencilAttachmentPixelFormat = PixelFormat::Invalid;
 
     ShaderFunctionHandle vertexFunction;
     ShaderFunctionHandle fragmentFunction;
 
     std::size_t rasterSampleCount = 1;
     PrimitiveTopologyClass inputPrimitiveTopology =
-        PrimitiveTopologyClass::unspecified;
+        PrimitiveTopologyClass::Unspecified;
 };
 
 class BLOOM_API RenderPipelineHandle: public HardwareResourceHandle {
@@ -460,26 +460,26 @@ public:
 
 /// MARK: - DepthStencil
 struct StencilDescription {
-    CompareFunction stencilCompareFunction = CompareFunction::always;
+    CompareFunction stencilCompareFunction = CompareFunction::Always;
 
     /*! Stencil is tested first.  stencilFailureOperation declares how the
      * stencil buffer is updated when the stencil test fails. */
-    StencilOperation stencilFailureOperation = StencilOperation::keep;
+    StencilOperation stencilFailureOperation = StencilOperation::Keep;
 
     /*! If stencil passes, depth is tested next.  Declare what happens when the
      * depth test fails. */
-    StencilOperation depthFailureOperation = StencilOperation::keep;
+    StencilOperation depthFailureOperation = StencilOperation::Keep;
 
     /*! If both the stencil and depth tests pass, declare how the stencil buffer
      * is updated. */
-    StencilOperation depthStencilPassOperation = StencilOperation::keep;
+    StencilOperation depthStencilPassOperation = StencilOperation::Keep;
 
     std::uint32_t readMask = 0xFFffFFff;
     std::uint32_t writeMask = 0xFFffFFff;
 };
 
 struct DepthStencilDescription {
-    CompareFunction depthCompareFunction = CompareFunction::always;
+    CompareFunction depthCompareFunction = CompareFunction::Always;
     bool depthWrite = false;
 
     std::optional<StencilDescription> frontFaceStencil;
@@ -502,19 +502,19 @@ public:
 
 /// MARK: - Sampler
 struct SamplerDescription {
-    SamplerMinMagFilter minFilter = SamplerMinMagFilter::nearest;
-    SamplerMinMagFilter magFilter = SamplerMinMagFilter::nearest;
-    SamplerMipFilter mipFilter = SamplerMipFilter::notMipmapped;
+    SamplerMinMagFilter minFilter = SamplerMinMagFilter::Nearest;
+    SamplerMinMagFilter magFilter = SamplerMinMagFilter::Nearest;
+    SamplerMipFilter mipFilter = SamplerMipFilter::NotMipmapped;
     std::size_t maxAnisotropy = 1;
-    SamplerAddressMode sAddressMode = SamplerAddressMode::clampToEdge;
-    SamplerAddressMode tAddressMode = SamplerAddressMode::clampToEdge;
-    SamplerAddressMode rAddressMode = SamplerAddressMode::clampToEdge;
-    SamplerBorderColor borderColor = SamplerBorderColor::clear;
+    SamplerAddressMode sAddressMode = SamplerAddressMode::ClampToEdge;
+    SamplerAddressMode tAddressMode = SamplerAddressMode::ClampToEdge;
+    SamplerAddressMode rAddressMode = SamplerAddressMode::ClampToEdge;
+    SamplerBorderColor borderColor = SamplerBorderColor::Clear;
     bool normalizedCoordinates = true;
     float lodMinClamp = 0;
     float lodMaxClamp = std::numeric_limits<float>::max();
     bool lodAverage = false;
-    CompareFunction compareFunction = CompareFunction::never;
+    CompareFunction compareFunction = CompareFunction::Never;
     bool supportArgumentBuffers = false;
 };
 

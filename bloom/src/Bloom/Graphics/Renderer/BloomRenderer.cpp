@@ -26,10 +26,10 @@ void BloomRenderer::populateFramebuffer(HardwareDevice& device,
                                         mtl::usize2 size) const {
     TextureDescription desc;
     desc.size = { size / 2, 1 };
-    desc.type = TextureType::texture2D;
+    desc.type = TextureType::Texture2D;
     desc.mipmapLevelCount = BloomFramebuffer::numDSMipLevels;
     desc.storageMode = StorageMode::GPUOnly;
-    desc.usage = TextureUsage::shaderRead | TextureUsage::shaderWrite;
+    desc.usage = TextureUsage::ShaderRead | TextureUsage::ShaderWrite;
     desc.pixelFormat = PixelFormat::RG11B10Float;
 
     framebuffer.downsample = device.createTexture(desc);
@@ -40,14 +40,14 @@ void BloomRenderer::populateFramebuffer(HardwareDevice& device,
     for (int i = 0; i < BloomFramebuffer::numDSMipLevels; ++i) {
         framebuffer.downsampleMips[i] =
             device.createSharedTextureView(framebuffer.downsample,
-                                           TextureType::texture2D,
+                                           TextureType::Texture2D,
                                            PixelFormat::RG11B10Float, i, 1, 0,
                                            1);
     }
     for (int i = 0; i < BloomFramebuffer::numUSMipLevels; ++i) {
         framebuffer.upsampleMips[i] =
             device.createSharedTextureView(framebuffer.upsample,
-                                           TextureType::texture2D,
+                                           TextureType::Texture2D,
                                            PixelFormat::RG11B10Float, i, 1, 0,
                                            1);
     }

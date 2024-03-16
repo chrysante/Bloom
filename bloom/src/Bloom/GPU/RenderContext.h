@@ -13,15 +13,15 @@ class Backbuffer;
 struct RenderPassColorAttachmentDescription {
     TextureHandle texture;
     mtl::float4 clearColor = 0;
-    LoadAction loadAction = LoadAction::dontCare;
-    StoreAction storeAction = StoreAction::store;
+    LoadAction loadAction = LoadAction::DontCare;
+    StoreAction storeAction = StoreAction::Store;
 };
 
 struct RenderPassDepthAttachmentDescription {
     TextureHandle texture;
     float clearDepth = 1;
-    LoadAction loadAction = LoadAction::clear;
-    StoreAction storeAction = StoreAction::store;
+    LoadAction loadAction = LoadAction::Clear;
+    StoreAction storeAction = StoreAction::Store;
 };
 
 struct RenderPassDescription {
@@ -33,7 +33,7 @@ struct RenderPassDescription {
 
 struct DrawDescription {
     BufferView indexBuffer;
-    IndexType indexType = IndexType::uint32;
+    IndexType indexType = IndexType::U32;
     std::size_t indexCount = 0;
     std::size_t indexBufferOffset = 0;
     std::size_t instanceCount = 1;

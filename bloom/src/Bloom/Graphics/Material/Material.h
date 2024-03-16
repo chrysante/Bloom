@@ -22,7 +22,7 @@ public:
     RenderPipelineHandle mainPass;
     RenderPipelineHandle editorPass;
     RenderPipelineHandle outlinePass;
-    TriangleCullMode cullMode = TriangleCullMode::back;
+    TriangleCullMode cullMode = TriangleCullMode::Back;
     void* functionTable;
 };
 

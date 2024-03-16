@@ -78,10 +78,8 @@ static RenderPipelineHandle createShadowPipeline(HardwareDevice& device) {
     RenderPipelineDescription desc;
     desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
     desc.vertexFunction = device.createFunction("shadowVertexShader");
-
     desc.rasterSampleCount = 1;
     desc.inputPrimitiveTopology = PrimitiveTopologyClass::Triangle;
-
     return device.createRenderPipeline(desc);
 }
 
@@ -118,10 +116,8 @@ void ForwardRenderer::createGPUState(HardwareDevice& device) {
 
         renderObjects.depthStencil = device.createDepthStencil(desc);
     }
-
     renderObjects.shadows.pipeline = createShadowPipeline(device);
     renderObjects.shadows.sampler = device.createSampler(SamplerDescription{});
-
     renderObjects.postprocessSampler =
         device.createSampler(SamplerDescription{});
     renderObjects.postprocessPipeline = createPostprocessPipeline(device);

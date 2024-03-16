@@ -61,26 +61,33 @@ static uint64_t allocateObject(svm::VirtualMachine& VM,
     }
 }
 
-void ScriptSystem::onSceneConstruction(Scene& scene) {
-    if (!impl->target) {
+void ScriptSystem::onScriptCompile(Scene& scene) {
+    scene.view<ScriptComponent, ScriptPreservedData const>().each(
+        [&](EntityID ID, ScriptComponent&, ScriptPreservedData const&) {
+        deserializeScript(scene.getHandle(ID));
+    });
+}
+
+void ScriptSystem::deserializeScript(EntityHandle entity) {
+    if (!impl->target || !entity.hasAll<ScriptComponent, ScriptPreservedData>()) 
+    {
         return;
     }
     auto& target = *impl->target;
-    /// TODO: Put this into a seperate `onScriptReload()` function
-    scene.view<ScriptComponent, ScriptPreservedData const>().each(
-        [&](ScriptComponent& component,
-            ScriptPreservedData const& preservedData) {
-        auto types = target.symbolTable().globalScope().findEntities(
-            preservedData.typeName);
-        if (types.empty()) {
-            /// Set all pointers to null
-            component = ScriptComponent{};
-            return;
-        }
-        auto* type = dyncast<scatha::sema::StructType const*>(types.front());
-        assignType(component, type);
-    });
+    auto& component = entity.get<ScriptComponent>();
+    auto& preservedData = entity.get<ScriptPreservedData>();
+    auto types =
+        target.symbolTable().globalScope().findEntities(preservedData.classname);
+    if (types.empty()) {
+        /// Set all pointers to null
+        component = ScriptComponent{};
+        return;
+    }
+    auto* type = dyncast<scatha::sema::StructType const*>(types.front());
+    assignType(component, type);
 }
+
+void ScriptSystem::onSceneConstruction(Scene&) {}
 
 void ScriptSystem::onSceneInit(Scene& scene) {
     if (!impl->target) {

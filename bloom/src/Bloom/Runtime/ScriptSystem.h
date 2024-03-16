@@ -8,6 +8,7 @@
 #include "Bloom/Application/CoreSystem.h"
 #include "Bloom/Core/Time.h"
 #include "Bloom/Scene/Components/Script.h"
+#include "Bloom/Scene/Entity.h"
 
 namespace bloom {
 
@@ -21,6 +22,11 @@ public:
     ~ScriptSystem();
 
     void init();
+
+    void onScriptCompile(Scene& scene);
+
+    ///
+    void deserializeScript(EntityHandle entity);
 
     void onSceneConstruction(Scene& scene);
 

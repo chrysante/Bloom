@@ -57,33 +57,37 @@ public:
     /// \pre \p entity must have a component of type \p T
     template <ComponentType T>
     T& getComponent(EntityID entity) {
-        assert(hasComponent<T>(entity) && "ComponentType not present");
+        BL_EXPECT(hasComponent<T>(entity), "ComponentType not present");
         return _registry.get<T>(entity.value());
     }
 
     /// \overload for `const`
     template <ComponentType T>
     T const& getComponent(EntityID entity) const {
-        assert(hasComponent<T>(entity) && "ComponentType not present");
+        BL_EXPECT(hasComponent<T>(entity), "ComponentType not present");
         return _registry.get<T>(entity.value());
     }
 
     /// Adds the component \p component to \p entity
     /// \pre \p entity must not have a component of type \p T
     template <ComponentType T>
-    void addComponent(EntityID entity, T component) {
-        assert(!hasComponent<std::decay_t<T>>(entity) &&
-               "ComponentType already present");
+    void addComponent(EntityID entity, T&& component) {
+        BL_EXPECT(!hasComponent<std::decay_t<T>>(entity),
+                  "ComponentType already present");
         _registry.emplace<std::decay_t<T>>(entity.value(),
-                                           std::move(component));
+                                           std::forward<T>(component));
     }
 
-    /// Removes component \p T from \p entity
-    /// \pre \p entity must have a component of type \p T
-    template <ComponentType T>
-    void removeComponent(EntityID entity) {
-        assert(hasComponent<T>(entity) && "ComponentType not present");
-        _registry.remove<T>(entity.value());
+    ///
+    template <ComponentType... T>
+    void addComponents(EntityID entity, T&&... components) {
+        (addComponent(entity, std::forward<T>(components)), ...);
+    }
+
+    /// Removes components \p T... from \p entity
+    template <ComponentType... T>
+    void removeComponents(EntityID entity) {
+        _registry.remove<T...>(entity.value());
     }
 
     /// Destroys all entities in this scene

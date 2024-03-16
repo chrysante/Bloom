@@ -37,16 +37,20 @@
      ::bloom::internal::debugfail())
 
 #define BL_IMPL_ASSERT_2(kind, cond)                                           \
-    (::bloom::internal::debugErrorMessage(::bloom::internal::kind, __LINE__,   \
-                                          __FILE__, __PRETTY_FUNCTION__,       \
-                                          #cond, nullptr),                     \
-     ::bloom::internal::debugfail())
+    (cond ? (void)0 :                                                          \
+            (::bloom::internal::debugErrorMessage(::bloom::internal::kind,     \
+                                                  __LINE__, __FILE__,          \
+                                                  __PRETTY_FUNCTION__, #cond,  \
+                                                  nullptr),                    \
+             ::bloom::internal::debugfail()))
 
 #define BL_IMPL_ASSERT_3(kind, cond, message)                                  \
-    (::bloom::internal::debugErrorMessage(::bloom::internal::kind, __LINE__,   \
-                                          __FILE__, __PRETTY_FUNCTION__,       \
-                                          #cond, message),                     \
-     ::bloom::internal::debugfail())
+    (cond ? (void)0 :                                                          \
+            (::bloom::internal::debugErrorMessage(::bloom::internal::kind,     \
+                                                  __LINE__, __FILE__,          \
+                                                  __PRETTY_FUNCTION__, #cond,  \
+                                                  message),                    \
+             ::bloom::internal::debugfail()))
 
 ///
 #define BL_ASSERT(...) UTL_VFUNC(BL_IMPL_ASSERT_, Assert, __VA_ARGS__)

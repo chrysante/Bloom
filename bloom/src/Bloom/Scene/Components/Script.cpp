@@ -16,13 +16,15 @@ void bloom::assignType(ScriptComponent& component,
     component.updateFunction = !functions.empty() ? functions.front() : nullptr;
 }
 
-YAML::Node YAML::convert<bloom::ScriptComponent>::encode(
-    bloom::ScriptComponent const& s) {
-    Node root;
-    return root;
+YAML::Node YAML::convert<bloom::ScriptPreservedData>::encode(
+    bloom::ScriptPreservedData const& data) {
+    Node node;
+    node["Typename"] = data.classname;
+    return node;
 }
 
-bool YAML::convert<bloom::ScriptComponent>::decode(Node const& root,
-                                                   bloom::ScriptComponent& s) {
+bool YAML::convert<bloom::ScriptPreservedData>::decode(
+    Node const& node, bloom::ScriptPreservedData& data) {
+    data.classname = node["Typename"].as<std::string>();
     return true;
 }

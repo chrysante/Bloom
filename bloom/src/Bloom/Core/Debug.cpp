@@ -73,6 +73,9 @@ void Logger::beginLog(Level level) {
     tfmt::pushModifier(mod(level), str);
 }
 
-void Logger::endLog() { tfmt::popModifier(ostream()); }
+void Logger::endLog() {
+    tfmt::popModifier(ostream());
+    ostream() << "\n";
+}
 
 std::ostream& Logger::ostream() { return std::cout; }

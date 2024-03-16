@@ -18,7 +18,7 @@ CoreRuntime::~CoreRuntime() { stop(); }
 
 void CoreRuntime::addDelegate(std::shared_ptr<RuntimeDelegate> delegate) {
     std::unique_lock lock(mMutex);
-    BL_EXPECT(mState == RuntimeState::Inactive);
+    BL_EXPECT(state() == RuntimeState::Inactive);
     mDelegates.insert(std::move(delegate));
 }
 
@@ -75,7 +75,6 @@ void CoreRuntime::resume() {
     setState(RuntimeState::Running);
 }
 
-/// MARK: Private
 void CoreRuntime::updateThread() {
     mTimer.reset();
     for (auto& del: mDelegates) {

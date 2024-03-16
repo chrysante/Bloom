@@ -381,7 +381,7 @@ void Viewport::dropdownMenu() {
                             ImGui::Selectable(tag.name.data()))
                         {
                             drawOptions.lightVizEntity =
-                                ConstEntityHandle(entity, scene);
+                                EntityHandle(entity, scene);
                         }
                     }
                 }

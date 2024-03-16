@@ -67,24 +67,20 @@ void EntityInspector::frame() {
 void EntityInspector::inspectTag(bloom::EntityHandle entity) {
     using namespace bloom;
     auto& tag = entity.get<TagComponent>();
-    std::string_view const name = tag.name;
-
-    float2 const framePadding = GImGui->Style.FramePadding;
+    std::string_view name = tag.name;
+    float2 framePadding = GImGui->Style.FramePadding;
     ImGui::BeginChild("##inspect-tag-child",
                       { 0, GImGui->FontSize + 2 * framePadding.y });
 
-    float2 const spacing = GImGui->Style.ItemSpacing;
-
+    float2 spacing = GImGui->Style.ItemSpacing;
     withFont(FontWeight::bold, FontStyle::roman, [&] {
         float2 const windowSize = ImGui::GetWindowSize();
         float2 const addButtonSize =
             float2(ImGui::CalcTextSize("Add Component")) +
             float2(4, 2) * framePadding;
-
         float2 const nameTextSize = {
             windowSize.x - addButtonSize.x - spacing.x, windowSize.y
         };
-
         if (editingNameState && !isSimulating()) {
             char buffer[256]{};
             std::strncpy(buffer, name.data(), 255);
@@ -107,11 +103,9 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
                                        ImGuiButtonFlags_PressedOnDoubleClick) *
                 2;
         }
-
         /// "Add Component" button
         disabledIf(isSimulating(), [&] {
             ImGui::SetCursorPos({ nameTextSize.x + spacing.x, 0 });
-
             ImGui::PushStyleColor(ImGuiCol_FrameBg,
                                   appearance.style()
                                       .colors.highlightControlFrame);
@@ -126,7 +120,6 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
                                   ImGuiComboFlags_NoArrowButton);
             ImGui::PopStyleColor(2);
             ImGui::PopStyleVar();
-
             if (comboOpen) {
                 withFont(Font::UIDefault(), [&] {
                     bool hasLight = hasLightComponent(entity);
@@ -147,7 +140,6 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
             }
         });
     });
-
     ImGui::EndChild();
 }
 
@@ -159,7 +151,7 @@ void EntityInspector::addComponentButton(char const* name, EntityHandle entity,
         flags |= ImGuiSelectableFlags_Disabled;
     }
     if (ImGui::Selectable(name, false, flags)) {
-        entity.add(Components{}...);
+        entity.tryAdd(Components{}...);
     }
 }
 
@@ -457,21 +449,12 @@ void EntityInspector::inspectSkyLight(bloom::SkyLight& light) {
     inspectLightCommon(light.common, LightType::skylight);
 }
 
-template <typename T>
-static void editDataField(std::string_view id, T*) {
-    ImGui::Text("No Impl for %s", utl::nameof<T>.data());
-}
-
-template <>
-void editDataField(std::string_view id, float* value) {
-    ImGui::PushID(generateUniqueID(id, 0).data());
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    ImGui::DragFloat(generateUniqueID(id, 1).data(), value);
-    ImGui::PopID();
-}
-
 void EntityInspector::inspectScript(bloom::EntityHandle entity) {
     using namespace propertiesView;
+    if (!entity.has<ScriptPreservedData>()) {
+        ImGui::Text("Error: No preserved data");
+        return;
+    }
     auto& scriptSystem = editor().coreSystems().scriptSystem();
     auto* sym = scriptSystem.symbolTable();
     auto& component = entity.get<ScriptComponent>();
@@ -492,6 +475,7 @@ void EntityInspector::inspectScript(bloom::EntityHandle entity) {
                 bool selected = type == component.type;
                 if (ImGui::Selectable(type->name().data(), selected)) {
                     assignType(component, type);
+                    preservedData.classname = std::string(type->name());
                 }
                 if (selected) {
                     ImGui::SetItemDefaultFocus();
@@ -571,7 +555,6 @@ bool EntityInspector::beginGenericSection(std::string_view name,
         if (!deleter) {
             return true;
         }
-
         // 'Delete' Button
         return withFont(FontWeight::semibold, FontStyle::roman, [&] {
             return disabledIf(isSimulating(), [&] {
@@ -581,7 +564,6 @@ bool EntityInspector::beginGenericSection(std::string_view name,
                     cursorPos.x + ImGui::GetContentRegionAvail().x - textSize.x,
                     cursorPos.y
                 };
-
                 ImGui::SetCursorPos(buttonPos);
                 char deleteButtonLabel[64] = "-delete-button";
                 std::strncpy(&deleteButtonLabel[14], name.data(), 49);
@@ -589,7 +571,6 @@ bool EntityInspector::beginGenericSection(std::string_view name,
                     deleter();
                     result = false;
                 }
-
                 float4 const color =
                     GImGui->Style.Colors[ImGuiCol_TextDisabled];
                 float4 const hightlightColor =

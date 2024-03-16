@@ -4,8 +4,11 @@
 #include <utl/stack.hpp>
 #include <utl/strcat.hpp>
 
+#include "Bloom/Application/Application.h"
+#include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Yaml.h"
+#include "Bloom/Runtime/ScriptSystem.h"
 #include "Bloom/Scene/Components/Hierarchy.h"
 #include "Bloom/Scene/Components/Tag.h"
 #include "Bloom/Scene/Components/Transform.h"
@@ -128,6 +131,8 @@ static void deserializeEntity(YAML::Node const& node, Scene& scene,
                      [&]<typename T>(utl::tag<T>) {
         deserializeComponent(node, entity, assetManager, utl::tag<T>{});
     });
+    assetManager.application().coreSystems().scriptSystem().deserializeScript(
+        entity);
 }
 
 YAML::Node Scene::serialize() const {

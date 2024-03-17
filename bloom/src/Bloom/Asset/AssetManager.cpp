@@ -405,7 +405,6 @@ void ScriptSystem_setTarget(ScriptSystem::Impl& impl, scatha::Target target);
 } // namespace bloom
 
 void AssetManager::compileScripts() {
-    Logger::Trace("Compiling scripts");
     dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
     using namespace scatha;
     CompilerInvocation inv(TargetType::BinaryOnly, "main");
@@ -414,16 +413,19 @@ void AssetManager::compileScripts() {
     }) | transform([](auto& entry) {
         return SourceFile::load(entry.diskLocation);
     });
+    std::optional<scatha::Target> target;
     try {
         inv.setInputs(sources | ranges::to<std::vector>);
+        target = inv.run();
     }
     catch (std::exception const& e) {
         Logger::Error(e.what());
     }
-    auto target = inv.run();
     if (!target) {
+        Logger::Error("Failed to compile scripts");
         return;
     }
+    Logger::Info("Successfully compiled scripts");
     ScriptSystem_setTarget(*application().coreSystems().scriptSystem().impl,
                            std::move(*target));
     dispatch(DispatchToken::Now, ScriptsDidLoadEvent{});

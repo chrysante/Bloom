@@ -1,5 +1,8 @@
 #include "Bloom/Runtime/CoreRuntime.h"
 
+#include <charconv>
+#include <cstdlib>
+
 #include <utl/scope_guard.hpp>
 
 #include "Bloom/Application/Application.h"
@@ -75,8 +78,20 @@ void CoreRuntime::resume() {
     setState(RuntimeState::Running);
 }
 
+static std::chrono::nanoseconds getTargetFrameTime() {
+    if (auto* dur = std::getenv("BLOOM_FRAME_DURATION")) {
+        std::chrono::nanoseconds::rep value;
+        if (std::from_chars(dur, dur + std::strlen(dur), value).ec ==
+            std::errc{})
+        {
+            return std::chrono::nanoseconds{ value };
+        }
+    }
+    return std::chrono::milliseconds{ 20 };
+}
+
 void CoreRuntime::updateThread() {
-    static constexpr std::chrono::milliseconds TargetFrameTime{ 10 };
+    auto const targetFrameTime = getTargetFrameTime();
     mTimer.reset();
     for (auto& del: mDelegates) {
         del->start();
@@ -96,7 +111,7 @@ void CoreRuntime::updateThread() {
                 del->step(mTimer.timestep());
             }
             std::chrono::nanoseconds remaining =
-                TargetFrameTime - mTimer.preciseTimestep().delta;
+                targetFrameTime - mTimer.preciseTimestep().delta;
             if (remaining.count() > 0) {
                 std::this_thread::sleep_for(remaining);
             }

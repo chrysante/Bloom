@@ -65,12 +65,47 @@ static tfmt::Modifier const& mod(Logger::Level level) {
     return mods[(size_t)level];
 };
 
+namespace {
+
+struct LoggerOptions {
+    bool timestamps;
+};
+
+LoggerOptions const options = [] {
+    auto* values = std::getenv("BLOOM_LOGGER_OPTIONS");
+    (void)values;
+    return LoggerOptions{ .timestamps = true };
+}();
+
+} // namespace
+
+static void formatTime(std::ostream& str) {
+    // FIXME: This does not compute current daytime correctly
+    using namespace std::chrono;
+    auto now = high_resolution_clock::now();
+    auto dur = now.time_since_epoch();
+    dur -= duration_cast<days>(dur);
+    auto h = duration_cast<hours>(dur);
+    dur -= h;
+    auto min = duration_cast<minutes>(dur);
+    dur -= min;
+    auto sec = duration_cast<seconds>(dur);
+    dur -= sec;
+    auto mil = duration_cast<milliseconds>(dur);
+    dur -= mil;
+    str << "[" << h.count() << "h:" << min.count() << "m:" << sec.count()
+        << "s:" << mil.count() << "ms] ";
+}
+
 void Logger::beginLog(Level level) {
     auto& str = ostream();
+    tfmt::pushModifier(mod(level), str);
+    if (options.timestamps) {
+        formatTime(str);
+    }
     if (!tfmt::isTermFormattable(str)) {
         announceMessage(str, level);
     }
-    tfmt::pushModifier(mod(level), str);
 }
 
 void Logger::endLog() {

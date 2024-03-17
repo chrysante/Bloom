@@ -139,13 +139,11 @@ void Editor::init() {
     loadStateFromDisk();
 }
 
-/// MARK: Shutdown
 void Editor::shutdown() {
     saveStateToDisk();
     imguiCtx.shutdown();
 }
 
-/// MARK: Frame
 void Editor::frame() {
     saveStateDirtyTimer -= time().delta;
     if (saveStateDirtyTimer <= 0) {

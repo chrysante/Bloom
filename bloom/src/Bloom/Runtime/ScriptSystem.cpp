@@ -1,11 +1,14 @@
 #include "Bloom/Runtime/ScriptSystem.h"
 
+#include <cstring>
+
 #include <scatha/Invocation/Target.h>
 #include <scatha/Sema/Entity.h>
 #include <scatha/Sema/LifetimeMetadata.h>
 #include <scatha/Sema/SymbolTable.h>
 #include <svm/VirtualMachine.h>
 #include <svm/VirtualMemory.h>
+#include <utl/functional.hpp>
 #include <utl/scope_guard.hpp>
 #include <utl/strcat.hpp>
 
@@ -100,11 +103,26 @@ void ScriptSystem::onSceneInit(Scene& scene) {
     });
 }
 
+template <typename... T>
+    requires(std::is_trivial_v<T> && ...)
+static auto toWordArray(T const&... args) {
+    static constexpr size_t NumWords = (utl::ceil_divide(sizeof(T), 8) + ...);
+    std::array<uint64_t, NumWords> data{};
+    size_t i = 0;
+    (
+        [&] {
+        std::memcpy(&data[i], &args, sizeof args);
+        i += utl::ceil_divide(sizeof(T), 8);
+    }(),
+        ...);
+    return data;
+}
+
 void ScriptSystem::onSceneUpdate(Scene& scene, Timestep timestep) {
     scene.view<ScriptComponent>().each([&](ScriptComponent& component) {
         if (component.objectAddress && component.updateFunction) {
             impl->VM.execute(component.updateFunction->binaryAddress().value(),
-                             std::array{ component.objectAddress });
+                             toWordArray(component.objectAddress, timestep));
         }
     });
 }

@@ -13,13 +13,7 @@
 using namespace mtl::short_types;
 using namespace bloom;
 
-/// MARK: - Statics
-///
-///
-void Window::pollEvents() {
-    glfwPollEvents();
-    //		glfwWaitEvents();
-}
+void Window::pollEvents() { glfwPollEvents(); }
 
 void Window::initWindowSystem() {
     int const status = glfwInit();
@@ -29,23 +23,15 @@ void Window::initWindowSystem() {
     }
 }
 
-/// MARK: - Initialization
-///
-///
 Window::Window(WindowDescription const& d) {
     desc = WindowDescPrivate{ d };
-
     desc.fullscreen = false;
-
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     auto* const w = glfwCreateWindow(desc.size.x, desc.size.y,
                                      desc.title.data(), nullptr, nullptr);
     glfwWindowPtr = std::unique_ptr<void, Deleter>(w);
-
     platformInit();
-
     glfwSetWindowUserPointer(GLFW_WND, this);
-
     glfwGetWindowPos(GLFW_WND, &desc.position.x, &desc.position.y);
     glfwGetWindowSize(GLFW_WND, &desc.size.x, &desc.size.y);
     glfwGetWindowContentScale(GLFW_WND, &desc.contentScaleFactor.x,
@@ -67,16 +53,10 @@ void Window::createDefaultSwapchain(HardwareDevice& device,
     setSwapchain(std::move(swapchain));
 }
 
-//	void Window::setSwapchain(std::unique_ptr<Swapchain>); // defined in
-// Platform/.../CocoaWindow.mm
-
 void Window::setCommandQueue(std::unique_ptr<CommandQueue> queue) {
-    theCommandQueue = std::move(queue);
+    _commandQueue = std::move(queue);
 }
 
-/// MARK: Update
-///
-///
 void Window::beginFrame() {}
 
 void Window::endFrame() {
@@ -84,9 +64,6 @@ void Window::endFrame() {
     userInput._scrollOffset = 0;
 }
 
-/// MARK: Callbacks
-///
-///
 void Window::onInput(utl::function<void(InputEvent const&)> f) {
     onInputFn = std::move(f);
 }
@@ -121,16 +98,10 @@ void Window::onContentScaleChange(
     onContentScaleChangeFn = std::move(f);
 }
 
-/// MARK: Queries
-///
-///
 bool Window::shouldClose() const {
     return !desc.shallPreventClose && glfwWindowShouldClose(GLFW_WND);
 }
 
-/// MARK: Modifiers
-///
-///
 void Window::setTitle(std::string newTitle) {
     desc.title = newTitle;
     glfwSetWindowTitle(GLFW_WND, newTitle.data());
@@ -194,17 +165,15 @@ void Window::makeFullscreen() {
     if (isFullscreen()) {
         return;
     }
-    auto* const monitor = glfwGetPrimaryMonitor();
-    auto* const vidMode = glfwGetVideoMode(monitor);
-    int2 const monitorPos = 0;
-    int2 const monitorSize = { vidMode->width, vidMode->height };
-
+    auto* monitor = glfwGetPrimaryMonitor();
+    auto* vidMode = glfwGetVideoMode(monitor);
+    int2 monitorPos = 0;
+    int2 monitorSize = { vidMode->width, vidMode->height };
     desc.backupSize = desc.size;
     desc.size = monitorSize;
     desc.backupPosition = desc.position;
     desc.position = monitorPos;
     desc.fullscreen = true;
-
     glfwSetWindowMonitor(GLFW_WND, monitor, monitorPos.x, monitorPos.y,
                          monitorSize.x, monitorSize.y, GLFW_DONT_CARE);
 }
@@ -235,9 +204,6 @@ void Window::stopClose() { glfwSetWindowShouldClose(GLFW_WND, false); }
 
 void Window::requestAttention() { glfwRequestWindowAttention(GLFW_WND); }
 
-/// MARK: Private
-///
-///
 #if !defined(BLOOM_PLATFORM_APPLE)
 void Window::platformInit() {}
 #endif
@@ -246,11 +212,9 @@ void Window::setCallbacks() {
     glfwSetMouseButtonCallback(GLFW_WND, [](GLFWwindow* w, int button,
                                             int action, int mods) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-
         window.userInput
             ._mouseButtons[(std::size_t)mouseButtonFromGLFW(button)] = action;
         window.userInput._modFlags = modFlagsFromGLFW(mods);
-
         if (window.onInputFn) {
             auto const event = inputEventFromGLFWMouseButton(window.userInput,
                                                              button, action,
@@ -262,13 +226,10 @@ void Window::setCallbacks() {
     glfwSetCursorPosCallback(GLFW_WND,
                              [](GLFWwindow* w, double xpos, double ypos) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-
-        float2 const currentPos = { xpos, ypos };
-        float2 const lastPos = window.userInput._mousePosition;
-
+        float2 currentPos = { xpos, ypos };
+        float2 lastPos = window.userInput._mousePosition;
         window.userInput._mousePosition = currentPos;
         window.userInput._mouseOffset = currentPos - lastPos;
-
         if (window.onInputFn) {
             window.onInputFn(
                 inputEventFromGLFWCursorPos(window.userInput, xpos, ypos));
@@ -283,9 +244,7 @@ void Window::setCallbacks() {
     glfwSetScrollCallback(GLFW_WND,
                           [](GLFWwindow* w, double xoffset, double yoffset) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-
         window.userInput._scrollOffset = { xoffset, yoffset };
-
         if (window.onInputFn) {
             window.onInputFn(
                 inputEventFromGLFWScroll(window.userInput, xoffset, yoffset));
@@ -295,7 +254,6 @@ void Window::setCallbacks() {
     glfwSetKeyCallback(GLFW_WND, [](GLFWwindow* w, int key, int scancode,
                                     int action, int mods) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-
         int& repeatCount =
             window.userInput._keys[(std::size_t)keyFromGLFW(key)];
         switch (action) {
@@ -313,7 +271,6 @@ void Window::setCallbacks() {
             break;
         }
         window.userInput._modFlags = modFlagsFromGLFW(mods);
-
         if (window.onInputFn) {
             window.onInputFn(inputEventFromGLFWKey(window.userInput, key,
                                                    scancode, action, mods));
@@ -342,11 +299,9 @@ void Window::setCallbacks() {
 
     glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        int2 const pos = { posx, posy };
+        int2 pos = { posx, posy };
+        Logger::Trace(pos);
         window.desc.position = pos;
-        if (window.onMovePrivateFn) {
-            window.onMovePrivateFn(pos);
-        }
         if (window.onMoveFn) {
             window.onMoveFn(pos);
         }
@@ -355,7 +310,7 @@ void Window::setCallbacks() {
     glfwSetWindowSizeCallback(GLFW_WND,
                               [](GLFWwindow* w, int sizex, int sizey) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        int2 const newSize = { sizex, sizey };
+        int2 newSize = { sizex, sizey };
         window.desc.size = newSize;
         window.resizeSwapchain(newSize);
         if (window.onResizePrivateFn) {
@@ -394,7 +349,7 @@ void Window::setCallbacks() {
     glfwSetWindowContentScaleCallback(GLFW_WND,
                                       [](GLFWwindow* w, float x, float y) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        float2 const contentScale = { x, y };
+        float2 contentScale = { x, y };
         window.desc.contentScaleFactor = contentScale;
         if (window.onContentScaleChangeFn) {
             window.onContentScaleChangeFn(contentScale);
@@ -402,62 +357,9 @@ void Window::setCallbacks() {
     });
 }
 
-static std::optional<int> calcNewSize(int currentSize, int newSize,
-                                      int padding) {
-    if (newSize <= currentSize && newSize > currentSize - padding) {
-        return std::nullopt;
-    }
-    if (newSize > currentSize) {
-        if (padding > 1) {
-            while (newSize > currentSize) {
-                currentSize += padding;
-            }
-            return currentSize;
-        }
-        else {
-            return newSize;
-        }
-    }
-    else {
-        if (padding > 1) {
-            while (newSize <= currentSize - padding) {
-                currentSize -= padding;
-            }
-            return currentSize;
-        }
-        else {
-            return newSize;
-        }
-    }
-}
-
 void Window::resizeSwapchain(mtl::int2 newSize) {
-    if (!desc.autoResizeSwapchain) {
-        return;
-    }
-    if (!theSwapchain) {
-        return;
-    }
-
-    bool const IGNORE_RESIZE_PADDING = true;
-    if (IGNORE_RESIZE_PADDING) {
-        theSwapchain->resize(newSize * contentScaleFactor());
-        return;
-    }
-
-    int2 const currentSize = theSwapchain->description().size;
-
-    auto newSizeX =
-        calcNewSize(currentSize.x, newSize.x, desc.swapchainResizePadding.x);
-    auto newSizeY =
-        calcNewSize(currentSize.y, newSize.y, desc.swapchainResizePadding.y);
-
-    if (newSizeX || newSizeY) {
-        auto const newSizePadded = int2(newSizeX.value_or(currentSize.x),
-                                        newSizeY.value_or(currentSize.y));
-        assert(newSizePadded.x >= newSize.x);
-        assert(newSizePadded.y >= newSize.y);
-        theSwapchain->resize(newSizePadded * contentScaleFactor());
+    if (_swapchain && desc.autoResizeSwapchain) {
+        swapchain().resize(newSize * contentScaleFactor());
     }
 }
 

@@ -46,10 +46,8 @@ utl::small_vector<Window*> Application::getWindows() {
 Window& Application::createWindow(WindowDescription const& windowDesc,
                                   std::unique_ptr<WindowDelegate> delegate) {
     auto window = std::make_unique<Window>(windowDesc);
-    window->desc.application = this;
     window->onResizePrivateFn = [this](int2) { doFrame(); };
-    window->onMovePrivateFn = [this](int2) { doFrame(); };
-    delegate->theWindow = window.get();
+    delegate->wnd = window.get();
     delegate->init();
     mWindows.push_back({ std::move(window), std::move(delegate) });
     return *mWindows.back().window;

@@ -29,26 +29,22 @@ EntityHandle Scene::createEntity(std::string_view name) {
     entity.add(TransformMatrixComponent{});
     entity.add(TagComponent{ std::string(name) });
     entity.add(HierarchyComponent{});
-
     return { entity, this };
 }
 
 EntityHandle Scene::cloneEntity(EntityID from) {
     EntityHandle const result = createEmptyEntity();
-
     forEachComponent([&]<typename C>(utl::tag<C>) {
         if (hasComponent<C>(from)) {
             C const& c = getComponent<C>(from);
             result.add(c);
         }
     });
-
     getComponent<HierarchyComponent>(result) = {};
     auto const fromHierarchy = getComponent<HierarchyComponent>(from);
     if (fromHierarchy.parent) {
         parent(result, fromHierarchy.parent);
     }
-
     return result;
 }
 

@@ -6,21 +6,27 @@
 
 namespace bloom {
 
+/// Callback class to customize window behaviour
 class BLOOM_API WindowDelegate {
 public:
     virtual ~WindowDelegate() = default;
 
+    /// FIXME: Should this be called `onAttach()`?
+    /// Called after being attached to a window
     virtual void init() {}
+
+    /// TODO: Do we need this?
     virtual void shutdown() {}
 
+    /// Called on every frame
     virtual void frame() {}
 
-    Window& window() { return *theWindow; }
-    Application& application() { return theWindow->application(); }
+    /// \Returns the attached window
+    Window& window() { return *wnd; }
 
 private:
     friend class Application;
-    Window* theWindow;
+    Window* wnd;
 };
 
 }; // namespace bloom

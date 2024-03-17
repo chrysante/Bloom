@@ -20,36 +20,44 @@ namespace bloom {
 class HardwareDevice;
 class Application;
 
+///
 BLOOM_API void showSaveView(utl::function<void(std::string)> completion);
-BLOOM_API void showOpenView(utl::function<void(std::string)> completion);
-//	BLOOM_API void showSelectDirectoryView(utl::function<void(std::string)>
-// completion);
 
-/// MARK: WindowDescription
+///
+BLOOM_API void showOpenView(utl::function<void(std::string)> completion);
+
+/// Constructor arguments for a window
 struct WindowDescription {
+    /// The window title
     std::string title;
+
+    /// The initial size of the window
     mtl::int2 size = 0;
 
-    mtl::int2 swapchainResizePadding = 100;
+    ///
     bool autoResizeSwapchain = true;
 
-    bool fullscreen = false; // ignored for now
+    /// This is ignored for now
+    bool fullscreen = false;
 };
 
-/// MARK: Window Class
+///
 class BLOOM_API Window {
     friend class Application;
 
 public:
-    /// MARK: Statics
+    /// Must be called before creating any windows
     static void initWindowSystem();
+
+    /// Must be called in regular intervals to handle window interaction
     static void pollEvents();
 
 public:
-    /// MARK: Initialization
-    Window(WindowDescription const&);
-    Window(Window&&) = delete; // because we rely on 'this' being constant for
-                               // the lifetime of the window
+    ///
+    Window(WindowDescription const& desc);
+
+    Window(Window const&) = delete;
+    Window& operator=(Window const&) = delete;
     ~Window();
 
     void createDefaultSwapchain(HardwareDevice&,
@@ -57,11 +65,9 @@ public:
     void setSwapchain(std::unique_ptr<Swapchain>);
     void setCommandQueue(std::unique_ptr<CommandQueue>);
 
-    /// MARK: Update
     void beginFrame();
     void endFrame();
 
-    /// MARK: Callbacks
     void onInput(utl::function<void(InputEvent const&)>);
     void onCharInput(utl::function<void(unsigned int)>);
     void onFileDrop(
@@ -76,10 +82,8 @@ public:
 
     void onContentScaleChange(utl::function<void(mtl::float2 newContentScale)>);
 
-    /// MARK: Queries
-    Application& application() { return *desc.application; }
-    Swapchain& swapchain() { return *theSwapchain; }
-    CommandQueue& commandQueue() { return *theCommandQueue; }
+    Swapchain& swapchain() { return *_swapchain; }
+    CommandQueue& commandQueue() { return *_commandQueue; }
     Input const& input() const { return userInput; }
 
     std::string_view title() const { return desc.title; }
@@ -129,7 +133,6 @@ private:
     };
 
     struct WindowDescPrivate: WindowDescription {
-        Application* application = nullptr;
         mtl::int2 position = 0;
         mtl::int2 backupPosition = 0;
         mtl::int2 backupSize = 0;
@@ -141,27 +144,20 @@ private:
     };
 
     WindowDescPrivate desc;
-
     std::unique_ptr<void, Deleter> glfwWindowPtr;
-    std::unique_ptr<Swapchain> theSwapchain;
-    std::unique_ptr<CommandQueue> theCommandQueue;
-
+    std::unique_ptr<Swapchain> _swapchain;
+    std::unique_ptr<CommandQueue> _commandQueue;
     Input userInput;
-
     utl::function<void(InputEvent)> onInputFn;
     utl::function<void(unsigned)> onCharInputFn;
     utl::function<void(utl::vector<std::filesystem::path> const&)> onFileDropFn;
-
     utl::function<void(mtl::int2 newPosition)> onMoveFn;
-    utl::function<void(mtl::int2 newPosition)> onMovePrivateFn;
     utl::function<void(mtl::int2 newSize)> onResizeFn;
+    /// Used by the application to run the main loop during resizing
     utl::function<void(mtl::int2 newPosition)> onResizePrivateFn;
-
     utl::function<void()> onFocusFn;
     utl::function<void()> onFocusLossFn;
-
     utl::function<void()> onCloseFn;
-
     utl::function<void(mtl::float2 newContentScale)> onContentScaleChangeFn;
 };
 

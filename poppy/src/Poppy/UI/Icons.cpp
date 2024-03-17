@@ -32,7 +32,7 @@ void IconFontMap::load(ImFontAtlas& atlas, float scaleFactor,
     glyphs.clear();
     fonts.clear();
     std::fstream file(configPath, std::ios::in);
-    assert(file);
+    BL_ASSERT(file);
     rapidjson::IStreamWrapper stream(file);
     rapidjson::Document doc;
     doc.ParseStream(stream);

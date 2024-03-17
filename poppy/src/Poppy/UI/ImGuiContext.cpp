@@ -36,7 +36,6 @@ static ImGuiKey toImGuiKeyCode(Key key) {
         return ImGuiKey_8;
     case Key::_9:
         return ImGuiKey_9;
-
     case Key::A:
         return ImGuiKey_A;
     case Key::S:
@@ -89,7 +88,6 @@ static ImGuiKey toImGuiKeyCode(Key key) {
         return ImGuiKey_M;
     case Key::K:
         return ImGuiKey_K;
-
     case Key::Apostrophe:
         return ImGuiKey_Apostrophe;
     case Key::Equal:
@@ -176,7 +174,6 @@ static ImGuiKey toImGuiKeyCode(Key key) {
         return ImGuiKey_RightAlt;
     case Key::RightSuper:
         return ImGuiKey_RightSuper;
-
     case Key::F1:
         return ImGuiKey_F1;
     case Key::F2:
@@ -201,7 +198,6 @@ static ImGuiKey toImGuiKeyCode(Key key) {
         return ImGuiKey_F10;
     case Key::F12:
         return ImGuiKey_F12;
-
     case Key::PrintScreen:
         return ImGuiKey_PrintScreen;
     case Key::Menu:
@@ -226,7 +222,6 @@ static ImGuiKey toImGuiKeyCode(Key key) {
         return ImGuiKey_DownArrow;
     case Key::UpArrow:
         return ImGuiKey_UpArrow;
-
     default:
         return ImGuiKey_None;
     }
@@ -283,14 +278,10 @@ void poppy::ImGuiContext::loadFonts(bloom::HardwareDevice&, float scaleFactor) {
                resourceDir() / "Icons/Icons.ttf");
     fonts.loadFonts(*sFontAtlas, scaleFactor);
     sFontAtlas->Build();
-    {
-        auto* testFont = fonts.get(Font::UIDefault());
-        assert(testFont->IsLoaded());
-    }
-    auto* const iconFont16 = icons.font(IconSize::_16);
-    assert(iconFont16);
-    assert(iconFont16->IsLoaded());
-    assert(icons.font(IconSize::_16)->IsLoaded());
+    auto* testFont = fonts.get(Font::UIDefault());
+    BL_ASSERT(testFont && testFont->IsLoaded());
+    auto* iconFont16 = icons.font(IconSize::_16);
+    BL_ASSERT(iconFont16 && iconFont16->IsLoaded());
 }
 
 void poppy::ImGuiContext::shutdown() {
@@ -303,13 +294,10 @@ void poppy::ImGuiContext::shutdown() {
 void poppy::ImGuiContext::newFrame(bloom::Window& window) {
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
-
     io.DisplaySize = (mtl::float2)window.size();
     io.DisplayFramebufferScale = window.contentScaleFactor();
-
     doNewFramePlatform(window);
     ImGui::NewFrame();
-
     fontAtlasReloaded = false;
 }
 
@@ -321,23 +309,18 @@ void poppy::ImGuiContext::drawFrame(bloom::HardwareDevice& device,
 
 void poppy::ImGuiContext::onInput(bloom::InputEvent e) {
     ImGui::SetCurrentContext(context);
-
     ImGuiIO& io = ImGui::GetIO();
-
     io.AddMouseViewportEvent(ImGuiID{});
-
     e.dispatch<InputEventType::mouseDown>([&](MouseDownEvent const& event) {
         int const button = (int)event.button;
         if (button >= 0 && button < ImGuiMouseButton_COUNT)
             io.AddMouseButtonEvent(button, true);
-
         return true;
     });
     e.dispatch<InputEventType::mouseUp>([&](MouseUpEvent const& event) {
         int const button = (int)event.button;
         if (button >= 0 && button < ImGuiMouseButton_COUNT)
             io.AddMouseButtonEvent(button, false);
-
         return true;
     });
     e.dispatch<InputEventType::mouseMoved>([&](MouseMoveEvent const& event) {
@@ -357,40 +340,35 @@ void poppy::ImGuiContext::onInput(bloom::InputEvent e) {
         return true;
     });
     e.dispatch<InputEventType::key>([&](KeyEvent const& event) {
-        //			if (event.repeat > 1)
-        //				return true;
-
         ImGuiKey const key = toImGuiKeyCode(event.key);
         bool const down = e.type() == InputEventType::keyDown;
-
         // Set Modifiers
         switch (event.key) {
         case Key::LeftCtrl:
+            [[fallthrough]];
         case Key::RightCtrl:
             io.KeyCtrl = down;
             break;
-
         case Key::LeftShift:
+            [[fallthrough]];
         case Key::RightShift:
             io.KeyShift = down;
             break;
-
         case Key::LeftAlt:
+            [[fallthrough]];
         case Key::RightAlt:
             io.KeyAlt = down;
             break;
 
         case Key::LeftSuper:
+            [[fallthrough]];
         case Key::RightSuper:
             io.KeySuper = down;
             break;
-
         default:
             break;
         }
-
         io.AddKeyEvent(key, e.type() == InputEventType::keyDown);
-
         return true;
     });
 }

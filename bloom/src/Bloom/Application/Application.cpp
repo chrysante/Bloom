@@ -31,8 +31,6 @@ Application::Application():
 
 Application::~Application() = default;
 
-/// MARK: Queries
-
 utl::small_vector<Window*> Application::getWindows() {
     utl::small_vector<Window*> result;
     result.reserve(mWindows.size());
@@ -40,8 +38,6 @@ utl::small_vector<Window*> Application::getWindows() {
                    [](auto& wrapper) { return wrapper.window.get(); });
     return result;
 }
-
-/// MARK: Modifiers
 
 Window& Application::createWindow(WindowDescription const& windowDesc,
                                   std::unique_ptr<WindowDelegate> delegate) {
@@ -53,8 +49,6 @@ Window& Application::createWindow(WindowDescription const& windowDesc,
     return *mWindows.back().window;
 }
 
-/// MARK: Private
-
 void Application::run() {
     doInit();
     while (!mWindows.empty()) {
@@ -65,7 +59,6 @@ void Application::run() {
     doShutdown();
 }
 
-/// MARK: Lifetime
 void Application::doInit() {
     registerListeners();
     Window::initWindowSystem();
@@ -87,12 +80,7 @@ void Application::doShutdown() {
     mCoreSystems.shutdown();
 }
 
-/// MARK: Frame
 void Application::doFrame() {
-    if (skipFrame) {
-        skipFrame = false;
-        return;
-    }
     MessageSystem::flush();
     BLOOM_AUTORELEASE_BEGIN
     this->frame();
@@ -108,12 +96,6 @@ void Application::doFrame() {
         window->endFrame();
     }
     mTimer.update();
-    std::size_t const frameDuration = mTimer.preciseTimestep().delta.count();
-    std::size_t const targetFrameDuration = 16'000'000;
-    if (frameDuration < targetFrameDuration) {
-        std::this_thread::sleep_for(
-            std::chrono::nanoseconds{ targetFrameDuration - frameDuration });
-    }
 }
 
 void Application::clearClosingWindows() {

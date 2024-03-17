@@ -24,7 +24,11 @@ std::unique_ptr<Application> bloom::createApplication() {
 }
 
 struct EditorWindowDelegate: public bloom::WindowDelegate {
-    void frame() override { onFrame(); }
+    void frame() override {
+        if (onFrame) {
+            onFrame();
+        }
+    }
 
     utl::function<void()> onFrame;
 };
@@ -53,8 +57,9 @@ Editor::Editor(): mSelection(makeReceiver()) {
     });
     dockspace.setCenterToolbar({
         ToolbarIconButton("plus")
-            .onClick([] {
-                Logger::Trace("Some Button Pressed");
+            .onClick([this] {
+                auto* window = getWindows().front();
+                window->setPosition(window->position() + int2(5, 5));
             }),
         ToolbarIconButton("bank")
             .onClick([] {
@@ -112,11 +117,9 @@ void Editor::init() {
                                          coreSystems().takeRenderer());
     editorRenderer->init(device());
     coreSystems().setRenderer(std::move(editorRenderer));
-
     /* Create a Window */ {
         WindowDescription windowDesc;
         windowDesc.size = { 1200, 800 };
-
         auto delegate = std::make_unique<EditorWindowDelegate>();
         delegate->onFrame = [this, delegate = delegate.get()] {
             imguiCtx.drawFrame(device(), delegate->window());
@@ -124,18 +127,15 @@ void Editor::init() {
         auto& window = createWindow(windowDesc, std::move(delegate));
         window.onInput([this](InputEvent const& e) { this->onInput(e); });
         window.onCharInput(
-            [this](unsigned int code) { imguiCtx.onCharInput(code); });
-
+            [this](unsigned code) { imguiCtx.onCharInput(code); });
         window.createDefaultSwapchain(device());
         window.setCommandQueue(device().createCommandQueue());
     }
-
     /* Initialize ImGui */ {
         ImGuiContextDescription desc;
         desc.iniFilePath = bloom::libraryDir() / "imgui.ini";
         imguiCtx.init(*this, desc);
     }
-
     loadStateFromDisk();
 }
 
@@ -151,11 +151,11 @@ void Editor::frame() {
         saveStateDirtyTimer = saveStateInterval();
     }
     clearClosingViews();
-    auto const windows = getWindows();
+    appearance.update();
+    auto windows = getWindows();
     if (windows.empty()) {
         return;
     }
-    appearance.update();
     imguiCtx.newFrame(*windows.front());
     menuBar();
     dockspace.display();

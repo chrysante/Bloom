@@ -58,6 +58,7 @@ void poppy::ImGuiContext::doDrawFramePlatform(bloom::HardwareDevice&, bloom::Win
     auto& mtlBackbuffer = dynamic_cast<MetalBackbuffer&>(*backbuffer);
     [commandBuffer presentDrawable: mtlBackbuffer.drawable];
     [commandBuffer commit];
+    Logger::Trace("Committed render commands");
 }
 
 void poppy::ImGuiContext::doShutdownPlatform() {

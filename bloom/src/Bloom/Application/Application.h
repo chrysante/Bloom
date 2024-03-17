@@ -101,8 +101,6 @@ private:
     utl::vector<WindowWrapper> mWindows;
     CoreSystemManager mCoreSystems;
     Timer mTimer;
-    bool skipFrame = false; // Used to skip frames on resize and move events to
-                            // avoid visual glitches
 };
 
 } // namespace bloom

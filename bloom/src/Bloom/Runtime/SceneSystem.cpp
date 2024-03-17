@@ -6,6 +6,7 @@
 #include "Bloom/Application/Application.h"
 #include "Bloom/Runtime/ScriptSystem.h"
 #include "Bloom/Scene/Scene.h"
+#include "Bloom/Scene/SceneEvents.h"
 
 using namespace bloom;
 
@@ -18,12 +19,14 @@ void SceneSystem::init() {
 }
 
 void SceneSystem::loadScene(Reference<Scene> scene) {
+    auto* raw = scene.get();
     auto [itr, success] =
         mScenes.insert({ scene->handle().ID(), std::move(scene) });
     if (!success) {
         Logger::Error("Failed to load scene. Scene is already loaded.");
         return;
     }
+    dispatch(DispatchToken::Now, SceneLoadedEvent{ raw });
     setPointers(mScenes);
 }
 

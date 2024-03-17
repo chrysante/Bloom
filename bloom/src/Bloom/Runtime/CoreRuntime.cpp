@@ -76,6 +76,7 @@ void CoreRuntime::resume() {
 }
 
 void CoreRuntime::updateThread() {
+    static constexpr std::chrono::milliseconds TargetFrameTime{ 10 };
     mTimer.reset();
     for (auto& del: mDelegates) {
         del->start();
@@ -88,19 +89,27 @@ void CoreRuntime::updateThread() {
     while (true) {
         std::unique_lock lock(mMutex);
         switch (mState) {
-        case RuntimeState::Running:
+        case RuntimeState::Running: {
             lock.unlock();
             mTimer.update();
             for (auto& del: mDelegates) {
                 del->step(mTimer.timestep());
             }
+            std::chrono::nanoseconds remaining =
+                TargetFrameTime - mTimer.preciseTimestep().delta;
+            if (remaining.count() > 0) {
+                std::this_thread::sleep_for(remaining);
+            }
             break;
+        }
         case RuntimeState::Paused:
+            mTimer.pause();
             for (auto& del: mDelegates) {
                 del->pause();
             }
             mCV.wait(lock, [&] { return mState != RuntimeState::Paused; });
             if (mState == RuntimeState::Running) {
+                mTimer.resume();
                 for (auto& del: mDelegates) {
                     del->resume();
                 }

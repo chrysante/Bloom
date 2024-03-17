@@ -16,6 +16,7 @@
 #include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Entity.h"
 #include "Bloom/Scene/Scene.h"
+#include "Bloom/Scene/SceneEvents.h"
 
 using namespace bloom;
 
@@ -37,8 +38,9 @@ ScriptSystem::ScriptSystem(): impl(std::make_unique<Impl>()) {}
 ScriptSystem::~ScriptSystem() = default;
 
 void ScriptSystem::init() {
-    listen([this](ScriptsWillLoadEvent) { this->scriptsWillCompile(); });
-    listen([this](ScriptsDidLoadEvent) { this->scriptsDidCompile(); });
+    listen([this](ScriptsWillLoadEvent) { scriptsWillCompile(); });
+    listen([this](ScriptsDidLoadEvent) { scriptsDidCompile(); });
+    listen([this](SceneLoadedEvent event) { onScriptCompile(*event.scene); });
 }
 
 static uint64_t allocateObject(svm::VirtualMachine& VM,
@@ -63,21 +65,19 @@ static uint64_t allocateObject(svm::VirtualMachine& VM,
 
 void ScriptSystem::onScriptCompile(Scene& scene) {
     scene.view<ScriptComponent, ScriptPreservedData const>().each(
-        [&](EntityID ID, ScriptComponent&, ScriptPreservedData const&) {
-        deserializeScript(scene.getHandle(ID));
+        [&](ScriptComponent& component, ScriptPreservedData const& data) {
+        deserializeScript(component, data);
     });
 }
 
-void ScriptSystem::deserializeScript(EntityHandle entity) {
-    if (!impl->target || !entity.hasAll<ScriptComponent, ScriptPreservedData>()) 
-    {
+void ScriptSystem::deserializeScript(ScriptComponent& component,
+                                     ScriptPreservedData const& preservedData) {
+    if (!impl->target) {
         return;
     }
     auto& target = *impl->target;
-    auto& component = entity.get<ScriptComponent>();
-    auto& preservedData = entity.get<ScriptPreservedData>();
-    auto types =
-        target.symbolTable().globalScope().findEntities(preservedData.classname);
+    auto types = target.symbolTable().globalScope().findEntities(
+        preservedData.classname);
     if (types.empty()) {
         /// Set all pointers to null
         component = ScriptComponent{};

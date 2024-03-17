@@ -16,15 +16,16 @@ struct ScriptComponent {
 
     /// The class type of the object that will be instantiated for the entity
     scatha::sema::StructType const* type = nullptr;
-    
+
     /// The update function of the class
     scatha::sema::Function const* updateFunction = nullptr;
-    
+
     /// The address of the allocated object
     uint64_t objectAddress = 0;
 };
 
-/// Data that can be serialized. Also used to preserve object data through recompilations
+/// Data that can be serialized. Also used to preserve object data through
+/// recompilations
 struct ScriptPreservedData {
     BLOOM_REGISTER_COMPONENT("Script Preserved Data")
 

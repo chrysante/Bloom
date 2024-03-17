@@ -25,9 +25,6 @@ public:
 
     void onScriptCompile(Scene& scene);
 
-    ///
-    void deserializeScript(EntityHandle entity);
-
     void onSceneConstruction(Scene& scene);
 
     void onSceneInit(Scene& scene);
@@ -43,6 +40,9 @@ public:
 
 private:
     friend class AssetManager;
+
+    void deserializeScript(ScriptComponent& component,
+                           ScriptPreservedData const& preservedData);
 
     void scriptsWillCompile();
     void scriptsDidCompile();

@@ -68,11 +68,11 @@ class BLOOM_API EntityHandleEx: public EntityID {
 public:
     /// Construct an empty handle
     EntityHandleEx() = default;
-    
+
     ///
     EntityHandleEx(EntityID id, SceneT* scene): EntityID(id), _scene(scene) {}
-    
-    ///Implicit `EntityHandle -> ConstEntityHandle` conversion
+
+    /// Implicit `EntityHandle -> ConstEntityHandle` conversion
     EntityHandleEx(EntityHandleEx<std::remove_const_t<SceneT>> rhs)
         requires(IsConst)
         : EntityID(rhs), _scene(rhs._scene) {}

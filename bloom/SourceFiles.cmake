@@ -131,6 +131,7 @@ set(bloom_sources
   src/Bloom/Scene/Entity.h
   src/Bloom/Scene/Scene.cpp
   src/Bloom/Scene/Scene.h
+  src/Bloom/Scene/SceneEvents.h
   src/Bloom/Scene/SceneCamera.cpp
   src/Bloom/Scene/SceneCamera.h
 )

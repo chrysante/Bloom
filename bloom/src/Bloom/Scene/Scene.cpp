@@ -131,8 +131,6 @@ static void deserializeEntity(YAML::Node const& node, Scene& scene,
                      [&]<typename T>(utl::tag<T>) {
         deserializeComponent(node, entity, assetManager, utl::tag<T>{});
     });
-    assetManager.application().coreSystems().scriptSystem().deserializeScript(
-        entity);
 }
 
 YAML::Node Scene::serialize() const {

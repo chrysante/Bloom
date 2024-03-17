@@ -35,9 +35,8 @@ void EntityInspector::frame() {
         displayEmptyWithReason("No active Scene");
         return;
     }
-    bloom::EntityHandle const entity = selection().empty() ?
-                                           bloom::EntityHandle{} :
-                                           *selection().entities().begin();
+    auto entity = selection().empty() ? EntityHandle{} :
+                                        selection().entities().front();
     if (!entity) {
         displayEmptyWithReason("No Entity selected");
         return;

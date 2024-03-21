@@ -211,20 +211,18 @@ void DirectoryView::assignDirectory(std::filesystem::path const& dir) {
     if (dir.empty()) {
         return;
     }
-
     namespace fs = std::filesystem;
-
     for (auto&& entry: fs::directory_iterator(dir)) {
-        if (utl::is_hidden(entry.path())) {
+        if (utl::is_hidden(entry.path()) || !fs::is_regular_file(entry.path()))
+        {
             continue;
         }
-        if (fs::is_regular_file(entry.path())) {
-            assetsInCurrentDir.push_back(
-                assetManager->getHandleFromFile(entry.path()));
-        }
-        else {
-            assert(fs::is_directory(entry.path()));
+        if (fs::is_directory(entry.path())) {
             foldersInCurrentDir.push_back(entry.path().stem().string());
+            continue;
+        }
+        if (auto handle = assetManager->getHandleFromFile(entry.path())) {
+            assetsInCurrentDir.push_back(handle);
         }
     }
 }

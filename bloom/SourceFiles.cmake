@@ -24,7 +24,6 @@ set(bloom_sources
   src/Bloom/Asset/AssetHandle.cpp
   src/Bloom/Asset/AssetHandle.h
   src/Bloom/Asset/Assets.def
-  src/Bloom/Asset/AssetFileHeader.h
   src/Bloom/Asset/AssetManager.cpp
   src/Bloom/Asset/AssetManager.h
   src/Bloom/Asset/Fwd.cpp

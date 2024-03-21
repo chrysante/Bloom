@@ -1,0 +1,80 @@
+- Handle:
+    Type: StaticMesh
+    ID: 8f0af78b 1b749d6c 1726f058 ed3e9c74
+  Name: Torus
+  Location: ./Torus.bmesh
+- Handle:
+    Type: StaticMesh
+    ID: bcdcf402 25170bda e8da2040 5f961a72
+  Name: Cube
+  Location: Cube.bmesh
+- Handle:
+    Type: StaticMesh
+    ID: 10925464 132900ae da598b2c 3f99cd9
+  Name: CubeBeveled
+  Location: CubeBeveled.bmesh
+- Handle:
+    Type: MaterialInstance
+    ID: 52ed40a6 8c66dce3 2ffd5b82 6e194672
+  Name: FloorMatInst
+  Location: FloorMatInst.bmatinst
+- Handle:
+    Type: MaterialInstance
+    ID: b6d3a4a1 1118eecc d12b781a cb838476
+  Name: GreenMetal
+  Location: GreenMetal.bmatinst
+- Handle:
+    Type: Material
+    ID: 538c05f6 85a62d7 c78e70e2 95eb7c20
+  Name: MyMaterial
+  Location: MyMaterial.bmat
+- Handle:
+    Type: Scene
+    ID: 62dd946b 267a5e99 4fde0e8e 4e881fef
+  Name: MyScene
+  Location: MyScene.bscene
+- Handle:
+    Type: ScriptSource
+    ID: 9011cded f1e0a22d 833193bb 67c1e3d8
+  Name: MyScript
+  Location: MyScript.sc
+- Handle:
+    Type: ScriptSource
+    ID: 6598fc02 7054d2f8 6beb8625 b0df474b
+  Name: OtherScript
+  Location: OtherScript.sc
+- Handle:
+    Type: MaterialInstance
+    ID: da04f1e3 b4355f93 31a0e025 9b48d870
+  Name: RedPlastic
+  Location: RedPlastic.bmatinst
+- Handle:
+    Type: StaticMesh
+    ID: 4662c184 7462b026 cf7bf3cc 68289b57
+  Name: Torus
+  Location: Torus.bmesh
+- Handle:
+    Type: MaterialInstance
+    ID: 3b1d1a58 5ad5a90b 439663f bb980a75
+  Name: FloorMatInst
+  Location: /Users/indigo/dev/bloom/projects/TestProject/FloorMatInst.bmatinst
+- Handle:
+    Type: MaterialInstance
+    ID: 9e95286a 9a776818 a876010f ba28b3d4
+  Name: GreenMetal
+  Location: /Users/indigo/dev/bloom/projects/TestProject/GreenMetal.bmatinst
+- Handle:
+    Type: Material
+    ID: 465eded8 1b49e4ce 65fe8d65 dd009c18
+  Name: MyMaterial
+  Location: /Users/indigo/dev/bloom/projects/TestProject/MyMaterial.bmat
+- Handle:
+    Type: ScriptSource
+    ID: c8d92406 cbf1ed1c fa789806 530ae24c
+  Name: OtherScript
+  Location: /Users/indigo/dev/bloom/projects/TestProject/OtherScript.sc
+- Handle:
+    Type: MaterialInstance
+    ID: 15f09dde 306b26f0 9e0442e3 f47e7b61
+  Name: RedPlastic
+  Location: /Users/indigo/dev/bloom/projects/TestProject/RedPlastic.bmatinst

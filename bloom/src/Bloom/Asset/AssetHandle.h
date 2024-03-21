@@ -39,7 +39,7 @@ public:
     operator bool() const { return !utl::is_null(ID()); }
 
 private:
-    AssetType _type = InvalidAssetType;
+    AssetType _type = AssetType::Invalid;
     utl::uuid _id;
 };
 

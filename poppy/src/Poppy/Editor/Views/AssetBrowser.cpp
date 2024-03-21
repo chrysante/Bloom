@@ -64,7 +64,7 @@ AssetBrowser::AssetBrowser(): dirView(this) {
 
         ToolbarIconButton("delicious")
             .onClick([this] {
-                assetManager->create(bloom::AssetType::Material,
+                assetManager->createAsset(bloom::AssetType::Material,
                                      "Default Material",
                                      data.currentDir);
                 refreshFilesystem();
@@ -81,7 +81,7 @@ AssetBrowser::AssetBrowser(): dirView(this) {
 }
 
 void AssetBrowser::frame() {
-    bool active = assetManager && !assetManager->workingDir().empty();
+    bool active = assetManager && !assetManager->projectRootDir().empty();
     poppy::disabledIf(!active, [&] {
         /// Add x window padding in y direction because y padding has been
         /// pushed to  0
@@ -97,7 +97,7 @@ void AssetBrowser::frame() {
         displayEmptyWithReason("Asset Manager not loaded");
         return;
     }
-    if (assetManager->workingDir().empty()) {
+    if (assetManager->projectRootDir().empty()) {
         displayNoOpenProject();
         return;
     }
@@ -117,9 +117,10 @@ void AssetBrowser::frame() {
 void AssetBrowser::newAssetPopup() {
     if (ImGui::BeginPopupModal("New Asset", NULL, ImGuiWindowFlags_NoTitleBar))
     {
-        static AssetType type = InvalidAssetType;
+        static AssetType type = AssetType::Invalid;
         if (ImGui::BeginCombo("Type", toString(type).data())) {
             for (unsigned i = 0; i < EnumCount<AssetType>; ++i) {
+                // TODO: Check if type is concrete
                 AssetType t{ i };
                 bool selected = type == t;
                 if (ImGui::Selectable(toString(t).data(), selected)) {
@@ -138,7 +139,7 @@ void AssetBrowser::newAssetPopup() {
         }
         ImGui::SameLine();
         if (ImGui::Button("Create")) {
-            assetManager->create(type, nameBuffer, data.currentDir);
+            assetManager->createAsset(type, nameBuffer, data.currentDir);
             refreshFilesystem();
             ImGui::CloseCurrentPopup();
         }
@@ -235,10 +236,11 @@ void AssetBrowser::deserialize(YAML::Node node) {
 
 /// MARK: -
 void AssetBrowser::importAsset(std::filesystem::path source) {
-    assetManager->import(source,
-                         std::filesystem::relative(data.currentDir,
-                                                   assetManager->workingDir())
-                             .lexically_normal());
+    auto dest = std::filesystem::relative(data.currentDir,
+                                          assetManager->projectRootDir())
+                    .lexically_normal();
+    auto name = source.filename().replace_extension().string();
+    assetManager->importAsset(name, source, dest);
     refreshFilesystem();
 }
 
@@ -251,19 +253,19 @@ void AssetBrowser::openProject(std::filesystem::path const& path) {
         return;
     }
     data.projectDir = path;
-    assetManager->setWorkingDir(path);
+    assetManager->openProject(path);
     openSubdirectory(path);
 }
 
 void AssetBrowser::openSubdirectory(std::filesystem::path const& path) {
     if (path.is_relative()) {
-        return openSubdirectory(assetManager->workingDir() / path);
+        return openSubdirectory(assetManager->projectRootDir() / path);
     }
     data.currentDir = path;
     dirView.assignDirectory(path);
 }
 
 void AssetBrowser::refreshFilesystem() {
-    assetManager->refreshWorkingDir();
+    assetManager->refreshProject();
     dirView.assignDirectory(data.currentDir);
 }

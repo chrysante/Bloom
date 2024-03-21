@@ -1,0 +1,15 @@
+Material:
+  Type: Material
+  ID: 538c05f6 85a62d7 c78e70e2 95eb7c20
+Parameters:
+  baseColor:
+    - 0.366803378
+    - 0.858710527
+    - 0.265910149
+  roughness: 0.588999987
+  metallic: 1
+  emissive:
+    - -0.372548997
+    - -0.372548997
+    - -0.372548997
+  emissiveIntensity: 0

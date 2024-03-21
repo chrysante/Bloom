@@ -16,9 +16,6 @@
 
 namespace bloom {
 
-/// List of possible file formats
-enum class FileFormat { Binary, Text };
-
 /// Forward declaration of all asset types
 #define BLOOM_ASSET_TYPE_DEF(Name, ...) class Name;
 #include "Bloom/Asset/Assets.def"
@@ -27,12 +24,7 @@ enum class FileFormat { Binary, Text };
 enum class AssetType : unsigned {
 #define BLOOM_ASSET_TYPE_DEF(Name, ...) Name,
 #include "Bloom/Asset/Assets.def"
-    LAST = ScriptSource
-};
-
-///
-inline constexpr AssetType InvalidAssetType{
-    utl::to_underlying(AssetType::LAST) + 1
+    COUNT = Invalid
 };
 
 /// \Returns `std::invoke(callback, utl::tag</* ID as type */>{})`
@@ -64,24 +56,6 @@ using VoidParent = void;
 
 namespace bloom {
 
-/// List of possible asset file extensions
-enum class FileExtension { Bmesh, Bmat, Bmatinst, Bscene, Scatha };
-
-///
-std::string toString(FileExtension ext);
-
-///
-std::filesystem::path append(std::filesystem::path filename, FileExtension ext);
-
-/// Converts \p ext to `FileExtension`
-std::optional<FileExtension> toExtension(std::filesystem::path const& ext);
-
-/// \overload for `std::string_view`
-std::optional<FileExtension> toExtension(std::string_view ext);
-
-/// TODO: Should this be private?
-bool hasHeader(FileExtension ext);
-
 /// Constructs a UUID by hashing \p text
 /// TODO: This should be private and ideally should not exist
 utl::uuid toUUID(std::string_view text);
@@ -91,16 +65,6 @@ BLOOM_API std::string toString(AssetType type);
 
 /// Prints \p type to \p ostream
 BLOOM_API std::ostream& operator<<(std::ostream& ostream, AssetType type);
-
-/// \Returns the file extension corresponding to \p type
-/// TODO: Make this a member function of `Asset`
-BLOOM_API FileExtension toExtension(AssetType type);
-
-/// \Returns the asset type corresponding to the file extension \p ext
-BLOOM_API AssetType toAssetType(FileExtension ext);
-
-/// \Returns the file format corresponding to the extension \p ext
-BLOOM_API FileFormat toFileFormat(FileExtension ext);
 
 /// Bit set of different asset representations
 enum class AssetRepresentation { None = 0, CPU = 1 << 0, GPU = 1 << 1 };

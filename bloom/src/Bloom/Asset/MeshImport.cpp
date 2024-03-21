@@ -18,7 +18,7 @@ static float BaseWorldScale() { return 100; }
 StaticMeshData bloom::importStaticMesh(std::filesystem::path const& path) {
     std::fstream file(path, std::ios::in | std::ios::binary);
     if (!file) {
-        throw std::runtime_error(utl::strcat("Failed to open file ", path));
+        throw std::runtime_error(utl::strcat("Failed to open file: ", path));
     }
 
     std::stringstream sstr;

@@ -11,6 +11,7 @@ BLOOM_ASSET_TYPE_DEF(SkeletalMesh,     Mesh,       Concrete)
 BLOOM_ASSET_TYPE_DEF(Material,         Asset,      Concrete)
 BLOOM_ASSET_TYPE_DEF(MaterialInstance, Asset,      Concrete)
 BLOOM_ASSET_TYPE_DEF(Scene,            Asset,      Concrete)
-BLOOM_ASSET_TYPE_DEF(ScriptSource,     Asset,      Concrete) // Update LAST enum case if this changes!
+BLOOM_ASSET_TYPE_DEF(ScriptSource,     Asset,      Concrete)
+BLOOM_ASSET_TYPE_DEF(Invalid,          VoidParent, Abstract)
 
 #undef BLOOM_ASSET_TYPE_DEF

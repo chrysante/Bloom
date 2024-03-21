@@ -17,9 +17,11 @@ using namespace bloom;
 using namespace mtl::short_types;
 using namespace poppy;
 
+using InteractionData = DirectoryView::InteractionData;
+
 DirectoryView::DirectoryView(DirectoryViewDelegate delegate):
     delegate(delegate) {
-    params = { .itemSpacing = 10, .itemSize = 100, .labelHeight = 20 };
+    style = { .itemSpacing = 10, .itemSize = 100, .labelHeight = 20 };
 }
 
 void DirectoryView::display() {
@@ -43,6 +45,7 @@ void DirectoryView::display() {
 }
 
 void DirectoryView::openDirectory(std::filesystem::path const& dir) {
+    currentDirectory = dir;
     entries.clear();
     if (dir.empty()) {
         return;
@@ -65,27 +68,55 @@ void DirectoryView::openDirectory(std::filesystem::path const& dir) {
     });
 }
 
-static auto generateIDs(std::string_view label, int index) {
-    auto buttonID =
-        generateUniqueID(label, index, /* prepentDoubleHash = */ true);
-    auto popupID = generateUniqueID(buttonID.data(), index);
-    return std::pair{ buttonID, popupID };
-}
+void DirectoryView::rescan() { openDirectory(currentDirectory); }
 
-static bool displayEntryButton(float2 position, float2 size, int index) {
-    auto ID =
-        generateUniqueID("entry-button", index, /* prepentDoubleHash = */ true);
-    ImGui::PushStyleColor(ImGuiCol_Button, 0);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0x20FFffFF);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0x20FFffFF);
-    ImGuiButtonFlags flags = 0;
-#if 0 // Does not work well with drag and drop
-    flags |= ImGuiButtonFlags_PressedOnDoubleClick;
-#endif
-    ImGui::SetCursorPos(position);
-    bool result = ImGui::ButtonEx(ID.data(), size, flags);
+namespace {
+
+enum class EntryButtonState { None, Selected, Activated };
+
+enum class RenameState { None, Apply, Cancel };
+
+} // namespace
+
+static auto withButtonStyle(bool selected, auto f) {
+    if (selected) {
+        ImGui::PushStyleColor(ImGuiCol_Button, 0x20FFffFF);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0x30FFffFF);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0x30FFffFF);
+    }
+    else {
+        ImGui::PushStyleColor(ImGuiCol_Button, 0);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0x20FFffFF);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0x20FFffFF);
+    }
+    auto result = f();
     ImGui::PopStyleColor(3);
     return result;
+}
+
+static EntryButtonState displayEntryButton(float2 position, float2 size,
+                                           int index,
+                                           InteractionData const& interaction) {
+    bool pressed = withButtonStyle(interaction.selectedIndex == index, [&] {
+        auto ID = generateUniqueID("entry-button", index,
+                                   /* prependDoubleHash = */ true);
+        ImGuiButtonFlags flags = ImGuiButtonFlags_PressedOnClick;
+        ImGui::SetCursorPos(position);
+        ImGui::SetNextItemAllowOverlap();
+        return ImGui::ButtonEx(ID.data(), size, flags);
+    });
+    if (!pressed) {
+        return EntryButtonState::None;
+    }
+    auto& g = *GImGui;
+    switch (g.IO.MouseClickedCount[ImGuiMouseButton_Left]) {
+    case 1:
+        return EntryButtonState::Selected;
+    case 2:
+        return EntryButtonState::Activated;
+    default:
+        return EntryButtonState::None;
+    }
 }
 
 static void drawIcon(IconSize iconSize, std::string iconName,
@@ -103,13 +134,58 @@ static void drawIcon(IconSize iconSize, std::string iconName,
     ImGui::PopFont();
 }
 
-static void drawLabel(float2 labelSize, float2 buttonPos, float2 buttonSize,
-                      float labelHeight, char const* label) {
+static float2 computeLabelPos(float2 labelSize, float2 buttonPos,
+                              float2 buttonSize, float labelHeight) {
     buttonPos.y += buttonSize.y - labelHeight / 2;
     buttonPos.x += buttonSize.x / 2;
     buttonPos -= labelSize / 2;
-    ImGui::SetCursorPos(buttonPos);
+    return buttonPos;
+}
+
+static void drawLabel(float2 labelSize, float2 buttonPos, float2 buttonSize,
+                      float labelHeight, char const* label) {
+
+    ImGui::SetCursorPos(
+        computeLabelPos(labelSize, buttonPos, buttonSize, labelHeight));
     ImGui::Text("%s", label);
+}
+
+static RenameState drawRenameLabel(float2 labelSize, float2 buttonPos,
+                                   float2 buttonSize, float labelHeight,
+                                   char const* label, int index,
+                                   InteractionData& interaction) {
+    if (index != interaction.renamingIndex) {
+        drawLabel(labelSize, buttonPos, buttonSize, labelHeight, label);
+        return RenameState::None;
+    }
+    bool setRenameFocus = interaction.setRenameFocus;
+    interaction.setRenameFocus = false;
+    if (setRenameFocus) {
+        ImGui::SetKeyboardFocusHere();
+    }
+    float2 framePadding = GImGui->Style.FramePadding;
+    auto renameTextSize = ImGui::CalcTextSize(interaction.renameBuffer.data());
+    ImGui::SetNextItemWidth(renameTextSize.x + 2 * framePadding.x);
+    auto renamePos =
+        computeLabelPos(renameTextSize, buttonPos, buttonSize, labelHeight) -
+        framePadding;
+    ImGui::SetCursorPos(renamePos);
+    bool pressedEnter = ImGui::InputText("##rename-field",
+                                         interaction.renameBuffer.data(),
+                                         interaction.renameBuffer.size(),
+                                         ImGuiInputTextFlags_EnterReturnsTrue);
+    if (pressedEnter) {
+        return RenameState::Apply;
+    }
+    /// If we just gained focus or have not lost focus we do nothing
+    if (setRenameFocus || GImGui->LastItemData.ID == ImGui::GetActiveID()) {
+        return RenameState::None;
+    }
+    /// We lost focus
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        return RenameState::Cancel;
+    }
+    return RenameState::Apply;
 }
 
 static void showPopup(int index, auto callback) {
@@ -135,41 +211,64 @@ static void handleDragDrop(float2 size, auto callback) {
 
 void DirectoryView::displayEntry(Cursor const& cursor, EntryEx const& entry) {
     float2 labelSize = ImGui::CalcTextSize(entry.label.data());
-    auto buttonPos = cursor.position + params.itemSpacing;
+    auto buttonPos = cursor.position + style.itemSpacing;
     auto iconSize = IconSize::_32;
     /// We handle all interaction first
-    if (displayEntryButton(buttonPos, params.itemSize, cursor.index)) {
-        handleOpen(entry);
+    switch (displayEntryButton(buttonPos, style.itemSize, cursor.index,
+                               interaction))
+    {
+    case EntryButtonState::None:
+        break;
+    case EntryButtonState::Selected:
+        handleSelection(cursor.index);
+        break;
+    case EntryButtonState::Activated:
+        handleActivation(entry);
+        break;
     }
     showPopup(cursor.index, [&] {
+        if (ImGui::Selectable("Open")) {
+            handleActivation(entry);
+            ImGui::CloseCurrentPopup();
+        }
         if (ImGui::Selectable("Rename")) {
-            renaming = cursor.index;
-            setRenameFocus = true;
+            startRenaming(entry, cursor.index);
             ImGui::CloseCurrentPopup();
         }
         if (delegate.popupMenu) {
             delegate.popupMenu(entry);
         }
     });
-    handleDragDrop(params.itemSize, [&] {
+    handleDragDrop(style.itemSize, [&] {
         if (delegate.dragdropPayload) {
             delegate.dragdropPayload(entry);
         }
         drawIcon(iconSize, entry.icon.data(), /* position = */ { 0, 0 },
-                 params.itemSize, params.labelHeight);
-        drawLabel(labelSize, /* position = */ { 0, 0 }, params.itemSize,
-                  params.labelHeight, entry.label.c_str());
+                 style.itemSize, style.labelHeight);
+        drawLabel(labelSize, /* position = */ { 0, 0 }, style.itemSize,
+                  style.labelHeight, entry.label.c_str());
     });
     /// We handle drawing after all interaction
-    drawIcon(iconSize, entry.icon.data(), buttonPos, params.itemSize,
-             params.labelHeight);
-    drawLabel(labelSize, buttonPos, params.itemSize, params.labelHeight,
-              entry.label.c_str());
+    drawIcon(iconSize, entry.icon.data(), buttonPos, style.itemSize,
+             style.labelHeight);
+    switch (drawRenameLabel(labelSize, buttonPos, style.itemSize,
+                            style.labelHeight, entry.label.c_str(),
+                            cursor.index, interaction))
+    {
+    case RenameState::None:
+        break;
+    case RenameState::Apply:
+        applyRenaming(entry);
+        break;
+    case RenameState::Cancel:
+        cancelRenaming();
+        break;
+    }
 }
 
 void DirectoryView::advanceCursor(Cursor& cursor, bool forceNextLine) {
     ++cursor.index;
-    auto itemSizeWithSpacing = params.itemSize + 2 * params.itemSpacing;
+    auto itemSizeWithSpacing = style.itemSize + 2 * style.itemSpacing;
     cursor.position.x += itemSizeWithSpacing.x;
     if (forceNextLine ||
         cursor.position.x + itemSizeWithSpacing.x > ImGui::GetWindowSize().x)
@@ -191,7 +290,11 @@ DirectoryView::EntryEx DirectoryView::makeEntryEx(
              .icon = selectIconName(entry) };
 }
 
-void DirectoryView::handleOpen(EntryEx const& entry) {
+void DirectoryView::handleSelection(int index) {
+    interaction.selectedIndex = index;
+}
+
+void DirectoryView::handleActivation(EntryEx const& entry) {
     if (entry.type == EntryType::Directory) {
         if (delegate.openFolder) {
             delegate.openFolder(entry);
@@ -203,6 +306,35 @@ void DirectoryView::handleOpen(EntryEx const& entry) {
     if (entry.type == EntryType::File && delegate.openFile) {
         delegate.openFile(entry);
     }
+}
+
+void DirectoryView::startRenaming(DirectoryEntry const& entry, int index) {
+    interaction.renamingIndex = index;
+    auto name = entry.path.filename().string();
+    auto* buf = interaction.renameBuffer.data();
+    size_t bufSz = interaction.renameBuffer.size();
+    std::memcpy(buf, name.data(), std::min(name.size(), bufSz));
+    interaction.setRenameFocus = true;
+}
+
+void DirectoryView::applyRenaming(DirectoryEntry const& entry) {
+    std::string newName = interaction.renameBuffer.data();
+    cancelRenaming();
+    if (newName == entry.path.filename().string()) {
+        return;
+    }
+    if (delegate.renameEntry) {
+        delegate.renameEntry(entry, newName);
+        rescan();
+    }
+    else {
+        Logger::Warn("Not renaming because no rename handler is set");
+    }
+}
+
+void DirectoryView::cancelRenaming() {
+    interaction.renamingIndex = -1;
+    interaction.renameBuffer = {};
 }
 
 bool DirectoryView::shallDisplay(DirectoryEntry const& entry) const {

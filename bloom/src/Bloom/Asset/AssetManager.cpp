@@ -177,10 +177,13 @@ struct AssetManager::Impl {
 
     explicit Impl(AssetManager* assetManager): assetManager(assetManager) {}
 
-    ///
-    std::fstream openRegistryFile();
+    /// Opens the registry file in mode \p mode
+    std::fstream openRegistryFile(std::ios_base::openmode mode = std::ios::in |
+                                                                 std::ios::out);
 
-    ///
+    /// Deletes the contents of the registry file
+    /// \Warning Use with care. A deleted registry is a major headache for the
+    /// user because all asset references need to be restored manually
     void clearRegistryFile();
 
     /// Loads every entry from the registry on disk into memory
@@ -191,12 +194,15 @@ struct AssetManager::Impl {
     /// Scans the entire project directory and creates missing registry entries
     bool amendRegistry();
 
-    ///
+    /// Overrides the projects registry file with what is currently in memory
     void writeRegistryToDisk();
 
-    Reference<Asset> allocateAsset(AssetHandle, std::string name) const;
+    /// Allocates an asset of the correct derived type for \p handle
+    Reference<Asset> allocateAsset(AssetHandle handle, std::string name) const;
 
-    RegistryEntry* find(AssetHandle);
+    /// \Returns the directory entry of the asset \p handle or null if it does
+    /// not exist
+    RegistryEntry* find(AssetHandle handle);
 
     /// \Returns the registry entry of the asset handle \p handle or null if it
     /// does not exist
@@ -343,10 +349,10 @@ void AssetManager::refreshProject() {
     compileScripts();
 }
 
-std::fstream Impl::openRegistryFile() {
+std::fstream Impl::openRegistryFile(std::ios_base::openmode mode) {
     BL_EXPECT(std::filesystem::is_directory(rootDir));
     BL_EXPECT(std::filesystem::exists(rootDir));
-    return openOrCreateFile(rootDir / registryFilePath());
+    return openOrCreateFile(rootDir / registryFilePath(), mode);
 }
 
 void Impl::clearRegistryFile() {
@@ -438,7 +444,7 @@ void Impl::writeRegistryToDisk() {
     }
     YAML::Emitter out;
     out << root;
-    openRegistryFile() << out.c_str();
+    openRegistryFile(std::ios::out | std::ios::trunc) << out.c_str();
 }
 
 std::filesystem::path AssetManager::projectRootDir() const {
@@ -502,6 +508,30 @@ AssetHandle AssetManager::importAsset(std::string name,
     impl->doImport(*asset, source);
     impl->flushToDisk(handle);
     return handle;
+}
+
+/// \Returns \p path with it's filename replaced with \p newName
+/// The extension of \p path is kept
+static std::filesystem::path replaceFilename(std::filesystem::path path,
+                                             std::string newName) {
+    auto ext = path.extension().string();
+    return path.remove_filename() / (newName + ext);
+}
+
+void AssetManager::renameAsset(AssetHandle handle, std::string name) {
+    auto const itr = impl->assets.find(handle.ID());
+    if (itr == impl->assets.end()) {
+        Logger::Warn("Failed to rename asset, does not exist: ", handle);
+        return;
+    }
+    auto& entry = itr->second;
+    entry.name = name;
+    auto oldPath = entry.diskLocation;
+    auto newPath = replaceFilename(oldPath, name);
+    std::filesystem::rename(impl->makeAbsolute(oldPath),
+                            impl->makeAbsolute(newPath));
+    entry.diskLocation = newPath;
+    impl->writeRegistryToDisk();
 }
 
 void AssetManager::deleteAsset(AssetHandle handle) {
@@ -670,6 +700,7 @@ bool AssetManager::isValid(AssetHandle handle) const {
 void AssetManager::saveToDisk(AssetHandle handle) { impl->flushToDisk(handle); }
 
 void AssetManager::saveAll() {
+    impl->writeRegistryToDisk();
     for (auto& [ID, entry]: impl->assets) {
         saveToDisk(entry.handle);
     }
@@ -690,8 +721,8 @@ void AssetManager::compileScripts() {
     inv.setLinkerOptions({ .searchHost = true });
     auto sources = impl->assets | values | filter([](auto& entry) {
         return entry.handle.type() == AssetType::ScriptSource;
-    }) | transform([](auto& entry) {
-        return SourceFile::load(entry.diskLocation);
+    }) | transform([&](auto& entry) {
+        return SourceFile::load(impl->makeAbsolute(entry.diskLocation));
     });
     std::optional<scatha::Target> target;
     try {
@@ -991,7 +1022,6 @@ std::fstream Impl::openOrCreateFile(std::filesystem::path const& path) const {
 
 std::fstream Impl::openOrCreateFile(std::filesystem::path const& path,
                                     std::ios_base::openmode mode) const {
-
     BL_EXPECT(isAbsoluteInProjDir(path));
     std::fstream file(path, mode);
     if (file) {

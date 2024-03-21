@@ -27,6 +27,9 @@ struct DirectoryViewDelegate {
     /// folder will be opened in this view
     std::function<void(DirectoryEntry const&)> openFolder;
 
+    /// Callback to handle renaming of directory entries
+    std::function<void(DirectoryEntry const&, std::string newName)> renameEntry;
+
     /// Shall return a CSS icon name for the given file. This will change in the
     /// future when we have proper thumbnails. If this is null a default icon
     /// will be used
@@ -60,12 +63,16 @@ public:
     /// Opens \p directory in this viewer
     void openDirectory(std::filesystem::path const& directory);
 
+    /// Opens the current directory again
+    void rescan();
+
     /// Assigns the delegate
     void setDelegate(DirectoryViewDelegate delegate) {
         this->delegate = delegate;
     }
 
-private:
+    /// # Private types declared public for simplified implementation
+
     /// Used for drawing the entries
     struct Cursor {
         mtl::float2 position = 0;
@@ -81,12 +88,22 @@ private:
         std::string icon;
     };
 
-    struct Parameters {
+    ///
+    struct StyleParameters {
         mtl::float2 itemSpacing = 10;
         mtl::float2 itemSize = 100;
         float labelHeight = 20;
     };
 
+    /// Groups data used for interacting with the view
+    struct InteractionData {
+        int selectedIndex = -1;
+        int renamingIndex = -1;
+        bool setRenameFocus = false;
+        std::array<char, 1024> renameBuffer{};
+    };
+
+private:
     /// Displays and handles interaction of one entry
     void displayEntry(Cursor const& cursor, EntryEx const& entry);
 
@@ -97,24 +114,24 @@ private:
     EntryEx makeEntryEx(DirectoryEntry publicEntry,
                         std::filesystem::directory_entry const& fsEntry) const;
 
-    /// Delegate wrappers
+    /// Interaction
     /// @{
-    void handleOpen(EntryEx const& entry);
+    void handleSelection(int index);
+    void handleActivation(EntryEx const& entry);
+    void startRenaming(DirectoryEntry const& entry, int index);
+    void applyRenaming(DirectoryEntry const& entry);
+    void cancelRenaming();
     bool shallDisplay(DirectoryEntry const& entry) const;
     std::string selectIconName(DirectoryEntry const& entry) const;
     std::any makeUserData(std::filesystem::directory_entry const& entry) const;
     /// @}
 
-    ///
-    DirectoryViewDelegate delegate;
-
+    std::filesystem::path currentDirectory;
     /// The entries in the current directory
     std::vector<EntryEx> entries;
-
-    Parameters params;
-    int renaming = -1;
-    bool setRenameFocus = false;
-    std::array<char, 256> renameBuffer{};
+    DirectoryViewDelegate delegate;
+    StyleParameters style;
+    InteractionData interaction;
 };
 
 } // namespace poppy

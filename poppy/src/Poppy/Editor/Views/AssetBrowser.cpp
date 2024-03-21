@@ -71,6 +71,15 @@ AssetBrowser::AssetBrowser() {
             }
             openAsset(handle);
         },
+        .renameEntry = [this](DirectoryEntry const& entry, 
+                              std::string newName) {
+            auto handle = getHandle(entry);
+            /// Kinda hacky but the asset manager expects a name without
+            /// extension for renaming, so we just discard the extension here
+            auto name = std::filesystem::path(newName).replace_extension()
+                            .string();
+            assetManager->renameAsset(handle, name);
+        },
         .selectIcon = [](DirectoryEntry const& entry) {
             auto handle = getHandle(entry);
             switch (handle.type()) {

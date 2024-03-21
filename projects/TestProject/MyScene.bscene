@@ -56,6 +56,9 @@
     nextSibling: -1
     firstChild: -1
     lastChild: -1
+  Script: ~
+  Script Preserved Data:
+    Typename: PulseBehaviour
   Mesh Renderer:
     MaterialInstance:
       AssetType: MaterialInstance
@@ -169,18 +172,18 @@
     name: Torus
   Transform:
     position:
-      - -770.568848
-      - -1446.53406
-      - 435.729462
+      - -658.641052
+      - -1831.94238
+      - 422.346344
     orientation:
       - 0.329041094
-      - 0.156011418
-      - -0.207195714
+      - 0.156011447
+      - -0.207195878
       - 0.907999039
     scale:
-      - 3.38999557
-      - 3.3900013
       - 3.38999581
+      - 3.39000106
+      - 3.38998938
   Hierarchy:
     parent: -1
     prevSibling: -1
@@ -193,4 +196,4 @@
       AssetID: e26ba1dc b9fd446e f9e537ac c56ff427
     Mesh:
       AssetType: StaticMesh
-      AssetID: 767f7dc3 df293401 1990b684 bcdcf9ad
+      AssetID: 2cee2aa3 57f81268 d88f389f aa81a117

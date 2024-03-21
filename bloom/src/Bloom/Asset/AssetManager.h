@@ -71,6 +71,11 @@ public:
     AssetHandle importAsset(std::string name, std::filesystem::path source,
                             std::filesystem::path dest);
 
+    /// Renames the asset \p handle to \p name
+    ///
+    /// Updates the registry and asset filename
+    void renameAsset(AssetHandle handle, std::string name);
+
     /// Deletes asset from memory and from working directory
     ///
     /// \Param handle Handle to the asset to be deleted
@@ -113,15 +118,15 @@ public:
     ///
     /// \Param handle Handle to an asset. May be null or invalid.
     ///
-    /// \Param rep Representation. Shall be any combination of
+    /// \Param repr Representation. Shall be any combination of
     /// `AssetRepresentation::CPU` and `AssetRepresentation::GPU`.
-
+    ///
     /// \Param forceReload If true, reloads asset into memory even if already
     /// available.
     ///
     /// \Returns `true` if operation was successful.
     ///
-    bool makeAvailable(AssetHandle handle, AssetRepresentation rep,
+    bool makeAvailable(AssetHandle handle, AssetRepresentation repr,
                        bool forceReload = false);
 
     /// Check if an AssetHandle is valid, i.e. refers to an asset in this

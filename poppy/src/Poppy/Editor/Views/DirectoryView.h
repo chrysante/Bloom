@@ -76,7 +76,7 @@ public:
         this->delegate = delegate;
     }
 
-    /// 
+    ///
     void onInput(bloom::InputEvent& event);
 
     /// # Private types declared public for simplified implementation

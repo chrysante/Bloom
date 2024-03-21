@@ -235,9 +235,8 @@ void Viewport::updateFramebuffer() {
     }
 }
 
-void Viewport::onInput(bloom::InputEvent& event) {
-    event.dispatch<bloom::InputEventMask::LeftMouseDown>(
-        [&](bloom::MouseEvent const& e) {
+void Viewport::onInput(InputEvent& event) {
+    event.dispatch<InputEventMask::LeftMouseDown>([&](MouseEvent const& e) {
         if (!viewportHovered || gizmo.isHovered() || gameView) {
             return false;
         }
@@ -253,9 +252,7 @@ void Viewport::onInput(bloom::InputEvent& event) {
         selection().clear();
         return true;
     });
-    event.dispatch<bloom::InputEventMask::KeyDown>(
-        [&](bloom::KeyEvent const& e) {
-        using bloom::Key;
+    event.dispatch<InputEventMask::KeyDown>([&](KeyEvent const& e) {
         switch (e.key) {
         case Key::Tab:
             gizmo.cycleSpace();
@@ -405,11 +402,8 @@ void Viewport::dropdownMenu() {
     }
 }
 
-bloom::EntityHandle Viewport::readEntityID(mtl::float2 /* mousePosition */) {
-    Logger::Warn("Mouse picking is not implemented");
+EntityHandle Viewport::readEntityID(mtl::float2 /*mousePosition*/) {
     return {};
-    /// This doesn't work right now because we don't render the entity ID
-    /// framebuffer
 #if 0
     static_assert(
         std::is_same_v<std::underlying_type_t<entt::entity>, std::uint32_t>);
@@ -419,12 +413,11 @@ bloom::EntityHandle Viewport::readEntityID(mtl::float2 /* mousePosition */) {
     if (mousePosition.x < 0 || mousePosition.y < 0) {
         return {};
     }
-    auto const viewSize = this->size();
-    if (mousePosition.x >= viewSize.x || mousePosition.y >= viewSize.y) {
+    if (mousePosition.x >= size().x || mousePosition.y >= size().y) {
         return {};
     }
-    auto* entityTexture = (MTL::Texture*)framebuffer.entityID.nativeHandle();
-    auto* mtlRenderContext = utl::down_cast<bloom::MetalRenderContext*>(
+    auto* entityTexture = (MTLTexture*)framebuffer.entityID.nativeHandle();
+    auto* mtlRenderContext = utl::down_cast<MetalRenderContext*>(
         renderer->getRenderContext());
     auto* commandBuffer = mtlRenderContext->commandQueue()->commandBuffer();
     auto* encoder = commandBuffer->blitCommandEncoder();
@@ -432,13 +425,11 @@ bloom::EntityHandle Viewport::readEntityID(mtl::float2 /* mousePosition */) {
     encoder->endEncoding();
     commandBuffer->commit();
     commandBuffer->waitUntilCompleted();
-
     std::uint32_t id = -1;
-    auto const region =
+    auto region =
         MTL::Region(mousePosition.x * 2, mousePosition.y * 2, 1, 1);
     entityTexture->getBytes(&id, 4, region, 0);
-
-    return bloom::EntityID((entt::entity)id);
+    return EntityID((entt::entity)id);
 #endif
 }
 

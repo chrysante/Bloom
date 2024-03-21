@@ -14,7 +14,8 @@ public:
     static void run(Application& app) { app.run(); }
 };
 
-int main(int, char*[]) {
+/// We use `weak` attribute to allow clients to supply their own main function
+__attribute__((weak)) int main(int, char*[]) {
     auto app = createApplication();
     AppRunner::run(*app);
 }

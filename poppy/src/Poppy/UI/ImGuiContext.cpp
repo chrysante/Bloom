@@ -311,36 +311,36 @@ void poppy::ImGuiContext::onInput(bloom::InputEvent e) {
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.AddMouseViewportEvent(ImGuiID{});
-    e.dispatch<InputEventType::mouseDown>([&](MouseDownEvent const& event) {
+    e.dispatch<InputEventMask::MouseDown>([&](MouseDownEvent const& event) {
         int const button = (int)event.button;
         if (button >= 0 && button < ImGuiMouseButton_COUNT)
             io.AddMouseButtonEvent(button, true);
         return true;
     });
-    e.dispatch<InputEventType::mouseUp>([&](MouseUpEvent const& event) {
+    e.dispatch<InputEventMask::MouseUp>([&](MouseUpEvent const& event) {
         int const button = (int)event.button;
         if (button >= 0 && button < ImGuiMouseButton_COUNT)
             io.AddMouseButtonEvent(button, false);
         return true;
     });
-    e.dispatch<InputEventType::mouseMoved>([&](MouseMoveEvent const& event) {
+    e.dispatch<InputEventMask::MouseMoved>([&](MouseMoveEvent const& event) {
         io.AddMousePosEvent(event.locationInWindow.x, event.locationInWindow.y);
         return true;
     });
-    e.dispatch<InputEventType::mouseDragged>([&](MouseDragEvent const& event) {
+    e.dispatch<InputEventMask::MouseDragged>([&](MouseDragEvent const& event) {
         io.AddMousePosEvent(event.locationInWindow.x, event.locationInWindow.y);
         return true;
     });
-    e.dispatch<InputEventType::scrollWheel>([&](ScrollEvent const& event) {
+    e.dispatch<InputEventMask::ScrollWheel>([&](ScrollEvent const& event) {
         if (event.offset.x != 0.0 || event.offset.y != 0.0) {
             io.AddMouseWheelEvent((float)event.offset.x * 0.1f,
                                   (float)event.offset.y * 0.1f);
         }
         return true;
     });
-    e.dispatch<InputEventType::key>([&](KeyEvent const& event) {
+    e.dispatch<InputEventMask::Key>([&](KeyEvent const& event) {
         ImGuiKey const key = toImGuiKeyCode(event.key);
-        bool const down = e.type() == InputEventType::keyDown;
+        bool const down = e.type() == InputEventMask::KeyDown;
         // Set Modifiers
         switch (event.key) {
         case Key::LeftCtrl:
@@ -367,7 +367,7 @@ void poppy::ImGuiContext::onInput(bloom::InputEvent e) {
         default:
             break;
         }
-        io.AddKeyEvent(key, e.type() == InputEventType::keyDown);
+        io.AddKeyEvent(key, e.type() == InputEventMask::KeyDown);
         return true;
     });
 }
@@ -379,6 +379,7 @@ void poppy::ImGuiContext::onTextInput(unsigned int code) {
 }
 
 #if !defined(BLOOM_PLATFORM_APPLE)
+
 /// On Apple platform these are defined in Platform/MacOS/ImGuiContext.mm
 
 void poppy::ImGuiContext::doInitPlatform(bloom::HardwareDevice& device,

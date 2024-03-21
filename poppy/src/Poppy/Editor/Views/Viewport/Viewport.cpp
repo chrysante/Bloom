@@ -236,7 +236,7 @@ void Viewport::updateFramebuffer() {
 }
 
 void Viewport::onInput(bloom::InputEvent& event) {
-    event.dispatch<bloom::InputEventType::leftMouseDown>(
+    event.dispatch<bloom::InputEventMask::LeftMouseDown>(
         [&](bloom::MouseEvent const& e) {
         if (!viewportHovered || gizmo.isHovered() || gameView) {
             return false;
@@ -253,7 +253,7 @@ void Viewport::onInput(bloom::InputEvent& event) {
         selection().clear();
         return true;
     });
-    event.dispatch<bloom::InputEventType::keyDown>(
+    event.dispatch<bloom::InputEventMask::KeyDown>(
         [&](bloom::KeyEvent const& e) {
         using bloom::Key;
         switch (e.key) {

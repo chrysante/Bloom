@@ -219,9 +219,9 @@ void Window::setCallbacks() {
             ._mouseButtons[(std::size_t)mouseButtonFromGLFW(button)] = action;
         window.userInput._modFlags = modFlagsFromGLFW(mods);
         if (window.callbacks.onInputFn) {
-            auto const event = inputEventFromGLFWMouseButton(window.userInput,
-                                                             button, action,
-                                                             mods);
+            auto const event =
+                makeInputEventFromGLFWMouseButton(window.userInput, button,
+                                                  action, mods);
             window.callbacks.onInputFn(event);
         }
     });
@@ -232,7 +232,7 @@ void Window::setCallbacks() {
         window.userInput.setMousePosition({ xpos, ypos });
         if (window.callbacks.onInputFn) {
             window.callbacks.onInputFn(
-                inputEventFromGLFWCursorPos(window.userInput, xpos, ypos));
+                makeInputEventFromGLFWCursorPos(window.userInput, xpos, ypos));
         }
     });
 
@@ -247,7 +247,8 @@ void Window::setCallbacks() {
         window.userInput.setScrollOffset({ xoffset, yoffset });
         if (window.callbacks.onInputFn) {
             window.callbacks.onInputFn(
-                inputEventFromGLFWScroll(window.userInput, xoffset, yoffset));
+                makeInputEventFromGLFWScroll(window.userInput, xoffset,
+                                             yoffset));
         }
     });
 
@@ -272,9 +273,9 @@ void Window::setCallbacks() {
         }
         window.userInput._modFlags = modFlagsFromGLFW(mods);
         if (window.callbacks.onInputFn) {
-            window.callbacks.onInputFn(inputEventFromGLFWKey(window.userInput,
-                                                             key, scancode,
-                                                             action, mods));
+            window.callbacks.onInputFn(
+                makeInputEventFromGLFWKey(window.userInput, key, scancode,
+                                          action, mods));
         }
     });
 

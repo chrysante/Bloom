@@ -227,7 +227,7 @@ void Editor::displayViews() {
 void Editor::onInput(bloom::InputEvent e) {
     invalidateView();
     imguiCtx.onInput(e);
-    e.dispatch<InputEventType::keyUp>([&](KeyEvent event) {
+    e.dispatch<InputEventMask::KeyUp>([&](KeyEvent event) {
         if (event.key == Key::S && test(event.modifierFlags & ModFlags::Super))
         {
             saveAll();

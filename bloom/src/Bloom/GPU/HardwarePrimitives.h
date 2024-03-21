@@ -58,9 +58,9 @@ enum class SamplerAddressMode {
 };
 
 enum class SamplerBorderColor {
-    Clear = 0,       // { 0, 0, 0, 0 }
-    OpaqueBlack = 1, // { 0, 0, 0, 1 }
-    OpaqueWhite = 2, // { 1, 1, 1, 1 }
+    Clear = 0,       // r: 0.0, g: 0.0, b: 0.0, a: 0.0
+    OpaqueBlack = 1, // r: 0.0, g: 0.0, b: 0.0, a: 1.0
+    OpaqueWhite = 2, // r: 1.0, g: 1.0, b: 1.0, a: 1.0
 };
 
 enum class TextureUsage {
@@ -70,6 +70,7 @@ enum class TextureUsage {
     RenderTarget = 1 << 2,
     PixelFormatView = 1 << 4,
 };
+
 UTL_ENUM_OPERATORS(TextureUsage);
 
 enum class TextureType {
@@ -280,14 +281,13 @@ enum class PrimitiveTopologyClass {
     Triangle = 3,
 };
 
-/// MARK: - Buffer
-struct BLOOM_API BufferDescription {
+struct BufferDescription {
     void const* data = nullptr;
     std::size_t size = 0;
     StorageMode storageMode = StorageMode::GPUOnly;
 };
 
-class BLOOM_API BufferHandle: public HardwareResourceHandle {
+class BufferHandle: public HardwareResourceHandle {
     friend class BufferView;
 
 public:
@@ -315,8 +315,7 @@ public:
     BufferDescription desc;
 };
 
-/// MARK: - Texture
-struct BLOOM_API TextureDescription {
+struct TextureDescription {
     TextureType type = TextureType::Texture2D;
     PixelFormat pixelFormat = PixelFormat::RGBA8Unorm;
     mtl::usize3 size = 1;
@@ -327,7 +326,7 @@ struct BLOOM_API TextureDescription {
     TextureUsage usage = TextureUsage::ShaderRead;
 };
 
-class BLOOM_API TextureHandle: public HardwareResourceHandle {
+class TextureHandle: public HardwareResourceHandle {
 public:
     TextureHandle() = default;
     TextureHandle(std::nullptr_t): TextureHandle() {}
@@ -345,7 +344,7 @@ private:
     TextureDescription desc;
 };
 
-class BLOOM_API TextureView: public HardwareResourceView {
+class TextureView: public HardwareResourceView {
 public:
     using HardwareResourceView::HardwareResourceView;
     TextureView(void* native, TextureDescription desc):
@@ -364,22 +363,20 @@ private:
     TextureDescription desc;
 };
 
-/// MARK: - ShaderFunction
-class BLOOM_API ShaderFunctionHandle: public HardwareResourceHandle {
+class ShaderFunctionHandle: public HardwareResourceHandle {
 public:
     ShaderFunctionHandle() = default;
     ShaderFunctionHandle(void* native, Deleter deleter):
         HardwareResourceHandle(native, deleter) {}
 };
 
-class BLOOM_API ShaderFunctionView: public HardwareResourceView {
+class ShaderFunctionView: public HardwareResourceView {
 public:
     using HardwareResourceView::HardwareResourceView;
     ShaderFunctionView(ShaderFunctionHandle const& function):
         HardwareResourceView(function) {}
 };
 
-/// MARK: - RenderPipeline
 struct ColorAttachmentDescription {
     PixelFormat pixelFormat = PixelFormat::Invalid;
 
@@ -407,21 +404,20 @@ struct RenderPipelineDescription {
         PrimitiveTopologyClass::Unspecified;
 };
 
-class BLOOM_API RenderPipelineHandle: public HardwareResourceHandle {
+class RenderPipelineHandle: public HardwareResourceHandle {
 public:
     RenderPipelineHandle() = default;
     RenderPipelineHandle(void* native, Deleter deleter):
         HardwareResourceHandle(native, deleter) {}
 };
 
-class BLOOM_API RenderPipelineView: public HardwareResourceView {
+class RenderPipelineView: public HardwareResourceView {
 public:
     using HardwareResourceView::HardwareResourceView;
     RenderPipelineView(RenderPipelineHandle const& pipeline):
         HardwareResourceView(pipeline) {}
 };
 
-/// MARK: - ComputePipeline
 struct ComputePipelineDescription {
     ShaderFunctionHandle computeFunction;
     bool threadGroupSizeIsMultipleOfThreadExecutionWidth = false;
@@ -430,17 +426,17 @@ struct ComputePipelineDescription {
 
 struct ComputePipelineParameters {
     /// The maximum number of threads in a threadgroup that you can dispatch to
-    /// the pipeline.
+    /// the pipeline
     std::size_t maxTotalThreadsPerThreadgroup = 0;
 
-    /// The number of threads that the GPU executes simultaneously.
+    /// The number of threads that the GPU executes simultaneously
     std::size_t threadExecutionWidth = 0;
 
     /// The length, in bytes, of statically allocated threadgroup memory
     std::size_t staticThreadgroupMemoryLength = 0;
 };
 
-class BLOOM_API ComputePipelineHandle:
+class ComputePipelineHandle:
     public HardwareResourceHandle,
     public ComputePipelineParameters {
 public:
@@ -449,7 +445,7 @@ public:
         HardwareResourceHandle(native, deleter) {}
 };
 
-class BLOOM_API ComputePipelineView:
+class ComputePipelineView:
     public HardwareResourceView,
     public ComputePipelineParameters {
 public:
@@ -458,20 +454,19 @@ public:
         HardwareResourceView(pipeline), ComputePipelineParameters(pipeline) {}
 };
 
-/// MARK: - DepthStencil
 struct StencilDescription {
     CompareFunction stencilCompareFunction = CompareFunction::Always;
 
-    /*! Stencil is tested first.  stencilFailureOperation declares how the
-     * stencil buffer is updated when the stencil test fails. */
+    /// Stencil is tested first. `stencilFailureOperation` declares how the
+    /// stencil buffer is updated when the stencil test fails
     StencilOperation stencilFailureOperation = StencilOperation::Keep;
 
-    /*! If stencil passes, depth is tested next.  Declare what happens when the
-     * depth test fails. */
+    /// If stencil passes, depth is tested next.  Declares what happens when the
+    /// depth test fails
     StencilOperation depthFailureOperation = StencilOperation::Keep;
 
-    /*! If both the stencil and depth tests pass, declare how the stencil buffer
-     * is updated. */
+    /// If both the stencil and depth tests pass, declare how the stencil buffer
+    /// is updated
     StencilOperation depthStencilPassOperation = StencilOperation::Keep;
 
     std::uint32_t readMask = 0xFFffFFff;
@@ -481,26 +476,24 @@ struct StencilDescription {
 struct DepthStencilDescription {
     CompareFunction depthCompareFunction = CompareFunction::Always;
     bool depthWrite = false;
-
     std::optional<StencilDescription> frontFaceStencil;
     std::optional<StencilDescription> backFaceStencil;
 };
 
-class BLOOM_API DepthStencilHandle: public HardwareResourceHandle {
+class DepthStencilHandle: public HardwareResourceHandle {
 public:
     DepthStencilHandle() = default;
     DepthStencilHandle(void* native, Deleter deleter):
         HardwareResourceHandle(native, deleter) {}
 };
 
-class BLOOM_API DepthStencilView: public HardwareResourceView {
+class DepthStencilView: public HardwareResourceView {
 public:
     using HardwareResourceView::HardwareResourceView;
     DepthStencilView(DepthStencilHandle const& depthStencil):
         HardwareResourceView(depthStencil) {}
 };
 
-/// MARK: - Sampler
 struct SamplerDescription {
     SamplerMinMagFilter minFilter = SamplerMinMagFilter::Nearest;
     SamplerMinMagFilter magFilter = SamplerMinMagFilter::Nearest;
@@ -518,14 +511,14 @@ struct SamplerDescription {
     bool supportArgumentBuffers = false;
 };
 
-class BLOOM_API SamplerHandle: public HardwareResourceHandle {
+class SamplerHandle: public HardwareResourceHandle {
 public:
     SamplerHandle() = default;
     SamplerHandle(void* native, Deleter deleter):
         HardwareResourceHandle(native, deleter) {}
 };
 
-class BLOOM_API SamplerView: public HardwareResourceView {
+class SamplerView: public HardwareResourceView {
 public:
     using HardwareResourceView::HardwareResourceView;
     SamplerView(SamplerHandle const& depthStencil):

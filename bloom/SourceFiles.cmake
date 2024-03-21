@@ -138,4 +138,5 @@ set(bloom_sources
 
 set(bloom_test_sources
   test/RuntimeSystem.t.cpp
+  test/HardwareResourceHandle.t.cpp
 )

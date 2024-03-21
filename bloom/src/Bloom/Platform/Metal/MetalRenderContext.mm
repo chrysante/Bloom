@@ -49,7 +49,6 @@ void MetalRenderContext::end() {
     [commandEncoder endEncoding];
 }
 
-/// MARK: - Pipeline
 void MetalRenderContext::setPipeline(RenderPipelineView pipeline) {
     [commandEncoder setRenderPipelineState:(__bridge id<MTLRenderPipelineState>)pipeline.nativeHandle()];
 }
@@ -58,7 +57,6 @@ void MetalRenderContext::setDepthStencil(DepthStencilView depthStencil) {
     [commandEncoder setDepthStencilState:(__bridge id<MTLDepthStencilState>)depthStencil.nativeHandle()];
 }
 
-/// MARK: - VertexData
 void MetalRenderContext::setVertexBuffer(BufferView buffer, std::size_t index, std::size_t offset) {
     [commandEncoder setVertexBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
                              offset:offset
@@ -80,7 +78,6 @@ void MetalRenderContext::setVertexSampler(SamplerView sampler, std::size_t index
                                   atIndex:index];
 }
 
-/// MARK: - FragmentData
 void MetalRenderContext::setFragmentBuffer(BufferView buffer, std::size_t index, std::size_t offset) {
     [commandEncoder setFragmentBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
                                offset:offset
@@ -102,7 +99,6 @@ void MetalRenderContext::setFragmentSampler(SamplerView sampler, std::size_t ind
                                     atIndex:index];
 }
 
-/// MARK: - Misc
 void MetalRenderContext::setTriangleFillMode(TriangleFillMode mode) {
     [commandEncoder setTriangleFillMode:(MTLTriangleFillMode)mode];
 }
@@ -111,7 +107,6 @@ void MetalRenderContext::setTriangleCullMode(TriangleCullMode mode) {
     [commandEncoder setCullMode:(MTLCullMode)mode];
 }
 
-/// MARK: - Draw
 void MetalRenderContext::draw(DrawDescription const& desc) {
     [commandEncoder drawIndexedPrimitives: MTLPrimitiveTypeTriangle
                                indexCount: desc.indexCount

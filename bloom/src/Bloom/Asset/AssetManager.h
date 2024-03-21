@@ -33,8 +33,6 @@ public:
     ///
     ~AssetManager();
 
-    /// MARK: Environment
-    ///
     /// @brief		Set current working directory to \p path
     /// @param path	Must be an absolute directory. Directory will be created if
     /// not existent.
@@ -49,8 +47,6 @@ public:
     /// @brief	Retrieves the device.
     HardwareDevice& device() const;
 
-    /// MARK: Create
-    ///
     /// @brief		Creates a new Asset at \p dest
     /// @param type	Type of the asset.
     /// @param name	Name of the asset.
@@ -59,8 +55,6 @@ public:
     Reference<Asset> create(AssetType type, std::string name,
                             std::filesystem::path destDir);
 
-    /// MARK: Import
-    ///
     /// @brief			Imports asset from outside the working directory by
     /// reading a file and converting it to an internal representation to be
     /// stored on disk.
@@ -70,15 +64,11 @@ public:
     AssetHandle import(std::filesystem::path source,
                        std::filesystem::path dest);
 
-    /// MARK: Remove
-    ///
     /// @brief 			Deletes asset from memory and from working
     /// directory.
     /// @param handle	Handle to asset to be removed.
     void remove(AssetHandle handle);
 
-    /// MARK: Access
-    ///
     /// @brief 			Retrieves an asset from an AssetHandle. Does not load
     /// the asset into memory. Use makeAvailable to load the asset into memory.
     /// @param handle 	Handle to an Asset. May be null or invalid.
@@ -132,15 +122,14 @@ public:
     /// directory.
     bool isValid(AssetHandle handle) const;
 
-    /// MARK: Save
     /// @brief			Saves asset to disk from current CPU
     /// representation.
     /// @param handle	Asset to save.
     void saveToDisk(AssetHandle handle);
 
+    ///
     void saveAll();
 
-    /// MARK: Uncategorized
     // path can be relative or absolute
     AssetHandle getHandleFromFile(std::filesystem::path path) const;
 

@@ -16,7 +16,7 @@
 #define BL_DEFINE_ASSET_CTOR(Type, Parent)                                     \
     explicit Type(AssetHandle handle, std::string name):                       \
         Parent(handle, std::move(name)) {                                      \
-        assert(handle.type() == AssetType::Type && "Mismatched asset type");   \
+        BL_EXPECT(handle.type() == AssetType::Type, "Mismatched asset type");  \
     }
 
 namespace bloom {

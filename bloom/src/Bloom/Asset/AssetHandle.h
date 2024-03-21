@@ -36,7 +36,10 @@ public:
     }
 
     /// \Returns `true` if `ID()` is a valid value
-    operator bool() const { return !utl::is_null(ID()); }
+    bool isValid() const { return !utl::is_null(ID()); }
+
+    /// \Returns `isValid()`
+    operator bool() const { return isValid(); }
 
 private:
     AssetType _type = AssetType::Invalid;

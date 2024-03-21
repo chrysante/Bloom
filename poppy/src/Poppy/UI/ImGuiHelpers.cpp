@@ -215,7 +215,7 @@ bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
 }
 
 std::array<char, 64> poppy::generateUniqueID(std::string_view name, int id,
-                                             bool const prepentDoubleHash) {
+                                             bool prepentDoubleHash) {
     std::array<char, 64> buffer{};
     char* bufferPtr = buffer.data();
     /* -0000000 */
@@ -226,10 +226,8 @@ std::array<char, 64> poppy::generateUniqueID(std::string_view name, int id,
         bufferPtr += 2;
         availSize -= 2;
     }
-
-    std::size_t const nameSize =
+    std::size_t nameSize =
         std::min(name.size(), availSize - 2 * !prepentDoubleHash);
-
     std::memcpy(bufferPtr, name.data(), nameSize);
     bufferPtr += nameSize;
     availSize -= nameSize;
@@ -241,6 +239,5 @@ std::array<char, 64> poppy::generateUniqueID(std::string_view name, int id,
     }
     assert(availSize < 56 && "Overflow has occured");
     std::strncpy(bufferPtr, utl::strcat("-", id).data(), 8);
-
     return buffer;
 }

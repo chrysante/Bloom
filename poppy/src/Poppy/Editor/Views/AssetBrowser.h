@@ -15,9 +15,17 @@ namespace bloom {
 
 class AssetManager;
 
-}
+} // namespace bloom
 
 namespace poppy {
+
+///
+std::optional<bloom::AssetHandle> acceptAssetDragDrop(
+    std::span<bloom::AssetType const> types);
+
+/// \overload
+std::optional<bloom::AssetHandle> acceptAssetDragDrop(
+    std::initializer_list<bloom::AssetType> types);
 
 struct AssetBrowserData {
     std::filesystem::path projectDir; // absolute path
@@ -48,9 +56,17 @@ private:
     void refreshFilesystem();
 
 private:
+    /// The applications asset manager, will be set by ???
     bloom::AssetManager* assetManager = nullptr;
+
+    /// The current directory relative to the project directory
+    std::filesystem::path currentDir;
+
     AssetBrowserData data;
+
     DirectoryView dirView;
+
+    /// Our toolbar
     Toolbar toolbar;
 };
 

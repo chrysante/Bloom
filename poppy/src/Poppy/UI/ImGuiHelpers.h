@@ -54,7 +54,7 @@ auto disabledIf(bool condition, std::invocable auto&& block) {
     return block();
 }
 
-std::array<char, 64> generateUniqueID(std::string_view, int,
+std::array<char, 64> generateUniqueID(std::string_view name, int ID,
                                       bool prepentDoubleHash = false);
 
 template <typename E>

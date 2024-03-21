@@ -24,9 +24,86 @@ using namespace bloom;
 using namespace mtl::short_types;
 using namespace poppy;
 
+static std::string toDragDropType(AssetType type) {
+    return utl::strcat("DD-Asset-", type);
+}
+
+std::optional<AssetHandle> poppy::acceptAssetDragDrop(
+    std::span<AssetType const> types) {
+    if (!ImGui::BeginDragDropTarget()) {
+        return std::nullopt;
+    }
+    utl::scope_guard endTarget = [] { ImGui::EndDragDropTarget(); };
+    for (auto type: types) {
+        auto* payload =
+            ImGui::AcceptDragDropPayload(toDragDropType(type).data());
+        if (!payload) {
+            continue;
+        }
+        if (payload->IsDelivery()) {
+            AssetHandle receivedAsset;
+            std::memcpy(&receivedAsset, payload->Data, sizeof receivedAsset);
+            return receivedAsset;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<AssetHandle> poppy::acceptAssetDragDrop(
+    std::initializer_list<AssetType> types) {
+    return acceptAssetDragDrop(std::span(types));
+}
+
 POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser", {});
 
-AssetBrowser::AssetBrowser(): dirView(this) {
+static AssetHandle getHandle(DirectoryEntry const& entry) {
+    auto* handle = std::any_cast<AssetHandle>(&entry.userData);
+    return handle ? *handle : AssetHandle();
+}
+
+AssetBrowser::AssetBrowser() {
+    // clang-format off
+    dirView.setDelegate({
+        .openFile = [this](DirectoryEntry const& entry) {
+            auto handle = getHandle(entry);
+            if (!handle) {
+                return;
+            }
+            openAsset(handle);
+        },
+        .selectIcon = [](DirectoryEntry const& entry) {
+            auto handle = getHandle(entry);
+            switch (handle.type()) {
+            case AssetType::StaticMesh:
+                return "cube";
+            case AssetType::SkeletalMesh:
+                return "cube";
+            case AssetType::Material:
+                return "delicious";
+            case AssetType::MaterialInstance:
+                return "delicious";
+            case AssetType::Scene:
+                return "cubes";
+            case AssetType::ScriptSource:
+                return "file-code";
+            default:
+                return "doc";
+            }
+        },
+        .shallDisplay = [](DirectoryEntry const& entry) {
+            return getHandle(entry).isValid();
+        },
+        .makeUserData = [this](std::filesystem::path const& path) {
+            return assetManager->getHandleFromFile(path);
+        },
+        .popupMenu = [](DirectoryEntry const&) {},
+        .dragdropPayload = [](DirectoryEntry const& entry) {
+            if (auto handle = getHandle(entry)) {
+                ImGui::SetDragDropPayload(toDragDropType(handle.type()).data(),
+                                          &handle, sizeof handle);
+            }
+        },
+    }); // clang-format on
     // clang-format off
     toolbar = {
         ToolbarIconButton("up-open")
@@ -75,7 +152,7 @@ AssetBrowser::AssetBrowser(): dirView(this) {
             .onClick([this] {
                 assetManager->compileScripts();
             })
-    }; // clang-format on
+    };  // clang-format on
     toolbar.setHeight(30);
     setPadding({ -1, 0 });
 }
@@ -209,17 +286,16 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
         break;
     }
     default:
+        Logger::Trace("Cannot open asset of type: ", handle.type());
         break;
     }
 }
 
 void AssetBrowser::init() {
     assetManager = &editor().coreSystems().assetManager();
-    dirView.setAssetManager(assetManager);
     if (!data.projectDir.empty()) {
         openProject(data.projectDir);
     }
-    // Ignore subdirectories for now
 }
 
 void AssetBrowser::shutdown() {}
@@ -262,10 +338,10 @@ void AssetBrowser::openSubdirectory(std::filesystem::path const& path) {
         return openSubdirectory(assetManager->projectRootDir() / path);
     }
     data.currentDir = path;
-    dirView.assignDirectory(path);
+    dirView.openDirectory(path);
 }
 
 void AssetBrowser::refreshFilesystem() {
     assetManager->refreshProject();
-    dirView.assignDirectory(data.currentDir);
+    dirView.openDirectory(data.currentDir);
 }

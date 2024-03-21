@@ -1,164 +1,3 @@
-- EntityID: 4
-  Tag:
-    name: Torus
-  Transform:
-    position:
-      - -770.568848
-      - -1446.53406
-      - 435.729462
-    orientation:
-      - 0.329041094
-      - 0.156011418
-      - -0.207195714
-      - 0.907999039
-    scale:
-      - 3.38999557
-      - 3.3900013
-      - 3.38999581
-  Hierarchy:
-    parent: -1
-    prevSibling: -1
-    nextSibling: -1
-    firstChild: -1
-    lastChild: -1
-  Mesh Renderer:
-    MaterialInstance:
-      AssetType: MaterialInstance
-      AssetID: e26ba1dc b9fd446e f9e537ac c56ff427
-    Mesh:
-      AssetType: StaticMesh
-      AssetID: 767f7dc3 df293401 1990b684 bcdcf9ad
-- EntityID: 3
-  Tag:
-    name: Sky Light
-  Transform:
-    position:
-      - 0
-      - 0
-      - 0
-    orientation:
-      - 1
-      - 0
-      - 0
-      - 0
-    scale:
-      - 1
-      - 1
-      - 1
-  Hierarchy:
-    parent: -1
-    prevSibling: -1
-    nextSibling: -1
-    firstChild: -1
-    lastChild: -1
-  Sky Light:
-    common:
-      color:
-        - 0.661161602
-        - 0.749280274
-        - 0.778088629
-      intensity: 0.0392999984
-- EntityID: 0
-  Tag:
-    name: Floor
-  Transform:
-    position:
-      - 0
-      - 0
-      - 0
-    orientation:
-      - 1
-      - 0
-      - 0
-      - 0
-    scale:
-      - 15.3216629
-      - 15.3861647
-      - 0.629973471
-  Hierarchy:
-    parent: -1
-    prevSibling: -1
-    nextSibling: -1
-    firstChild: -1
-    lastChild: -1
-  Mesh Renderer:
-    MaterialInstance:
-      AssetType: MaterialInstance
-      AssetID: 296ec2ec 58c82aa1 65e93dc2 1a2a8637
-    Mesh:
-      AssetType: StaticMesh
-      AssetID: b0d777f6 216eb44b 8fcc0438 fc12e91d
-- EntityID: 1
-  Tag:
-    name: Directional Light
-  Transform:
-    position:
-      - 0
-      - 0
-      - 0
-    orientation:
-      - 0.921625078
-      - 0.162750691
-      - -0.323592097
-      - 0.139311269
-    scale:
-      - 1.00000024
-      - 0.999998152
-      - 1.00000155
-  Hierarchy:
-    parent: -1
-    prevSibling: -1
-    nextSibling: -1
-    firstChild: -1
-    lastChild: -1
-  Directional Light:
-    common:
-      color:
-        - 1
-        - 0.831541061
-        - 0.476634443
-      intensity: 1.38999999
-    direction:
-      - 0
-      - 0
-      - 0
-    castsShadows: true
-    numCascades: 5
-    shadowDistance: 501
-    shadowDistanceZ: 10000
-    cascadeDistributionExponent: 2
-    cascadeTransitionFraction: 0.0500000007
-    shadowDistanceFadeoutFraction: 0.0500000007
-- EntityID: 2
-  Tag:
-    name: Cube
-  Transform:
-    position:
-      - 0
-      - 0
-      - 321.168365
-    orientation:
-      - 1
-      - 0
-      - 0
-      - 0
-    scale:
-      - 1.8499999
-      - 1.8499999
-      - 1.8499999
-  Hierarchy:
-    parent: -1
-    prevSibling: -1
-    nextSibling: -1
-    firstChild: -1
-    lastChild: -1
-  Mesh Renderer:
-    MaterialInstance:
-      AssetType: MaterialInstance
-      AssetID: 94812734 2da111d0 d27f1d2c bcc5fc0
-    Mesh:
-      AssetType: StaticMesh
-      AssetID: 4493d73d 5336bb5e f7d0b0ad f4d2260b
 - EntityID: 5
   Tag:
     name: Point Light
@@ -194,3 +33,164 @@
       - 0
       - 0
     radius: 100
+- EntityID: 2
+  Tag:
+    name: Cube
+  Transform:
+    position:
+      - 0
+      - 0
+      - 321.168365
+    orientation:
+      - 1
+      - 0
+      - 0
+      - 0
+    scale:
+      - 1.8499999
+      - 1.8499999
+      - 1.8499999
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: -1
+    lastChild: -1
+  Mesh Renderer:
+    MaterialInstance:
+      AssetType: MaterialInstance
+      AssetID: 94812734 2da111d0 d27f1d2c bcc5fc0
+    Mesh:
+      AssetType: StaticMesh
+      AssetID: 4493d73d 5336bb5e f7d0b0ad f4d2260b
+- EntityID: 1
+  Tag:
+    name: Directional Light
+  Transform:
+    position:
+      - -106.183563
+      - 0
+      - 56.6313477
+    orientation:
+      - 0.921625078
+      - 0.162750691
+      - -0.323592097
+      - 0.139311269
+    scale:
+      - 1.00000024
+      - 0.999998152
+      - 1.00000155
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: -1
+    lastChild: -1
+  Directional Light:
+    common:
+      color:
+        - 1
+        - 0.831541061
+        - 0.476634443
+      intensity: 1.38999999
+    direction:
+      - 0
+      - 0
+      - 0
+    castsShadows: true
+    numCascades: 5
+    shadowDistance: 501
+    shadowDistanceZ: 10000
+    cascadeDistributionExponent: 2
+    cascadeTransitionFraction: 0.0500000007
+    shadowDistanceFadeoutFraction: 0.0500000007
+- EntityID: 0
+  Tag:
+    name: Floor
+  Transform:
+    position:
+      - 0
+      - 0
+      - 0
+    orientation:
+      - 1
+      - 0
+      - 0
+      - 0
+    scale:
+      - 15.3216629
+      - 15.3861647
+      - 0.629973471
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: -1
+    lastChild: -1
+  Mesh Renderer:
+    MaterialInstance:
+      AssetType: MaterialInstance
+      AssetID: 296ec2ec 58c82aa1 65e93dc2 1a2a8637
+    Mesh:
+      AssetType: StaticMesh
+      AssetID: b0d777f6 216eb44b 8fcc0438 fc12e91d
+- EntityID: 3
+  Tag:
+    name: Sky Light
+  Transform:
+    position:
+      - 18.1578369
+      - -852.283264
+      - 0
+    orientation:
+      - 1
+      - 0
+      - 0
+      - 0
+    scale:
+      - 1
+      - 1
+      - 1
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: -1
+    lastChild: -1
+  Sky Light:
+    common:
+      color:
+        - 0.661161602
+        - 0.749280274
+        - 0.778088629
+      intensity: 0.0392999984
+- EntityID: 4
+  Tag:
+    name: Torus
+  Transform:
+    position:
+      - -770.568848
+      - -1446.53406
+      - 435.729462
+    orientation:
+      - 0.329041094
+      - 0.156011418
+      - -0.207195714
+      - 0.907999039
+    scale:
+      - 3.38999557
+      - 3.3900013
+      - 3.38999581
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: -1
+    lastChild: -1
+  Mesh Renderer:
+    MaterialInstance:
+      AssetType: MaterialInstance
+      AssetID: e26ba1dc b9fd446e f9e537ac c56ff427
+    Mesh:
+      AssetType: StaticMesh
+      AssetID: 767f7dc3 df293401 1990b684 bcdcf9ad

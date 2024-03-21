@@ -110,7 +110,7 @@ utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
         utl::stack<ImGuiDockNode const*> stack;
         stack.push(mainNode);
         utl::vector<mtl::rectangle<int>> result;
-        while (stack) {
+        while (!stack.empty()) {
             auto* node = stack.pop();
             if ((int)node->Pos.y == (int)mainNode->Pos.y && node->IsVisible &&
                 node != mainNode && (int2)node->Size != (int2)mainNode->Size)
@@ -257,7 +257,7 @@ void Dockspace::displayToolbar() {
     });
 }
 
-void Dockspace::toolbarLayoutOne(utl::small_vector<int, 2> spacing) {
+void Dockspace::toolbarLayoutOne(utl::small_vector<int, 2> /* spacing */) {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     float2 padding = GImGui->Style.WindowPadding;
     float t0Width = toolbars[0].getWidthWithoutSpacers();

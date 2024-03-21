@@ -91,11 +91,7 @@ void Toolbar::display(float width) {
         std::min(ImGui::GetContentRegionAvail().y, style.height);
     cooked &= actualHeight == newHeight;
     this->actualHeight = newHeight;
-
-    //		if (!cooked) {
     cook(!cooked);
-    //		}
-
     position = ImGui::GetCursorPos();
 
     // display blocks
@@ -265,25 +261,18 @@ bool Toolbar::beginCombo(ToolbarDropdownMenu const& menuData, std::size_t index,
     return result;
 }
 
-/// MARK: Cooking
-void Toolbar::cook(bool full) {
+void Toolbar::cook(bool /* full */) {
     blocks.clear();
     cooked = true;
-
     if (items.empty()) {
         return;
     }
-
-    // sort into blocks
-    [this, full] {
-        //			if (!full) { return; }
-
+    /// Sort into blocks
+    [&] {
         blocks.emplace_back();
         blocks.back().itemBeginIndex = 0;
-
         for (std::size_t index = 0; auto& item: items) {
             utl_defer { ++index; };
-
             if (item.type() == ToolbarItemUnion::Type::spacer) {
                 blocks.back().itemEndIndex = index + 1;
                 blocks.emplace_back();
@@ -291,16 +280,13 @@ void Toolbar::cook(bool full) {
                 continue;
             }
         }
-
         blocks.back().itemEndIndex = items.size();
     }();
-
-    // calc item widths
+    /// Calculate item widths
     for (auto& item: items) {
         item.calcWidth(actualHeight);
     }
-
-    // calcs block widths
+    /// calculate block widths
     for (auto& block: blocks) {
         block.width =
             std::accumulate(items.begin() + block.itemBeginIndex,
@@ -315,49 +301,34 @@ void Toolbar::cook(bool full) {
 
 void Toolbar::calcOffsets(float const totalWidth) {
     assert(cooked);
-
     for (auto& block: blocks) {
         block.visible = false;
     }
-
     if (blocks.size() == 0) {
         return;
     }
     float cursor = 0;
     float widthAvail = totalWidth;
-
     blocks[0].offset = cursor;
     blocks[0].visible = true;
-
     if (blocks.size() == 1) {
         return;
     }
-
     cursor += blocks[0].width;
     widthAvail -= blocks[0].width;
-
     auto& lastBlock = blocks.back();
-
     if (lastBlock.width > widthAvail) {
         return;
     }
-
     lastBlock.visible = true;
-
     lastBlock.offset = totalWidth - lastBlock.width;
-
     widthAvail -= lastBlock.width;
-
     if (blocks.size() == 2) {
         return;
     }
-
     if (blocks[1].width > widthAvail) {
         return;
     }
-
     blocks[1].visible = true;
     blocks[1].offset = cursor + (widthAvail - blocks[1].width) / 2;
-    return;
-    // ...
 }

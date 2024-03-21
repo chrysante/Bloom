@@ -1,6 +1,6 @@
 Material:
-  Type: Material
-  ID: 538c05f6 85a62d7 c78e70e2 95eb7c20
+  AssetType: Material
+  AssetID: 1e528bc6 219fdd4f 5f1c504c 41df03ca
 Parameters:
   baseColor:
     - 0.920898557

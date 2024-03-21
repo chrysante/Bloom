@@ -1,4 +1,4 @@
-- ID: 4
+- EntityID: 4
   Tag:
     name: Torus
   Transform:
@@ -23,12 +23,12 @@
     lastChild: -1
   Mesh Renderer:
     MaterialInstance:
-      Type: MaterialInstance
-      ID: da04f1e3 b4355f93 31a0e025 9b48d870
+      AssetType: MaterialInstance
+      AssetID: e26ba1dc b9fd446e f9e537ac c56ff427
     Mesh:
-      Type: StaticMesh
-      ID: 4662c184 7462b026 cf7bf3cc 68289b57
-- ID: 3
+      AssetType: StaticMesh
+      AssetID: 767f7dc3 df293401 1990b684 bcdcf9ad
+- EntityID: 3
   Tag:
     name: Sky Light
   Transform:
@@ -58,7 +58,7 @@
         - 0.749280274
         - 0.778088629
       intensity: 0.0392999984
-- ID: 0
+- EntityID: 0
   Tag:
     name: Floor
   Transform:
@@ -83,12 +83,12 @@
     lastChild: -1
   Mesh Renderer:
     MaterialInstance:
-      Type: MaterialInstance
-      ID: 52ed40a6 8c66dce3 2ffd5b82 6e194672
+      AssetType: MaterialInstance
+      AssetID: 296ec2ec 58c82aa1 65e93dc2 1a2a8637
     Mesh:
-      Type: StaticMesh
-      ID: bcdcf402 25170bda e8da2040 5f961a72
-- ID: 1
+      AssetType: StaticMesh
+      AssetID: b0d777f6 216eb44b 8fcc0438 fc12e91d
+- EntityID: 1
   Tag:
     name: Directional Light
   Transform:
@@ -124,12 +124,12 @@
       - 0
     castsShadows: true
     numCascades: 5
-    shadowDistance: 500
+    shadowDistance: 501
     shadowDistanceZ: 10000
     cascadeDistributionExponent: 2
     cascadeTransitionFraction: 0.0500000007
     shadowDistanceFadeoutFraction: 0.0500000007
-- ID: 2
+- EntityID: 2
   Tag:
     name: Cube
   Transform:
@@ -154,8 +154,43 @@
     lastChild: -1
   Mesh Renderer:
     MaterialInstance:
-      Type: MaterialInstance
-      ID: b6d3a4a1 1118eecc d12b781a cb838476
+      AssetType: MaterialInstance
+      AssetID: 94812734 2da111d0 d27f1d2c bcc5fc0
     Mesh:
-      Type: StaticMesh
-      ID: 10925464 132900ae da598b2c 3f99cd9
+      AssetType: StaticMesh
+      AssetID: 4493d73d 5336bb5e f7d0b0ad f4d2260b
+- EntityID: 5
+  Tag:
+    name: Point Light
+  Transform:
+    position:
+      - 452.60257
+      - 200.863525
+      - 373.688171
+    orientation:
+      - 1
+      - 0
+      - 0
+      - 0
+    scale:
+      - 1
+      - 1
+      - 1
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: -1
+    lastChild: -1
+  Point Light:
+    common:
+      color:
+        - 0.883781731
+        - 0.217455074
+        - 0.668607473
+      intensity: 80300
+    position:
+      - 0
+      - 0
+      - 0
+    radius: 100

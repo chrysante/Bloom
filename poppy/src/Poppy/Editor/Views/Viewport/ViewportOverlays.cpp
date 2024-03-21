@@ -100,10 +100,9 @@ void ViewportOverlays::drawLightOverlays() {
 }
 
 template <>
-void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
+void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
                                            mtl::float2 positionInWindow,
-                                           bool selected,
-                                           Transform const& transform,
+                                           bool selected, Transform const&,
                                            PointLight const& light) {
     drawPointLightIcon(positionInWindow, light.common.color, selected);
 }
@@ -111,8 +110,7 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
 template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
                                            mtl::float2 positionInWindow,
-                                           bool selected,
-                                           Transform const& transform,
+                                           bool selected, Transform const&,
                                            SpotLight const& s) {
     drawSpotLightIcon(positionInWindow, s.common.color);
     if (selected) {
@@ -123,9 +121,9 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
 }
 
 template <>
-void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
+void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
                                            mtl::float2 positionInWindow,
-                                           bool selected,
+                                           bool /* selected */,
                                            Transform const& transform,
                                            DirectionalLight const& light) {
     float3 const lightDirWS = mtl::rotate({ 0, 0, 1 }, transform.orientation);
@@ -133,10 +131,10 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
 }
 
 template <>
-void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
+void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
                                            mtl::float2 positionInWindow,
-                                           bool selected,
-                                           Transform const& transform,
+                                           bool /* selected */,
+                                           Transform const&,
                                            SkyLight const& light) {
     drawSkyLightIcon(positionInWindow, light.common.color);
 }
@@ -172,7 +170,7 @@ void ViewportOverlays::drawSpotLightIcon(mtl::float2 position,
 }
 
 void ViewportOverlays::drawDirectionalLightIcon(mtl::float2 position,
-                                                mtl::float3 directionWS,
+                                                mtl::float3 /* directionWS */,
                                                 mtl::float3 color) {
     float const size = 18;
     float2 const line = float2(-1, 2) * size;

@@ -8,7 +8,7 @@
 namespace poppy {
 
 class EditorRenderer;
-class EditorFramebuffer;
+struct EditorFramebuffer;
 class SelectionContext;
 
 class EditorSceneRenderer: public bloom::SceneRenderer {

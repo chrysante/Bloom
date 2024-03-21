@@ -16,11 +16,9 @@ vertex float4 selectionPassVS(SceneRenderData device const&  scene     [[ buffer
 
 									  uint const             vertexID  [[ vertex_id ]])
 {
-	Vertex3D const v = vertices[vertexID];
-	
-	float4 const vertexPositionMS = float4(v.position, 1);
-	float4 const vertexPositionWS = transform * vertexPositionMS;
-	
+	Vertex3D v = vertices[vertexID];
+	float4 vertexPositionMS = float4(v.position, 1);
+	float4 vertexPositionWS = transform * vertexPositionMS;
 	return scene.camera * vertexPositionWS;
 }
 
@@ -43,8 +41,8 @@ static EdgeDetectResult edgeDetecSampleOffset(texture2d<float> selectionMap,
 {
 	EdgeDetectResult result;
 	result.edge = selectionMap.sample(sampler2D, uv).r;
-	float const depth = depthMap.sample(sampler2D, uv).r;
-	float const selectionDepth = selectionDepthMap.sample(sampler2D, uv).r;
+	float depth = depthMap.sample(sampler2D, uv).r;
+	float selectionDepth = selectionDepthMap.sample(sampler2D, uv).r;
 	result.occluded = selectionDepth > depth;
 	return result;
 }
@@ -57,7 +55,7 @@ static EdgeDetectResult edgeDetect(texture2d<float> selectionMap,
 								   float lineWidth,
 								   float2 screenRes)
 {
-	float2 const uvOffset = lineWidth / screenRes;
+	float2 uvOffset = lineWidth / screenRes;
 	bool occluded = true;
 	float edgeX = 0;
 	EdgeDetectResult result;
@@ -73,7 +71,6 @@ static EdgeDetectResult edgeDetect(texture2d<float> selectionMap,
 								   sampler2D, uv + float2(-uvOffset.x,  uvOffset.y));
 	edgeX +=     result.edge;
 	occluded &= result.occluded;
-
 	result = edgeDetecSampleOffset(selectionMap, depthMap, selectionDepthMap,
 								   sampler2D, uv + float2(uvOffset.x, -uvOffset.y));
 	edgeX -=     result.edge;
@@ -86,7 +83,6 @@ static EdgeDetectResult edgeDetect(texture2d<float> selectionMap,
 								   sampler2D, uv + float2(uvOffset.x,  uvOffset.y));
 	edgeX -=     result.edge;
 	occluded &= result.occluded;
-	
 	float edgeY = 0;
 	result = edgeDetecSampleOffset(selectionMap, depthMap, selectionDepthMap,
 								   sampler2D, uv + float2(-uvOffset.x, -uvOffset.y));
@@ -113,10 +109,7 @@ static EdgeDetectResult edgeDetect(texture2d<float> selectionMap,
 								   sampler2D, uv + float2( uvOffset.x,  uvOffset.y));
 	edgeY -=     result.edge;
 	occluded &= result.occluded;
-
-	
-	float const edge = min(abs(edgeX) + abs(edgeY), 1.0);
-	
+    float edge = min(abs(edgeX) + abs(edgeY), 1.0);
 	return {
 		edge, occluded
 	};
@@ -133,16 +126,14 @@ fragment float4 editorCompositionFS(PPRasterOutput in                          [
 									sampler          sampler2D                 [[ sampler(0) ]])
 {
 	float3 result = postProcessed.sample(sampler2D, in.screenCoords).rgb;
-	float const depth = depthMap.sample(sampler2D, in.screenCoords).r;
+	float depth = depthMap.sample(sampler2D, in.screenCoords).r;
+    (void)depth;
 	if (editor.overlayDrawDesc.drawSelection) {
-		auto const edgeResult = edgeDetect(selectionMap,
-										   depthMap,
-										   selectionDepthMap,
-										   sampler2D,
-										   in.screenCoords,
-										   editor.overlayDrawDesc.selectionLineWidth,
-										   scene.screenResolution);
-		float const edge = edgeResult.occluded ? edgeResult.edge / 3 : edgeResult.edge;
+		auto edgeResult = edgeDetect(selectionMap, depthMap, selectionDepthMap,
+                                     sampler2D, in.screenCoords,
+                                     editor.overlayDrawDesc.selectionLineWidth,
+                                     scene.screenResolution);
+		float edge = edgeResult.occluded ? edgeResult.edge / 3 : edgeResult.edge;
 		result = mix(result, editor.overlayDrawDesc.selectionLineColor.rgb, edge);
 	}
 	return float4(result, 1);
@@ -150,7 +141,6 @@ fragment float4 editorCompositionFS(PPRasterOutput in                          [
 
 struct EditorPassData {
 	float4 positionCS [[ position ]];
-
 	float3 normalWS;
 	float3 positionWS;
 	float3 color;
@@ -162,18 +152,14 @@ vertex EditorPassData editorPassVS(SceneRenderData device const&  scene     [[ b
 								   uint const                     vertexID  [[ vertex_id ]])
 {
 	Vertex3D const v = vertices[vertexID];
-
 	float4 const vertexPositionMS = float4(v.position, 1);
 	float4 const vertexNormalMS   = float4(v.normal, 0);
 	float4 const vertexPositionWS = transform * vertexPositionMS;
-
 	EditorPassData result;
-
 	result.positionCS = scene.camera * vertexPositionWS;
 	result.normalWS   = (transform * vertexNormalMS).xyz;
 	result.positionWS = vertexPositionWS.xyz;
 	result.color      = v.color.rgb;
-
 	return result;
 }
 
@@ -190,16 +176,13 @@ fragment EditorPassFragmentData editorPassFS(EditorPassData in                  
 											 sampler shadowMapSampler                    [[ sampler(0) ]])
 {
 	EditorPassFragmentData result;
-
 	// Editor Properties
 	if (debugData.visualizeShadowCascades) {
-		float3 const shadowCascade = visualizeShadowCascade(0,
-															debugData.shadowCascadeVizCount,
-															debugData.shadowCascadeVizTransforms,
-															float4(in.positionWS, 1));
+		float3 shadowCascade = visualizeShadowCascade(
+            0, debugData.shadowCascadeVizCount,
+            debugData.shadowCascadeVizTransforms, float4(in.positionWS, 1));
 		result.shadowCascade = float4(shadowCascade, 1);
 	}
-
 	return result;
 }
 

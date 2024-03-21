@@ -11,11 +11,11 @@ constexpr sampler bilinSampler(coord::normalized,
 							   address::clamp_to_zero,
 							   filter::linear);
 
-static half3 safeHDR(half3 color) {
+[[maybe_unused]] static half3 safeHDR(half3 color) {
 	return min(color, HALF_MAX);
 }
 
-static half4 safeHDR(half4 color) {
+[[maybe_unused]] static half4 safeHDR(half4 color) {
 	return min(color, HALF_MAX);
 }
 

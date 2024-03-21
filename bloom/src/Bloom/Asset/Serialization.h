@@ -27,14 +27,14 @@ template <>
 struct YAML::convert<bloom::AssetHandle> {
     static Node encode(bloom::AssetHandle const& handle) {
         Node node;
-        node["Type"] = handle.type();
-        node["ID"] = handle.ID();
+        node["AssetType"] = handle.type();
+        node["AssetID"] = handle.ID();
         return node;
     }
 
     static bool decode(Node const& node, bloom::AssetHandle& handle) {
-        handle = bloom::AssetHandle(node["Type"].as<bloom::AssetType>(),
-                                    node["ID"].as<utl::uuid>());
+        handle = bloom::AssetHandle(node["AssetType"].as<bloom::AssetType>(),
+                                    node["AssetID"].as<utl::uuid>());
         return true;
     }
 };

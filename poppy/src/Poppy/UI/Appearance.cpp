@@ -76,7 +76,8 @@ static void applyStyle(poppy::Style const& style) {
 
 Appearance poppy::appearance{};
 
-StyleColors poppy::makeStyle(float hue, StyleColorDescription const& desc) {
+StyleColors poppy::makeStyle(float /* hue */,
+                             StyleColorDescription const& desc) {
     StyleColors result{};
     result.text = mtl::hsva_to_rgba(desc.text);
     result.textDisabled = mtl::hsva_to_rgba(desc.textDisabled);
@@ -182,7 +183,7 @@ static StyleColorDescription toColorDesc(SystemAppearance const& a) {
     return desc;
 }
 
-void Appearance::showInspector(bool* open) {
+void Appearance::showInspector(bool* /* open */) {
     ImGui::Begin("Style Editor");
     bool update = false;
     if (ImGui::Button("Reset")) {

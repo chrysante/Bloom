@@ -98,6 +98,8 @@ static FileExtension toExtension(AssetType type) {
         return FileExtension::Bscene;
     case AssetType::ScriptSource:
         return FileExtension::Scatha;
+    case AssetType::Invalid:
+        BL_UNREACHABLE();
     }
 }
 
@@ -177,6 +179,9 @@ struct AssetManager::Impl {
 
     ///
     std::fstream openRegistryFile();
+
+    ///
+    void clearRegistryFile();
 
     /// Loads every entry from the registry on disk into memory
     /// Opens the registry file or creates one if it doesn't exist.
@@ -341,18 +346,27 @@ void AssetManager::refreshProject() {
 std::fstream Impl::openRegistryFile() {
     BL_EXPECT(std::filesystem::is_directory(rootDir));
     BL_EXPECT(std::filesystem::exists(rootDir));
+    return openOrCreateFile(rootDir / registryFilePath());
+}
+
+void Impl::clearRegistryFile() {
     auto path = rootDir / registryFilePath();
-    std::fstream file(path, std::ios::in | std::ios::out);
-    if (!file) {
-        /// Create the file if it doesn't exist
-        file.open(path, std::ios::trunc | std::ios::in | std::ios::out);
-    }
-    return file;
+    (void)std::fstream(path, std::ios::trunc | std::ios::out);
 }
 
 void Impl::openRegistry() {
     auto file = openRegistryFile();
-    YAML::Node root = YAML::Load(file);
+    YAML::Node root;
+    try {
+        root = YAML::Load(file);
+    }
+    catch (YAML::ParserException const& e) {
+        // TODO: Try to save what we can from the existing registry file
+        Logger::Error("Failed to parse registry: ", e.what(),
+                      " - Deleting existing registry file");
+        clearRegistryFile();
+        return;
+    }
     if (root.IsNull()) {
         Logger::Trace("Empty registery, creating new registry");
         return;
@@ -861,8 +875,7 @@ void Impl::flushToDiskImpl(SkeletalMesh const&, std::filesystem::path const&) {
     BL_UNIMPLEMENTED();
 }
 
-void Impl::flushToDiskImpl(Material const& mat,
-                           std::filesystem::path const& dest) {
+void Impl::flushToDiskImpl(Material const&, std::filesystem::path const& dest) {
     /// Since we don't have any material representation yet we only create the
     /// file and return
     (void)openOrCreateFile(dest,

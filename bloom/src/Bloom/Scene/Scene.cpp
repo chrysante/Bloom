@@ -107,7 +107,7 @@ static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
 
 static YAML::Node serializeEntity(Scene const& scene, EntityID id) {
     YAML::Node node;
-    node["ID"] = id.raw();
+    node["EntityID"] = id.raw();
     auto entity = scene.getHandle(id);
     forEachComponent(except<TransformMatrixComponent>,
                      [&]<typename T>(utl::tag<T>) {
@@ -118,7 +118,7 @@ static YAML::Node serializeEntity(Scene const& scene, EntityID id) {
 
 static void deserializeEntity(YAML::Node const& node, Scene& scene,
                               AssetManager& assetManager) {
-    EntityID reference(node["ID"].as<EntityID::RawType>());
+    EntityID reference(node["EntityID"].as<EntityID::RawType>());
     EntityID id = scene.createEmptyEntity(reference);
     auto entity = scene.getHandle(id);
     entity.add(TransformMatrixComponent{});

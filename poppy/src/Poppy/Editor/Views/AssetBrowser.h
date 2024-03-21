@@ -42,6 +42,7 @@ private:
     void init() override;
     void shutdown() override;
     void frame() override;
+    void onInput(bloom::InputEvent& event) override { dirView.onInput(event); }
 
     YAML::Node serialize() const override;
     void deserialize(YAML::Node) override;
@@ -55,7 +56,6 @@ private:
     void openSubdirectory(std::filesystem::path const&);
     void refreshFilesystem();
 
-private:
     /// The applications asset manager, will be set by ???
     bloom::AssetManager* assetManager = nullptr;
 

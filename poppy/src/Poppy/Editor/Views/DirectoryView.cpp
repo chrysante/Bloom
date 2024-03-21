@@ -70,6 +70,27 @@ void DirectoryView::openDirectory(std::filesystem::path const& dir) {
 
 void DirectoryView::rescan() { openDirectory(currentDirectory); }
 
+/// \Returns
+static bool isDeleteEntryKey(KeyEvent event) {
+#if __APPLE__
+    return event.key == Key::Backspace &&
+           test(event.modifierFlags & ModFlags::Super);
+#endif
+    return false;
+}
+
+void DirectoryView::onInput(InputEvent& event) {
+    event.dispatch<InputEventMask::KeyDown>([this](KeyEvent event) {
+        if (isDeleteEntryKey(event)) {
+            if (interaction.selectedIndex >= 0) {
+                deleteEntry(entries[interaction.selectedIndex]);
+                return true;
+            }
+        }
+        return false;
+    });
+}
+
 namespace {
 
 enum class EntryButtonState { None, Selected, Activated };
@@ -335,6 +356,16 @@ void DirectoryView::applyRenaming(DirectoryEntry const& entry) {
 void DirectoryView::cancelRenaming() {
     interaction.renamingIndex = -1;
     interaction.renameBuffer = {};
+}
+
+void DirectoryView::deleteEntry(DirectoryEntry const& entry) {
+    if (delegate.deleteEntry) {
+        delegate.deleteEntry(entry);
+        rescan();
+    }
+    else {
+        Logger::Warn("Not deleting because no deletion handler is set");
+    }
 }
 
 bool DirectoryView::shallDisplay(DirectoryEntry const& entry) const {

@@ -10,6 +10,8 @@
 #include <mtl/mtl.hpp>
 #include <utl/vector.hpp>
 
+#include "Bloom/Application/InputEvent.h"
+
 namespace poppy {
 
 /// Passed to directory view callbacks
@@ -29,6 +31,9 @@ struct DirectoryViewDelegate {
 
     /// Callback to handle renaming of directory entries
     std::function<void(DirectoryEntry const&, std::string newName)> renameEntry;
+
+    /// Callback to handle deletion of directory entries
+    std::function<void(DirectoryEntry const&)> deleteEntry;
 
     /// Shall return a CSS icon name for the given file. This will change in the
     /// future when we have proper thumbnails. If this is null a default icon
@@ -70,6 +75,9 @@ public:
     void setDelegate(DirectoryViewDelegate delegate) {
         this->delegate = delegate;
     }
+
+    /// 
+    void onInput(bloom::InputEvent& event);
 
     /// # Private types declared public for simplified implementation
 
@@ -121,6 +129,7 @@ private:
     void startRenaming(DirectoryEntry const& entry, int index);
     void applyRenaming(DirectoryEntry const& entry);
     void cancelRenaming();
+    void deleteEntry(DirectoryEntry const& entry);
     bool shallDisplay(DirectoryEntry const& entry) const;
     std::string selectIconName(DirectoryEntry const& entry) const;
     std::any makeUserData(std::filesystem::directory_entry const& entry) const;

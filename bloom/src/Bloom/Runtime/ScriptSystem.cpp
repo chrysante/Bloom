@@ -22,6 +22,56 @@
 #include "Bloom/Scene/SceneEvents.h"
 
 using namespace bloom;
+using namespace mtl;
+
+template <typename... T>
+    requires(std::is_standard_layout_v<T> && ...)
+static auto toWordArray(T const&... args) {
+    static constexpr size_t NumWords = (utl::ceil_divide(sizeof(T), 8) + ...);
+    std::array<uint64_t, NumWords> data{};
+    size_t i = 0;
+    (
+        [&] {
+        std::memcpy(&data[i], &args, sizeof args);
+        i += utl::ceil_divide(sizeof(T), 8);
+    }(),
+        ...);
+    return data;
+}
+
+namespace {
+
+struct ScriptTransform {
+    packed_double3 position;
+    packed_double3 scale;
+};
+
+struct ScriptEntityHandle {
+    EntityID::RawType ID;
+    Scene* scene;
+
+    explicit ScriptEntityHandle(EntityHandle e):
+        ID(e.ID().raw()), scene(&e.scene()) {}
+
+    EntityHandle asEntityHandle() const {
+        return EntityHandle(EntityID(ID), scene);
+    }
+};
+
+} // namespace
+
+__attribute__((visibility("default"))) extern "C" ScriptTransform
+    bloomGetEntityTransform(ScriptEntityHandle entity) {
+    auto& t = entity.asEntityHandle().get<Transform const>();
+    return ScriptTransform{ t.position, t.scale };
+}
+
+__attribute__((visibility("default"))) extern "C" void bloomSetEntityTransform(
+    ScriptEntityHandle entity, ScriptTransform source) {
+    auto& dest = entity.asEntityHandle().get<Transform>();
+    dest.position = source.position;
+    dest.scale = source.scale;
+}
 
 struct ScriptSystem::Impl {
     std::optional<scatha::Target> target;
@@ -47,23 +97,37 @@ void ScriptSystem::init() {
 }
 
 static uint64_t allocateObject(svm::VirtualMachine& VM,
-                               scatha::sema::StructType const* type) {
+                               scatha::sema::StructType const* type,
+                               EntityHandle handle) {
     auto addr = VM.allocateMemory(type->size(), type->align());
     auto bitAddr = std::bit_cast<uint64_t>(addr);
-    auto ctor = type->lifetimeMetadata().defaultConstructor();
+    auto ctors = type->findFunctions("new");
+    if (ctors.empty()) {
+        std::memset(VM.derefPointer(addr, type->size()), 0, type->size());
+        return bitAddr;
+    }
+    if (ctors.size() > 1) {
+        Logger::Warn(
+            "'", type->name(),
+            "' has multiple constructors; selecting unspecified constructor");
+    }
+    VM.execute(ctors.front()->binaryAddress().value(),
+               toWordArray(bitAddr, ScriptEntityHandle(handle)));
+    return bitAddr;
+    /// More rigorous implementation, but we're hacking around right now
+#if 0
     using enum scatha::sema::LifetimeOperation::Kind;
     switch (ctor.kind()) {
     case Trivial:
         std::memset(VM.derefPointer(addr, type->size()), 0, type->size());
         return bitAddr;
     case Nontrivial:
-        VM.execute(ctor.function()->binaryAddress().value(),
-                   std::array{ bitAddr });
-        return bitAddr;
+        
     default:
         Logger::Error("Cannot instantiate type without default constructor");
         return 0;
     }
+#endif
 }
 
 void ScriptSystem::onScriptCompile(Scene& scene) {
@@ -92,38 +156,40 @@ void ScriptSystem::deserializeScript(ScriptComponent& component,
 
 void ScriptSystem::onSceneConstruction(Scene&) {}
 
+static void runGuarded(auto&& f) {
+    try {
+        f();
+    }
+    catch (svm::RuntimeException const& e) {
+        Logger::Error("Script execution error: ", e.what());
+    }
+}
+
 void ScriptSystem::onSceneInit(Scene& scene) {
     if (!impl->target) {
         return;
     }
-    scene.view<ScriptComponent>().each([&](ScriptComponent& component) {
-        if (component.type) {
-            component.objectAddress = allocateObject(impl->VM, component.type);
+    scene.view<ScriptComponent>().each(
+        [&](EntityID ID, ScriptComponent& component) {
+        if (!component.type) {
+            return;
         }
+        runGuarded([&] {
+            component.objectAddress = allocateObject(impl->VM, component.type,
+                                                     EntityHandle(ID, &scene));
+        });
     });
-}
-
-template <typename... T>
-    requires(std::is_trivial_v<T> && ...)
-static auto toWordArray(T const&... args) {
-    static constexpr size_t NumWords = (utl::ceil_divide(sizeof(T), 8) + ...);
-    std::array<uint64_t, NumWords> data{};
-    size_t i = 0;
-    (
-        [&] {
-        std::memcpy(&data[i], &args, sizeof args);
-        i += utl::ceil_divide(sizeof(T), 8);
-    }(),
-        ...);
-    return data;
 }
 
 void ScriptSystem::onSceneUpdate(Scene& scene, Timestep timestep) {
     scene.view<ScriptComponent>().each([&](ScriptComponent& component) {
-        if (component.objectAddress && component.updateFunction) {
+        if (!component.objectAddress || !component.updateFunction) {
+            return;
+        }
+        runGuarded([&] {
             impl->VM.execute(component.updateFunction->binaryAddress().value(),
                              toWordArray(component.objectAddress, timestep));
-        }
+        });
     });
 }
 
@@ -143,5 +209,6 @@ void ScriptSystem::scriptsDidCompile() {
         return;
     }
     auto& target = *impl->target;
+    impl->VM.reset();
     impl->VM.loadBinary(target.binary().data());
 }

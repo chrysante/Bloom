@@ -4,6 +4,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include "Bloom/Application/InputInternal.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/Swapchain.h"
@@ -13,14 +14,19 @@
 using namespace mtl::short_types;
 using namespace bloom;
 
-void Window::pollEvents() { glfwPollEvents(); }
+void Window::PollEvents() { glfwPollEvents(); }
 
-void Window::initWindowSystem() {
-    int const status = glfwInit();
-    if (status != GLFW_TRUE) {
+void Window::WaitEvents() { glfwWaitEvents(); }
+
+void Window::InitWindowSystem() {
+    if (!glfwInit()) {
         Logger::Fatal("Failed to initialize GLFW");
-        std::terminate();
+        std::exit(1);
     }
+}
+
+std::unique_ptr<Window> Window::Create(WindowDescription const& desc) {
+    return std::unique_ptr<Window>(new Window(desc));
 }
 
 Window::Window(WindowDescription const& d) {
@@ -29,7 +35,7 @@ Window::Window(WindowDescription const& d) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     auto* const w = glfwCreateWindow(desc.size.x, desc.size.y,
                                      desc.title.data(), nullptr, nullptr);
-    glfwWindowPtr = std::unique_ptr<void, Deleter>(w);
+    glfwWindowPtr = std::unique_ptr<void, GLFWDeleter>(w);
     platformInit();
     glfwSetWindowUserPointer(GLFW_WND, this);
     glfwGetWindowPos(GLFW_WND, &desc.position.x, &desc.position.y);
@@ -48,54 +54,51 @@ void Window::createDefaultSwapchain(HardwareDevice& device,
     swapchainDesc.displaySync = true;
     swapchainDesc.size = size() * contentScaleFactor();
     swapchainDesc.backBufferCount = backbufferCount;
-
-    auto swapchain = device.createSwapchain(swapchainDesc);
-    setSwapchain(std::move(swapchain));
+    setSwapchain(device.createSwapchain(swapchainDesc));
 }
 
 void Window::setCommandQueue(std::unique_ptr<CommandQueue> queue) {
     _commandQueue = std::move(queue);
 }
 
-void Window::beginFrame() {}
+void Window::endFrame() { userInput.endFrame(); }
 
-void Window::endFrame() {
-    userInput._mouseOffset = 0;
-    userInput._scrollOffset = 0;
+void Window::onInput(std::function<void(InputEvent const&)> f) {
+    callbacks.onInputFn = std::move(f);
 }
 
-void Window::onInput(utl::function<void(InputEvent const&)> f) {
-    onInputFn = std::move(f);
-}
-
-void Window::onCharInput(utl::function<void(unsigned)> f) {
-    onCharInputFn = std::move(f);
+void Window::onTextInput(std::function<void(unsigned)> f) {
+    callbacks.onCharInputFn = std::move(f);
 }
 
 void Window::onFileDrop(
-    utl::function<void(utl::vector<std::filesystem::path> const&)> f) {
-    onFileDropFn = std::move(f);
+    std::function<void(std::span<std::filesystem::path const>)> f) {
+    callbacks.onFileDropFn = std::move(f);
 }
 
-void Window::onMove(utl::function<void(mtl::int2 newPosition)> f) {
-    onMoveFn = std::move(f);
+void Window::onMove(std::function<void(mtl::int2 newPosition)> f) {
+    callbacks.onMoveFn = std::move(f);
 }
 
-void Window::onResize(utl::function<void(mtl::int2 newSize)> f) {
-    onResizeFn = std::move(f);
+void Window::onResize(std::function<void(mtl::int2 newSize)> f) {
+    callbacks.onResizeFn = std::move(f);
 }
 
-void Window::onFocus(utl::function<void()> f) { onFocusFn = std::move(f); }
-
-void Window::onFocusLoss(utl::function<void()> f) {
-    onFocusLossFn = std::move(f);
+void Window::onFocus(std::function<void()> f) {
+    callbacks.onFocusFn = std::move(f);
 }
 
-void Window::onClose(utl::function<void()> f) { onCloseFn = std::move(f); }
+void Window::onFocusLoss(std::function<void()> f) {
+    callbacks.onFocusLossFn = std::move(f);
+}
+
+void Window::onClose(std::function<void()> f) {
+    callbacks.onCloseFn = std::move(f);
+}
 
 void Window::onContentScaleChange(
-    utl::function<void(mtl::float2 newContentScale)> f) {
-    onContentScaleChangeFn = std::move(f);
+    std::function<void(mtl::float2 newContentScale)> f) {
+    callbacks.onContentScaleChangeFn = std::move(f);
 }
 
 bool Window::shouldClose() const {
@@ -215,23 +218,20 @@ void Window::setCallbacks() {
         window.userInput
             ._mouseButtons[(std::size_t)mouseButtonFromGLFW(button)] = action;
         window.userInput._modFlags = modFlagsFromGLFW(mods);
-        if (window.onInputFn) {
+        if (window.callbacks.onInputFn) {
             auto const event = inputEventFromGLFWMouseButton(window.userInput,
                                                              button, action,
                                                              mods);
-            window.onInputFn(event);
+            window.callbacks.onInputFn(event);
         }
     });
 
     glfwSetCursorPosCallback(GLFW_WND,
                              [](GLFWwindow* w, double xpos, double ypos) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        float2 currentPos = { xpos, ypos };
-        float2 lastPos = window.userInput._mousePosition;
-        window.userInput._mousePosition = currentPos;
-        window.userInput._mouseOffset = currentPos - lastPos;
-        if (window.onInputFn) {
-            window.onInputFn(
+        window.userInput.setMousePosition({ xpos, ypos });
+        if (window.callbacks.onInputFn) {
+            window.callbacks.onInputFn(
                 inputEventFromGLFWCursorPos(window.userInput, xpos, ypos));
         }
     });
@@ -244,9 +244,9 @@ void Window::setCallbacks() {
     glfwSetScrollCallback(GLFW_WND,
                           [](GLFWwindow* w, double xoffset, double yoffset) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.userInput._scrollOffset = { xoffset, yoffset };
-        if (window.onInputFn) {
-            window.onInputFn(
+        window.userInput.setScrollOffset({ xoffset, yoffset });
+        if (window.callbacks.onInputFn) {
+            window.callbacks.onInputFn(
                 inputEventFromGLFWScroll(window.userInput, xoffset, yoffset));
         }
     });
@@ -271,16 +271,17 @@ void Window::setCallbacks() {
             break;
         }
         window.userInput._modFlags = modFlagsFromGLFW(mods);
-        if (window.onInputFn) {
-            window.onInputFn(inputEventFromGLFWKey(window.userInput, key,
-                                                   scancode, action, mods));
+        if (window.callbacks.onInputFn) {
+            window.callbacks.onInputFn(inputEventFromGLFWKey(window.userInput,
+                                                             key, scancode,
+                                                             action, mods));
         }
     });
 
     glfwSetCharCallback(GLFW_WND, [](GLFWwindow* w, unsigned int codepoint) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        if (window.onCharInputFn) {
-            window.onCharInputFn(codepoint);
+        if (window.callbacks.onCharInputFn) {
+            window.callbacks.onCharInputFn(codepoint);
         }
     });
 
@@ -292,18 +293,17 @@ void Window::setCallbacks() {
         for (int i = 0; i < pathCount; ++i) {
             pathVec.push_back(std::filesystem::path(paths[i]));
         }
-        if (window.onFileDropFn) {
-            window.onFileDropFn(pathVec);
+        if (window.callbacks.onFileDropFn) {
+            window.callbacks.onFileDropFn(pathVec);
         }
     });
 
     glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         int2 pos = { posx, posy };
-        Logger::Trace(pos);
         window.desc.position = pos;
-        if (window.onMoveFn) {
-            window.onMoveFn(pos);
+        if (window.callbacks.onMoveFn) {
+            window.callbacks.onMoveFn(pos);
         }
     });
 
@@ -313,27 +313,26 @@ void Window::setCallbacks() {
         int2 newSize = { sizex, sizey };
         window.desc.size = newSize;
         window.resizeSwapchain(newSize);
-        if (window.onResizePrivateFn) {
-            window.onResizePrivateFn(newSize);
+        if (window.callbacks.onResizePrivateFn) {
+            window.callbacks.onResizePrivateFn(newSize);
         }
-        if (window.onResizeFn) {
-            window.onResizeFn(newSize);
+        if (window.callbacks.onResizeFn) {
+            window.callbacks.onResizeFn(newSize);
         }
     });
 
     glfwSetWindowFocusCallback(GLFW_WND, [](GLFWwindow* w, int focus) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-
         if (focus == GLFW_TRUE) {
             window.desc.focused = true;
-            if (window.onFocusFn) {
-                window.onFocusFn();
+            if (window.callbacks.onFocusFn) {
+                window.callbacks.onFocusFn();
             }
         }
         else {
             window.desc.focused = false;
-            if (window.onFocusLossFn) {
-                window.onFocusLossFn();
+            if (window.callbacks.onFocusLossFn) {
+                window.callbacks.onFocusLossFn();
             }
         }
     });
@@ -341,8 +340,8 @@ void Window::setCallbacks() {
     glfwSetWindowCloseCallback(GLFW_WND, [](GLFWwindow* w) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         window.desc.shallPreventClose = false;
-        if (window.onCloseFn) {
-            window.onCloseFn();
+        if (window.callbacks.onCloseFn) {
+            window.callbacks.onCloseFn();
         }
     });
 
@@ -351,8 +350,8 @@ void Window::setCallbacks() {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         float2 contentScale = { x, y };
         window.desc.contentScaleFactor = contentScale;
-        if (window.onContentScaleChangeFn) {
-            window.onContentScaleChangeFn(contentScale);
+        if (window.callbacks.onContentScaleChangeFn) {
+            window.callbacks.onContentScaleChangeFn(contentScale);
         }
     });
 }
@@ -363,6 +362,6 @@ void Window::resizeSwapchain(mtl::int2 newSize) {
     }
 }
 
-void Window::Deleter::operator()(void* ptr) const {
+void Window::GLFWDeleter::operator()(void* ptr) const {
     glfwDestroyWindow((GLFWwindow*)ptr);
 }

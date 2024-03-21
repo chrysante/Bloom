@@ -16,8 +16,20 @@ std::unique_ptr<HardwareDevice> bloom::createMetalDevice() {
     return std::make_unique<MetalDevice>();
 }
 
+/// TODO: Expose this through the UI
+static id<MTLDevice> selectDevice() {
+    NSArray* devices = MTLCopyAllDevices();
+    for (unsigned i = 0; i < devices.count; ++i) {
+        id<MTLDevice> device = [devices objectAtIndex:i];
+        if (!device.isLowPower) {
+            return device;
+        }
+    }
+    return nil;
+}
+
 MetalDevice::MetalDevice() {
-    device = MTLCreateSystemDefaultDevice();
+    device = selectDevice();
     shaderLib = [device newDefaultLibrary];
 }
 

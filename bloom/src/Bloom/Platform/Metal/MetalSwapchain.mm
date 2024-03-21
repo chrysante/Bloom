@@ -17,7 +17,7 @@ MetalSwapchain::MetalSwapchain(id<MTLDevice> device, SwapchainDescription const&
     layer = [[CAMetalLayer alloc] init];
     layer.device = device;
     layer.pixelFormat = (MTLPixelFormat)desc.pixelFormat;
-    layer.drawableSize = CGSize{ static_cast<CGFloat>(desc.size.x), static_cast<CGFloat>(desc.size.y) };
+    layer.drawableSize = CGSize{ (CGFloat)desc.size.x, (CGFloat)desc.size.y };
     layer.maximumDrawableCount = desc.backBufferCount;
     layer.displaySyncEnabled = desc.displaySync;
     this->desc = desc;

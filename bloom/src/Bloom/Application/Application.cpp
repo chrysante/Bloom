@@ -39,21 +39,35 @@ utl::small_vector<Window*> Application::getWindows() {
     return result;
 }
 
-Window& Application::createWindow(WindowDescription const& windowDesc,
+Window& Application::createWindow(WindowDescription const& desc,
                                   std::unique_ptr<WindowDelegate> delegate) {
-    auto window = std::make_unique<Window>(windowDesc);
-    window->onResizePrivateFn = [this](int2) { doFrame(); };
+    auto window = Window::Create(desc);
+    window->callbacks.onResizePrivateFn = [this](int2) { doFrame(); };
     delegate->wnd = window.get();
     delegate->init();
     mWindows.push_back({ std::move(window), std::move(delegate) });
     return *mWindows.back().window;
 }
 
+static void handleEvents(RunLoopMode mode) {
+    using enum RunLoopMode;
+    switch (mode) {
+    case EventDriven:
+        Window::WaitEvents();
+        break;
+    case Realtime:
+        Window::PollEvents();
+        break;
+    default:
+        BL_UNREACHABLE();
+    }
+}
+
 void Application::run() {
     doInit();
     while (!mWindows.empty()) {
         doFrame();
-        Window::pollEvents();
+        handleEvents(mRunLoopMode);
         clearClosingWindows();
     }
     doShutdown();
@@ -61,7 +75,7 @@ void Application::run() {
 
 void Application::doInit() {
     registerListeners();
-    Window::initWindowSystem();
+    Window::InitWindowSystem();
     mCoreSystems.init();
     this->init();
     mTimer.reset();
@@ -86,7 +100,6 @@ void Application::doFrame() {
     this->frame();
     BLOOM_AUTORELEASE_END
     for (auto&& [window, delegate]: mWindows) {
-        window->beginFrame();
         if (delegate) {
             auto& d = *delegate;
             BLOOM_AUTORELEASE_BEGIN
@@ -112,3 +125,5 @@ void Application::clearClosingWindows() {
         }
     }
 }
+
+void Application::setRunLoopMode(RunLoopMode mode) { mRunLoopMode = mode; }

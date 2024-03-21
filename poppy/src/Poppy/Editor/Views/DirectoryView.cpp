@@ -47,30 +47,29 @@ std::optional<AssetHandle> poppy::acceptAssetDragDrop(
 }
 
 void DirectoryView::display() {
-    ImGui::BeginChild("Asset Browser DirView");
-    {
-        contentSize = ImGui::GetWindowSize();
-        cursor = 0;
-        itemIndex = 0;
-        for (auto&& folderName: foldersInCurrentDir) {
-            if (displayItem(folderName)) {
-            }
-        }
-        for (auto&& asset: assetsInCurrentDir) {
-            if (displayItem(assetManager->getName(asset), asset)) {
-                browser->openAsset(asset);
-            }
-        }
-        /// Add spacing at the end
-        if (cursor.x > 0) {
-            bool const forceLineBreak = true;
-            advanceCursor(forceLineBreak);
-        }
-        ImGui::SetCursorPos(cursor);
-        ImGui::PushStyleColor(ImGuiCol_Separator, 0);
-        ImGui::Separator();
-        ImGui::PopStyleColor();
+    if (!ImGui::BeginChild("Asset Browser DirView")) {
+        return;
     }
+    contentSize = ImGui::GetWindowSize();
+    cursor = 0;
+    itemIndex = 0;
+    for (auto&& folderName: foldersInCurrentDir) {
+        displayItem(folderName);
+    }
+    for (auto&& asset: assetsInCurrentDir) {
+        if (displayItem(assetManager->getName(asset), asset)) {
+            browser->openAsset(asset);
+        }
+    }
+    /// Add spacing at the end
+    if (cursor.x > 0) {
+        bool const forceLineBreak = true;
+        advanceCursor(forceLineBreak);
+    }
+    ImGui::SetCursorPos(cursor);
+    ImGui::PushStyleColor(ImGuiCol_Separator, 0);
+    ImGui::Separator();
+    ImGui::PopStyleColor();
     ImGui::EndChild();
 }
 

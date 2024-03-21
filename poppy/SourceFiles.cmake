@@ -7,8 +7,6 @@ set(poppy_sources
 
   src/Poppy/Editor/Editor.cpp
   src/Poppy/Editor/Editor.h
-  src/Poppy/Editor/EditorWindowDelegate.cpp
-  src/Poppy/Editor/EditorWindowDelegate.h
   src/Poppy/Editor/SelectionContext.cpp
   src/Poppy/Editor/SelectionContext.h
   src/Poppy/Editor/Views/AssetBrowser.cpp

@@ -2,11 +2,12 @@
 #define BLOOM_APPLICATION_WINDOW_H
 
 #include <filesystem>
+#include <functional>
 #include <memory>
+#include <span>
+#include <string>
 
 #include <mtl/mtl.hpp>
-#include <string>
-#include <utl/functional.hpp>
 #include <utl/utility.hpp>
 
 #include "Bloom/Application/Input.h"
@@ -21,10 +22,10 @@ class HardwareDevice;
 class Application;
 
 ///
-BLOOM_API void showSaveView(utl::function<void(std::string)> completion);
+BLOOM_API void showSaveView(std::function<void(std::string)> completion);
 
 ///
-BLOOM_API void showOpenView(utl::function<void(std::string)> completion);
+BLOOM_API void showOpenView(std::function<void(std::string)> completion);
 
 /// Constructor arguments for a window
 struct WindowDescription {
@@ -34,101 +35,145 @@ struct WindowDescription {
     /// The initial size of the window
     mtl::int2 size = 0;
 
-    ///
+    /// Set to true to make the window automatically resize the swapchain when
+    /// window size changes
     bool autoResizeSwapchain = true;
 
     /// This is ignored for now
     bool fullscreen = false;
 };
 
-///
+/// Wraps a native window handle
 class BLOOM_API Window {
     friend class Application;
 
 public:
     /// Must be called before creating any windows
-    static void initWindowSystem();
+    static void InitWindowSystem();
 
-    /// Must be called in regular intervals to handle window interaction
-    static void pollEvents();
+    /// Polls OS event like input and window movement and returns after calling
+    /// event callbacks
+    static void PollEvents();
 
-public:
-    ///
-    Window(WindowDescription const& desc);
+    /// Waits for OS events like input and window movement and returns after
+    /// calling event callbacks
+    static void WaitEvents();
 
+    /// Creates and shows a window with description \p desc
+    static std::unique_ptr<Window> Create(WindowDescription const& desc);
+
+    /// Windows are not copyable because we require address stability
+    /// @{
     Window(Window const&) = delete;
     Window& operator=(Window const&) = delete;
+    /// @}
+
+    ///
     ~Window();
 
-    void createDefaultSwapchain(HardwareDevice&,
-                                std::size_t backbufferCount = 2);
-    void setSwapchain(std::unique_ptr<Swapchain>);
-    void setCommandQueue(std::unique_ptr<CommandQueue>);
+    /// Creates a swapchain with default settings and sets it as this windows
+    /// swapchain
+    void createDefaultSwapchain(HardwareDevice& device,
+                                std::size_t backbufferCount = 3);
 
-    void beginFrame();
+    /// Sets \p swapchain as this windows swapchain
+    void setSwapchain(std::unique_ptr<Swapchain> swapchain);
+
+    /// Sets \p commandQueue as this windows command queue
+    void setCommandQueue(std::unique_ptr<CommandQueue> commandQueue);
+
+    /// Resets the scroll and mouse offset in the input class so this must be
+    /// called after each frame. This is not pretty but we go with it for now.
     void endFrame();
 
-    void onInput(utl::function<void(InputEvent const&)>);
-    void onCharInput(utl::function<void(unsigned int)>);
+    /// Sets the input callback to \p callback
+    void onInput(std::function<void(InputEvent const& event)> callback);
+
+    /// Sets the text input callback to \p callback
+    void onTextInput(std::function<void(unsigned int)>);
+
+    /// Sets the file drop callback to \p callback
     void onFileDrop(
-        utl::function<void(utl::vector<std::filesystem::path> const&)>);
+        std::function<void(std::span<std::filesystem::path const>)>);
 
-    void onMove(utl::function<void(mtl::int2 newPosition)>);
-    void onResize(utl::function<void(mtl::int2 newSize)>);
-    void onFocus(utl::function<void()>);
-    void onFocusLoss(utl::function<void()>);
+    /// Sets the move callback to \p callback
+    void onMove(std::function<void(mtl::int2 newPosition)>);
 
-    void onClose(utl::function<void()>);
+    /// Sets the resize callback to \p callback
+    void onResize(std::function<void(mtl::int2 newSize)>);
 
-    void onContentScaleChange(utl::function<void(mtl::float2 newContentScale)>);
+    /// Sets the focus gain callback to \p callback
+    void onFocus(std::function<void()>);
 
+    /// Sets the focus loss callback to \p callback
+    void onFocusLoss(std::function<void()>);
+
+    /// Sets the close loss callback to \p callback
+    void onClose(std::function<void()>);
+
+    /// Sets the content scale change loss callback to \p callback
+    void onContentScaleChange(std::function<void(mtl::float2 newContentScale)>);
+
+    /// \Returns the window's swapchain
     Swapchain& swapchain() { return *_swapchain; }
+
+    /// \Returns the window's command queue
     CommandQueue& commandQueue() { return *_commandQueue; }
+
+    /// \Returns the window's input
     Input const& input() const { return userInput; }
 
-    std::string_view title() const { return desc.title; }
+    /// \Returns the window title
+    std::string const& title() const { return desc.title; }
+
+    /// \Returns the window's position on the monitor
     mtl::int2 position() const { return desc.position; }
+
+    /// \Returns the window's size
     mtl::int2 size() const { return desc.size; }
+
+    /// \Returns `true` if this window is currently focused
     bool focused() const { return desc.focused; }
+
+    /// \Returns the window's contant scale factor
     mtl::float2 contentScaleFactor() const { return desc.contentScaleFactor; }
 
+    /// \Returns `true` if this window is in fullscreen mode
     bool isFullscreen() const { return desc.fullscreen; }
+
+    /// \Returns `true` if this window is not in fullscreen mode
     bool isWindowed() const { return !isFullscreen(); }
 
+    /// \Returns true if the window's close button has been pressed
     bool shouldClose() const;
+
+    /// \Returns the underlying OS window handle
     void* nativeHandle();
 
-    /// MARK: Modifiers
-    void setTitle(std::string);
-    void setPosition(mtl::int2);
-    void setSize(mtl::int2);
-    void setMinSize(mtl::int2);
-    void setMaxSize(mtl::int2);
+    /// A bunch of setters and commands
+    /// @{
+    void setTitle(std::string title);
+    void setPosition(mtl::int2 position);
+    void setSize(mtl::int2 size);
+    void setMinSize(mtl::int2 minSize);
+    void setMaxSize(mtl::int2 maxSize);
     void setFocused();
-
     void show();
     void hide();
-
     void maximize();
     void minimize();
     void restore();
     void makeFullscreen();
     void toggleFullscreen();
     void makeWindowed();
-
     void close();
     void stopClose();
     void haltClose() { desc.shallPreventClose = true; }
-
     void requestAttention();
+    /// @}
 
 private:
-    void platformInit();
-    void setCallbacks();
-    void resizeSwapchain(mtl::int2 size);
-
-private:
-    struct Deleter {
+    struct GLFWDeleter {
         void operator()(void*) const;
     };
 
@@ -143,22 +188,32 @@ private:
         bool shallPreventClose = false;
     };
 
+    struct Callbacks {
+        std::function<void(InputEvent)> onInputFn;
+        std::function<void(unsigned)> onCharInputFn;
+        std::function<void(std::span<std::filesystem::path const>)>
+            onFileDropFn;
+        std::function<void(mtl::int2 newPosition)> onMoveFn;
+        std::function<void(mtl::int2 newSize)> onResizeFn;
+        /// Used by the application to run the main loop during resizing
+        std::function<void(mtl::int2 newPosition)> onResizePrivateFn;
+        std::function<void()> onFocusFn;
+        std::function<void()> onFocusLossFn;
+        std::function<void()> onCloseFn;
+        std::function<void(mtl::float2 newContentScale)> onContentScaleChangeFn;
+    };
+
+    Window(WindowDescription const& desc);
+    void platformInit();
+    void setCallbacks();
+    void resizeSwapchain(mtl::int2 size);
+
     WindowDescPrivate desc;
-    std::unique_ptr<void, Deleter> glfwWindowPtr;
+    std::unique_ptr<void, GLFWDeleter> glfwWindowPtr;
     std::unique_ptr<Swapchain> _swapchain;
     std::unique_ptr<CommandQueue> _commandQueue;
     Input userInput;
-    utl::function<void(InputEvent)> onInputFn;
-    utl::function<void(unsigned)> onCharInputFn;
-    utl::function<void(utl::vector<std::filesystem::path> const&)> onFileDropFn;
-    utl::function<void(mtl::int2 newPosition)> onMoveFn;
-    utl::function<void(mtl::int2 newSize)> onResizeFn;
-    /// Used by the application to run the main loop during resizing
-    utl::function<void(mtl::int2 newPosition)> onResizePrivateFn;
-    utl::function<void()> onFocusFn;
-    utl::function<void()> onFocusLossFn;
-    utl::function<void()> onCloseFn;
-    utl::function<void(mtl::float2 newContentScale)> onContentScaleChangeFn;
+    Callbacks callbacks;
 };
 
 } // namespace bloom

@@ -35,7 +35,7 @@ public:
     void drawFrame(bloom::HardwareDevice&, bloom::Window&);
 
     void onInput(bloom::InputEvent);
-    void onCharInput(unsigned int);
+    void onTextInput(unsigned int);
 
 private:
     void doInitPlatform(bloom::HardwareDevice& device, bloom::Window& window);
@@ -47,7 +47,6 @@ private:
     void createFontAtlasPlatform(ImFontAtlas* fontAtlas,
                                  bloom::HardwareDevice& device);
 
-private:
     bloom::Application* mApplication = nullptr;
     static ImFontAtlas* sFontAtlas;
     ::ImGuiContext* context = nullptr;

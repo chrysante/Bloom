@@ -22,6 +22,15 @@ class AppRunner;
 /// code, that returns a derived application
 BLOOM_WEAK_API std::unique_ptr<Application> createApplication();
 
+/// Run loop modes for the application
+enum class RunLoopMode {
+    /// Runs the main loop body after recieving input or other events
+    EventDriven,
+
+    /// Continuously runs the main looo body regardless of input or other events
+    Realtime
+};
+
 /// Base class of user application. Users are expected to derive from this class
 /// to implement their application
 class BLOOM_API Application:
@@ -70,6 +79,10 @@ protected:
     ///
     Application();
 
+    /// Sets the run loop mode of this application. See `RunLoopMode` for more
+    /// details Defaults to `RunLoopMode::Realtime`
+    void setRunLoopMode(RunLoopMode mode);
+
 private:
     friend class AppRunner;
 
@@ -101,6 +114,7 @@ private:
     utl::vector<WindowWrapper> mWindows;
     CoreSystemManager mCoreSystems;
     Timer mTimer;
+    RunLoopMode mRunLoopMode = RunLoopMode::Realtime;
 };
 
 } // namespace bloom

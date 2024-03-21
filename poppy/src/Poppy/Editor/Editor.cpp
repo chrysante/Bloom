@@ -38,6 +38,7 @@ static char const* playButton(Editor const* editor) {
 }
 
 Editor::Editor(): mSelection(makeReceiver()) {
+    setRunLoopMode(RunLoopMode::EventDriven);
     // clang-format off
     dockspace.setLeftToolbar({
         ToolbarDropdownMenu()
@@ -126,8 +127,8 @@ void Editor::init() {
         };
         auto& window = createWindow(windowDesc, std::move(delegate));
         window.onInput([this](InputEvent const& e) { this->onInput(e); });
-        window.onCharInput(
-            [this](unsigned code) { imguiCtx.onCharInput(code); });
+        window.onTextInput(
+            [this](unsigned code) { imguiCtx.onTextInput(code); });
         window.createDefaultSwapchain(device());
         window.setCommandQueue(device().createCommandQueue());
     }
@@ -145,6 +146,17 @@ void Editor::shutdown() {
 }
 
 void Editor::frame() {
+    /// Dirty hack to make ImGui happy. By posting an empty event we make sure
+    /// the next frame is being rendered. Because ImGui relies on continuous
+    /// renderering we need to draw a few frames after every interaction to make
+    /// sure views really appear etc.
+    if (trickleEmptyEventCount-- > 0) {
+        postEmptySystemEvent();
+    }
+    /// If we simulate we want to render continuously
+    if (isSimulating()) {
+        invalidateView();
+    }
     saveStateDirtyTimer -= time().delta;
     if (saveStateDirtyTimer <= 0) {
         saveStateToDisk();
@@ -213,6 +225,7 @@ void Editor::displayViews() {
 }
 
 void Editor::onInput(bloom::InputEvent e) {
+    invalidateView();
     imguiCtx.onInput(e);
     e.dispatch<InputEventType::keyUp>([&](KeyEvent event) {
         if (event.key == Key::S && test(event.modifierFlags & ModFlags::Super))
@@ -296,12 +309,10 @@ std::filesystem::path Editor::settingsFile() const {
 View& Editor::createView(ViewRegistry::Entry const& entry, Window& window) {
     assert((bool)entry.factory);
     auto view = entry.factory();
-
     view->mRegisterDescription = entry.description;
     view->desc.pub._name_DONT_CHANGE_ME = entry.name;
     populateView(*view, window);
     view->doInit();
-
     views.push_back(std::move(view));
     return *views.back();
 }
@@ -332,4 +343,9 @@ void Editor::saveAll() {
     for (auto* scene: coreSystems().sceneSystem().scenes()) {
         coreSystems().assetManager().saveToDisk(scene->handle());
     }
+}
+
+void Editor::invalidateView() {
+    trickleEmptyEventCount = 3;
+    postEmptySystemEvent();
 }

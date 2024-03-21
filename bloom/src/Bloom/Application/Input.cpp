@@ -1,4 +1,5 @@
 #include "Bloom/Application/Input.h"
+#include "Bloom/Application/InputInternal.h"
 
 #include <GLFW/glfw3.h>
 
@@ -31,16 +32,16 @@ ModFlags bloom::modFlagsFromGLFW(int glfwFlags) {
 
 static std::array<Key, GLFW_KEY_LAST + 1> glfwKeyTranslationTable = [] {
     std::array<Key, GLFW_KEY_LAST + 1> result{};
-    result[GLFW_KEY_0] = Key::_0;
-    result[GLFW_KEY_1] = Key::_1;
-    result[GLFW_KEY_2] = Key::_2;
-    result[GLFW_KEY_3] = Key::_3;
-    result[GLFW_KEY_4] = Key::_4;
-    result[GLFW_KEY_5] = Key::_5;
-    result[GLFW_KEY_6] = Key::_6;
-    result[GLFW_KEY_7] = Key::_7;
-    result[GLFW_KEY_8] = Key::_8;
-    result[GLFW_KEY_9] = Key::_9;
+    result[GLFW_KEY_0] = Key::Num0;
+    result[GLFW_KEY_1] = Key::Num1;
+    result[GLFW_KEY_2] = Key::Num2;
+    result[GLFW_KEY_3] = Key::Num3;
+    result[GLFW_KEY_4] = Key::Num4;
+    result[GLFW_KEY_5] = Key::Num5;
+    result[GLFW_KEY_6] = Key::Num6;
+    result[GLFW_KEY_7] = Key::Num7;
+    result[GLFW_KEY_8] = Key::Num8;
+    result[GLFW_KEY_9] = Key::Num9;
     result[GLFW_KEY_A] = Key::A;
     result[GLFW_KEY_B] = Key::B;
     result[GLFW_KEY_C] = Key::C;
@@ -78,7 +79,7 @@ static std::array<Key, GLFW_KEY_LAST + 1> glfwKeyTranslationTable = [] {
     result[GLFW_KEY_RIGHT_BRACKET] = Key::RightBracket;
     result[GLFW_KEY_SEMICOLON] = Key::Semicolon;
     result[GLFW_KEY_SLASH] = Key::Slash;
-    result[GLFW_KEY_WORLD_1] = Key::_1;
+    result[GLFW_KEY_WORLD_1] = Key::None;
     result[GLFW_KEY_BACKSPACE] = Key::Backspace;
     result[GLFW_KEY_CAPS_LOCK] = Key::CapsLock;
     result[GLFW_KEY_DELETE] = Key::Delete;
@@ -166,3 +167,22 @@ static std::array<MouseButton, 3> glfwMouseButtonTranslationTable = [] {
 MouseButton bloom::mouseButtonFromGLFW(int glfwCode) {
     return glfwMouseButtonTranslationTable[glfwCode];
 }
+
+void Input::endFrame() {
+    _mouseOffset = { 0.0, 0.0 };
+    _scrollOffset = { 0.0, 0.0 };
+}
+
+void Input::setKey(Key key, bool down) { _keys[(std::size_t)key] = down; }
+
+void Input::setMouseButton(MouseButton button, bool down) {
+    _mouseButtons[(std::size_t)button] = down;
+}
+
+void Input::setMousePosition(mtl::float2 position) {
+    auto lastPos = _mousePosition;
+    _mousePosition = position;
+    _mouseOffset = position - lastPos;
+}
+
+void Input::setScrollOffset(mtl::float2 offset) { _scrollOffset = offset; }

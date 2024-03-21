@@ -73,12 +73,17 @@ private:
     void stopSimulation();
 
 private:
+    /// Hack to make ImGui happy, described in the source file
+    void invalidateView();
+    void postEmptySystemEvent();
+
     ImGuiContext imguiCtx;
     Dockspace dockspace;
     utl::vector<std::unique_ptr<View>> views;
     DebugViews debugViews;
     SelectionContext mSelection;
     float saveStateDirtyTimer = saveStateInterval();
+    int trickleEmptyEventCount = 0;
 };
 
 } // namespace poppy

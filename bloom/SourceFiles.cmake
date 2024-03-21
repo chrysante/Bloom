@@ -8,6 +8,7 @@ set(bloom_sources
   src/Bloom/Application/CoreSystemManager.h
   src/Bloom/Application/Input.cpp
   src/Bloom/Application/Input.h
+  src/Bloom/Application/InputInternal.h
   src/Bloom/Application/InputEvent.cpp
   src/Bloom/Application/InputEvent.h
   src/Bloom/Application/MessageSystem.h

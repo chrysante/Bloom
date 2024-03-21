@@ -59,7 +59,7 @@ AssetBrowser::AssetBrowser(): dirView(this) {
             .tooltip("Import..."),
 
         ToolbarIconButton("plus")
-            .onClick([this] { ImGui::OpenPopup("New Asset"); })
+            .onClick([] { ImGui::OpenPopup("New Asset"); })
             .tooltip("Create Asset..."),
 
         ToolbarIconButton("delicious")
@@ -81,7 +81,7 @@ AssetBrowser::AssetBrowser(): dirView(this) {
 }
 
 void AssetBrowser::frame() {
-    bool const active = assetManager && !assetManager->workingDir().empty();
+    bool active = assetManager && !assetManager->workingDir().empty();
     poppy::disabledIf(!active, [&] {
         /// Add x window padding in y direction because y padding has been
         /// pushed to  0
@@ -93,7 +93,6 @@ void AssetBrowser::frame() {
         ImGui::SetCursorPos(ImGui::GetCursorPos() +
                             ImVec2(0, GImGui->Style.WindowPadding.y + 1));
     });
-
     if (!assetManager) {
         displayEmptyWithReason("Asset Manager not loaded");
         return;
@@ -102,19 +101,16 @@ void AssetBrowser::frame() {
         displayNoOpenProject();
         return;
     }
-
     newAssetPopup();
-
-    // draw separator
+    // Draw separator
     auto* window = ImGui::GetCurrentWindow();
-    auto const yPadding = GImGui->Style.WindowPadding.y;
-    auto const from =
+    auto yPadding = GImGui->Style.WindowPadding.y;
+    auto from =
         ImGui::GetWindowPos() + ImGui::GetCursorPos() + ImVec2(-yPadding, -1);
-    auto const to = ImGui::GetWindowPos() + ImGui::GetCursorPos() +
-                    ImVec2(ImGui::GetWindowWidth() + 2 * yPadding, -1);
+    auto to = ImGui::GetWindowPos() + ImGui::GetCursorPos() +
+              ImVec2(ImGui::GetWindowWidth() + 2 * yPadding, -1);
     auto* drawList = window->DrawList;
     drawList->AddLine(from, to, ImGui::GetColorU32(ImGuiCol_Separator), 2);
-
     dirView.display();
 }
 

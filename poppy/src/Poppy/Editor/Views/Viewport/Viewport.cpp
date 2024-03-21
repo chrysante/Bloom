@@ -211,7 +211,7 @@ void Viewport::drawScene() {
     POPPY_PROFILE(frame);
     camera.applyProjection(framebuffer->size);
     auto& sceneSystem = editor().coreSystems().sceneSystem();
-    auto lock = sceneSystem.lock();
+    std::unique_lock lock = sceneSystem.lock();
     sceneSystem.applyTransformHierarchy();
     sceneRenderer.submitScenes(sceneSystem.scenes(), camera.camera());
     lock.unlock();
@@ -260,13 +260,13 @@ void Viewport::onInput(bloom::InputEvent& event) {
         case Key::Tab:
             gizmo.cycleSpace();
             break;
-        case Key::_1:
+        case Key::Num1:
             gizmo.setOperation(Gizmo::Operation::Translate);
             break;
-        case Key::_2:
+        case Key::Num2:
             gizmo.setOperation(Gizmo::Operation::Rotate);
             break;
-        case Key::_3:
+        case Key::Num3:
             gizmo.setOperation(Gizmo::Operation::Scale);
             break;
         case Key::Escape:

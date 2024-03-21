@@ -111,10 +111,14 @@ public:
     }
 
 private:
+    struct LogGuard {
+        ~LogGuard() { Logger::endLog(); }
+    };
+
     static void doLog(Level level, auto const&... args) noexcept {
         beginLog(level);
+        LogGuard guard;
         (..., (ostream() << args));
-        endLog();
     }
 
     static void beginLog(Level level);

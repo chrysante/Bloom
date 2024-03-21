@@ -11,6 +11,8 @@
 
 namespace bloom {
 
+class InputEvent;
+
 /// Flags type to indicate if modifier keys are pressed
 enum class ModFlags : unsigned {
     None = 0u,
@@ -56,16 +58,16 @@ enum class BLOOM_API Key {
     K,
     N,
     M,
-    _1,
-    _2,
-    _3,
-    _4,
-    _5,
-    _6,
-    _7,
-    _8,
-    _9,
-    _0,
+    Num1,
+    Num2,
+    Num3,
+    Num4,
+    Num5,
+    Num6,
+    Num7,
+    Num8,
+    Num9,
+    Num0,
     Equal,
     Minus,
     RightBracket,
@@ -139,6 +141,7 @@ enum class BLOOM_API Key {
 /// Translates GLFW key IDs to `bloom::Key`
 Key keyFromGLFW(int);
 
+/// List of all known mouse buttons
 enum struct BLOOM_API MouseButton {
     None = -1,
     Left = 0,
@@ -147,34 +150,49 @@ enum struct BLOOM_API MouseButton {
     LAST = Other
 };
 
-MouseButton mouseButtonFromGLFW(int);
-
-class InputEvent;
-
+/// Utility class that captures all input and stores it for easy access during a
+/// frame. An object of this class is accessible via the application and can be
+/// useful if listening to input events is too tedious
 class BLOOM_API Input {
-    friend class Window;
-
 public:
+    /// \Returns the current mouse position
     mtl::float2 mousePosition() const { return _mousePosition; }
+
+    /// \Returns the offset between the mouse position this frame and last frame
     mtl::float2 mouseOffset() const { return _mouseOffset; }
 
+    /// \Returns the current scroll offset
     mtl::float2 scrollOffset() const { return _scrollOffset; }
 
+    /// \Returns `true` if \p button is currently pressed
     bool mouseDown(MouseButton button) const {
         return _mouseButtons[(std::size_t)button];
     }
+
+    /// \Returns `true` if \p key is currently pressed
     bool keyDown(Key key) const { return _keys[(std::size_t)key]; }
+
+    /// \Returns the number of registered repeats of \p key while it is held
+    /// down
     int keyDownRepeatCount(Key key) const { return _keys[(std::size_t)key]; }
 
+    /// \Returns a bitfield of the currently pressed modifier keys
     ModFlags modFlags() const { return _modFlags; }
 
 private:
-    void _setKey(Key k, bool down) { _keys[(std::size_t)k] = down; }
-    void _setMouseButton(MouseButton b, bool down) {
-        _mouseButtons[(std::size_t)b] = down;
-    }
+    friend class Application;
+    friend class Window;
 
-private:
+    /// Private setter API used by the `Window` and `Application` classes
+    /// @{
+    /// Resets mouse and scroll offset to zero
+    void endFrame();
+    void setKey(Key key, bool down);
+    void setMouseButton(MouseButton button, bool down);
+    void setMousePosition(mtl::float2 position);
+    void setScrollOffset(mtl::float2 offset);
+    /// @}
+
     ModFlags _modFlags = ModFlags::None;
     mtl::float2 _mousePosition = 0;
     mtl::float2 _mouseOffset = 0;

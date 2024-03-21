@@ -12,10 +12,10 @@
 #include "Bloom/Platform/Metal/MetalCommandQueue.h"
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 #include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Editor.h"
 
 using namespace bloom;
 using namespace mtl::short_types;
-
 using namespace poppy;
 
 static NSView* getNativeView(bloom::Window& window) {
@@ -58,7 +58,6 @@ void poppy::ImGuiContext::doDrawFramePlatform(bloom::HardwareDevice&, bloom::Win
     auto& mtlBackbuffer = dynamic_cast<MetalBackbuffer&>(*backbuffer);
     [commandBuffer presentDrawable: mtlBackbuffer.drawable];
     [commandBuffer commit];
-    Logger::Trace("Committed render commands");
 }
 
 void poppy::ImGuiContext::doShutdownPlatform() {
@@ -66,7 +65,21 @@ void poppy::ImGuiContext::doShutdownPlatform() {
     ImGui_ImplMetal_Shutdown();
 }
 
-void poppy::ImGuiContext::createFontAtlasPlatform(ImFontAtlas* atlas, bloom::HardwareDevice& device) {
+void poppy::ImGuiContext::createFontAtlasPlatform(ImFontAtlas*, bloom::HardwareDevice& device) {
     MetalDevice& mtlDevice = dynamic_cast<MetalDevice&>(device);
     ImGui_ImplMetal_CreateFontsTexture(mtlDevice.device);
+}
+
+/// TODO: Move this to other file
+void poppy::Editor::postEmptySystemEvent() {
+    NSEvent* event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
+                                        location:NSMakePoint(0, 0)
+                                   modifierFlags:0
+                                       timestamp:0
+                                    windowNumber:0
+                                         context:nil
+                                         subtype:0
+                                           data1:0
+                                           data2:0];
+    [NSApp postEvent:event atStart:YES];
 }

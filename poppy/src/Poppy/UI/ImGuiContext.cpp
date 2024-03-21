@@ -16,25 +16,25 @@ using namespace poppy;
 
 static ImGuiKey toImGuiKeyCode(Key key) {
     switch (key) {
-    case Key::_0:
+    case Key::Num0:
         return ImGuiKey_0;
-    case Key::_1:
+    case Key::Num1:
         return ImGuiKey_1;
-    case Key::_2:
+    case Key::Num2:
         return ImGuiKey_2;
-    case Key::_3:
+    case Key::Num3:
         return ImGuiKey_3;
-    case Key::_4:
+    case Key::Num4:
         return ImGuiKey_4;
-    case Key::_5:
+    case Key::Num5:
         return ImGuiKey_5;
-    case Key::_6:
+    case Key::Num6:
         return ImGuiKey_6;
-    case Key::_7:
+    case Key::Num7:
         return ImGuiKey_7;
-    case Key::_8:
+    case Key::Num8:
         return ImGuiKey_8;
-    case Key::_9:
+    case Key::Num9:
         return ImGuiKey_9;
     case Key::A:
         return ImGuiKey_A;
@@ -331,7 +331,6 @@ void poppy::ImGuiContext::onInput(bloom::InputEvent e) {
         io.AddMousePosEvent(event.locationInWindow.x, event.locationInWindow.y);
         return true;
     });
-
     e.dispatch<InputEventType::scrollWheel>([&](ScrollEvent const& event) {
         if (event.offset.x != 0.0 || event.offset.y != 0.0) {
             io.AddMouseWheelEvent((float)event.offset.x * 0.1f,
@@ -373,7 +372,7 @@ void poppy::ImGuiContext::onInput(bloom::InputEvent e) {
     });
 }
 
-void poppy::ImGuiContext::onCharInput(unsigned int code) {
+void poppy::ImGuiContext::onTextInput(unsigned int code) {
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.AddInputCharacter(code);

@@ -408,6 +408,8 @@ void AssetManager::compileScripts() {
     dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
     using namespace scatha;
     CompilerInvocation inv(TargetType::BinaryOnly, "main");
+    inv.setOptLevel(1);
+    inv.setLinkerOptions({ .searchHost = true });
     auto sources = impl->assets | values | filter([](auto& entry) {
         return entry.handle.type() == AssetType::ScriptSource;
     }) | transform([](auto& entry) {

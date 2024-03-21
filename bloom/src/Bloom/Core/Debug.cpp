@@ -1,5 +1,6 @@
 #include "Bloom/Core/Debug.h"
 
+#include <iomanip>
 #include <iostream>
 
 #include <termfmt/termfmt.h>
@@ -72,6 +73,7 @@ struct LoggerOptions {
 };
 
 LoggerOptions const options = [] {
+    /// TODO: Implement logger control through environment variables
     auto* values = std::getenv("BLOOM_LOGGER_OPTIONS");
     (void)values;
     return LoggerOptions{ .timestamps = true };
@@ -93,11 +95,22 @@ static void formatTime(std::ostream& str) {
     dur -= sec;
     auto mil = duration_cast<milliseconds>(dur);
     dur -= mil;
-    str << "[" << h.count() << "h:" << min.count() << "m:" << sec.count()
-        << "s:" << mil.count() << "ms] ";
+    str << "[" << std::setfill(' ') << std::setw(2) << h.count()
+        << "h:" << std::setfill(' ') << std::setw(2) << min.count()
+        << "m:" << std::setfill(' ') << std::setw(2) << sec.count()
+        << "s:" << std::setfill(' ') << std::setw(3) << mil.count() << "ms] ";
 }
 
+static std::mutex gLoggerMutex;
+
 void Logger::beginLog(Level level) {
+    /// We use RAII to invoke `endLog()` which unlocks the mutex so no need to
+    /// use `lock_guard` or `unique_lock` here.
+    /// We need the lock because
+    ///  - this way messages from different threads won't be interleaved
+    ///  - Otherwise pushing and popping `tfmt` modifiers from different threads
+    ///  does not work correctly
+    gLoggerMutex.lock();
     auto& str = ostream();
     tfmt::pushModifier(mod(level), str);
     if (options.timestamps) {
@@ -111,6 +124,7 @@ void Logger::beginLog(Level level) {
 void Logger::endLog() {
     tfmt::popModifier(ostream());
     ostream() << "\n";
+    gLoggerMutex.unlock();
 }
 
 std::ostream& Logger::ostream() { return std::cout; }

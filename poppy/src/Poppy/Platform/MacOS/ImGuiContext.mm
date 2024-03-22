@@ -34,12 +34,6 @@ void poppy::ImGuiContext::doNewFramePlatform(Window& window) {
 }
 
 void poppy::ImGuiContext::doDrawFramePlatform(HardwareDevice&, Window& window) {
-    /// Hacky way to stop the window from yanking when dragged. See
-    /// `Window::shallSkipFrame()` for further explanation
-    if (window.shallSkipFrame()) {
-        ImGui::EndFrame();
-        return;
-    }
     MetalCommandQueue& mtlCommandQueue = dynamic_cast<MetalCommandQueue&>(window.commandQueue());
     id<MTLCommandBuffer> commandBuffer = [mtlCommandQueue.queue commandBuffer];
     MTLRenderPassDescriptor* renderPassDescriptor = [[MTLRenderPassDescriptor alloc] init];

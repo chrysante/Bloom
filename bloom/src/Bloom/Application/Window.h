@@ -149,7 +149,7 @@ public:
     /// \Returns the underlying OS window handle
     void* nativeHandle();
 
-    /// Experimental and hacky "pretty window" API for MacOS
+    /// # Experimental and hacky "pretty window" API for MacOS
     /// @{
 
     /// \Returns the height of the window tool bar in MacOS
@@ -165,10 +165,6 @@ public:
 
     /// Activate double click on titlebar behaviour
     void zoom();
-
-    /// \Returns `true` if we want to discard the current frame. We use this to
-    /// stop the window from "yanking" when a window drag starts
-    bool shallSkipFrame();
 
     /// @}
 
@@ -210,8 +206,6 @@ private:
         bool shallPreventClose = false;
         /// See `setMovable()`
         bool movable = true;
-        /// See `shallSkipFrame()`
-        bool skipFrame = false;
     };
 
     struct Callbacks {

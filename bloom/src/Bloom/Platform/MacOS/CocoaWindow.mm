@@ -208,14 +208,14 @@ void Window::platformInit() {
     window.styleMask |= NSWindowStyleMaskFullSizeContentView;
     window.titlebarAppearsTransparent = true;
     window.toolbar = [[NSToolbar alloc] init];
-    
     /// Because GLFW down not get mouse input events over the toolbar we monitor these events ourself
+    /// TODO: Remove the monitors when we destroy windows
     auto mask = NSEventMaskLeftMouseDown |
-    NSEventMaskLeftMouseUp |
-    NSEventMaskRightMouseDown |
-    NSEventMaskRightMouseUp |
-    NSEventMaskOtherMouseDown |
-    NSEventMaskOtherMouseUp;
+                NSEventMaskLeftMouseUp |
+                NSEventMaskRightMouseDown |
+                NSEventMaskRightMouseUp |
+                NSEventMaskOtherMouseDown |
+                NSEventMaskOtherMouseUp;
     [NSEvent addLocalMonitorForEventsMatchingMask:mask handler:^NSEvent*(NSEvent* event) {
         if (event.window != window) {
             return event;
@@ -236,9 +236,9 @@ void Window::platformInit() {
                                              userInput);
             callbacks.onInputFn(inputEvent);
         }
-        if (event.type == NSEventTypeLeftMouseDown && desc.movable) {
+        bool isInToolbar = window.frame.size.height - event.locationInWindow.y <= toolbarHeight();
+        if (event.type == NSEventTypeLeftMouseDown && desc.movable && isInToolbar) {
             [window performWindowDragWithEvent:event];
-            desc.skipFrame = true;
         }
         return event;
     }];
@@ -265,8 +265,6 @@ mtl::AABB<float, 2> Window::titleButtonsArea() const {
     return { rect.origin, { rect.size.width, rect.size.height } };
 }
 
-
-
 void Window::zoom() {
     NSWindow* window = getNative(this);
     NSEvent* event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
@@ -279,8 +277,4 @@ void Window::zoom() {
                                            data1:0
                                            data2:0];
     [NSApp postEvent:event atStart:YES];
-}
-
-bool Window::shallSkipFrame() {
-    return desc.skipFrame;
 }

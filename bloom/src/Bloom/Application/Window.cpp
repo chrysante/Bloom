@@ -297,7 +297,6 @@ void Window::setCallbacks() {
     });
     glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.desc.skipFrame = false;
         int2 pos = { posx, posy };
         window.desc.position = pos;
         if (window.callbacks.onMoveFn) {

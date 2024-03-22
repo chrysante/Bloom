@@ -16,12 +16,12 @@ class InputEvent;
 /// Flags type to indicate if modifier keys are pressed
 enum class ModFlags : unsigned {
     None = 0u,
-    CapsLock = 1u << 0, /// Set if caps lock key is pressed.
-    Shift = 1u << 1,    /// Set if shift key is pressed.
-    Control = 1u << 2,  /// Set if control key is pressed.
-    Alt = 1u << 3,      /// Set if alt key is pressed.
-    Super = 1u << 4,    /// Set if command key is pressed.
-    NumLock = 1u << 5,  /// Set if numLock key is pressed.
+    CapsLock = 1u << 0,
+    Shift = 1u << 1,
+    Control = 1u << 2,
+    Alt = 1u << 3,
+    Super = 1u << 4,
+    NumLock = 1u << 5,
 };
 
 UTL_ENUM_OPERATORS(ModFlags);
@@ -142,7 +142,7 @@ enum class BLOOM_API Key {
 Key keyFromGLFW(int);
 
 /// List of all known mouse buttons
-enum struct BLOOM_API MouseButton {
+enum struct MouseButton {
     None = -1,
     Left = 0,
     Right = 1,

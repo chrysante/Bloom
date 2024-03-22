@@ -59,8 +59,11 @@ void ToolbarItemUnion::calcWidth(float height) {
         width = 0;
         break;
     }
+    case Type::emptyItem: {
+        width = get<Type::emptyItem>()._width;
+        break;
+    }
     default:
-        width = 0;
         break;
     }
 }
@@ -156,7 +159,10 @@ void Toolbar::displayItem(ToolbarItemUnion const& item, std::size_t index) {
         }
         break;
     }
-
+    case ToolbarItemUnion::Type::emptyItem: {
+        ImGui::Dummy({ item.width, actualHeight });
+        break;
+    }
     default:
         break;
     }

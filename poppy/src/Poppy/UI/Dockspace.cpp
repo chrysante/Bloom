@@ -6,6 +6,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <mtl/mtl.hpp>
+#include <utl/function_view.hpp>
 #include <utl/scope_guard.hpp>
 #include <utl/stack.hpp>
 
@@ -13,9 +14,9 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 
+using namespace poppy;
 using namespace bloom;
 using namespace mtl::short_types;
-using namespace poppy;
 
 static constexpr auto MainWindowID = "__MainWindow__";
 static constexpr auto MainDockspaceID = "__MainWindow_Dockspace__";
@@ -37,9 +38,10 @@ static void withWindowSizeConstraints(mtl::float2 minSize, auto&& block) {
 
 Dockspace::Dockspace() {}
 
-void Dockspace::display() {
-    dockspace();
-    displayToolbar();
+void Dockspace::display(Window& window) {
+    mainWindow();
+    setToolbarHeight(window.toolbarHeight());
+    displayToolbar(window);
 }
 
 void Dockspace::setLeftToolbar(Toolbar tb) {
@@ -57,7 +59,16 @@ void Dockspace::setRightToolbar(Toolbar tb) {
     toolbars[2] = std::move(tb);
 }
 
-void Dockspace::dockspace() { mainWindow(); }
+void Dockspace::setToolbarHeight(float height) {
+    toolbars[0].setHeight(height);
+    toolbars[1].setHeight(height);
+    toolbars[2].setHeight(height);
+}
+
+void Dockspace::setInsets(float left, float right) {
+    leftInset = left;
+    rightInset = right;
+}
 
 void Dockspace::mainWindow() {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -69,7 +80,6 @@ void Dockspace::mainWindow() {
     ImGui::SetNextWindowSize(windowSize);
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGuiWindowFlags windowFlags = 0;
-    windowFlags |= ImGuiWindowFlags_MenuBar;
     windowFlags |= ImGuiWindowFlags_NoTitleBar;
     windowFlags |= ImGuiWindowFlags_NoResize;
     windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
@@ -156,14 +166,10 @@ utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
     }();
 }
 
-template <std::invocable Block>
-static void toolbarWindow(char const* id, float posX, float2 const size,
-                          Block&& block) {
+static void toolbarWindow(float2 size, utl::function_view<void()> content) {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
-    float2 position = {
-        posX,
-        viewport->Pos.y + ImGui::FindWindowByName(MainWindowID)->MenuBarHeight()
-    };
+    ImGuiWindow* mainWindow = ImGui::FindWindowByName(MainWindowID);
+    float2 position = { 0, viewport->Pos.y + mainWindow->MenuBarHeight() };
     ImGui::SetNextWindowPos(position);
     ImGui::SetNextWindowSize(size);
     ImGui::SetNextWindowViewport(viewport->ID);
@@ -178,9 +184,9 @@ static void toolbarWindow(char const* id, float posX, float2 const size,
     flags |= ImGuiWindowFlags_NoSavedSettings;
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
-    ImGui::Begin(id, NULL, flags);
+    ImGui::Begin("Main_Toolbar", NULL, flags);
     ImGui::PopStyleVar(2);
-    block();
+    content();
     if (ImGui::IsWindowFocused() && GImGui->WindowsFocusOrder.size() > 1 &&
         ImGui::GetIO().MouseReleased[ImGuiMouseButton_Left])
     {
@@ -203,7 +209,29 @@ static void drawSeparator(float positionX) {
                           GImGui->Style.Colors[ImGuiCol_Separator]));
 }
 
-void Dockspace::displayToolbar() {
+/// Simulates window titlebar behaviour on the toolbar background
+static void toolbarBackground(Window& window, ImGuiViewport* viewport,
+                              float toolbarHeight) {
+    ImGui::BeginDisabled();
+    float2 windowPadding = GImGui->Style.WindowPadding;
+    ImGui::SetCursorPos(-windowPadding);
+    ImGui::SetNextItemAllowOverlap();
+    ImGui::InvisibleButton("Main_Toolbar_Background_Button",
+                           { viewport->Size.x + 2 * windowPadding.x,
+                             toolbarHeight + windowPadding.y });
+    ImGui::EndDisabled();
+    if (GImGui->LastItemData.ID == GImGui->HoveredIdPreviousFrame) {
+        if (GImGui->IO.MouseClickedCount[ImGuiMouseButton_Left] == 2) {
+            window.zoom();
+        }
+        window.setMovable(true);
+    }
+    else {
+        window.setMovable(false);
+    }
+}
+
+void Dockspace::displayToolbar(Window& window) {
     float height = toolbars[0].getHeight();
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     auto spacing = getToolbarSpacing();
@@ -232,7 +260,8 @@ void Dockspace::displayToolbar() {
         }
     }
     BL_ASSERT(spacing.size() <= 2);
-    toolbarWindow("toolbar", 0, { viewport->Size.x, height }, [&] {
+    toolbarWindow({ viewport->Size.x, height }, [&] {
+        toolbarBackground(window, viewport, height);
         switch (spacing.size()) {
         case 0:
             toolbarLayoutOne(spacing);

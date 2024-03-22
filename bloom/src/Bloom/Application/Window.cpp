@@ -9,7 +9,7 @@
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/Swapchain.h"
 
-#define GLFW_WND ((GLFWwindow*)glfwWindowPtr.get())
+#define GLFW_WND ((GLFWwindow*)windowPtr.get())
 
 using namespace mtl::short_types;
 using namespace bloom;
@@ -35,7 +35,7 @@ Window::Window(WindowDescription const& d) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     auto* const w = glfwCreateWindow(desc.size.x, desc.size.y,
                                      desc.title.data(), nullptr, nullptr);
-    glfwWindowPtr = std::unique_ptr<void, GLFWDeleter>(w);
+    windowPtr = std::unique_ptr<void, Deleter>(w);
     platformInit();
     glfwSetWindowUserPointer(GLFW_WND, this);
     glfwGetWindowPos(GLFW_WND, &desc.position.x, &desc.position.y);
@@ -212,6 +212,8 @@ void Window::platformInit() {}
 #endif
 
 void Window::setCallbacks() {
+    /// For Apple we handle mouse events in "CocoaWindow.mm"
+#if !defined(BLOOM_PLATFORM_APPLE)
     glfwSetMouseButtonCallback(GLFW_WND, [](GLFWwindow* w, int button,
                                             int action, int mods) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -225,7 +227,7 @@ void Window::setCallbacks() {
             window.callbacks.onInputFn(event);
         }
     });
-
+#endif
     glfwSetCursorPosCallback(GLFW_WND,
                              [](GLFWwindow* w, double xpos, double ypos) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -235,12 +237,10 @@ void Window::setCallbacks() {
                 makeInputEventFromGLFWCursorPos(window.userInput, xpos, ypos));
         }
     });
-
     glfwSetCursorEnterCallback(GLFW_WND,
                                [](GLFWwindow* w, [[maybe_unused]] int entered) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
     });
-
     glfwSetScrollCallback(GLFW_WND,
                           [](GLFWwindow* w, double xoffset, double yoffset) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -251,7 +251,6 @@ void Window::setCallbacks() {
                                              yoffset));
         }
     });
-
     glfwSetKeyCallback(GLFW_WND, [](GLFWwindow* w, int key, int scancode,
                                     int action, int mods) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -278,14 +277,12 @@ void Window::setCallbacks() {
                                           action, mods));
         }
     });
-
     glfwSetCharCallback(GLFW_WND, [](GLFWwindow* w, unsigned int codepoint) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         if (window.callbacks.onCharInputFn) {
             window.callbacks.onCharInputFn(codepoint);
         }
     });
-
     glfwSetDropCallback(GLFW_WND,
                         [](GLFWwindow* w, int pathCount, char const* paths[]) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -298,16 +295,15 @@ void Window::setCallbacks() {
             window.callbacks.onFileDropFn(pathVec);
         }
     });
-
     glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
+        window.desc.skipFrame = false;
         int2 pos = { posx, posy };
         window.desc.position = pos;
         if (window.callbacks.onMoveFn) {
             window.callbacks.onMoveFn(pos);
         }
     });
-
     glfwSetWindowSizeCallback(GLFW_WND,
                               [](GLFWwindow* w, int sizex, int sizey) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -321,7 +317,6 @@ void Window::setCallbacks() {
             window.callbacks.onResizeFn(newSize);
         }
     });
-
     glfwSetWindowFocusCallback(GLFW_WND, [](GLFWwindow* w, int focus) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         if (focus == GLFW_TRUE) {
@@ -337,7 +332,6 @@ void Window::setCallbacks() {
             }
         }
     });
-
     glfwSetWindowCloseCallback(GLFW_WND, [](GLFWwindow* w) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         window.desc.shallPreventClose = false;
@@ -345,7 +339,6 @@ void Window::setCallbacks() {
             window.callbacks.onCloseFn();
         }
     });
-
     glfwSetWindowContentScaleCallback(GLFW_WND,
                                       [](GLFWwindow* w, float x, float y) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -363,6 +356,6 @@ void Window::resizeSwapchain(mtl::int2 newSize) {
     }
 }
 
-void Window::GLFWDeleter::operator()(void* ptr) const {
+void Window::Deleter::operator()(void* ptr) const {
     glfwDestroyWindow((GLFWwindow*)ptr);
 }

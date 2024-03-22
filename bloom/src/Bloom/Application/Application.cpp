@@ -67,8 +67,8 @@ static void handleEvents(RunLoopMode mode) {
 void Application::run() {
     doInit();
     while (!mWindows.empty()) {
-        doFrame();
         handleEvents(mRunLoopMode);
+        doFrame();
         clearClosingWindows();
     }
     doShutdown();

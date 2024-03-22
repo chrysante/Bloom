@@ -127,11 +127,30 @@ struct ToolbarSeparator {};
 
 struct ToolbarSpacer {};
 
+class ToolbarEmptyItem {
+public:
+    ToolbarEmptyItem width(float width) {
+        _width = width;
+        return *this;
+    }
+
+private:
+    friend class ToolbarItemUnion;
+    float _width = 0;
+};
+
 class ToolbarItemUnion {
     friend class Toolbar;
 
 public:
-    enum struct Type { button, iconButton, dropdownMenu, separator, spacer };
+    enum struct Type {
+        button,
+        iconButton,
+        dropdownMenu,
+        separator,
+        spacer,
+        emptyItem
+    };
 
     ToolbarItemUnion(ToolbarButton button): item(std::move(button)) {}
 
@@ -142,6 +161,8 @@ public:
     ToolbarItemUnion(ToolbarSeparator separator): item(std::move(separator)) {}
 
     ToolbarItemUnion(ToolbarSpacer spacer): item(std::move(spacer)) {}
+
+    ToolbarItemUnion(ToolbarEmptyItem emptyItem): item(emptyItem) {}
 
     Type type() const { return (Type)item.index(); }
 
@@ -159,7 +180,7 @@ private:
 
 private:
     std::variant<ToolbarButton, ToolbarIconButton, ToolbarDropdownMenu,
-                 ToolbarSeparator, ToolbarSpacer>
+                 ToolbarSeparator, ToolbarSpacer, ToolbarEmptyItem>
         item;
     float width = 0;
 };

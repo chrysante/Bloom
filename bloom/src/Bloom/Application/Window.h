@@ -48,7 +48,8 @@ class BLOOM_API Window {
     friend class Application;
 
 public:
-    /// Must be called before creating any windows
+    /// Sets up the application as a windowed application. Must be called before
+    /// creating any windows.
     static void InitWindowSystem();
 
     /// Polls OS event like input and window movement and returns after calling
@@ -62,11 +63,9 @@ public:
     /// Creates and shows a window with description \p desc
     static std::unique_ptr<Window> Create(WindowDescription const& desc);
 
-    /// Windows are not copyable because we require address stability
-    /// @{
+    /// Windows are not copyable
     Window(Window const&) = delete;
     Window& operator=(Window const&) = delete;
-    /// @}
 
     ///
     ~Window();
@@ -150,6 +149,29 @@ public:
     /// \Returns the underlying OS window handle
     void* nativeHandle();
 
+    /// Experimental and hacky "pretty window" API for MacOS
+    /// @{
+
+    /// \Returns the height of the window tool bar in MacOS
+    float toolbarHeight() const;
+
+    /// \Returns the bounding box of the close, minimize and maximize buttons
+    mtl::AABB<float, 2> titleButtonsArea() const;
+
+    /// Flag to indicate if the mouse is over an area from which the window may
+    /// be dragged. We need this because ImGui is not event based but Cocoa
+    /// wants to dispatch the mouse event to the window server directly
+    void setMovable(bool value = true) { desc.movable = value; }
+
+    /// Activate double click on titlebar behaviour
+    void zoom();
+
+    /// \Returns `true` if we want to discard the current frame. We use this to
+    /// stop the window from "yanking" when a window drag starts
+    bool shallSkipFrame();
+
+    /// @}
+
     /// A bunch of setters and commands
     /// @{
     void setTitle(std::string title);
@@ -173,7 +195,7 @@ public:
     /// @}
 
 private:
-    struct GLFWDeleter {
+    struct Deleter {
         void operator()(void*) const;
     };
 
@@ -186,6 +208,10 @@ private:
         mtl::int2 maxSize = 0;
         bool focused = false;
         bool shallPreventClose = false;
+        /// See `setMovable()`
+        bool movable = true;
+        /// See `shallSkipFrame()`
+        bool skipFrame = false;
     };
 
     struct Callbacks {
@@ -209,7 +235,7 @@ private:
     void resizeSwapchain(mtl::int2 size);
 
     WindowDescPrivate desc;
-    std::unique_ptr<void, GLFWDeleter> glfwWindowPtr;
+    std::unique_ptr<void, Deleter> windowPtr;
     std::unique_ptr<Swapchain> _swapchain;
     std::unique_ptr<CommandQueue> _commandQueue;
     Input userInput;

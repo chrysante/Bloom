@@ -18,22 +18,28 @@ using namespace bloom;
 using namespace mtl::short_types;
 using namespace poppy;
 
-static NSView* getNativeView(bloom::Window& window) {
+static NSView* getContentView(Window& window) {
     NSWindow* nsWindow = (__bridge NSWindow*)window.nativeHandle();
     return nsWindow.contentView;
 }
 
-void poppy::ImGuiContext::doInitPlatform(bloom::HardwareDevice& device,
-                                         bloom::Window& window) {
+void poppy::ImGuiContext::doInitPlatform(HardwareDevice& device,
+                                         Window& window) {
     ImGui_ImplMetal_Init(dynamic_cast<MetalDevice&>(device).device);
-    ImGui_ImplOSX_Init(getNativeView(window));
+    ImGui_ImplOSX_Init(getContentView(window));
 }
 
-void poppy::ImGuiContext::doNewFramePlatform(bloom::Window& window) {
-    ImGui_ImplOSX_NewFrame(getNativeView(window));
+void poppy::ImGuiContext::doNewFramePlatform(Window& window) {
+    ImGui_ImplOSX_NewFrame(getContentView(window));
 }
 
-void poppy::ImGuiContext::doDrawFramePlatform(bloom::HardwareDevice&, bloom::Window& window) {
+void poppy::ImGuiContext::doDrawFramePlatform(HardwareDevice&, Window& window) {
+    /// Hacky way to stop the window from yanking when dragged. See
+    /// `Window::shallSkipFrame()` for further explanation
+    if (window.shallSkipFrame()) {
+        ImGui::EndFrame();
+        return;
+    }
     MetalCommandQueue& mtlCommandQueue = dynamic_cast<MetalCommandQueue&>(window.commandQueue());
     id<MTLCommandBuffer> commandBuffer = [mtlCommandQueue.queue commandBuffer];
     MTLRenderPassDescriptor* renderPassDescriptor = [[MTLRenderPassDescriptor alloc] init];
@@ -65,7 +71,7 @@ void poppy::ImGuiContext::doShutdownPlatform() {
     ImGui_ImplMetal_Shutdown();
 }
 
-void poppy::ImGuiContext::createFontAtlasPlatform(ImFontAtlas*, bloom::HardwareDevice& device) {
+void poppy::ImGuiContext::createFontAtlasPlatform(ImFontAtlas*, HardwareDevice& device) {
     MetalDevice& mtlDevice = dynamic_cast<MetalDevice&>(device);
     ImGui_ImplMetal_CreateFontsTexture(mtlDevice.device);
 }

@@ -5,6 +5,7 @@
 #include <imgui.h>
 
 #include "Bloom/Application/ResourceUtil.h"
+#include "Bloom/Application/Window.h"
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Autorelease.h"
 #include "Bloom/GPU/HardwareDevice.h"
@@ -41,10 +42,13 @@ Editor::Editor(): mSelection(makeReceiver()) {
     setRunLoopMode(RunLoopMode::EventDriven);
     // clang-format off
     dockspace.setLeftToolbar({
+        /// Very annoying hack to prevent the toolbar from rendering under the 
+        /// window buttons on MacOS
+        ToolbarEmptyItem().width(75),
         ToolbarDropdownMenu()
             .icon([] { return "menu"; })
-            .content([] {
-                ImGui::Text("fndsjsnsaf");
+            .content([this] {
+                menuBar();
             }),
         ToolbarSpacer{},
         ToolbarIconButton(std::bind_front(playButton, this))
@@ -57,27 +61,28 @@ Editor::Editor(): mSelection(makeReceiver()) {
             })
     });
     dockspace.setCenterToolbar({
-        ToolbarIconButton("plus")
-            .onClick([this] {
-                auto* window = getWindows().front();
-                window->setPosition(window->position() + int2(5, 5));
-            }),
         ToolbarIconButton("bank")
             .onClick([] {
                 Logger::Trace("Some Button Pressed");
             }),
         ToolbarSpacer{},
         ToolbarIconButton("cw")
-            .onClick([this] {
-                dispatch(DispatchToken::NextFrame,
-                         ReloadShadersCommand{});
+            .onClick([&] {
+#if 0
+                dispatch(DispatchToken::NextFrame, ReloadShadersCommand{});
+#endif
             })
-            .tooltip("Reload Shaders")
+            .tooltip("Reload Shaders (currently disabled due to a bug)")
     });
     dockspace.setRightToolbar({
-        ToolbarIconButton("attention-circled"),
+        ToolbarIconButton("attention-circled")
+            .onClick([]{ Logger::Trace("Some Button Clicked"); }),
         ToolbarSpacer{},
-        ToolbarIconButton("menu")
+        ToolbarDropdownMenu()
+            .icon([] { return "menu"; })
+            .content([] {
+                ImGui::Text("Placeholder Menu");
+            }),
     });
     // clang-format on
 }
@@ -168,15 +173,15 @@ void Editor::frame() {
     if (windows.empty()) {
         return;
     }
-    imguiCtx.newFrame(*windows.front());
-    menuBar();
-    dockspace.display();
+    auto& window = *windows.front();
+    imguiCtx.newFrame(window);
+    dockspace.display(window);
     displayViews();
     debugViews.display();
 }
 
 void Editor::menuBar() {
-    ImGui::BeginMainMenuBar();
+    //    ImGui::BeginMainMenuBar();
     if (ImGui::BeginMenu("File")) {
         if (ImGui::MenuItem("New Scene...")) {
             // newScene();
@@ -207,7 +212,7 @@ void Editor::menuBar() {
         ImGui::EndMenu();
     }
 
-    ImGui::EndMainMenuBar();
+    //    ImGui::EndMainMenuBar();
 }
 
 void Editor::displayViews() {

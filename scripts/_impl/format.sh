@@ -30,7 +30,7 @@ function format() {
             format $entry
             continue
         fi
-        if [[ $entry != *.h ]] && [[ $entry != *.cc ]] && [[ $entry != *.hpp ]] && [[ $entry != *.cpp ]]; then
+        if [[ $entry != *.h ]] && [[ $entry != *.cc ]] && [[ $entry != *.hpp ]] && [[ $entry != *.cpp ]] && [[ $entry != *.m ]] && [[ $entry != *.mm ]]; then
             continue
         fi
         ${FMT} -i ${entry} &

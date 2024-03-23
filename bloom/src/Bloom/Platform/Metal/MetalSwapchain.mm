@@ -1,7 +1,7 @@
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 
-#include "Bloom/Platform/Metal/ObjCBridging.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Platform/Metal/ObjCBridging.h"
 
 using namespace bloom;
 
@@ -10,10 +10,12 @@ MetalBackbuffer::MetalBackbuffer(id<CAMetalDrawable> drawable) {
 }
 
 TextureHandle MetalBackbuffer::texture() {
-    return TextureHandle(bloom_retain(drawable.texture), bloom_release, TextureDescription{});
+    return TextureHandle(bloom_retain(drawable.texture), bloom_release,
+                         TextureDescription{});
 }
 
-MetalSwapchain::MetalSwapchain(id<MTLDevice> device, SwapchainDescription const& desc) {
+MetalSwapchain::MetalSwapchain(id<MTLDevice> device,
+                               SwapchainDescription const& desc) {
     layer = [[CAMetalLayer alloc] init];
     layer.device = device;
     layer.pixelFormat = (MTLPixelFormat)desc.pixelFormat;
@@ -28,6 +30,6 @@ std::unique_ptr<Backbuffer> MetalSwapchain::nextBackbuffer() {
 }
 
 void MetalSwapchain::resize(mtl::usize2 newSize) {
-    [layer setDrawableSize: CGSize{ (CGFloat)newSize.x, (CGFloat)newSize.y }];
+    [layer setDrawableSize:CGSize{ (CGFloat)newSize.x, (CGFloat)newSize.y }];
     desc.size = newSize;
 }

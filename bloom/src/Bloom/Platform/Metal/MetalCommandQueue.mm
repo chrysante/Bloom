@@ -1,14 +1,12 @@
 #include "Bloom/Platform/Metal/MetalCommandQueue.h"
 
-#include "Bloom/Platform/Metal/MetalRenderContext.h"
-#include "Bloom/Platform/Metal/MetalComputeContext.h"
 #include "Bloom/Platform/Metal/MetalBlitContext.h"
+#include "Bloom/Platform/Metal/MetalComputeContext.h"
+#include "Bloom/Platform/Metal/MetalRenderContext.h"
 
 using namespace bloom;
 
-MetalCommandQueue::MetalCommandQueue(id<MTLCommandQueue> q) {
-    queue = q;
-}
+MetalCommandQueue::MetalCommandQueue(id<MTLCommandQueue> q) { queue = q; }
 
 std::unique_ptr<RenderContext> MetalCommandQueue::createRenderContext() {
     return std::make_unique<MetalRenderContext>([queue commandBuffer]);

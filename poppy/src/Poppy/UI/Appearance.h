@@ -18,6 +18,7 @@ struct StyleVars {
     bool popupBorder;
     bool frameBorder;
     bool tabBorder;
+    bool tabBarBorder;
     float windowRounding;
     float childWindowRounding;
     float popupRounding;

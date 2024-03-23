@@ -65,6 +65,7 @@ static void applyStyle(poppy::StyleDescription const& style) {
     imguiStyle.PopupBorderSize = style.vars.popupBorder ? 1.0 : 0.0;
     imguiStyle.FrameBorderSize = style.vars.frameBorder ? 1.0 : 0.0;
     imguiStyle.TabBorderSize = style.vars.tabBorder ? 1.0 : 0.0;
+    imguiStyle.TabBarBorderSize = style.vars.tabBarBorder ? 1.0 : 0.0;
     imguiStyle.WindowRounding = style.vars.windowRounding;
     imguiStyle.ChildRounding = style.vars.childWindowRounding;
     imguiStyle.PopupRounding = style.vars.popupRounding;
@@ -111,6 +112,7 @@ static StyleDescription makeStyle(SystemAppearance s) {
         .popupBorder = true,
         .frameBorder = true,
         .tabBorder = true,
+        .tabBarBorder = true,
         .windowRounding = 4,
         .childWindowRounding = 0,
         .popupRounding = 0,
@@ -172,6 +174,7 @@ void Appearance::showInspector(bool* open) {
         update |= ImGui::Checkbox("Popup Border", &vars.popupBorder);
         update |= ImGui::Checkbox("Frame Border", &vars.frameBorder);
         update |= ImGui::Checkbox("Tab Border", &vars.tabBorder);
+        update |= ImGui::Checkbox("Tab Bar Border", &vars.tabBarBorder);
         ImGui::Text("Roundings");
         update |= ImGui::SliderFloat("Window Rounding", &vars.windowRounding, 0,
                                      12, "%.0f");

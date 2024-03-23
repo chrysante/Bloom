@@ -101,16 +101,20 @@ enum class RenameState { None, Apply, Cancel };
 
 static auto withButtonStyle(bool selected, auto f) {
     if (selected) {
-        ImGui::PushStyleColor(ImGuiCol_Button, 0x20FFffFF);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0x30FFffFF);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0x30FFffFF);
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              ImGui::GetStyleColorVec4(ImGuiCol_Button));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                              ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
     }
     else {
         ImGui::PushStyleColor(ImGuiCol_Button, 0);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0x20FFffFF);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0x20FFffFF);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
     }
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,
+                          ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
     auto result = f();
+    ImGui::PopStyleVar();
     ImGui::PopStyleColor(3);
     return result;
 }

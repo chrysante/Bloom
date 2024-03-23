@@ -14,7 +14,7 @@ void DebugViews::display() {
         ImGui::ShowMetricsWindow(&showUIDebugger);
     }
     if (showStylePanel) {
-        appearance.showInspector(&showStylePanel);
+        Appearance::showInspector(&showStylePanel);
         systemStyleInspector(&showStylePanel);
     }
 }

@@ -42,6 +42,7 @@ void SceneOutliner::treeNode(TreeNodeDescription const& desc, auto&& block) {
     flags |= ImGuiTreeNodeFlags_OpenOnArrow;
     flags |= ImGuiTreeNodeFlags_OpenOnDoubleClick;
     flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
+    flags |= ImGuiTreeNodeFlags_SpanFullWidth;
     if (desc.selected) {
         flags |= ImGuiTreeNodeFlags_Selected;
     }

@@ -150,7 +150,6 @@ void Toolbar::displayItem(ToolbarItemUnion const& item, std::size_t index) {
 
     case ToolbarItemUnion::Type::dropdownMenu: {
         auto const& menuData = item.get<ToolbarItemUnion::Type::dropdownMenu>();
-
         if (beginCombo(menuData, index, { item.width, actualHeight })) {
             if (menuData._content) {
                 menuData._content();
@@ -172,37 +171,40 @@ void Toolbar::displayItem(ToolbarItemUnion const& item, std::size_t index) {
 
 /// MARK: Buttons
 bool Toolbar::buttonEx(char const* label, std::size_t id, mtl::float2 size,
-                       bool enabled) const {
+                       bool enabled, bool open) const {
     ImGui::BeginDisabled(!enabled);
-
-    float4 color = GImGui->Style.Colors[ImGuiCol_Button];
+    float4 color =
+        GImGui->Style.Colors[open ? ImGuiCol_ButtonActive : ImGuiCol_Button];
     color.a *= style.buttonAlpha;
-    float4 colorHovered = GImGui->Style.Colors[ImGuiCol_ButtonHovered];
+    float4 colorHovered =
+        GImGui->Style
+            .Colors[open ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered];
     colorHovered.a *= style.buttonAlphaHovered;
     float4 colorActive = GImGui->Style.Colors[ImGuiCol_ButtonActive];
     colorActive.a *= style.buttonAlphaActive;
-
     ImGui::PushStyleColor(ImGuiCol_Button, color);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colorHovered);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, colorActive);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
     ImGui::PushID((int)id);
     bool const result = ImGui::Button(label, size);
     ImGui::PopID();
     ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar();
     ImGui::EndDisabled();
     return result;
 }
 
 bool Toolbar::button(char const* label, std::size_t id, mtl::float2 size,
-                     bool enabled) const {
+                     bool enabled, bool open) const {
     return withFont(FontWeight::semibold, FontStyle::roman,
-                    [&] { return buttonEx(label, id, size, enabled); });
+                    [&] { return buttonEx(label, id, size, enabled, open); });
 }
 
 bool Toolbar::iconButton(char const* icon, std::size_t id, mtl::float2 size,
-                         char const* tooltip, bool enabled) const {
+                         char const* tooltip, bool enabled, bool open) const {
     bool const result = withIconFont(IconSize::_16, [&] {
-        return buttonEx(icons.unicodeStr(icon).data(), id, size, enabled);
+        return buttonEx(icons.unicodeStr(icon).data(), id, size, enabled, open);
     });
 
     static float tooltipTimer = 1;
@@ -227,38 +229,30 @@ bool Toolbar::beginCombo(ToolbarDropdownMenu const& menuData, std::size_t index,
                          mtl::float2 size) const {
     char const* const tooltip = menuData._tooltip ? menuData._tooltip() :
                                                     nullptr;
-    bool const enabled = menuData._enabled == nullptr || menuData._enabled();
+    bool enabled = menuData._enabled == nullptr || menuData._enabled();
     using namespace ImGui;
     ImGuiWindow* window = GetCurrentWindow();
-
-    ImRect const bb(window->DC.CursorPos,
-                    window->DC.CursorPos +
-                        ImVec2(size.x,
-                               actualHeight + GImGui->Style.ItemSpacing.y));
-
+    ImRect bb(window->DC.CursorPos,
+              window->DC.CursorPos +
+                  ImVec2(size.x, actualHeight + GImGui->Style.ItemSpacing.y));
+    ImGuiID id = window->GetID(menuData._id.data());
+    ImGuiID popup_id = ImHashStr("##ComboPopup", 0, id);
+    bool popup_open = IsPopupOpen(popup_id, ImGuiPopupFlags_None);
     bool pressed = false;
-
     if (menuData._preview) {
-        pressed = button(menuData._preview().data(), index, size, enabled);
+        pressed = button(menuData._preview().data(), index, size, enabled,
+                         popup_open);
     }
     else {
         pressed = iconButton(menuData._icon ? menuData._icon() : "down-open",
-                             index, size, tooltip, enabled);
+                             index, size, tooltip, enabled, popup_open);
     }
-
-    ImGuiID const id = window->GetID(menuData._id.data());
-
-    ImGuiID const popup_id = ImHashStr("##ComboPopup", 0, id);
-    bool popup_open = IsPopupOpen(popup_id, ImGuiPopupFlags_None);
     if (pressed && !popup_open) {
         OpenPopupEx(popup_id, ImGuiPopupFlags_None);
         popup_open = true;
     }
-
     if (!popup_open) return false;
-
     SetNextWindowSizeConstraints(menuData._minSize, { FLT_MAX, FLT_MAX });
-
     auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                         ImVec2(2 * style.FramePadding.x, style.FramePadding.y));

@@ -220,12 +220,15 @@ private:
     void displayBlock(Block const&);
     void displayItem(ToolbarItemUnion const&, std::size_t index);
 
+    /// \Param open Use this flag to make the button look pressed. Used if popup
+    /// is open
     bool button(char const* label, std::size_t id, mtl::float2 size,
-                bool enabled = true) const;
+                bool enabled = true, bool open = false) const;
     bool buttonEx(char const* label, std::size_t id, mtl::float2 size,
-                  bool enabled = true) const;
+                  bool enabled, bool open) const;
     bool iconButton(char const* icon, std::size_t id, mtl::float2 size,
-                    char const* tooltip = nullptr, bool enabled = true) const;
+                    char const* tooltip = nullptr, bool enabled = true,
+                    bool open = false) const;
     bool beginCombo(ToolbarDropdownMenu const&, std::size_t id,
                     mtl::float2 size) const;
 

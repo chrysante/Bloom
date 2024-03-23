@@ -195,11 +195,18 @@ static void toolbarBGWindow(float2 size) {
     if (!open) {
         return;
     }
-    auto* DL = ImGui::GetWindowDrawList();
-    auto top = IM_COL32(255, 255, 255, 16);
-    auto bottom = IM_COL32(255, 255, 255, 24);
-    DL->AddRectFilledMultiColor({ 0, 0 }, ImGui::GetWindowSize(), top, top,
-                                bottom, bottom);
+    auto* window = ImGui::GetCurrentWindow();
+    auto* DL = window->DrawList;
+    // Background
+    auto bgCol = ImGui::ColorConvertFloat4ToU32(
+        ImGui::GetStyleColorVec4(ImGuiCol_TitleBg));
+    DL->AddRectFilled(window->Pos, window->Size, bgCol);
+    // Bottom separator
+    auto separatorCol = ImGui::ColorConvertFloat4ToU32(
+        GImGui->Style.Colors[ImGuiCol_Separator]);
+    DL->AddLine(float2(0, window->Pos.y + window->Size.y - 1),
+                float2(window->Size.x, window->Pos.y + window->Size.y - 1),
+                separatorCol);
     ImGui::End();
 }
 
@@ -220,22 +227,8 @@ static void toolbarWindow(float2 size, utl::function_view<void()> content) {
     ImGui::End();
 }
 
-static void drawSeparator(float positionX) {
-    auto* const window = ImGui::GetCurrentWindow();
-    auto* const drawList = window->DrawList;
-
-    drawList->AddLine(float2(positionX - 1, window->Pos.y),
-                      float2(positionX - 1, window->Pos.y + window->Size.y - 1),
-                      ImGui::ColorConvertFloat4ToU32(
-                          GImGui->Style.Colors[ImGuiCol_Separator]));
-    drawList->AddLine(float2(positionX, window->Pos.y),
-                      float2(positionX, window->Pos.y + window->Size.y - 1),
-                      ImGui::ColorConvertFloat4ToU32(
-                          GImGui->Style.Colors[ImGuiCol_Separator]));
-}
-
 /// Simulates window titlebar behaviour on the toolbar background
-static void toolbarBackground(Window& window, ImGuiViewport* viewport,
+static void titlebarBehaviour(Window& window, ImGuiViewport* viewport,
                               float toolbarHeight) {
     ImGui::BeginDisabled();
     float2 windowPadding = GImGui->Style.WindowPadding;
@@ -285,7 +278,7 @@ void Dockspace::displayToolbar(Window& window) {
     }
     BL_ASSERT(spacing.size() <= 2);
     toolbarWindow({ viewport->Size.x, height }, [&] {
-        toolbarBackground(window, viewport, height);
+        titlebarBehaviour(window, viewport, height);
         switch (spacing.size()) {
         case 0:
             toolbarLayoutOne(spacing);
@@ -299,14 +292,6 @@ void Dockspace::displayToolbar(Window& window) {
         default:
             BL_UNREACHABLE();
         }
-        // Bottom separator
-        auto* window = ImGui::GetCurrentWindow();
-        auto* drawList = window->DrawList;
-        drawList->AddLine(float2(0, window->Pos.y + window->Size.y - 1),
-                          float2(window->Size.x,
-                                 window->Pos.y + window->Size.y - 1),
-                          ImGui::ColorConvertFloat4ToU32(
-                              GImGui->Style.Colors[ImGuiCol_Separator]));
     });
 }
 
@@ -356,7 +341,6 @@ void Dockspace::toolbarLayoutTwo(utl::small_vector<int, 2> spacing) {
             ImVec2(viewport->Size.x - padding.x - t2Width, padding.y));
         toolbars[2].display(t2Width);
     }
-    drawSeparator(spacer);
 }
 
 void Dockspace::toolbarLayoutThree(utl::small_vector<int, 2> spacing) {
@@ -369,6 +353,4 @@ void Dockspace::toolbarLayoutThree(utl::small_vector<int, 2> spacing) {
         ImGui::SetCursorPos(ImVec2(position[i] + padding.x, padding.y));
         toolbars[i].display(width[i] - 2 * padding.x);
     }
-    drawSeparator(spacing[0]);
-    drawSeparator(spacing[1]);
 }

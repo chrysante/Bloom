@@ -106,10 +106,12 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
         disabledIf(isSimulating(), [&] {
             ImGui::SetCursorPos({ nameTextSize.x + spacing.x, 0 });
             ImGui::PushStyleColor(ImGuiCol_FrameBg,
-                                  appearance.style()
+                                  Appearance::get()
+                                      .style()
                                       .colors.highlightControlFrame);
             ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,
-                                  appearance.style()
+                                  Appearance::get()
+                                      .style()
                                       .colors.highlightControlFrameHovered);
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                                 float2(2, 1) * framePadding);
@@ -199,13 +201,16 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
             bool const tsLinked = transformScaleLinked;
             if (tsLinked) {
                 ImGui::PushStyleColor(ImGuiCol_Button,
-                                      appearance.style()
+                                      Appearance::get()
+                                          .style()
                                           .colors.highlightControlFrame);
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-                                      appearance.style()
+                                      Appearance::get()
+                                          .style()
                                           .colors.highlightControlFrameHovered);
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive,
-                                      appearance.style()
+                                      Appearance::get()
+                                          .style()
                                           .colors.highlightControlFrameDown);
             }
             if (ImGui::Button(unicode.data(), lockButtonSize)) {

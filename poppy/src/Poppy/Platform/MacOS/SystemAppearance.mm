@@ -20,21 +20,21 @@ static mtl::double4 convertColor(NSColor* color) {
 AppearanceType SystemAppearance::getCurrentType() {
     auto appearance = NSApp.effectiveAppearance;
     if (appearance.name == NSAppearanceNameAqua) {
-        return AppearanceType::light;
+        return AppearanceType::Light;
     }
     else if (appearance.name == NSAppearanceNameDarkAqua) {
-        return AppearanceType::dark;
+        return AppearanceType::Dark;
     }
     else {
-        return AppearanceType::none;
+        return AppearanceType::None;
     }
 }
 
 static NSAppearanceName toNSType(AppearanceType type) {
     switch (type) {
-    case AppearanceType::light:
+    case AppearanceType::Light:
         return NSAppearanceNameAqua;
-    case AppearanceType::dark:
+    case AppearanceType::Dark:
         return NSAppearanceNameDarkAqua;
     default:
         BL_UNREACHABLE();

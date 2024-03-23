@@ -13,13 +13,12 @@ namespace poppy {
 struct SystemAppearance {
     AppearanceType type;
 
-    enum struct ControlTint { Default = 0, Blue = 1, Graphite = 6, Clear = 7 };
+    enum class ControlTint { Default = 0, Blue = 1, Graphite = 6, Clear = 7 };
 
     static SystemAppearance getCurrent();
     static SystemAppearance get(AppearanceType);
     static AppearanceType getCurrentType();
 
-    /// MARK: Label Colors
     /// The primary color to use for text labels.
     mtl::double4 labelColor;
 
@@ -32,7 +31,6 @@ struct SystemAppearance {
     /// The quaternary color to use for text labels and separators.
     mtl::double4 quaternaryLabelColor;
 
-    /// MARK: Text Colors
     /// The color to use for text.
     mtl::double4 textColor;
 

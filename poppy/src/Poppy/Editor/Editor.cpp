@@ -173,7 +173,7 @@ void Editor::frame() {
     }
     autoConfigSave();
     clearClosingViews();
-    appearance.update();
+    Appearance::staticInstance().update();
     auto windows = getWindows();
     if (windows.empty()) {
         return;
@@ -294,7 +294,6 @@ void Editor::saveConfigToDisk() {
 
 void Editor::restoreConfigFromDisk() {
     YAML::Node root = getStoredConfig();
-    appearance.deserialize(root["Appearance"]);
     Logger::Warn("Resetting style colors on startup");
     ImGui::StyleColorsDark();
     loadViews(root["Views"]);

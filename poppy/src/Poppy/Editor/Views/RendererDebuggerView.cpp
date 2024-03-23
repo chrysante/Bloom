@@ -163,7 +163,7 @@ bloom::ForwardRenderer* RendererDebuggerView::findRenderer() const {
 
 std::shared_ptr<bloom::ForwardRendererFramebuffer> RendererDebuggerView::
     findFramebuffer() const {
-    auto const views = editor().getViews();
+    auto views = editor().getAllViews();
     for (auto* v: views) {
         auto* viewport = dynamic_cast<Viewport*>(v);
         if (!viewport) {

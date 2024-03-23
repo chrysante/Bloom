@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include <imgui.h>
+#include <range/v3/view.hpp>
 
 #include "Bloom/Application/ResourceUtil.h"
 #include "Bloom/Application/Window.h"
@@ -14,17 +15,20 @@
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/Appearance.h"
 
+using namespace poppy;
 using namespace bloom;
 using namespace mtl::short_types;
-using namespace poppy;
+using namespace ranges::views;
 
-float poppy::saveStateInterval() { return 5; }
+/// \Returns the duration in seconds after which the current editor config is
+/// automatically saved
+static float saveConfigInterval() { return 5; }
 
 std::unique_ptr<Application> bloom::createApplication() {
     return std::make_unique<poppy::Editor>();
 }
 
-struct EditorWindowDelegate: public bloom::WindowDelegate {
+struct EditorWindowDelegate: public WindowDelegate {
     void frame() override {
         if (onFrame) {
             onFrame();
@@ -87,15 +91,12 @@ Editor::Editor(): mSelection(makeReceiver()) {
     // clang-format on
 }
 
-utl::vector<View*> Editor::getViews() {
-    utl::vector<View*> result;
-    result.reserve(views.size());
-    std::transform(views.begin(), views.end(), std::back_inserter(result),
-                   [](auto&& v) { return v.get(); });
-    return result;
+std::vector<View*> Editor::getAllViews() {
+    return views | transform([](auto& view) { return view.get(); }) |
+           ranges::to<std::vector>;
 }
 
-void Editor::openView(std::string name, utl::function<void(View&)> completion) {
+void Editor::openView(std::string name, std::function<void(View&)> completion) {
     auto const entry = ViewRegistry::get(name);
     if (!entry) {
         Logger::Warn("Could not find View '", name, "'");
@@ -118,34 +119,43 @@ bool Editor::isSimulating() const {
 }
 
 void Editor::init() {
+    Logger::Trace("Editor::doInit()");
+    initRenderer();
+    createMainWindow();
+    initImGui();
+    restoreConfigFromDisk();
+    Logger::Trace("Editor::init() done");
+}
+
+void Editor::initRenderer() {
     auto editorRenderer =
         std::make_unique<EditorRenderer>(makeReceiver(),
                                          coreSystems().takeRenderer());
     editorRenderer->init(device());
     coreSystems().setRenderer(std::move(editorRenderer));
-    /* Create a Window */ {
-        auto delegate = std::make_unique<EditorWindowDelegate>();
-        delegate->onFrame = [this, delegate = delegate.get()] {
-            imguiCtx.drawFrame(device(), delegate->window());
-        };
-        auto& window = createWindow(loadWindowDesc(), std::move(delegate));
-        window.onInput([this](InputEvent const& e) { this->onInput(e); });
-        window.onTextInput(
-            [this](unsigned code) { imguiCtx.onTextInput(code); });
-        window.onClose([this] { saveStateToDisk(); });
-        window.createDefaultSwapchain(device());
-        window.setCommandQueue(device().createCommandQueue());
-    }
-    /* Initialize ImGui */ {
-        ImGuiContextDescription desc;
-        desc.iniFilePath = bloom::libraryDir() / "imgui.ini";
-        imguiCtx.init(*this, desc);
-    }
-    loadStateFromDisk();
+}
+
+void Editor::createMainWindow() {
+    auto delegate = std::make_unique<EditorWindowDelegate>();
+    delegate->onFrame = [this, delegate = delegate.get()] {
+        imguiCtx.drawFrame(device(), delegate->window());
+    };
+    auto& window = createWindow(loadWindowConfig(), std::move(delegate));
+    window.onInput([this](InputEvent const& e) { this->onInput(e); });
+    window.onTextInput([this](unsigned code) { imguiCtx.onTextInput(code); });
+    window.onClose([this] { saveConfigToDisk(); });
+    window.createDefaultSwapchain(device());
+    window.setCommandQueue(device().createCommandQueue());
+}
+
+void Editor::initImGui() {
+    ImGuiContextDescription desc;
+    desc.iniFilePath = libraryDir() / "imgui.ini";
+    imguiCtx.init(*this, desc);
 }
 
 void Editor::shutdown() {
-    saveStateToDisk();
+    saveConfigToDisk();
     imguiCtx.shutdown();
 }
 
@@ -161,11 +171,7 @@ void Editor::frame() {
     if (isSimulating()) {
         invalidateView();
     }
-    saveStateDirtyTimer -= time().delta;
-    if (saveStateDirtyTimer <= 0) {
-        saveStateToDisk();
-        saveStateDirtyTimer = saveStateInterval();
-    }
+    autoConfigSave();
     clearClosingViews();
     appearance.update();
     auto windows = getWindows();
@@ -180,7 +186,6 @@ void Editor::frame() {
 }
 
 void Editor::menuBar() {
-    //    ImGui::BeginMainMenuBar();
     if (ImGui::BeginMenu("File")) {
         if (ImGui::MenuItem("New Scene...")) {
             // newScene();
@@ -210,8 +215,6 @@ void Editor::menuBar() {
         }
         ImGui::EndMenu();
     }
-
-    //    ImGui::EndMainMenuBar();
 }
 
 void Editor::displayViews() {
@@ -228,7 +231,7 @@ void Editor::displayViews() {
     }
 }
 
-void Editor::onInput(bloom::InputEvent e) {
+void Editor::onInput(InputEvent e) {
     invalidateView();
     imguiCtx.onInput(e);
     e.dispatch<InputEventMask::KeyUp>([&](KeyEvent event) {
@@ -267,15 +270,17 @@ std::filesystem::path Editor::configFile() const {
     return libraryDir() / "Poppy.settings";
 }
 
-YAML::Node Editor::getConfig() { return YAML::LoadFile(configFile()); }
+YAML::Node Editor::getStoredConfig() { return YAML::LoadFile(configFile()); }
 
-void Editor::saveStateToDisk() {
-    YAML::Node root = getConfig();
+void Editor::saveConfigToDisk() {
+    /// We load the existing config to not destroy any saved state that is not
+    /// currently active
+    YAML::Node root = getStoredConfig();
     auto windows = getWindows();
     if (!windows.empty()) {
         root["Window"] = windows.front()->getDescription();
     }
-    root["Views"] = saveViews();
+    root["Views"] = getViewsConfig();
     YAML::Emitter out;
     out << root;
     auto filename = configFile();
@@ -287,19 +292,17 @@ void Editor::saveStateToDisk() {
     file << out.c_str();
 }
 
-void Editor::loadStateFromDisk() {
-    /// We load the existing config to not destroy any saved state that is not
-    /// currently active
-    YAML::Node root = getConfig();
+void Editor::restoreConfigFromDisk() {
+    YAML::Node root = getStoredConfig();
     appearance.deserialize(root["Appearance"]);
     Logger::Warn("Resetting style colors on startup");
     ImGui::StyleColorsDark();
     loadViews(root["Views"]);
 }
 
-WindowDescription Editor::loadWindowDesc() {
+WindowDescription Editor::loadWindowConfig() {
     try {
-        return getConfig()["Window"].as<WindowDescription>();
+        return getStoredConfig()["Window"].as<WindowDescription>();
     }
     catch (YAML::Exception const& e) {
         Logger::Trace("Failed to deserialize window state: ", e.what());
@@ -310,7 +313,15 @@ WindowDescription Editor::loadWindowDesc() {
     }
 }
 
-YAML::Node Editor::saveViews() {
+void Editor::autoConfigSave() {
+    autoConfigSaveTimer -= time().delta;
+    if (autoConfigSaveTimer <= 0) {
+        saveConfigToDisk();
+        autoConfigSaveTimer = saveConfigInterval();
+    }
+}
+
+YAML::Node Editor::getViewsConfig() {
     YAML::Node node;
     for (auto& view: views) {
         node.push_back(view->doSerialize());
@@ -330,10 +341,6 @@ void Editor::loadViews(YAML::Node const& node) {
     }
 }
 
-std::filesystem::path Editor::settingsFile() const {
-    return libraryDir() / "Poppy.settings";
-}
-
 View& Editor::createView(ViewRegistry::Entry const& entry, Window& window) {
     assert((bool)entry.factory);
     auto view = entry.factory();
@@ -345,7 +352,7 @@ View& Editor::createView(ViewRegistry::Entry const& entry, Window& window) {
     return *views.back();
 }
 
-void Editor::populateView(View& view, bloom::Window& window) {
+void Editor::populateView(View& view, Window& window) {
     auto& desc = view.desc;
     desc.editor = this;
     desc.window = &window;
@@ -366,12 +373,7 @@ void Editor::clearClosingViews() {
     }
 }
 
-void Editor::saveAll() {
-    coreSystems().assetManager().saveAll();
-    for (auto* scene: coreSystems().sceneSystem().scenes()) {
-        coreSystems().assetManager().saveToDisk(scene->handle());
-    }
-}
+void Editor::saveAll() { coreSystems().assetManager().saveAll(); }
 
 void Editor::invalidateView() {
     trickleEmptyEventCount = 3;

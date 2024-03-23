@@ -124,16 +124,15 @@ void Editor::init() {
     editorRenderer->init(device());
     coreSystems().setRenderer(std::move(editorRenderer));
     /* Create a Window */ {
-        WindowDescription windowDesc;
-        windowDesc.size = { 1200, 800 };
         auto delegate = std::make_unique<EditorWindowDelegate>();
         delegate->onFrame = [this, delegate = delegate.get()] {
             imguiCtx.drawFrame(device(), delegate->window());
         };
-        auto& window = createWindow(windowDesc, std::move(delegate));
+        auto& window = createWindow(loadWindowDesc(), std::move(delegate));
         window.onInput([this](InputEvent const& e) { this->onInput(e); });
         window.onTextInput(
             [this](unsigned code) { imguiCtx.onTextInput(code); });
+        window.onClose([this] { saveStateToDisk(); });
         window.createDefaultSwapchain(device());
         window.setCommandQueue(device().createCommandQueue());
     }
@@ -264,27 +263,51 @@ void Editor::onInput(bloom::InputEvent e) {
     }
 }
 
+std::filesystem::path Editor::configFile() const {
+    return libraryDir() / "Poppy.settings";
+}
+
+YAML::Node Editor::getConfig() { return YAML::LoadFile(configFile()); }
+
 void Editor::saveStateToDisk() {
-    YAML::Node root;
-    root["Appearance"] = appearance.serialize();
+    YAML::Node root = getConfig();
+    auto windows = getWindows();
+    if (!windows.empty()) {
+        root["Window"] = windows.front()->getDescription();
+    }
     root["Views"] = saveViews();
     YAML::Emitter out;
     out << root;
-    auto const filename = settingsFile();
+    auto filename = configFile();
     std::fstream file(filename, std::ios::out);
     if (!file) {
-        Logger::Error("Failed to save to file: ", filename);
+        Logger::Error("Failed to open config file: ", filename);
         return;
     }
     file << out.c_str();
 }
 
 void Editor::loadStateFromDisk() {
-    YAML::Node root = YAML::LoadFile(settingsFile());
+    /// We load the existing config to not destroy any saved state that is not
+    /// currently active
+    YAML::Node root = getConfig();
     appearance.deserialize(root["Appearance"]);
     Logger::Warn("Resetting style colors on startup");
     ImGui::StyleColorsDark();
     loadViews(root["Views"]);
+}
+
+WindowDescription Editor::loadWindowDesc() {
+    try {
+        return getConfig()["Window"].as<WindowDescription>();
+    }
+    catch (YAML::Exception const& e) {
+        Logger::Trace("Failed to deserialize window state: ", e.what());
+        return WindowDescription{
+            .size = { 1200, 800 },
+            .position = { 400, 400 },
+        };
+    }
 }
 
 YAML::Node Editor::saveViews() {

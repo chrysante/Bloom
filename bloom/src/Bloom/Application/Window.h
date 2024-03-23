@@ -9,6 +9,7 @@
 
 #include <mtl/mtl.hpp>
 #include <utl/utility.hpp>
+#include <yaml-cpp/yaml.h>
 
 #include "Bloom/Application/Input.h"
 #include "Bloom/Application/InputEvent.h"
@@ -34,6 +35,9 @@ struct WindowDescription {
 
     /// The initial size of the window
     mtl::int2 size = 0;
+
+    /// The initial position of the window
+    mtl::int2 position = 0;
 
     /// Set to true to make the window automatically resize the swapchain when
     /// window size changes
@@ -122,6 +126,9 @@ public:
     /// \Returns the window's input
     Input const& input() const { return userInput; }
 
+    /// \Returns the window's descriptor of the current state
+    WindowDescription const& getDescription() const { return desc; }
+
     /// \Returns the window title
     std::string const& title() const { return desc.title; }
 
@@ -196,7 +203,7 @@ private:
     };
 
     struct WindowDescPrivate: WindowDescription {
-        mtl::int2 position = 0;
+        /// Backup positition and size to restore from fullscreen
         mtl::int2 backupPosition = 0;
         mtl::int2 backupSize = 0;
         mtl::float2 contentScaleFactor = 1;
@@ -237,5 +244,11 @@ private:
 };
 
 } // namespace bloom
+
+template <>
+struct YAML::convert<bloom::WindowDescription> {
+    static Node encode(bloom::WindowDescription const& desc);
+    static bool decode(Node const& node, bloom::WindowDescription& desc);
+};
 
 #endif // BLOOM_APPLICATION_WINDOW_H

@@ -52,13 +52,15 @@ private:
     void onInput(bloom::InputEvent);
 
     /// Serialization
+    std::filesystem::path configFile() const;
+    YAML::Node getConfig();
     void saveStateToDisk();
     void loadStateFromDisk();
+    bloom::WindowDescription loadWindowDesc();
     YAML::Node saveViews();
     void loadViews(YAML::Node const&);
 
     /// Misc
-    std::filesystem::path settingsFile() const;
     View& createView(ViewRegistry::Entry const&, bloom::Window&);
     void populateView(View&, bloom::Window&);
     void clearClosingViews();
@@ -72,7 +74,6 @@ private:
     ///
     void stopSimulation();
 
-private:
     /// Hack to make ImGui happy, described in the source file
     void invalidateView();
     void postEmptySystemEvent();

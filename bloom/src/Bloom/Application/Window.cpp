@@ -6,6 +6,7 @@
 
 #include "Bloom/Application/InputInternal.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Yaml.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/Swapchain.h"
 
@@ -38,7 +39,7 @@ Window::Window(WindowDescription const& d) {
     windowPtr = std::unique_ptr<void, Deleter>(w);
     platformInit();
     glfwSetWindowUserPointer(GLFW_WND, this);
-    glfwGetWindowPos(GLFW_WND, &desc.position.x, &desc.position.y);
+    glfwSetWindowPos(GLFW_WND, desc.position.x, desc.position.y);
     glfwGetWindowSize(GLFW_WND, &desc.size.x, &desc.size.y);
     glfwGetWindowContentScale(GLFW_WND, &desc.contentScaleFactor.x,
                               &desc.contentScaleFactor.y);
@@ -357,4 +358,25 @@ void Window::resizeSwapchain(mtl::int2 newSize) {
 
 void Window::Deleter::operator()(void* ptr) const {
     glfwDestroyWindow((GLFWwindow*)ptr);
+}
+
+YAML::Node YAML::convert<WindowDescription>::encode(
+    bloom::WindowDescription const& desc) {
+    YAML::Node node;
+    node["Title"] = desc.title;
+    node["Size"] = desc.size;
+    node["Position"] = desc.position;
+    node["AutoResizeSwapchain"] = desc.autoResizeSwapchain;
+    node["Fullscreen"] = desc.fullscreen;
+    return node;
+}
+
+bool YAML::convert<WindowDescription>::decode(YAML::Node const& node,
+                                              WindowDescription& desc) {
+    desc.title = node["Title"].as<std::string>();
+    desc.size = node["Size"].as<int2>();
+    desc.position = node["Position"].as<int2>();
+    desc.autoResizeSwapchain = node["AutoResizeSwapchain"].as<bool>();
+    desc.fullscreen = node["Fullscreen"].as<bool>();
+    return true;
 }

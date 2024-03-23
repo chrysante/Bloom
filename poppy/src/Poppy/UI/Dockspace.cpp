@@ -36,7 +36,7 @@ static void withWindowSizeConstraints(mtl::float2 minSize, auto&& block) {
     block();
 }
 
-Dockspace::Dockspace() {}
+Dockspace::Dockspace() = default;
 
 void Dockspace::display(Window& window) {
     mainWindow();
@@ -60,9 +60,9 @@ void Dockspace::setRightToolbar(Toolbar tb) {
 }
 
 void Dockspace::setToolbarHeight(float height) {
-    toolbars[0].setHeight(height);
-    toolbars[1].setHeight(height);
-    toolbars[2].setHeight(height);
+    for (auto& toolbar: toolbars) {
+        toolbar.setHeight(height);
+    }
 }
 
 void Dockspace::setInsets(float left, float right) {
@@ -108,9 +108,8 @@ void Dockspace::submitMasterDockspace() {
     ImGuiDockNodeFlags flags = 0;
     flags |= ImGuiDockNodeFlags_NoWindowMenuButton;
     flags |= ImGuiDockNodeFlags_NoCloseButton;
-    ImGuiID const dockID = ImGui::GetID(MainDockspaceID);
-    mainDockID = dockID;
-    ImGui::DockSpace(dockID, /* size = */ {}, flags);
+    mainDockID = ImGui::GetID(MainDockspaceID);
+    ImGui::DockSpace(mainDockID, /* size = */ {}, flags);
 }
 
 utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
@@ -166,7 +165,7 @@ utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
     }();
 }
 
-static void toolbarWindow(float2 size, utl::function_view<void()> content) {
+[[nodiscard]] static bool beginToolbarWindow(char const* ID, float2 size) {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGuiWindow* mainWindow = ImGui::FindWindowByName(MainWindowID);
     float2 position = { 0, viewport->Pos.y + mainWindow->MenuBarHeight() };
@@ -184,8 +183,34 @@ static void toolbarWindow(float2 size, utl::function_view<void()> content) {
     flags |= ImGuiWindowFlags_NoSavedSettings;
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
-    ImGui::Begin("Main_Toolbar", NULL, flags);
+    bool result = ImGui::Begin(ID, NULL, flags);
     ImGui::PopStyleVar(2);
+    return result;
+}
+
+static void toolbarBGWindow(float2 size) {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    bool open = beginToolbarWindow("Main_Toolbar_BG", size);
+    ImGui::PopStyleVar();
+    if (!open) {
+        return;
+    }
+    auto* DL = ImGui::GetWindowDrawList();
+    auto top = IM_COL32(255, 255, 255, 16);
+    auto bottom = IM_COL32(255, 255, 255, 24);
+    DL->AddRectFilledMultiColor({ 0, 0 }, ImGui::GetWindowSize(), top, top,
+                                bottom, bottom);
+    ImGui::End();
+}
+
+static void toolbarWindow(float2 size, utl::function_view<void()> content) {
+    toolbarBGWindow(size);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
+    bool open = beginToolbarWindow("Main_Toolbar", size);
+    ImGui::PopStyleColor();
+    if (!open) {
+        return;
+    }
     content();
     if (ImGui::IsWindowFocused() && GImGui->WindowsFocusOrder.size() > 1 &&
         ImGui::GetIO().MouseReleased[ImGuiMouseButton_Left])
@@ -217,8 +242,7 @@ static void toolbarBackground(Window& window, ImGuiViewport* viewport,
     ImGui::SetCursorPos(-windowPadding);
     ImGui::SetNextItemAllowOverlap();
     ImGui::InvisibleButton("Main_Toolbar_Background_Button",
-                           { viewport->Size.x + 2 * windowPadding.x,
-                             toolbarHeight + windowPadding.y });
+                           { viewport->Size.x, toolbarHeight });
     ImGui::EndDisabled();
     if (GImGui->LastItemData.ID == GImGui->HoveredIdPreviousFrame) {
         if (GImGui->IO.MouseClickedCount[ImGuiMouseButton_Left] == 2) {

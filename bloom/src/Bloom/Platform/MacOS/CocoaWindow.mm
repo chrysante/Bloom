@@ -202,12 +202,7 @@ void Window::platformInit() {
                                        owner: window
                                     userInfo: nil];
     [window.contentView addTrackingArea:trackingArea];
-    
-    /// Make window pretty
-    window.movable = false;
-    window.styleMask |= NSWindowStyleMaskFullSizeContentView;
-    window.titlebarAppearsTransparent = true;
-    window.toolbar = [[NSToolbar alloc] init];
+    applyStyle();
     /// Because GLFW down not get mouse input events over the toolbar we monitor these events ourself
     /// TODO: Remove the monitors when we destroy windows
     auto mask = NSEventMaskLeftMouseDown |
@@ -249,6 +244,22 @@ void Window::platformInit() {
         }
         return event;
     }];
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskAppKitDefined
+                                          handler:^NSEvent*(NSEvent* event) {
+        if ((CocoaEventType)event.subtype == CocoaEventType::WindowShallZoom) {
+            [event.window zoom:nil];
+        }
+        return event;
+    }];
+}
+
+void Window::applyStyle() {
+    NSWindow* window = getNative(this);
+    window.title = @"";
+    window.movable = false;
+    window.styleMask |= NSWindowStyleMaskFullSizeContentView;
+    window.titlebarAppearsTransparent = true;
+    window.toolbar = [[NSToolbar alloc] init];
 }
 
 float Window::toolbarHeight() const {

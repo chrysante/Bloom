@@ -200,6 +200,7 @@ void Window::makeWindowed() {
     desc.fullscreen = false;
     glfwSetWindowMonitor(GLFW_WND, nullptr, desc.position.x, desc.position.y,
                          desc.size.x, desc.size.y, GLFW_DONT_CARE);
+    applyStyle();
 }
 
 void Window::close() { glfwSetWindowShouldClose(GLFW_WND, true); }

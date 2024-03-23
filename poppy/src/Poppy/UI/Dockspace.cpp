@@ -230,6 +230,9 @@ static void toolbarWindow(float2 size, utl::function_view<void()> content) {
 /// Simulates window titlebar behaviour on the toolbar background
 static void titlebarBehaviour(Window& window, ImGuiViewport* viewport,
                               float toolbarHeight) {
+    if (toolbarHeight <= 0) {
+        return;
+    }
     ImGui::BeginDisabled();
     float2 windowPadding = GImGui->Style.WindowPadding;
     ImGui::SetCursorPos(-windowPadding);

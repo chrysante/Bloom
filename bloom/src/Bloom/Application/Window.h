@@ -232,6 +232,7 @@ private:
 
     Window(WindowDescription const& desc);
     void platformInit();
+    void applyStyle();
     void setCallbacks();
     void resizeSwapchain(mtl::int2 size);
 

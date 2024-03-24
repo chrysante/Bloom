@@ -15,13 +15,22 @@ void MessageSystem::sendNow(std::any message) {
     }
 }
 
+void MessageSystem::sendAsync(std::any message) {
+    std::lock_guard lock(bufferMutex);
+    buffer.push_back(std::move(message));
+}
+
 void MessageSystem::flush() {
     /// Guard this here to prevent feedback loops
     if (flushing) {
         return;
     }
     flushing = true;
-    for (auto& msg: buffer) {
+    auto messages = [this] {
+        std::lock_guard lock(bufferMutex);
+        return std::move(buffer);
+    }();
+    for (auto& msg: messages) {
         try {
             sendNow(std::move(msg));
         }
@@ -30,7 +39,6 @@ void MessageSystem::flush() {
         }
     }
     flushing = false;
-    buffer.clear();
 }
 
 void MessageSystem::unregister(ListenerID ID) {

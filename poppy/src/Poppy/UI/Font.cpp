@@ -13,6 +13,7 @@
 
 #include "Bloom/Application.h"
 #include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/ImGuiContext.h"
 
 namespace rapidjson {
@@ -216,6 +217,7 @@ void FontManager::reloadAsync() {
                      data = imguiData]() mutable {
             data.atlas = IM_NEW(ImFontAtlas);
             loadAll(data, scaleFactor, glyphs);
+            postEmptySystemEvent();
             dispatch(DispatchToken::NextFrame, [this, data = std::move(data)] {
                 IM_FREE(imguiData.atlas);
                 imguiData = std::move(data);

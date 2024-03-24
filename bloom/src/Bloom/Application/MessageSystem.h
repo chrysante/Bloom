@@ -5,6 +5,7 @@
 #include <concepts>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <typeindex>
 #include <vector>
 
@@ -57,8 +58,9 @@ public:
     /// message and returns
     void sendNow(std::any message);
 
-    /// Stores \p message in an internal buffer
-    void sendAsync(std::any message) { buffer.push_back(std::move(message)); }
+    /// Stores \p message in an internal buffer. This function can be called
+    /// concurrently
+    void sendAsync(std::any message);
 
     /// Registers \p listener for listening to any messages sent to this system
     /// Call `unregister` with the returned ID to stop listening
@@ -100,6 +102,7 @@ private:
         utl::hashmap<int64_t, std::function<void(std::any const&)>>;
 
     utl::hashmap<std::type_index, TypedSet> listenerSets;
+    std::mutex bufferMutex;
     std::vector<std::any> buffer;
     int64_t index = 0;
     bool flushing = false;
@@ -117,7 +120,7 @@ public:
     ///
     void assignEmitter(Emitter emitter) { *this = std::move(emitter); }
 
-    /// Dispatches a message
+    /// Dispatches a message. This function can be called concurrently
     void dispatch(DispatchToken token, std::any message) const {
         BL_ASSERT(messageSystem, "Cannot dispatch without a message system");
         switch (token) {
@@ -156,7 +159,12 @@ public:
     ///
     void assignReceiver(Receiver receiver) { *this = std::move(receiver); }
 
+    /// Listens to messages of type \p T by invoking \p listener whenever a
+    /// message of type \p T is sent. The listener is is unregistered when this
+    /// receiver is destroyed or when `unregisterAll()` is called
     ///
+    /// \Warning this function is not thread safe. Ideally listeners are only
+    /// registered from the main thread
     template <typename T, std::invocable<T> F>
     void listen(F&& listener) {
         listenImpl([&](auto* msg) {

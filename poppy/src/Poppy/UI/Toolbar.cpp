@@ -204,7 +204,8 @@ bool Toolbar::button(char const* label, std::size_t id, mtl::float2 size,
 bool Toolbar::iconButton(char const* icon, std::size_t id, mtl::float2 size,
                          char const* tooltip, bool enabled, bool open) const {
     bool const result = withIconFont(IconSize::_16, [&] {
-        return buttonEx(icons.unicodeStr(icon).data(), id, size, enabled, open);
+        return buttonEx(FontManager::getUnicodeStr(icon).data(), id, size,
+                        enabled, open);
     });
 
     static float tooltipTimer = 1;

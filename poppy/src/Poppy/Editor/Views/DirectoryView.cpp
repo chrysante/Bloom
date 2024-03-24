@@ -147,11 +147,11 @@ static EntryButtonState displayEntryButton(float2 position, float2 size,
 static void drawIcon(IconSize iconSize, std::string iconName,
                      float2 buttonPosition, float2 buttonSize,
                      float labelHeight) {
-    ImGui::PushFont((ImFont*)icons.font(iconSize));
+    ImGui::PushFont(FontManager::get({ iconSize }));
     auto iconCursor = buttonPosition;
     iconCursor.y += (buttonSize.y - labelHeight) / 2;
     iconCursor.x += buttonSize.x / 2;
-    auto iconText = icons.unicodeStr(iconName);
+    auto iconText = FontManager::getUnicodeStr(iconName);
     float2 iconTextSize = ImGui::CalcTextSize(iconText.data());
     iconCursor -= iconTextSize / 2;
     ImGui::SetCursorPos(iconCursor);

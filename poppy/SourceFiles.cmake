@@ -51,8 +51,6 @@ set(poppy_sources
   src/Poppy/UI/Dockspace.h
   src/Poppy/UI/Font.cpp
   src/Poppy/UI/Font.h
-  src/Poppy/UI/Icons.cpp
-  src/Poppy/UI/Icons.h
   src/Poppy/UI/ImGuiContext.cpp
   src/Poppy/UI/ImGuiContext.h
   src/Poppy/UI/ImGuiHelpers.cpp

@@ -17,7 +17,7 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/Views/AssetBrowser.h"
 #include "Poppy/Editor/Views/MaterialInstanceViewer.h"
-#include "Poppy/UI/Icons.h"
+#include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace bloom;

@@ -8,7 +8,6 @@
 
 #include "Bloom/Core/EnumCount.h"
 #include "Poppy/UI/Font.h"
-#include "Poppy/UI/Icons.h"
 
 namespace poppy {
 
@@ -29,13 +28,13 @@ auto withID(int id, std::invocable auto&& block) {
 }
 
 auto withFont(FontDesc const& font, std::invocable auto&& block) {
-    ImGui::PushFont(fonts.get(font));
+    ImGui::PushFont(FontManager::get(font));
     utl::scope_guard pop = [] { ImGui::PopFont(); };
     return block();
 }
 
 auto withIconFont(IconSize size, std::invocable auto&& block) {
-    ImGui::PushFont(icons.font(size));
+    ImGui::PushFont(FontManager::get(IconFontDesc{ size }));
     utl::scope_guard pop = [] { ImGui::PopFont(); };
     return block();
 }

@@ -9,7 +9,6 @@
 #include "Bloom/GPU.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/UI/Font.h"
-#include "Poppy/UI/Icons.h"
 
 using namespace bloom;
 using namespace poppy;
@@ -238,14 +237,16 @@ void poppy::ImGuiContext::init(bloom::Application& application,
     desc = ds;
     this->bloom::Receiver::operator=(application.makeReceiver());
     IMGUI_CHECKVERSION();
-    fonts.init(application);
+    auto* fontManager = new FontManager();
+    fontManager->init(application);
+    FontManager::setGlobalInstance(fontManager);
     /// Scale factor values are figured out by trial-and-error and are hardcoded
     /// for now.
     static constexpr float ScaleFactor = 2.0;
     loadFonts(device, ScaleFactor);
     context = ImGui::CreateContext(sFontAtlas);
     context->IO.FontGlobalScale = 0.5 / ScaleFactor;
-    context->IO.FontDefault = fonts.get(FontDesc::UIDefault());
+    context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -258,13 +259,9 @@ void poppy::ImGuiContext::init(bloom::Application& application,
     doInitPlatform(device, *application.getWindows().front());
     createFontAtlasPlatform(sFontAtlas, device);
     listen([this](ReloadFontAtlasCommand) {
-        if (fontAtlasReloaded) {
-            return;
-        }
-        fontAtlasReloaded = true;
         loadFonts(mApplication->device(), ScaleFactor);
         createFontAtlasPlatform(sFontAtlas, mApplication->device());
-        context->IO.FontDefault = fonts.get(FontDesc::UIDefault());
+        context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
     });
 }
 
@@ -273,14 +270,16 @@ void poppy::ImGuiContext::loadFonts(bloom::HardwareDevice&, float scaleFactor) {
         sFontAtlas = IM_NEW(ImFontAtlas);
     }
     sFontAtlas->Clear();
-    icons.load(*sFontAtlas, scaleFactor,
-               resourceDir() / "Icons/IconsConfig.json",
-               resourceDir() / "Icons/Icons.ttf");
-    fonts.loadFonts(*sFontAtlas, scaleFactor);
+    FontManager::getGlobalInstance()->reloadFonts(*sFontAtlas, scaleFactor);
+    FontManager::getGlobalInstance()->reloadIcons(*sFontAtlas, scaleFactor,
+                                                  resourceDir() /
+                                                      "Icons/IconsConfig.json",
+                                                  resourceDir() /
+                                                      "Icons/Icons.ttf");
     sFontAtlas->Build();
-    auto* testFont = fonts.get(FontDesc::UIDefault());
+    auto* testFont = FontManager::get(FontDesc::UIDefault());
     BL_ASSERT(testFont && testFont->IsLoaded());
-    auto* iconFont16 = icons.font(IconSize::_16);
+    auto* iconFont16 = FontManager::get({ IconSize::_16 });
     BL_ASSERT(iconFont16 && iconFont16->IsLoaded());
 }
 
@@ -298,7 +297,6 @@ void poppy::ImGuiContext::newFrame(bloom::Window& window) {
     io.DisplayFramebufferScale = window.contentScaleFactor();
     doNewFramePlatform(window);
     ImGui::NewFrame();
-    fontAtlasReloaded = false;
 }
 
 void poppy::ImGuiContext::drawFrame(bloom::HardwareDevice& device,

@@ -51,7 +51,6 @@ private:
     static ImFontAtlas* sFontAtlas;
     ::ImGuiContext* context = nullptr;
     ImGuiContextDescription desc;
-    bool fontAtlasReloaded = false;
 };
 
 struct ReloadFontAtlasCommand {};

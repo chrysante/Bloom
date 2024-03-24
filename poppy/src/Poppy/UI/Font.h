@@ -1,6 +1,7 @@
 #ifndef POPPY_UI_FONT_H
 #define POPPY_UI_FONT_H
 
+#include <filesystem>
 #include <string>
 
 #include <imgui.h>
@@ -32,19 +33,19 @@ enum class FontWeight {
     LAST = Black
 };
 
-std::string toString(FontWeight weight);
-
 enum class FontStyle { Roman, Italic, Monospaced, LAST = Monospaced };
 
-std::string toString(FontStyle style);
-
+/// Font attribute descriptor. Used to identify fonts when interacting with the
+/// font manager
 struct FontDesc {
     FontSize size;
     FontWeight weight;
     FontStyle style;
 
+    /// \Returns the font descriptor used for most UI elements
     static FontDesc UIDefault();
 
+    ///
     [[nodiscard]] FontDesc setSize(FontSize size) const {
         auto result = *this;
         result.size = size;
@@ -63,31 +64,83 @@ struct FontDesc {
         return result;
     }
 
-    friend bool operator==(FontDesc const&, FontDesc const&) = default;
+    bool operator==(FontDesc const& rhs) const = default;
 };
 
-class FontMap: public bloom::Emitter {
-public:
-    void init(bloom::Application&);
-    void loadFonts(ImFontAtlas&, float scaleFactor);
-    ImFont* get(FontDesc const&);
+enum class IconSize { _16 = 16, _24 = 24, _32 = 32, _48 = 48, _64 = 64 };
 
-private:
-    static ImFont* loadFont(FontDesc const&, ImFontAtlas&, float scaleFactor);
+struct IconFontDesc {
+    IconSize size;
 
-private:
-    utl::hashmap<FontDesc, ImFont*> fonts;
+    bool operator==(IconFontDesc const& rhs) const = default;
 };
-
-extern FontMap fonts;
 
 } // namespace poppy
 
 template <>
 struct std::hash<poppy::FontDesc> {
-    std::size_t operator()(poppy::FontDesc const& font) const {
-        return utl::hash_combine(font.size, font.weight, font.style);
+    std::size_t operator()(poppy::FontDesc const& desc) const {
+        return utl::hash_combine(desc.size, desc.weight, desc.style);
     }
 };
+
+template <>
+struct std::hash<poppy::IconFontDesc> {
+    std::size_t operator()(poppy::IconFontDesc const& desc) const {
+        return std::hash<poppy::IconSize>{}(desc.size);
+    }
+};
+
+namespace poppy {
+
+///
+class FontManager: public bloom::Emitter {
+public:
+    /// Initializes the font manager. Must be called before any call to `get()`
+    void init(bloom::Application& app);
+
+    ///
+    static void setGlobalInstance(FontManager* fontManager);
+
+    ///
+    static FontManager* getGlobalInstance();
+
+    /// Tries to return the font described by \p desc
+    /// If the font is not available, it will be loaded in the background. In
+    /// this case another font is returned and the requested font will be
+    /// returned by the next call to `get` as soon as the font is available
+    static ImFont* get(FontDesc const& font);
+
+    ///
+    static ImFont* get(IconFontDesc const& font);
+
+    ///
+    static std::string getUnicodeStr(std::string name);
+
+    /// # Temporary interface
+
+    void reloadFonts(ImFontAtlas& atlas, float scaleFactor);
+
+    void reloadIcons(ImFontAtlas& atlas, float scaleFactor,
+                     std::filesystem::path config, std::filesystem::path icons);
+
+private:
+    using FontKey = std::variant<FontDesc, IconFontDesc>;
+
+    ImFont* getImpl(FontKey const& key);
+
+    std::string getUnicodeStrImpl(std::string name);
+
+    ImFont* loadFont(FontDesc const& font, ImFontAtlas& atlas,
+                     float scaleFactor);
+
+    bool haveSignaledReload = false;
+    utl::hashmap<FontKey, ImFont*> map;
+    // TODO: Evaluate these members
+    utl::hashmap<std::string, uint16_t> codes;
+    std::vector<uint16_t> glyphs;
+};
+
+} // namespace poppy
 
 #endif // POPPY_UI_FONT_H

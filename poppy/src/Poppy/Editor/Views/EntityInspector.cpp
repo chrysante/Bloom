@@ -194,9 +194,9 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
                 }
             }
             ImGui::SameLine();
-            auto* const iconFont = icons.font(IconSize::_16);
-            auto const unicode =
-                icons.unicodeStr(transformScaleLinked ? "link" : "unlink");
+            auto* iconFont = FontManager::get({ IconSize::_16 });
+            auto unicode = FontManager::getUnicodeStr(
+                transformScaleLinked ? "link" : "unlink");
             ImGui::PushFont(iconFont);
             bool const tsLinked = transformScaleLinked;
             if (tsLinked) {

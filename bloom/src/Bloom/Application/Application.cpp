@@ -27,8 +27,11 @@ std::unique_ptr<bloom::Application> bloom::createApplication() {
     std::terminate();
 }
 
-Application::Application():
-    Receiver(makeReceiver()), Emitter(makeEmitter()), mCoreSystems(this) {}
+Application::Application(): mCoreSystems(this) {
+    messageSystem = MessageSystem::Create();
+    assignEmitter(makeEmitter());
+    assignReceiver(makeReceiver());
+}
 
 Application::~Application() = default;
 
@@ -39,6 +42,10 @@ utl::small_vector<Window*> Application::getWindows() {
                    [](auto& wrapper) { return wrapper.window.get(); });
     return result;
 }
+
+Emitter Application::makeEmitter() { return messageSystem->makeEmitter(); }
+
+Receiver Application::makeReceiver() { return messageSystem->makeReceiver(); }
 
 Window& Application::createWindow(WindowDescription const& desc,
                                   std::unique_ptr<WindowDelegate> delegate) {
@@ -96,7 +103,7 @@ void Application::doShutdown() {
 }
 
 void Application::doFrame() {
-    MessageSystem::flush();
+    messageSystem->flush();
     BLOOM_AUTORELEASE_BEGIN
     this->frame();
     BLOOM_AUTORELEASE_END

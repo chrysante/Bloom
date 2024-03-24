@@ -2,6 +2,7 @@
 #define BLOOM_APPLICATION_APPLICATION_H
 
 #include <memory>
+#include <vector>
 
 #include <utl/utility.hpp>
 
@@ -17,6 +18,9 @@ namespace bloom {
 class Application;
 class HardwareDevice;
 class AppRunner;
+class MessageSystem;
+class Emitter;
+class Receiver;
 
 /// Users are expected to provide an implementation of this function in their
 /// code, that returns a derived application
@@ -33,10 +37,7 @@ enum class RunLoopMode {
 
 /// Base class of user application. Users are expected to derive from this class
 /// to implement their application
-class BLOOM_API Application:
-    private MessageSystem,
-    protected Receiver,
-    protected Emitter {
+class BLOOM_API Application: protected Receiver, protected Emitter {
 public:
     virtual ~Application();
 
@@ -66,9 +67,12 @@ public:
     ///
     utl::small_vector<Window*> getWindows();
 
-    using MessageSystem::makeEmitter;
+    /// Creates an emitter that emits to the message system of this application
+    Emitter makeEmitter();
 
-    using MessageSystem::makeReceiver;
+    /// Creates an receiver that listens to the message system of this
+    /// application
+    Receiver makeReceiver();
 
     /// Creates a new window with from window description \p desc and window
     /// delegate \p delegate
@@ -111,7 +115,8 @@ private:
         std::unique_ptr<bloom::WindowDelegate> delegate;
     };
 
-    utl::vector<WindowWrapper> mWindows;
+    std::shared_ptr<MessageSystem> messageSystem;
+    std::vector<WindowWrapper> mWindows;
     CoreSystemManager mCoreSystems;
     Timer mTimer;
     RunLoopMode mRunLoopMode = RunLoopMode::Realtime;

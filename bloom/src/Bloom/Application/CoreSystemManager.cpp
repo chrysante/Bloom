@@ -40,8 +40,8 @@ void CoreSystemManager::setRenderer(std::unique_ptr<Renderer> renderer) {
 template <typename SystemType>
 std::unique_ptr<SystemType> CoreSystemManager::makeCoreSystem(auto&&... args) {
     auto system = std::make_unique<SystemType>(UTL_FORWARD(args)...);
-    system->Emitter::operator=(mApp->makeEmitter());
-    system->Receiver::operator=(mApp->makeReceiver());
+    system->assignEmitter(mApp->makeEmitter());
+    system->assignReceiver(mApp->makeReceiver());
     system->mApp = mApp;
     return system;
 }

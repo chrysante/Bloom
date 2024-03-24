@@ -355,8 +355,8 @@ void Editor::populateView(View& view, Window& window) {
     auto& desc = view.desc;
     desc.editor = this;
     desc.window = &window;
-    view.Emitter::operator=(makeEmitter());
-    view.Receiver::operator=(makeReceiver());
+    view.assignEmitter(makeEmitter());
+    view.assignReceiver(makeReceiver());
 }
 
 void Editor::clearClosingViews() {

@@ -8,6 +8,7 @@
 #include <utl/hashmap.hpp>
 #include <utl/utility.hpp>
 #include <utl/uuid.hpp>
+#include <utl/vector.hpp>
 
 #include "Bloom/Application/CoreSystem.h"
 #include "Bloom/Core/Base.h"

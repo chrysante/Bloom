@@ -228,12 +228,12 @@ static ImGuiKey toImGuiKeyCode(Key key) {
 
 poppy::ImGuiContext::~ImGuiContext() = default;
 
-void poppy::ImGuiContext::init(bloom::Application& application,
+void poppy::ImGuiContext::init(Application& application,
                                ImGuiContextDescription const& ds) {
     mApplication = &application;
     auto& device = application.device();
     desc = ds;
-    this->bloom::Receiver::operator=(application.makeReceiver());
+    this->assignReceiver(application.makeReceiver());
     IMGUI_CHECKVERSION();
     /// Scale factor values are figured out by trial-and-error and are hardcoded
     /// for now.
@@ -275,7 +275,7 @@ void poppy::ImGuiContext::shutdown() {
     context = nullptr;
 }
 
-void poppy::ImGuiContext::newFrame(bloom::Window& window) {
+void poppy::ImGuiContext::newFrame(Window& window) {
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = (mtl::float2)window.size();
@@ -284,13 +284,12 @@ void poppy::ImGuiContext::newFrame(bloom::Window& window) {
     ImGui::NewFrame();
 }
 
-void poppy::ImGuiContext::drawFrame(bloom::HardwareDevice& device,
-                                    bloom::Window& window) {
+void poppy::ImGuiContext::drawFrame(HardwareDevice& device, Window& window) {
     ImGui::SetCurrentContext(context);
     doDrawFramePlatform(device, window);
 }
 
-void poppy::ImGuiContext::onInput(bloom::InputEvent e) {
+void poppy::ImGuiContext::onInput(InputEvent e) {
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.AddMouseViewportEvent(ImGuiID{});
@@ -365,19 +364,19 @@ void poppy::ImGuiContext::onTextInput(unsigned int code) {
 
 /// On Apple platform these are defined in Platform/MacOS/ImGuiContext.mm
 
-void poppy::ImGuiContext::doInitPlatform(bloom::HardwareDevice& device,
+void poppy::ImGuiContext::doInitPlatform(HardwareDevice& device,
                                          ImGuiContextDescription const& d) {}
 
-void poppy::ImGuiContext::createFontAtlas(bloom::HardwareDevice&) {}
+void poppy::ImGuiContext::createFontAtlas(HardwareDevice&) {}
 
-void poppy::ImGuiContext::doNewFramePlatform(bloom::Window& window) {}
+void poppy::ImGuiContext::doNewFramePlatform(Window& window) {}
 
-void poppy::ImGuiContext::doDrawFramePlatform(bloom::HardwareDevice& device,
-                                              bloom::Window& window) {}
+void poppy::ImGuiContext::doDrawFramePlatform(HardwareDevice& device,
+                                              Window& window) {}
 
 void poppy::ImGuiContext::doShutdownPlatform() {}
 
 void poppy::ImGuiContext::createFontAtlasPlatform(ImFontAtlas* atlas,
-                                                  bloom::HardwareDevice&) {}
+                                                  HardwareDevice&) {}
 
 #endif

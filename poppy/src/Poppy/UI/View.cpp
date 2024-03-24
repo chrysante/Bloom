@@ -71,12 +71,12 @@ void View::setTitle(std::string newTitle) {
     desc.pub.title = std::move(newTitle);
 }
 
-/// MARK: Convinience Helpers
+/// MARK: Convenience Helpers
 void View::displayEmptyWithReason(std::string_view reason) const {
     auto const oldCursorPos = ImGui::GetCursorPos();
     utl::scope_guard reset = [&] { ImGui::SetCursorPos(oldCursorPos); };
 
-    Font font = Font::UIDefault();
+    FontDesc font = FontDesc::UIDefault();
     font.weight = FontWeight::semibold;
 
     withFont(font, [&] {

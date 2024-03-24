@@ -47,7 +47,7 @@ private:
     bool beginComponentSection(std::string_view name, bloom::EntityHandle);
     bool beginSubSection(std::string_view name);
 
-    bool beginGenericSection(std::string_view name, Font const&,
+    bool beginGenericSection(std::string_view name, FontDesc const&,
                              utl::function<void()> deleter);
 
     void endSection();

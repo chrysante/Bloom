@@ -94,7 +94,7 @@ bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
 
             auto const cp = GetCursorPos();
             auto const label = labels[i];
-            //				withFont(Font::UIDefault().setWeight(FontWeight::black),
+            //				withFont(FontDesc::UIDefault().setWeight(FontWeight::black),
             //[&]{ 					auto const textSize = CalcTextSize(label);
             // SetCursorPos(cp + ImVec2((labelButtonSize.x - textSize.x) / 2, i
             // == 0 ? (labelButtonSize.y
@@ -105,7 +105,7 @@ bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
             // ImVec2(labelButtonSize.x, 0));
             //				});
 
-            withFont(Font::UIDefault().setWeight(FontWeight::black), [&] {
+            withFont(FontDesc::UIDefault().setWeight(FontWeight::black), [&] {
                 //					auto const label = labels[i];
                 auto const textSize = CalcTextSize(label);
                 //					auto const cp = GetCursorPos();

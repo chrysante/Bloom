@@ -95,7 +95,7 @@ void Dockspace::mainWindow() {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, { 0, 0 });
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                         float2(1, 1) * (float2)style.FramePadding);
-    withFont(Font::UIDefault(), [&] {
+    withFont(FontDesc::UIDefault(), [&] {
         ImGui::Begin(MainWindowID, nullptr, windowFlags);
         withWindowSizeConstraints(minWindowSize,
                                   [&] { submitMasterDockspace(); });

@@ -245,7 +245,7 @@ void poppy::ImGuiContext::init(bloom::Application& application,
     loadFonts(device, ScaleFactor);
     context = ImGui::CreateContext(sFontAtlas);
     context->IO.FontGlobalScale = 0.5 / ScaleFactor;
-    context->IO.FontDefault = fonts.get(Font::UIDefault());
+    context->IO.FontDefault = fonts.get(FontDesc::UIDefault());
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -264,7 +264,7 @@ void poppy::ImGuiContext::init(bloom::Application& application,
         fontAtlasReloaded = true;
         loadFonts(mApplication->device(), ScaleFactor);
         createFontAtlasPlatform(sFontAtlas, mApplication->device());
-        context->IO.FontDefault = fonts.get(Font::UIDefault());
+        context->IO.FontDefault = fonts.get(FontDesc::UIDefault());
     });
 }
 
@@ -278,7 +278,7 @@ void poppy::ImGuiContext::loadFonts(bloom::HardwareDevice&, float scaleFactor) {
                resourceDir() / "Icons/Icons.ttf");
     fonts.loadFonts(*sFontAtlas, scaleFactor);
     sFontAtlas->Build();
-    auto* testFont = fonts.get(Font::UIDefault());
+    auto* testFont = fonts.get(FontDesc::UIDefault());
     BL_ASSERT(testFont && testFont->IsLoaded());
     auto* iconFont16 = icons.font(IconSize::_16);
     BL_ASSERT(iconFont16 && iconFont16->IsLoaded());

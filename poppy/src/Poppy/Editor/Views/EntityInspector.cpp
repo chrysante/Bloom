@@ -122,7 +122,7 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
             ImGui::PopStyleColor(2);
             ImGui::PopStyleVar();
             if (comboOpen) {
-                withFont(Font::UIDefault(), [&] {
+                withFont(FontDesc::UIDefault(), [&] {
                     bool hasLight = hasLightComponent(entity);
                     addComponentButton<MeshRendererComponent>("Mesh Renderer",
                                                               entity);
@@ -313,7 +313,7 @@ void EntityInspector::inspectLight(bloom::EntityHandle entity) {
             BL_UNREACHABLE();
         }
     };
-    auto font = Font::UIDefault().setWeight(FontWeight::semibold);
+    auto font = FontDesc::UIDefault().setWeight(FontWeight::semibold);
     if (!beginGenericSection("Light Component", font, deleter)) {
         return;
     }
@@ -530,13 +530,13 @@ bool EntityInspector::beginComponentSection(std::string_view name,
                                             bloom::EntityHandle entity) {
     if constexpr (std::is_same_v<T, void>) {
         return beginGenericSection(name,
-                                   Font::UIDefault().setWeight(
+                                   FontDesc::UIDefault().setWeight(
                                        FontWeight::semibold),
                                    nullptr);
     }
     else {
         return beginGenericSection(name,
-                                   Font::UIDefault().setWeight(
+                                   FontDesc::UIDefault().setWeight(
                                        FontWeight::semibold),
                                    [&] { entity.remove<T>(); });
     }
@@ -545,12 +545,13 @@ bool EntityInspector::beginComponentSection(std::string_view name,
 bool EntityInspector::beginSubSection(std::string_view name) {
     endSection();
     return beginGenericSection(name,
-                               Font::UIDefault().setStyle(FontStyle::italic),
+                               FontDesc::UIDefault().setStyle(
+                                   FontStyle::italic),
                                nullptr);
 }
 
 bool EntityInspector::beginGenericSection(std::string_view name,
-                                          Font const& font,
+                                          FontDesc const& font,
                                           utl::function<void()> deleter) {
     using namespace propertiesView;
     float2 const cursorPos = ImGui::GetCursorPos();

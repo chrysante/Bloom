@@ -29,7 +29,7 @@ FontMap poppy::fonts{};
 
 void FontMap::init(bloom::Application& application) {
     static_cast<bloom::Emitter&>(*this) = application.makeEmitter();
-    fonts.insert({ Font::UIDefault(), nullptr });
+    fonts.insert({ FontDesc::UIDefault(), nullptr });
 }
 
 void FontMap::loadFonts(ImFontAtlas& atlas, float scaleFactor) {
@@ -38,7 +38,7 @@ void FontMap::loadFonts(ImFontAtlas& atlas, float scaleFactor) {
     }
 }
 
-ImFont* FontMap::loadFont(Font const& font, ImFontAtlas& atlas,
+ImFont* FontMap::loadFont(FontDesc const& font, ImFontAtlas& atlas,
                           float scaleFactor) {
     if (font.monospaced && (int)font.weight < (int)FontWeight::light) {
         return nullptr;
@@ -56,7 +56,7 @@ ImFont* FontMap::loadFont(Font const& font, ImFontAtlas& atlas,
     return imguiFontPtr;
 }
 
-ImFont* FontMap::get(Font const& index) {
+ImFont* FontMap::get(FontDesc const& index) {
     assert((int)index.size > 0);
     auto const [itr, inserted] = fonts.insert({ index, nullptr });
     if (inserted) {

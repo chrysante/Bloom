@@ -96,7 +96,7 @@ void RendererDebuggerView::frame() {
             }
         }
         endSection();
-        header("Downsample Pass", Font::UIDefault());
+        header("Downsample Pass", FontDesc::UIDefault());
         beginSection();
         beginProperty("Mipmap Level");
         fullWidth();
@@ -134,7 +134,7 @@ void RendererDebuggerView::frame() {
                      currentFramebuffer->size /
                          (1 << (veil.downsampleMipmapLevel + 1)));
 
-        header("Upsample Pass", Font::UIDefault());
+        header("Upsample Pass", FontDesc::UIDefault());
         beginSection();
         beginProperty("Mipmap Level");
         fullWidth();

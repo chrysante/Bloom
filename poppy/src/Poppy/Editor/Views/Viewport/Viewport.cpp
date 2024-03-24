@@ -278,7 +278,7 @@ void Viewport::onInput(InputEvent& event) {
 
 void Viewport::debugPanel() {
     auto matrix = [](float4x4 const& m) {
-        withFont(Font::UIDefault().setMonospaced(true), [&] {
+        withFont(FontDesc::UIDefault().setMonospaced(true), [&] {
             for (int i = 0; i < 4; ++i) {
                 ImGui::TextUnformatted(utl::strcat(m.row(i)).data());
             }
@@ -287,10 +287,10 @@ void Viewport::debugPanel() {
     ImGui::Begin("Viewport Debug");
     float4x4 view = camera.camera().view();
     float4x4 proj = camera.camera().projection();
-    withFont(Font::UIDefault().setWeight(FontWeight::semibold),
+    withFont(FontDesc::UIDefault().setWeight(FontWeight::semibold),
              [&] { ImGui::Text("View Matrix:"); });
     matrix(view);
-    withFont(Font::UIDefault().setWeight(FontWeight::semibold),
+    withFont(FontDesc::UIDefault().setWeight(FontWeight::semibold),
              [&] { ImGui::Text("Projection Matrix:"); });
     matrix(proj);
     ImGui::End();

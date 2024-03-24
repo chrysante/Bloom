@@ -237,7 +237,7 @@ void AssetBrowser::displayNoOpenProject() {
     char const* const text = "Choose Working Directory...";
 
     bool const pressed =
-        withFont(Font::UIDefault().setWeight(FontWeight::semibold), [&] {
+        withFont(FontDesc::UIDefault().setWeight(FontWeight::semibold), [&] {
         auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                             2 * (float2)style.FramePadding);

@@ -8,19 +8,20 @@
 
 namespace poppy::propertiesView {
 
-void header(std::string_view name,
-            Font const& = Font::UIDefault().setWeight(FontWeight::semibold));
+void header(
+    std::string_view name,
+    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::semibold));
 bool beginSection();
 
 // calls header(...) && beginSection()
 bool beginSection(
     std::string_view name,
-    Font const& = Font::UIDefault().setWeight(FontWeight::semibold));
+    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::semibold));
 
 void endSection();
 
 void beginProperty(std::string_view label);
-void beginProperty(std::string_view label, Font const&);
+void beginProperty(std::string_view label, FontDesc const&);
 
 void fullWidth(float offset = 0);
 

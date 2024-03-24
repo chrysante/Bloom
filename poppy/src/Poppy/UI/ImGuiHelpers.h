@@ -28,7 +28,7 @@ auto withID(int id, std::invocable auto&& block) {
     return block();
 }
 
-auto withFont(Font const& font, std::invocable auto&& block) {
+auto withFont(FontDesc const& font, std::invocable auto&& block) {
     ImGui::PushFont(fonts.get(font));
     utl::scope_guard pop = [] { ImGui::PopFont(); };
     return block();
@@ -41,7 +41,7 @@ auto withIconFont(IconSize size, std::invocable auto&& block) {
 }
 
 auto withFont(FontWeight w, FontStyle s, std::invocable auto&& block) {
-    Font font{};
+    FontDesc font{};
     font.weight = w;
     font.style = s;
     font.size = FontSize::medium;
@@ -88,7 +88,7 @@ bool enumCombo(E e, std::invocable<E> auto set,
 
 void displayEmptyWithReason(
     std::string_view reason,
-    Font const& = Font::UIDefault().setWeight(FontWeight::semibold));
+    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::semibold));
 
 } // namespace poppy
 

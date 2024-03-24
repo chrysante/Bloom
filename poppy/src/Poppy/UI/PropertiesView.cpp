@@ -13,7 +13,7 @@ using namespace mtl::short_types;
 using namespace poppy;
 using namespace propertiesView;
 
-void propertiesView::header(std::string_view name, Font const& font) {
+void propertiesView::header(std::string_view name, FontDesc const& font) {
     withFont(font, [&] {
         float4 color = GImGui->Style.Colors[ImGuiCol_Text];
         color.a *= 0.85;
@@ -39,7 +39,7 @@ bool propertiesView::beginSection() {
     return open;
 }
 
-bool propertiesView::beginSection(std::string_view name, Font const& font) {
+bool propertiesView::beginSection(std::string_view name, FontDesc const& font) {
     header(name, font);
     return beginSection();
 }
@@ -47,10 +47,11 @@ bool propertiesView::beginSection(std::string_view name, Font const& font) {
 void propertiesView::endSection() { ImGui::EndTable(); }
 
 void propertiesView::beginProperty(std::string_view label) {
-    beginProperty(label, Font::UIDefault().setWeight(FontWeight::light));
+    beginProperty(label, FontDesc::UIDefault().setWeight(FontWeight::light));
 }
 
-void propertiesView::beginProperty(std::string_view label, Font const& font) {
+void propertiesView::beginProperty(std::string_view label,
+                                   FontDesc const& font) {
     ImGui::TableNextRow();
     ImGui::TableSetColumnIndex(0);
 

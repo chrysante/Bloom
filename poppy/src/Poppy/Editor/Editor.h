@@ -3,6 +3,7 @@
 
 #include "Poppy/Editor/SelectionContext.h"
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -37,6 +38,9 @@ public:
 
     /// \Returns `true` if the game is currently simulated
     bool isSimulating() const;
+
+    /// Request the view to be redrawn. Can be called asynchronously
+    void invalidateView();
 
 private:
     void init() override;
@@ -79,18 +83,17 @@ private:
     void startSimulation();
     void stopSimulation();
 
-    /// Hack to make ImGui happy, described in the source file
-    void invalidateView();
-    void postEmptySystemEvent();
-
     ImGuiContext imguiCtx;
     Dockspace dockspace;
     std::vector<std::unique_ptr<View>> views;
     DebugViews debugViews;
     SelectionContext mSelection;
     float autoConfigSaveTimer = 0;
-    int trickleEmptyEventCount = 0;
+    std::atomic<int> trickleEmptyEventCount = 0;
 };
+
+/// Hack to make ImGui happy, described in the source file
+void postEmptySystemEvent();
 
 } // namespace poppy
 

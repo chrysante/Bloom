@@ -77,7 +77,7 @@ void poppy::ImGuiContext::uploadCurrentFontAtlas(HardwareDevice& device) {
 }
 
 /// TODO: Move this to other file
-void poppy::Editor::postEmptySystemEvent() {
+void poppy::postEmptySystemEvent() {
     NSEvent* event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
                                         location:NSMakePoint(0, 0)
                                    modifierFlags:0

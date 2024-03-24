@@ -50,8 +50,6 @@ private:
     ImGuiContextDescription desc;
 };
 
-struct ReloadFontAtlasCommand {};
-
 } // namespace poppy
 
 #endif // POPPY_UI_IMGUICONTEXT_H

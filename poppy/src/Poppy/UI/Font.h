@@ -96,11 +96,12 @@ namespace poppy {
 ///
 class FontManager: public bloom::Emitter {
 public:
-    /// Initializes the font manager. Must be called before any call to `get()`
-    void init(bloom::Application& app, float scaleFactor);
+    explicit FontManager(float scaleFactor);
+
+    ~FontManager();
 
     ///
-    static void setGlobalInstance(FontManager* fontManager);
+    static void setGlobalInstance(std::unique_ptr<FontManager> fontManager);
 
     ///
     static FontManager* getGlobalInstance();
@@ -119,32 +120,33 @@ public:
 
     /// # Temporary interface
 
-    void reload();
-    ImFontAtlas* getAtlas() { return atlas; }
+    ImFontAtlas* getAtlas() { return imguiData.atlas; }
+
+    using FontKey = std::variant<FontDesc, IconFontDesc>;
+    struct ImGuiData {
+        ImFontAtlas* atlas = nullptr;
+        utl::hashmap<FontKey, ImFont*> map;
+    };
 
 private:
-    using FontKey = std::variant<FontDesc, IconFontDesc>;
-
-    void reloadFonts(ImFontAtlas& atlas);
-
-    void reloadIcons(ImFontAtlas& atlas, std::filesystem::path config,
-                     std::filesystem::path icons);
-
     ImFont* getImpl(FontKey const& key);
 
     std::string getUnicodeStrImpl(std::string name);
 
-    ImFont* loadFont(FontDesc const& font, ImFontAtlas& atlas,
-                     float scaleFactor);
+    void reloadAsync();
+
+    void populateIcons();
 
     bool haveSignaledReload = false;
-    utl::hashmap<FontKey, ImFont*> map;
     float scaleFactor = 1;
-    ImFontAtlas* atlas = nullptr;
-
     // TODO: Evaluate these members
     utl::hashmap<std::string, uint16_t> codes;
     std::vector<uint16_t> glyphs;
+    ImGuiData imguiData;
+};
+
+struct ReloadedFontAtlasCommand {
+    FontManager* fontManager;
 };
 
 } // namespace poppy

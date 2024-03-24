@@ -239,11 +239,12 @@ void poppy::ImGuiContext::init(bloom::Application& application,
     /// for now.
     static constexpr float ScaleFactor = 2.0;
 
-    auto* fontManager = new FontManager();
-    fontManager->init(application, ScaleFactor);
-    FontManager::setGlobalInstance(fontManager);
+    auto fontManager = std::make_unique<FontManager>(ScaleFactor);
+    static_cast<Emitter&>(*fontManager) = application.makeEmitter();
+    FontManager::setGlobalInstance(std::move(fontManager));
 
-    context = ImGui::CreateContext(fontManager->getAtlas());
+    context =
+        ImGui::CreateContext(FontManager::getGlobalInstance()->getAtlas());
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.FontGlobalScale = 0.5 / ScaleFactor;
@@ -256,12 +257,12 @@ void poppy::ImGuiContext::init(bloom::Application& application,
 #endif
     io.IniFilename = desc.iniFilePath.c_str();
     doInitPlatform(device, *application.getWindows().front());
-
     uploadCurrentFontAtlas(device);
 
-    listen([this](ReloadFontAtlasCommand) {
-        FontManager::getGlobalInstance()->reload();
-        GImGui->IO.Fonts = FontManager::getGlobalInstance()->getAtlas();
+    listen([this](ReloadedFontAtlasCommand cmd) {
+        BL_ASSERT(cmd.fontManager == FontManager::getGlobalInstance(),
+                  "For now...");
+        context->IO.Fonts = cmd.fontManager->getAtlas();
         uploadCurrentFontAtlas(mApplication->device());
         context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
     });

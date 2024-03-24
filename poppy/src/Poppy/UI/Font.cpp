@@ -102,6 +102,31 @@ static void loadIcons(ImGuiData& data, float scaleFactor,
     }
 }
 
+static utl::hashmap<std::string, uint16_t> loadAllIconCodes() {
+    auto resourcePath = resourceDir() / "Icons/IconsConfig.json";
+    std::fstream file(resourcePath, std::ios::in);
+    if (!file) {
+        Logger::Error("Failed to load icon resource file: ", resourcePath, " ",
+                      strerror(errno));
+        return {};
+    }
+    rapidjson::IStreamWrapper stream(file);
+    rapidjson::Document doc;
+    doc.ParseStream(stream);
+    utl::hashmap<std::string, uint16_t> codes;
+    for (auto const& glyph: doc["glyphs"]) {
+        auto cssName = glyph["css"].GetString();
+        auto code = glyph["code"].GetUint();
+        if (code > USHRT_MAX) {
+            Logger::Warn("Skipping icon (unicode values exeeds range): ",
+                         cssName);
+            continue;
+        }
+        codes.insert({ std::move(cssName), utl::narrow_cast<WChar>(code) });
+    }
+    return codes;
+}
+
 static void loadAll(ImGuiData& data, float scaleFactor,
                     std::vector<uint16_t> glyphs) {
     if (!data.atlas) {
@@ -122,9 +147,11 @@ FontDesc FontDesc::UIDefault() {
 };
 
 FontManager::FontManager(float scaleFactor):
-    scaleFactor(scaleFactor), imguiData{ .atlas = IM_NEW(ImFontAtlas) } {
+    allIconCodes(loadAllIconCodes()),
+    scaleFactor(scaleFactor),
+    imguiData{ .atlas = IM_NEW(ImFontAtlas) } {
+    populateGlyphs();
     imguiData.map.insert({ FontDesc::UIDefault(), nullptr });
-    populateIcons();
     loadAll(imguiData, scaleFactor, glyphs);
 }
 
@@ -146,33 +173,16 @@ ImFont* FontManager::get(FontDesc const& desc) {
     return gFontManager->getImpl(desc);
 }
 
-ImFont* FontManager::get(IconFontDesc const& desc) {
-    return gFontManager->getImpl(desc);
+IconData FontManager::get(IconFontDesc const& desc, std::string name) {
+    return { gFontManager->getImpl(desc),
+             gFontManager->getUnicodeStrImpl(std::move(name)) };
 }
 
-std::string FontManager::getUnicodeStr(std::string name) {
-    return gFontManager->getUnicodeStrImpl(name);
-}
-
-void FontManager::populateIcons() {
-    std::filesystem::path configPath = resourceDir() / "Icons/IconsConfig.json";
-    codes.clear();
+void FontManager::populateGlyphs() {
     glyphs.clear();
-    std::fstream file(configPath, std::ios::in);
-    BL_ASSERT(file);
-    rapidjson::IStreamWrapper stream(file);
-    rapidjson::Document doc;
-    doc.ParseStream(stream);
-    for (auto const& glyph: doc["glyphs"]) {
-        auto cssName = glyph["css"].GetString();
-        auto code = glyph["code"].GetUint();
-        if (code > USHRT_MAX) {
-            continue;
-        }
-        codes.insert({ std::move(cssName), utl::narrow_cast<WChar>(code) });
-    }
-    glyphs.reserve(codes.size() + 1);
-    std::transform(codes.begin(), codes.end(), std::back_inserter(glyphs),
+    glyphs.reserve(allIconCodes.size() + 1);
+    std::transform(allIconCodes.begin(), allIconCodes.end(),
+                   std::back_inserter(glyphs),
                    [](auto const& p) { return p.second; });
     std::sort(glyphs.begin(), glyphs.end());
     glyphs.push_back(0); // Null terminator
@@ -187,12 +197,7 @@ ImFont* FontManager::getImpl(FontKey const& key) {
     return itr->second;
 }
 
-std::string FontManager::getUnicodeStrImpl(std::string name) {
-    auto itr = codes.find(name);
-    if (itr == codes.end()) {
-        return {};
-    }
-    uint16_t code = itr->second;
+static std::string unicodeToUTF8(uint16_t code) {
     std::array<char, 16> result{};
     int count = ImTextStrToUtf8(result.data(), 16, &code, &code + 1);
     BL_ASSERT(count < 16);
@@ -200,6 +205,14 @@ std::string FontManager::getUnicodeStrImpl(std::string name) {
         return {};
     }
     return std::string(result.data());
+}
+
+std::string FontManager::getUnicodeStrImpl(std::string name) {
+    auto itr = allIconCodes.find(name);
+    if (itr == allIconCodes.end()) {
+        return {};
+    }
+    return unicodeToUTF8(itr->second);
 }
 
 void FontManager::reloadAsync() {

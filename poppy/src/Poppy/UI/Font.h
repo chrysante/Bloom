@@ -93,6 +93,15 @@ struct std::hash<poppy::IconFontDesc> {
 
 namespace poppy {
 
+/// Result structure of `FontManager::get(IconFontDesc desc, std::string name)`
+struct IconData {
+    /// The font that encodes the icon
+    ImFont* font;
+
+    /// The string that represents the icon
+    std::string utf8Rep;
+};
+
 ///
 class FontManager: public bloom::Emitter {
 public:
@@ -113,10 +122,7 @@ public:
     static ImFont* get(FontDesc const& font);
 
     ///
-    static ImFont* get(IconFontDesc const& font);
-
-    ///
-    static std::string getUnicodeStr(std::string name);
+    static IconData get(IconFontDesc const& font, std::string iconName);
 
     /// # Temporary interface
 
@@ -135,14 +141,16 @@ private:
 
     void reloadAsync();
 
-    void populateIcons();
+    void populateGlyphs();
 
-    bool haveSignaledReload = false;
+    /// Maps CSS icon names to unicode representation. This lists all icons
+    /// available in the resource files
+    utl::hashmap<std::string, uint16_t> allIconCodes;
     float scaleFactor = 1;
-    // TODO: Evaluate these members
-    utl::hashmap<std::string, uint16_t> codes;
-    std::vector<uint16_t> glyphs;
     ImGuiData imguiData;
+    bool haveSignaledReload = false;
+    // Keep this for now
+    std::vector<uint16_t> glyphs;
 };
 
 struct ReloadedFontAtlasCommand {

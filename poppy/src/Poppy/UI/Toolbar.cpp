@@ -138,8 +138,8 @@ void Toolbar::displayItem(ToolbarItemUnion const& item, std::size_t index) {
             buttonData._tooltip ? buttonData._tooltip() : nullptr;
         bool const enabled = buttonData._enabled == nullptr ||
                              buttonData._enabled();
-        if (iconButton(buttonData._icon(), index, { item.width, actualHeight },
-                       tooltip, enabled))
+        if (iconButton(FontManager::get({ IconSize::_16 }, buttonData._icon()),
+                       index, { item.width, actualHeight }, tooltip, enabled))
         {
             if (buttonData._block) {
                 buttonData._block();
@@ -201,15 +201,12 @@ bool Toolbar::button(char const* label, std::size_t id, mtl::float2 size,
                     [&] { return buttonEx(label, id, size, enabled, open); });
 }
 
-bool Toolbar::iconButton(char const* icon, std::size_t id, mtl::float2 size,
+bool Toolbar::iconButton(IconData icon, std::size_t id, mtl::float2 size,
                          char const* tooltip, bool enabled, bool open) const {
-    bool const result = withIconFont(IconSize::_16, [&] {
-        return buttonEx(FontManager::getUnicodeStr(icon).data(), id, size,
-                        enabled, open);
+    bool result = withFont(icon.font, [&] {
+        return buttonEx(icon.utf8Rep.data(), id, size, enabled, open);
     });
-
     static float tooltipTimer = 1;
-
     if (tooltip && ImGui::IsItemHovered()) {
         tooltipTimer -= GImGui->IO.DeltaTime;
 
@@ -222,7 +219,6 @@ bool Toolbar::iconButton(char const* icon, std::size_t id, mtl::float2 size,
     else if (!ImGui::IsAnyItemHovered()) {
         tooltipTimer = 1;
     }
-
     return result;
 }
 
@@ -245,8 +241,11 @@ bool Toolbar::beginCombo(ToolbarDropdownMenu const& menuData, std::size_t index,
                          popup_open);
     }
     else {
-        pressed = iconButton(menuData._icon ? menuData._icon() : "down-open",
-                             index, size, tooltip, enabled, popup_open);
+        pressed =
+            iconButton(FontManager::get({ IconSize::_16 },
+                                        menuData._icon ? menuData._icon() :
+                                                         "down-open"),
+                       index, size, tooltip, enabled, popup_open);
     }
     if (pressed && !popup_open) {
         OpenPopupEx(popup_id, ImGuiPopupFlags_None);

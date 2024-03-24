@@ -27,27 +27,27 @@ auto withID(int id, std::invocable auto&& block) {
     return block();
 }
 
-auto withFont(FontDesc const& font, std::invocable auto&& block) {
-    ImGui::PushFont(FontManager::get(font));
+decltype(auto) withFont(ImFont* font, std::invocable auto&& block) {
+    ImGui::PushFont(font);
     utl::scope_guard pop = [] { ImGui::PopFont(); };
     return block();
 }
 
-auto withIconFont(IconSize size, std::invocable auto&& block) {
-    ImGui::PushFont(FontManager::get(IconFontDesc{ size }));
-    utl::scope_guard pop = [] { ImGui::PopFont(); };
-    return block();
+decltype(auto) withFont(FontDesc const& desc, std::invocable auto&& block) {
+    return withFont(FontManager::get(desc), block);
 }
 
-auto withFont(FontWeight w, FontStyle s, std::invocable auto&& block) {
-    FontDesc font{};
-    font.weight = w;
-    font.style = s;
-    font.size = FontSize::Medium;
-    return withFont(font, UTL_FORWARD(block));
+decltype(auto) withFont(FontWeight w, FontStyle s,
+                        std::invocable auto&& block) {
+    FontDesc desc{
+        .weight = w,
+        .style = s,
+        .size = FontSize::Medium,
+    };
+    return withFont(desc, block);
 }
 
-auto disabledIf(bool condition, std::invocable auto&& block) {
+decltype(auto) disabledIf(bool condition, std::invocable auto&& block) {
     ImGui::BeginDisabled(condition);
     utl::scope_guard pop = [] { ImGui::EndDisabled(); };
     return block();

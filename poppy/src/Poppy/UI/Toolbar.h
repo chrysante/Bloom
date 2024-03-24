@@ -192,6 +192,8 @@ struct ToolbarStyle {
     float buttonAlphaActive = 0.5;
 };
 
+struct IconData;
+
 class Toolbar {
 public:
     Toolbar();
@@ -226,7 +228,7 @@ private:
                 bool enabled = true, bool open = false) const;
     bool buttonEx(char const* label, std::size_t id, mtl::float2 size,
                   bool enabled, bool open) const;
-    bool iconButton(char const* icon, std::size_t id, mtl::float2 size,
+    bool iconButton(IconData icon, std::size_t id, mtl::float2 size,
                     char const* tooltip = nullptr, bool enabled = true,
                     bool open = false) const;
     bool beginCombo(ToolbarDropdownMenu const&, std::size_t id,

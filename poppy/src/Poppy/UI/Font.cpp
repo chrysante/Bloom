@@ -62,9 +62,11 @@ static std::string toFontFileName(FontDesc const& font) {
     return std::move(sstr).str();
 }
 
-void FontManager::init(bloom::Application& app) {
+void FontManager::init(bloom::Application& app, float scaleFactor) {
     static_cast<Emitter&>(*this) = app.makeEmitter();
     map.insert({ FontDesc::UIDefault(), nullptr });
+    this->scaleFactor = scaleFactor;
+    reload();
 }
 
 static FontManager* gFontManager = nullptr;
@@ -112,7 +114,19 @@ std::string FontManager::getUnicodeStrImpl(std::string name) {
     return std::string(result.data());
 }
 
-void FontManager::reloadFonts(ImFontAtlas& atlas, float scaleFactor) {
+void FontManager::reload() {
+    auto* newAtlas = IM_NEW(ImFontAtlas);
+    reloadFonts(*newAtlas);
+    reloadIcons(*newAtlas, resourceDir() / "Icons/IconsConfig.json",
+                resourceDir() / "Icons/Icons.ttf");
+    newAtlas->Build();
+    if (atlas) {
+        IM_FREE(atlas);
+    }
+    atlas = newAtlas;
+}
+
+void FontManager::reloadFonts(ImFontAtlas& atlas) {
     for (auto& [key, ptr]: map) {
         if (std::holds_alternative<FontDesc>(key)) {
             ptr = loadFont(std::get<FontDesc>(key), atlas, scaleFactor);
@@ -120,7 +134,7 @@ void FontManager::reloadFonts(ImFontAtlas& atlas, float scaleFactor) {
     }
 }
 
-void FontManager::reloadIcons(ImFontAtlas& atlas, float scaleFactor,
+void FontManager::reloadIcons(ImFontAtlas& atlas,
                               std::filesystem::path configPath,
                               std::filesystem::path iconPath) {
     codes.clear();

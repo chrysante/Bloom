@@ -71,8 +71,7 @@ void poppy::ImGuiContext::doShutdownPlatform() {
     ImGui_ImplMetal_Shutdown();
 }
 
-void poppy::ImGuiContext::createFontAtlasPlatform(ImFontAtlas*,
-                                                  HardwareDevice& device) {
+void poppy::ImGuiContext::uploadCurrentFontAtlas(HardwareDevice& device) {
     MetalDevice& mtlDevice = dynamic_cast<MetalDevice&>(device);
     ImGui_ImplMetal_CreateFontsTexture(mtlDevice.device);
 }

@@ -43,12 +43,9 @@ private:
     void doNewFramePlatform(bloom::Window& window);
     void doDrawFramePlatform(bloom::HardwareDevice& device,
                              bloom::Window& window);
-    void loadFonts(bloom::HardwareDevice& device, float scaleFactor);
-    void createFontAtlasPlatform(ImFontAtlas* fontAtlas,
-                                 bloom::HardwareDevice& device);
+    void uploadCurrentFontAtlas(bloom::HardwareDevice& device);
 
     bloom::Application* mApplication = nullptr;
-    static ImFontAtlas* sFontAtlas;
     ::ImGuiContext* context = nullptr;
     ImGuiContextDescription desc;
 };

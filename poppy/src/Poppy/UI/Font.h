@@ -97,7 +97,7 @@ namespace poppy {
 class FontManager: public bloom::Emitter {
 public:
     /// Initializes the font manager. Must be called before any call to `get()`
-    void init(bloom::Application& app);
+    void init(bloom::Application& app, float scaleFactor);
 
     ///
     static void setGlobalInstance(FontManager* fontManager);
@@ -119,13 +119,16 @@ public:
 
     /// # Temporary interface
 
-    void reloadFonts(ImFontAtlas& atlas, float scaleFactor);
-
-    void reloadIcons(ImFontAtlas& atlas, float scaleFactor,
-                     std::filesystem::path config, std::filesystem::path icons);
+    void reload();
+    ImFontAtlas* getAtlas() { return atlas; }
 
 private:
     using FontKey = std::variant<FontDesc, IconFontDesc>;
+
+    void reloadFonts(ImFontAtlas& atlas);
+
+    void reloadIcons(ImFontAtlas& atlas, std::filesystem::path config,
+                     std::filesystem::path icons);
 
     ImFont* getImpl(FontKey const& key);
 
@@ -136,6 +139,9 @@ private:
 
     bool haveSignaledReload = false;
     utl::hashmap<FontKey, ImFont*> map;
+    float scaleFactor = 1;
+    ImFontAtlas* atlas = nullptr;
+
     // TODO: Evaluate these members
     utl::hashmap<std::string, uint16_t> codes;
     std::vector<uint16_t> glyphs;

@@ -226,8 +226,6 @@ static ImGuiKey toImGuiKeyCode(Key key) {
     }
 }
 
-ImFontAtlas* poppy::ImGuiContext::sFontAtlas = nullptr;
-
 poppy::ImGuiContext::~ImGuiContext() = default;
 
 void poppy::ImGuiContext::init(bloom::Application& application,
@@ -237,18 +235,19 @@ void poppy::ImGuiContext::init(bloom::Application& application,
     desc = ds;
     this->bloom::Receiver::operator=(application.makeReceiver());
     IMGUI_CHECKVERSION();
-    auto* fontManager = new FontManager();
-    fontManager->init(application);
-    FontManager::setGlobalInstance(fontManager);
     /// Scale factor values are figured out by trial-and-error and are hardcoded
     /// for now.
     static constexpr float ScaleFactor = 2.0;
-    loadFonts(device, ScaleFactor);
-    context = ImGui::CreateContext(sFontAtlas);
-    context->IO.FontGlobalScale = 0.5 / ScaleFactor;
-    context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
+
+    auto* fontManager = new FontManager();
+    fontManager->init(application, ScaleFactor);
+    FontManager::setGlobalInstance(fontManager);
+
+    context = ImGui::CreateContext(fontManager->getAtlas());
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
+    io.FontGlobalScale = 0.5 / ScaleFactor;
+    io.FontDefault = FontManager::get(FontDesc::UIDefault());
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
@@ -257,30 +256,15 @@ void poppy::ImGuiContext::init(bloom::Application& application,
 #endif
     io.IniFilename = desc.iniFilePath.c_str();
     doInitPlatform(device, *application.getWindows().front());
-    createFontAtlasPlatform(sFontAtlas, device);
+
+    uploadCurrentFontAtlas(device);
+
     listen([this](ReloadFontAtlasCommand) {
-        loadFonts(mApplication->device(), ScaleFactor);
-        createFontAtlasPlatform(sFontAtlas, mApplication->device());
+        FontManager::getGlobalInstance()->reload();
+        GImGui->IO.Fonts = FontManager::getGlobalInstance()->getAtlas();
+        uploadCurrentFontAtlas(mApplication->device());
         context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
     });
-}
-
-void poppy::ImGuiContext::loadFonts(bloom::HardwareDevice&, float scaleFactor) {
-    if (!sFontAtlas) {
-        sFontAtlas = IM_NEW(ImFontAtlas);
-    }
-    sFontAtlas->Clear();
-    FontManager::getGlobalInstance()->reloadFonts(*sFontAtlas, scaleFactor);
-    FontManager::getGlobalInstance()->reloadIcons(*sFontAtlas, scaleFactor,
-                                                  resourceDir() /
-                                                      "Icons/IconsConfig.json",
-                                                  resourceDir() /
-                                                      "Icons/Icons.ttf");
-    sFontAtlas->Build();
-    auto* testFont = FontManager::get(FontDesc::UIDefault());
-    BL_ASSERT(testFont && testFont->IsLoaded());
-    auto* iconFont16 = FontManager::get({ IconSize::_16 });
-    BL_ASSERT(iconFont16 && iconFont16->IsLoaded());
 }
 
 void poppy::ImGuiContext::shutdown() {

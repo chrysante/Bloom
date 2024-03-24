@@ -24,7 +24,7 @@ void ToolbarItemUnion::calcWidth(float height) {
     switch (type()) {
     case Type::button: {
         float2 const textSize =
-            withFont(FontWeight::semibold, FontStyle::roman, [&] {
+            withFont(FontWeight::Semibold, FontStyle::Roman, [&] {
             return ImGui::CalcTextSize(get<Type::button>()._label.data());
         });
 
@@ -39,7 +39,7 @@ void ToolbarItemUnion::calcWidth(float height) {
         auto& ddMenu = get<Type::dropdownMenu>();
         if (ddMenu._preview) {
             float2 const textSize =
-                withFont(FontWeight::semibold, FontStyle::roman, [&] {
+                withFont(FontWeight::Semibold, FontStyle::Roman, [&] {
                 return ImGui::CalcTextSize(
                     get<Type::dropdownMenu>()._preview().data());
             });
@@ -197,7 +197,7 @@ bool Toolbar::buttonEx(char const* label, std::size_t id, mtl::float2 size,
 
 bool Toolbar::button(char const* label, std::size_t id, mtl::float2 size,
                      bool enabled, bool open) const {
-    return withFont(FontWeight::semibold, FontStyle::roman,
+    return withFont(FontWeight::Semibold, FontStyle::Roman,
                     [&] { return buttonEx(label, id, size, enabled, open); });
 }
 

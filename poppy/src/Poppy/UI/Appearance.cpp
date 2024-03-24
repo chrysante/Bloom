@@ -144,7 +144,7 @@ void Appearance::update(bool force) {
 
 static void showWarning() {
     ImGui::PushFont(fonts.get(
-        FontDesc{ .size = FontSize::large, .weight = FontWeight::bold }));
+        FontDesc{ .size = FontSize::Large, .weight = FontWeight::Bold }));
     ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0, 1, 1 });
     ImGui::TextWrapped(
         "Warning: Edits need to be made in code in Appearance.cpp to be persistent");

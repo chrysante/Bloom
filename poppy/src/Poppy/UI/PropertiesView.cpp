@@ -47,7 +47,7 @@ bool propertiesView::beginSection(std::string_view name, FontDesc const& font) {
 void propertiesView::endSection() { ImGui::EndTable(); }
 
 void propertiesView::beginProperty(std::string_view label) {
-    beginProperty(label, FontDesc::UIDefault().setWeight(FontWeight::light));
+    beginProperty(label, FontDesc::UIDefault().setWeight(FontWeight::Light));
 }
 
 void propertiesView::beginProperty(std::string_view label,

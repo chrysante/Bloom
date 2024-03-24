@@ -23,6 +23,14 @@ std::string poppy::toString(FontStyle s) {
     return std::array{ "Roman", "Italic" }[utl::to_underlying(s)];
 }
 
+FontDesc FontDesc::UIDefault() {
+    FontDesc font{};
+    font.size = FontSize::Medium;
+    font.weight = FontWeight::Regular;
+    font.style = FontStyle::Roman;
+    return font;
+};
+
 /// MARK: FontMap
 
 FontMap poppy::fonts{};
@@ -38,18 +46,38 @@ void FontMap::loadFonts(ImFontAtlas& atlas, float scaleFactor) {
     }
 }
 
+static std::string toFontFileName(FontDesc const& font) {
+    std::stringstream sstr;
+    if (font.style == FontStyle::Monospaced) {
+        sstr << "SFMono";
+    }
+    else {
+        sstr << "SFPro";
+    }
+    sstr << "-" << toString(font.weight) << "-";
+    if (font.style == FontStyle::Monospaced) {
+        sstr << toString(FontStyle::Roman);
+    }
+    else {
+        sstr << toString(font.style);
+    }
+    sstr << ".ttf";
+    return std::move(sstr).str();
+}
+
 ImFont* FontMap::loadFont(FontDesc const& font, ImFontAtlas& atlas,
                           float scaleFactor) {
-    if (font.monospaced && (int)font.weight < (int)FontWeight::light) {
+    if (font.style == FontStyle::Monospaced &&
+        (int)font.weight < (int)FontWeight::Light)
+    {
         return nullptr;
     }
-    if (font.monospaced && (int)font.weight > (int)FontWeight::heavy) {
+    if (font.style == FontStyle::Monospaced &&
+        (int)font.weight > (int)FontWeight::Heavy)
+    {
         return nullptr;
     }
-    std::string name = utl::strcat(font.monospaced ? "SFMono" : "SFPro", "-",
-                                   toString(font.weight), "-",
-                                   toString(font.style), ".ttf");
-    auto path = bloom::resourceDir() / "Font" / name;
+    auto path = bloom::resourceDir() / "Font" / toFontFileName(font);
     auto* imguiFontPtr =
         atlas.AddFontFromFileTTF(path.c_str(), (int)font.size * scaleFactor);
     assert(imguiFontPtr);

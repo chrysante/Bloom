@@ -10,13 +10,13 @@ namespace poppy::propertiesView {
 
 void header(
     std::string_view name,
-    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::semibold));
+    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::Semibold));
 bool beginSection();
 
 // calls header(...) && beginSection()
 bool beginSection(
     std::string_view name,
-    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::semibold));
+    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::Semibold));
 
 void endSection();
 

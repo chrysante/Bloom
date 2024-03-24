@@ -72,7 +72,7 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
                       { 0, GImGui->FontSize + 2 * framePadding.y });
 
     float2 spacing = GImGui->Style.ItemSpacing;
-    withFont(FontWeight::bold, FontStyle::roman, [&] {
+    withFont(FontWeight::Bold, FontStyle::Roman, [&] {
         float2 const windowSize = ImGui::GetWindowSize();
         float2 const addButtonSize =
             float2(ImGui::CalcTextSize("Add Component")) +
@@ -313,7 +313,7 @@ void EntityInspector::inspectLight(bloom::EntityHandle entity) {
             BL_UNREACHABLE();
         }
     };
-    auto font = FontDesc::UIDefault().setWeight(FontWeight::semibold);
+    auto font = FontDesc::UIDefault().setWeight(FontWeight::Semibold);
     if (!beginGenericSection("Light Component", font, deleter)) {
         return;
     }
@@ -531,13 +531,13 @@ bool EntityInspector::beginComponentSection(std::string_view name,
     if constexpr (std::is_same_v<T, void>) {
         return beginGenericSection(name,
                                    FontDesc::UIDefault().setWeight(
-                                       FontWeight::semibold),
+                                       FontWeight::Semibold),
                                    nullptr);
     }
     else {
         return beginGenericSection(name,
                                    FontDesc::UIDefault().setWeight(
-                                       FontWeight::semibold),
+                                       FontWeight::Semibold),
                                    [&] { entity.remove<T>(); });
     }
 }
@@ -546,7 +546,7 @@ bool EntityInspector::beginSubSection(std::string_view name) {
     endSection();
     return beginGenericSection(name,
                                FontDesc::UIDefault().setStyle(
-                                   FontStyle::italic),
+                                   FontStyle::Italic),
                                nullptr);
 }
 
@@ -561,7 +561,7 @@ bool EntityInspector::beginGenericSection(std::string_view name,
             return true;
         }
         // 'Delete' Button
-        return withFont(FontWeight::semibold, FontStyle::roman, [&] {
+        return withFont(FontWeight::Semibold, FontStyle::Roman, [&] {
             return disabledIf(isSimulating(), [&] {
                 bool result = true;
                 float2 const textSize = ImGui::CalcTextSize("Delete");

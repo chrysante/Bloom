@@ -77,7 +77,7 @@ void View::displayEmptyWithReason(std::string_view reason) const {
     utl::scope_guard reset = [&] { ImGui::SetCursorPos(oldCursorPos); };
 
     FontDesc font = FontDesc::UIDefault();
-    font.weight = FontWeight::semibold;
+    font.weight = FontWeight::Semibold;
 
     withFont(font, [&] {
         float2 const textSize = ImGui::CalcTextSize(reason.data());

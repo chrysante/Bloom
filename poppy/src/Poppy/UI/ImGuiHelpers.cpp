@@ -105,7 +105,7 @@ bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
             // ImVec2(labelButtonSize.x, 0));
             //				});
 
-            withFont(FontDesc::UIDefault().setWeight(FontWeight::black), [&] {
+            withFont(FontDesc::UIDefault().setWeight(FontWeight::Black), [&] {
                 //					auto const label = labels[i];
                 auto const textSize = CalcTextSize(label);
                 //					auto const cp = GetCursorPos();

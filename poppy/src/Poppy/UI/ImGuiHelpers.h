@@ -44,7 +44,7 @@ auto withFont(FontWeight w, FontStyle s, std::invocable auto&& block) {
     FontDesc font{};
     font.weight = w;
     font.style = s;
-    font.size = FontSize::medium;
+    font.size = FontSize::Medium;
     return withFont(font, UTL_FORWARD(block));
 }
 
@@ -88,7 +88,7 @@ bool enumCombo(E e, std::invocable<E> auto set,
 
 void displayEmptyWithReason(
     std::string_view reason,
-    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::semibold));
+    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::Semibold));
 
 } // namespace poppy
 

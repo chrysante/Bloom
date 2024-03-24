@@ -23,8 +23,16 @@ public struct double3 {
     }
 }
 
+public struct quaternion {
+    var r: double;
+    var i: double;
+    var j: double;
+    var k: double;
+}
+
 public struct Transform {
     var position: double3;
+    var orientation: quaternion;
     var scale: double3;
 }
 

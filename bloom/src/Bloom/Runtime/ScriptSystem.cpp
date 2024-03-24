@@ -15,6 +15,7 @@
 #include "Bloom/Application/Application.h"
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Runtime/ScriptBindings.h"
 #include "Bloom/Scene/Components/Script.h"
 #include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Entity.h"
@@ -37,40 +38,6 @@ static auto toWordArray(T const&... args) {
     }(),
         ...);
     return data;
-}
-
-namespace {
-
-struct ScriptTransform {
-    packed_double3 position;
-    packed_double3 scale;
-};
-
-struct ScriptEntityHandle {
-    EntityID::RawType ID;
-    Scene* scene;
-
-    explicit ScriptEntityHandle(EntityHandle e):
-        ID(e.ID().raw()), scene(&e.scene()) {}
-
-    EntityHandle asEntityHandle() const {
-        return EntityHandle(EntityID(ID), scene);
-    }
-};
-
-} // namespace
-
-__attribute__((visibility("default"))) extern "C" ScriptTransform
-    bloomGetEntityTransform(ScriptEntityHandle entity) {
-    auto& t = entity.asEntityHandle().get<Transform const>();
-    return ScriptTransform{ t.position, t.scale };
-}
-
-__attribute__((visibility("default"))) extern "C" void bloomSetEntityTransform(
-    ScriptEntityHandle entity, ScriptTransform source) {
-    auto& dest = entity.asEntityHandle().get<Transform>();
-    dest.position = source.position;
-    dest.scale = source.scale;
 }
 
 struct ScriptSystem::Impl {
@@ -112,7 +79,7 @@ static uint64_t allocateObject(svm::VirtualMachine& VM,
             "' has multiple constructors; selecting unspecified constructor");
     }
     VM.execute(ctors.front()->binaryAddress().value(),
-               toWordArray(bitAddr, ScriptEntityHandle(handle)));
+               toWordArray(bitAddr, ScriptEntityHandle::make(handle)));
     return bitAddr;
     /// More rigorous implementation, but we're hacking around right now
 #if 0

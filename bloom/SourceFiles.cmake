@@ -114,6 +114,8 @@ set(bloom_sources
   src/Bloom/Runtime/CoreRuntime.h
   src/Bloom/Runtime/SceneSystem.cpp
   src/Bloom/Runtime/SceneSystem.h
+  src/Bloom/Runtime/ScriptBindings.cpp
+  src/Bloom/Runtime/ScriptBindings.h
   src/Bloom/Runtime/ScriptSystem.cpp
   src/Bloom/Runtime/ScriptSystem.h
 

@@ -741,21 +741,21 @@ static bool compileEngineLibrary(std::filesystem::path destDir) {
 void AssetManager::compileScripts() {
     dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
     using namespace scatha;
-    auto engineLibDir = projectRootDir() / "int";
-    if (!compileEngineLibrary(engineLibDir)) {
-        return;
-    }
-    CompilerInvocation inv(TargetType::BinaryOnly, "main");
-    inv.setLibSearchPaths({ engineLibDir });
-    inv.setOptLevel(1);
-    inv.setLinkerOptions({ .searchHost = true });
-    auto sources = impl->assets | values | filter([](auto& entry) {
-        return entry.handle.type() == AssetType::ScriptSource;
-    }) | transform([&](auto& entry) {
-        return SourceFile::load(impl->makeAbsolute(entry.diskLocation));
-    });
     std::optional<scatha::Target> target;
     try {
+        auto engineLibDir = projectRootDir() / "int";
+        if (!compileEngineLibrary(engineLibDir)) {
+            return;
+        }
+        CompilerInvocation inv(TargetType::BinaryOnly, "main");
+        inv.setLibSearchPaths({ engineLibDir });
+        inv.setOptLevel(1);
+        inv.setLinkerOptions({ .searchHost = true });
+        auto sources = impl->assets | values | filter([](auto& entry) {
+            return entry.handle.type() == AssetType::ScriptSource;
+        }) | transform([&](auto& entry) {
+            return SourceFile::load(impl->makeAbsolute(entry.diskLocation));
+        });
         inv.setInputs(sources | ranges::to<std::vector>);
         target = inv.run();
     }

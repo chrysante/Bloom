@@ -713,10 +713,40 @@ void ScriptSystem_setTarget(ScriptSystem::Impl& impl, scatha::Target target);
 
 } // namespace bloom
 
+static bool compileEngineLibrary(std::filesystem::path destDir) {
+    auto* sourceDir = std::getenv("BLOOM_SCRIPT_DIR");
+    if (!sourceDir || !std::filesystem::exists(sourceDir)) {
+        Logger::Error(
+            "Cannot find engine script directory. Define environment variable BLOOM_SCRIPT_DIR and set it to an existing directory");
+        return false;
+    }
+    using namespace scatha;
+    std::vector<SourceFile> sourceFiles;
+    for (auto entry: std::filesystem::recursive_directory_iterator(sourceDir)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".sc") {
+            sourceFiles.push_back(SourceFile::load(entry.path()));
+        }
+    }
+    CompilerInvocation inv(TargetType::StaticLibrary, "Bloom");
+    inv.setInputs(sourceFiles);
+    auto target = inv.run();
+    if (!target) {
+        Logger::Error("Failed to compiled engine script library");
+        return false;
+    }
+    target->writeToDisk(destDir);
+    return true;
+}
+
 void AssetManager::compileScripts() {
     dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
     using namespace scatha;
+    auto engineLibDir = projectRootDir() / "int";
+    if (!compileEngineLibrary(engineLibDir)) {
+        return;
+    }
     CompilerInvocation inv(TargetType::BinaryOnly, "main");
+    inv.setLibSearchPaths({ engineLibDir });
     inv.setOptLevel(1);
     inv.setLinkerOptions({ .searchHost = true });
     auto sources = impl->assets | values | filter([](auto& entry) {

@@ -1,5 +1,50 @@
 use Bloom;
 
+fn print(v: double3) {
+    __builtin_putstr("(");
+    __builtin_putf64(v.x);
+    __builtin_putstr(", ");
+    __builtin_putf64(v.y);
+    __builtin_putstr(", ");
+    __builtin_putf64(v.z);
+    __builtin_putstr(")\n");
+}
+
+fn print(q: quaternion) {
+    __builtin_putstr("(");
+    __builtin_putf64(q.r);
+    __builtin_putstr(", ");
+    __builtin_putf64(q.i);
+    __builtin_putstr(", ");
+    __builtin_putf64(q.j);
+    __builtin_putstr(", ");
+    __builtin_putf64(q.k);
+    __builtin_putstr(")\n");
+}
+
+fn print(t: Transform) {
+    __builtin_putstr("Position:    ");
+    print(t.position);
+    __builtin_putstr("Orientation: ");
+    print(t.orientation);
+    __builtin_putstr("Scale:       ");
+    print(t.scale);
+}
+
+fn normalize(v: double3) -> double3 {
+    return v.scale(1.0 / __builtin_sqrt_f64(v.x * v.x + v.y * v.y + v.z * v.z));
+}
+
+fn makeRotation(angle: double, axis: double3) -> quaternion {
+    let s = __builtin_sin_f64(angle);
+    let c = __builtin_cos_f64(angle);
+    let a = normalize(axis);
+    return quaternion(c, 
+                      s * a.x,
+                      s * a.y,
+                      s * a.z);
+}
+
 public struct RotateBehaviour {
     fn new(&mut this, entity: Entity) {
         this.entity = entity;
@@ -7,11 +52,8 @@ public struct RotateBehaviour {
 
     fn update(&mut this, t: Timestep) {
         var transform = this.entity.getTransform();
-        let radius = 1000.0;
-        let x = radius * __builtin_cos_f64(t.absolute);
-        let y = radius * __builtin_sin_f64(t.absolute);
-        transform.position.x += x * t.delta;
-        transform.position.y += y * t.delta;
+        let t2 = t.absolute * 0.5;
+        transform.orientation = makeRotation(t.absolute, double3(__builtin_sin_f64(t2), __builtin_cos_f64(t2), 0.0));
         this.entity.setTransform(transform);
     }
 

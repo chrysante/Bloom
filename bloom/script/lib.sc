@@ -39,7 +39,10 @@ public struct Transform {
 public struct Entity {
     /// \Returns the transform of this entity
     fn getTransform(this) -> Transform {
-        return bloomGetEntityTransform(this);
+        // TODO: This causes SROA to crash. Investigate!
+        //let t = bloomGetEntityTransform(this); 
+        //return t;
+        return bloomGetEntityTransform(this); 
     }
 
     /// Sets the transform of this entity to \p transform

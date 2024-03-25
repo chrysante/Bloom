@@ -10,7 +10,7 @@
 #include <utl/strcat.hpp>
 
 using namespace bloom;
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace poppy;
 
 static int gID = 0;
@@ -29,11 +29,11 @@ static int getFreshID() {
 
 bool View::focused() const { return GImGui->NavWindow == desc.imguiWindow; }
 
-mtl::float2 View::windowSpaceToViewSpace(mtl::float2 position) const {
+vml::float2 View::windowSpaceToViewSpace(vml::float2 position) const {
     return position - desc.position;
 }
 
-mtl::float2 View::viewSpaceToWindowSpace(mtl::float2 position) const {
+vml::float2 View::viewSpaceToWindowSpace(vml::float2 position) const {
     return position + desc.position;
 }
 
@@ -60,7 +60,7 @@ void View::toggleMaximize() {
     }
 }
 
-void View::setPadding(mtl::float2 padding) {
+void View::setPadding(vml::float2 padding) {
     desc.hasPaddingX = padding.x >= 0;
     desc.hasPaddingY = padding.y >= 0;
 
@@ -125,7 +125,7 @@ void View::doFrame() {
     auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,
                         desc.maximized ? 0 : style.WindowRounding);
-    mtl::float2 const padding = {
+    vml::float2 const padding = {
         desc.hasPaddingX ? desc.pub.padding.x : style.WindowPadding.x,
         desc.hasPaddingY ? desc.pub.padding.y : style.WindowPadding.y
     };

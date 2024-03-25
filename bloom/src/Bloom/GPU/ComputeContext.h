@@ -23,12 +23,12 @@ public:
                             std::size_t index) = 0;
     virtual void setTexture(TextureView, std::size_t index) = 0;
 
-    void dispatchThreads(mtl::usize2 threadsPerGrid,
-                         mtl::usize2 threadsPerThreadgroup) {
+    void dispatchThreads(vml::usize2 threadsPerGrid,
+                         vml::usize2 threadsPerThreadgroup) {
         dispatchThreads({ threadsPerGrid, 1 }, { threadsPerThreadgroup, 1 });
     }
-    virtual void dispatchThreads(mtl::usize3 threadsPerGrid,
-                                 mtl::usize3 threadsPerThreadgroup) = 0;
+    virtual void dispatchThreads(vml::usize3 threadsPerGrid,
+                                 vml::usize3 threadsPerThreadgroup) = 0;
 
     virtual void commit() = 0;
 };

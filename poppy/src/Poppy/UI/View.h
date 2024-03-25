@@ -4,9 +4,9 @@
 #include <optional>
 #include <string>
 
-#include <mtl/mtl.hpp>
 #include <utl/hashmap.hpp>
 #include <utl/messenger.hpp>
+#include <vml/vml.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include "Bloom/Application/InputEvent.h"
@@ -27,8 +27,8 @@ struct ViewDescription {
 
     std::string title;
 
-    mtl::int2 size = { 300, 300 };
-    mtl::float2 padding = -1;
+    vml::int2 size = { 300, 300 };
+    vml::float2 padding = -1;
 
     int id = -1; // Used to restore serialized Views. -1 means the View will use
                  // a new ID.
@@ -54,17 +54,17 @@ public:
 
     int id() const { return desc.pub.id; }
 
-    mtl::int2 size() const { return desc.pub.size; }
-    mtl::int2 windowSize() const { return desc.windowSize; }
-    mtl::int2 position() const { return desc.position; }
-    mtl::float2 padding() const { return desc.pub.padding; }
+    vml::int2 size() const { return desc.pub.size; }
+    vml::int2 windowSize() const { return desc.windowSize; }
+    vml::int2 position() const { return desc.position; }
+    vml::float2 padding() const { return desc.pub.padding; }
 
     std::string_view name() const { return desc.pub.name(); }
     std::string_view title() const { return desc.pub.title; }
     ViewDescription const& description() const { return desc.pub; }
 
-    mtl::float2 windowSpaceToViewSpace(mtl::float2) const;
-    mtl::float2 viewSpaceToWindowSpace(mtl::float2) const;
+    vml::float2 windowSpaceToViewSpace(vml::float2) const;
+    vml::float2 viewSpaceToWindowSpace(vml::float2) const;
 
     Editor& editor() const { return *desc.editor; }
     bloom::Window& window() const { return *desc.window; }
@@ -79,7 +79,7 @@ public:
     void restore();
     void toggleMaximize();
 
-    void setPadding(mtl::float2 padding);
+    void setPadding(vml::float2 padding);
 
     void setTitle(std::string);
 
@@ -110,8 +110,8 @@ private:
     struct ViewDescPrivate {
         ViewDescription pub;
 
-        mtl::int2 position = 0;
-        mtl::int2 windowSize = 0;
+        vml::int2 position = 0;
+        vml::int2 windowSize = 0;
 
         void* imguiWindow = nullptr;
         Editor* editor = nullptr;

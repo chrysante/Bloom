@@ -7,8 +7,8 @@
 #include <span>
 #include <string>
 
-#include <mtl/mtl.hpp>
 #include <utl/utility.hpp>
+#include <vml/vml.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include "Bloom/Application/Input.h"
@@ -34,10 +34,10 @@ struct WindowDescription {
     std::string title;
 
     /// The initial size of the window
-    mtl::int2 size = 0;
+    vml::int2 size = 0;
 
     /// The initial position of the window
-    mtl::int2 position = 0;
+    vml::int2 position = 0;
 
     /// Set to true to make the window automatically resize the swapchain when
     /// window size changes
@@ -100,10 +100,10 @@ public:
         std::function<void(std::span<std::filesystem::path const>)>);
 
     /// Sets the move callback to \p callback
-    void onMove(std::function<void(mtl::int2 newPosition)>);
+    void onMove(std::function<void(vml::int2 newPosition)>);
 
     /// Sets the resize callback to \p callback
-    void onResize(std::function<void(mtl::int2 newSize)>);
+    void onResize(std::function<void(vml::int2 newSize)>);
 
     /// Sets the focus gain callback to \p callback
     void onFocus(std::function<void()>);
@@ -115,7 +115,7 @@ public:
     void onClose(std::function<void()>);
 
     /// Sets the content scale change loss callback to \p callback
-    void onContentScaleChange(std::function<void(mtl::float2 newContentScale)>);
+    void onContentScaleChange(std::function<void(vml::float2 newContentScale)>);
 
     /// \Returns the window's swapchain
     Swapchain& swapchain() { return *_swapchain; }
@@ -133,16 +133,16 @@ public:
     std::string const& title() const { return desc.title; }
 
     /// \Returns the window's position on the monitor
-    mtl::int2 position() const { return desc.position; }
+    vml::int2 position() const { return desc.position; }
 
     /// \Returns the window's size
-    mtl::int2 size() const { return desc.size; }
+    vml::int2 size() const { return desc.size; }
 
     /// \Returns `true` if this window is currently focused
     bool focused() const { return desc.focused; }
 
     /// \Returns the window's contant scale factor
-    mtl::float2 contentScaleFactor() const { return desc.contentScaleFactor; }
+    vml::float2 contentScaleFactor() const { return desc.contentScaleFactor; }
 
     /// \Returns `true` if this window is in fullscreen mode
     bool isFullscreen() const { return desc.fullscreen; }
@@ -163,7 +163,7 @@ public:
     float toolbarHeight() const;
 
     /// \Returns the bounding box of the close, minimize and maximize buttons
-    mtl::AABB<float, 2> titleButtonsArea() const;
+    vml::AABB<float, 2> titleButtonsArea() const;
 
     /// Flag to indicate if the mouse is over an area from which the window may
     /// be dragged. We need this because ImGui is not event based but Cocoa
@@ -178,10 +178,10 @@ public:
     /// A bunch of setters and commands
     /// @{
     void setTitle(std::string title);
-    void setPosition(mtl::int2 position);
-    void setSize(mtl::int2 size);
-    void setMinSize(mtl::int2 minSize);
-    void setMaxSize(mtl::int2 maxSize);
+    void setPosition(vml::int2 position);
+    void setSize(vml::int2 size);
+    void setMinSize(vml::int2 minSize);
+    void setMaxSize(vml::int2 maxSize);
     void setFocused();
     void show();
     void hide();
@@ -204,11 +204,11 @@ private:
 
     struct WindowDescPrivate: WindowDescription {
         /// Backup positition and size to restore from fullscreen
-        mtl::int2 backupPosition = 0;
-        mtl::int2 backupSize = 0;
-        mtl::float2 contentScaleFactor = 1;
-        mtl::int2 minSize = 0;
-        mtl::int2 maxSize = 0;
+        vml::int2 backupPosition = 0;
+        vml::int2 backupSize = 0;
+        vml::float2 contentScaleFactor = 1;
+        vml::int2 minSize = 0;
+        vml::int2 maxSize = 0;
         bool focused = false;
         bool shallPreventClose = false;
         /// See `setMovable()`
@@ -220,21 +220,21 @@ private:
         std::function<void(unsigned)> onCharInputFn;
         std::function<void(std::span<std::filesystem::path const>)>
             onFileDropFn;
-        std::function<void(mtl::int2 newPosition)> onMoveFn;
-        std::function<void(mtl::int2 newSize)> onResizeFn;
+        std::function<void(vml::int2 newPosition)> onMoveFn;
+        std::function<void(vml::int2 newSize)> onResizeFn;
         /// Used by the application to run the main loop during resizing
-        std::function<void(mtl::int2 newPosition)> onResizePrivateFn;
+        std::function<void(vml::int2 newPosition)> onResizePrivateFn;
         std::function<void()> onFocusFn;
         std::function<void()> onFocusLossFn;
         std::function<void()> onCloseFn;
-        std::function<void(mtl::float2 newContentScale)> onContentScaleChangeFn;
+        std::function<void(vml::float2 newContentScale)> onContentScaleChangeFn;
     };
 
     Window(WindowDescription const& desc);
     void platformInit();
     void applyStyle();
     void setCallbacks();
-    void resizeSwapchain(mtl::int2 size);
+    void resizeSwapchain(vml::int2 size);
 
     WindowDescPrivate desc;
     std::unique_ptr<void, Deleter> windowPtr;

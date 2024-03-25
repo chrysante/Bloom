@@ -1,7 +1,7 @@
 #ifndef BLOOM_GRAPHICS_RENDERER_BLOOMRENDERER_H
 #define BLOOM_GRAPHICS_RENDERER_BLOOMRENDERER_H
 
-#include <mtl/mtl.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Core/Core.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
@@ -29,10 +29,10 @@ class BLOOM_API BloomRenderer {
 public:
     void init(HardwareDevice&);
     void populateFramebuffer(HardwareDevice&, BloomFramebuffer&,
-                             mtl::usize2) const;
+                             vml::usize2) const;
 
     void render(CommandQueue&, BloomFramebuffer&, TextureView rawColor,
-                BufferView renderParameters, mtl::uint2 framebufferSize);
+                BufferView renderParameters, vml::uint2 framebufferSize);
 
     BloomParameters makeShaderParameters() const;
 

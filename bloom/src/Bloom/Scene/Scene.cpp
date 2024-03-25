@@ -231,9 +231,9 @@ void Scene::parent(EntityID c, EntityID p) {
         parent.lastChild = c;
     }
     auto& t = getComponent<Transform>(c);
-    mtl::float4x4 parentWorldTransform = calculateTransformRelativeToWorld(p);
-    mtl::float4x4 childLocalTransform =
-        mtl::inverse(parentWorldTransform) * t.calculate();
+    vml::float4x4 parentWorldTransform = calculateTransformRelativeToWorld(p);
+    vml::float4x4 childLocalTransform =
+        vml::inverse(parentWorldTransform) * t.calculate();
     t = Transform::fromMatrix(childLocalTransform);
 #if BLOOM_DEBUGLEVEL
     sanitizeHierachy(this);
@@ -268,9 +268,9 @@ void Scene::unparent(EntityID c) {
         parent.firstChild = {};
     }
     auto& t = getComponent<Transform>(c);
-    mtl::float4x4 const parentWorldTransform =
+    vml::float4x4 const parentWorldTransform =
         calculateTransformRelativeToWorld(child.parent);
-    mtl::float4x4 const childWorldTransform =
+    vml::float4x4 const childWorldTransform =
         parentWorldTransform * t.calculate();
     t = Transform::fromMatrix(childWorldTransform);
     child.parent = {};
@@ -331,8 +331,8 @@ bool Scene::isLeaf(EntityID entity) const {
     return result;
 }
 
-mtl::float4x4 Scene::calculateTransformRelativeToWorld(EntityID entity) const {
-    mtl::float4x4 result = 1;
+vml::float4x4 Scene::calculateTransformRelativeToWorld(EntityID entity) const {
+    vml::float4x4 result = 1;
     while (entity) {
         BL_ASSERT(hasComponent<HierarchyComponent>(entity),
                   "This API is supposed to be used with hierarchical entities");

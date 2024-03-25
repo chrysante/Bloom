@@ -7,7 +7,7 @@
 #include "Bloom/Core/Debug.h"
 
 using namespace bloom;
-using namespace mtl::short_types;
+using namespace vml::short_types;
 
 class bloom::AppRunner {
 public:

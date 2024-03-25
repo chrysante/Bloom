@@ -14,10 +14,10 @@ target_include_directories(poppy
 )
 
 target_link_libraries(poppy
-  PUBLIC
-    bloom
   PRIVATE
+    bloom
     utility
+    vml
     yaml-cpp
     ImGui
     ImGuizmo

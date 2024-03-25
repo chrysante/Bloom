@@ -16,7 +16,7 @@ struct RenderPassColorAttachmentDescription {
     TextureHandle texture;
 
     ///
-    mtl::float4 clearColor = 0;
+    vml::float4 clearColor = 0;
 
     ///
     LoadAction loadAction = LoadAction::DontCare;
@@ -52,7 +52,7 @@ struct RenderPassDescription {
     std::size_t renderTargetArrayLength = 1;
 
     /// The dimensions of the render target in pixels
-    mtl::usize2 renderTargetSize = 0;
+    vml::usize2 renderTargetSize = 0;
 };
 
 /// Argument struct for an indexed draw call

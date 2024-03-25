@@ -1,8 +1,8 @@
 #ifndef POPPY_UI_DOCKSPACE_H
 #define POPPY_UI_DOCKSPACE_H
 
-#include <mtl/mtl.hpp>
 #include <utl/vector.hpp>
+#include <vml/vml.hpp>
 
 #include "Poppy/UI/Toolbar.h"
 
@@ -43,7 +43,7 @@ private:
     void setToolbarHeight(float height);
 
 private:
-    mtl::float2 minWindowSize = { 250, 100 };
+    vml::float2 minWindowSize = { 250, 100 };
     std::array<Toolbar, 3> toolbars;
     float leftInset = 0, rightInset = 0;
 

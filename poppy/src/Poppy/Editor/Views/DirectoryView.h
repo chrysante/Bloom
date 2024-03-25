@@ -7,8 +7,8 @@
 #include <span>
 #include <string>
 
-#include <mtl/mtl.hpp>
 #include <utl/vector.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Application/InputEvent.h"
 
@@ -83,7 +83,7 @@ public:
 
     /// Used for drawing the entries
     struct Cursor {
-        mtl::float2 position = 0;
+        vml::float2 position = 0;
         int index = 0;
     };
 
@@ -98,8 +98,8 @@ public:
 
     ///
     struct StyleParameters {
-        mtl::float2 itemSpacing = 10;
-        mtl::float2 itemSize = 100;
+        vml::float2 itemSpacing = 10;
+        vml::float2 itemSize = 100;
         float labelHeight = 20;
     };
 

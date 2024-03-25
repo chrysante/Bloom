@@ -5,22 +5,22 @@
 #include "Bloom/Graphics/StaticMesh.h"
 
 using namespace bloom;
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace poppy;
 
 /// MARK: Framebuffer Creation
 std::unique_ptr<bloom::Framebuffer> EditorRenderer::createFramebuffer(
-    mtl::int2 size) const {
+    vml::int2 size) const {
     return mRenderer->createFramebuffer(size);
 }
 
 std::unique_ptr<bloom::Framebuffer> EditorRenderer::createDebugFramebuffer(
-    mtl::int2 size) const {
+    vml::int2 size) const {
     return mRenderer->createDebugFramebuffer(size);
 }
 
 std::unique_ptr<EditorFramebuffer> EditorRenderer::createEditorFramebuffer(
-    mtl::int2 size) const {
+    vml::int2 size) const {
     auto framebuffer = std::make_unique<EditorFramebuffer>();
 
     TextureDescription desc;
@@ -104,13 +104,13 @@ void EditorRenderer::endScene() { mRenderer->endScene(); }
 
 void EditorRenderer::submit(Reference<StaticMeshRenderer> mesh,
                             Reference<MaterialInstance> material,
-                            mtl::float4x4 const& transform) {
+                            vml::float4x4 const& transform) {
     mRenderer->submit(std::move(mesh), std::move(material), transform);
 }
 
 void EditorRenderer::submitSelected(Reference<StaticMeshRenderer> mesh,
-                                    mtl::float4x4 const& transform) {
-    selectedObjects.push_back({ mesh, mtl::transpose(transform) });
+                                    vml::float4x4 const& transform) {
+    selectedObjects.push_back({ mesh, vml::transpose(transform) });
 }
 
 void EditorRenderer::submit(PointLight const& light) {

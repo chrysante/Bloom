@@ -2,8 +2,8 @@
 #define POPPY_UI_APPEARANCE_H
 
 #include <imgui.h>
-#include <mtl/mtl.hpp>
 #include <utl/vector.hpp>
+#include <vml/vml.hpp>
 #include <yaml-cpp/yaml.h>
 
 namespace poppy {
@@ -29,35 +29,35 @@ struct StyleVars {
     float grabRounding;
     float scrollbarSize;
     float scrollbarRounding;
-    mtl::float2 windowTitleAlign;
+    vml::float2 windowTitleAlign;
 };
 
 /// UI colors used in the application
 struct StyleColors {
-    mtl::float4 text;
-    mtl::float4 textDisabled;
-    mtl::float4 windowBG;
-    mtl::float4 childWindowBG;
-    mtl::float4 popupBG;
-    mtl::float4 menubarBG;
-    mtl::float4 controlFrame;
-    mtl::float4 controlFrameHovered;
-    mtl::float4 controlFrameDown;
-    mtl::float4 highlightControlFrame;
-    mtl::float4 highlightControlFrameHovered;
-    mtl::float4 highlightControlFrameDown;
-    mtl::float4 checkMark;
-    mtl::float4 windowTitleBar;
-    mtl::float4 activeWindowTitleBar;
-    mtl::float4 border;
-    mtl::float4 scrollbar;
-    mtl::float4 separator;
-    mtl::float4 tab;
-    mtl::float4 tabHovered;
-    mtl::float4 tabActive;
-    mtl::float4 tabUnfocused;
-    mtl::float4 tabUnfocusedActive;
-    mtl::float4 dockingPreview;
+    vml::float4 text;
+    vml::float4 textDisabled;
+    vml::float4 windowBG;
+    vml::float4 childWindowBG;
+    vml::float4 popupBG;
+    vml::float4 menubarBG;
+    vml::float4 controlFrame;
+    vml::float4 controlFrameHovered;
+    vml::float4 controlFrameDown;
+    vml::float4 highlightControlFrame;
+    vml::float4 highlightControlFrameHovered;
+    vml::float4 highlightControlFrameDown;
+    vml::float4 checkMark;
+    vml::float4 windowTitleBar;
+    vml::float4 activeWindowTitleBar;
+    vml::float4 border;
+    vml::float4 scrollbar;
+    vml::float4 separator;
+    vml::float4 tab;
+    vml::float4 tabHovered;
+    vml::float4 tabActive;
+    vml::float4 tabUnfocused;
+    vml::float4 tabUnfocusedActive;
+    vml::float4 dockingPreview;
 };
 
 /// Intermediate data structure that is derived from system colors or hard coded

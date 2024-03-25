@@ -4,14 +4,14 @@
 
 #include <ImGuizmo/ImGuizmo.h>
 #include <imgui.h>
-#include <mtl/mtl.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Editor/SelectionContext.h"
 
 using namespace bloom;
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace poppy;
 
 std::string poppy::toString(Gizmo::Operation op) {
@@ -46,9 +46,9 @@ void Gizmo::cycleSpace() {
     setSpace(newSpace);
 }
 
-static std::pair<bool, mtl::float4x4> manipulateGizmo(
-    ImGuizmo::Context* context, mtl::float4x4 view, mtl::float4x4 proj,
-    Gizmo::Operation operation, Gizmo::Space space, mtl::float4x4 transform) {
+static std::pair<bool, vml::float4x4> manipulateGizmo(
+    ImGuizmo::Context* context, vml::float4x4 view, vml::float4x4 proj,
+    Gizmo::Operation operation, Gizmo::Space space, vml::float4x4 transform) {
     ImGuizmo::SetContext(context);
     ImGuizmo::BeginFrame();
     ImGuizmo::SetOrthographic(false);
@@ -57,9 +57,9 @@ static std::pair<bool, mtl::float4x4> manipulateGizmo(
     float2 const size = ImGui::GetWindowSize();
     ImGuizmo::SetRect(pos.x, pos.y, size.x, size.y);
 
-    view = mtl::transpose(view);
-    proj = mtl::transpose(proj);
-    transform = mtl::transpose(transform);
+    view = vml::transpose(view);
+    proj = vml::transpose(proj);
+    transform = vml::transpose(transform);
 
     auto const imguizmoOperation = (ImGuizmo::OPERATION)operation;
     auto const imguizmoMode = operation == Gizmo::Operation::Scale ?
@@ -69,7 +69,7 @@ static std::pair<bool, mtl::float4x4> manipulateGizmo(
     if (ImGuizmo::Manipulate(view.data(), proj.data(), imguizmoOperation,
                              imguizmoMode, transform.data()))
     {
-        return { true, mtl::transpose(transform) };
+        return { true, vml::transpose(transform) };
     }
     return { false, 0 };
 }
@@ -114,7 +114,7 @@ void Gizmo::display(bloom::Camera const& camera, SelectionContext& selection) {
     }
 
     auto const newLocalTransform =
-        mtl::inverse(parentTransform) * newEntityWSTransform;
+        vml::inverse(parentTransform) * newEntityWSTransform;
 
     entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
 }

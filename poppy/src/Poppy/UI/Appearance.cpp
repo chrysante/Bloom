@@ -14,7 +14,7 @@
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/SystemAppearance.h"
 
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace poppy;
 
 static void applyStyle(poppy::StyleDescription const& style) {
@@ -137,7 +137,7 @@ void Appearance::update(bool force) {
     }
     auto systemAppearance = SystemAppearance::get(currentType);
     mType = currentType;
-    globalHue = mtl::rgb_to_hsv(systemAppearance.controlAccentColor.rgb).hue;
+    globalHue = vml::rgb_to_hsv(systemAppearance.controlAccentColor.rgb).hue;
     mStyle = makeStyle(systemAppearance);
     applyStyle(mStyle);
 }
@@ -205,15 +205,15 @@ void Appearance::showInspector(bool* open) {
     }
     if (ImGui::BeginTabItem("Colors")) {
         utl_defer { ImGui::EndTabItem(); };
-        auto item = [&](char const* name, mtl::float4& color) -> bool {
-            auto hsva = mtl::rgba_to_hsva(color);
+        auto item = [&](char const* name, vml::float4& color) -> bool {
+            auto hsva = vml::rgba_to_hsva(color);
             bool result =
                 ImGui::ColorEdit4(name, hsva.data(),
                                   ImGuiColorEditFlags_AlphaPreviewHalf |
                                       ImGuiColorEditFlags_NoInputs |
                                       ImGuiColorEditFlags_Float |
                                       ImGuiColorEditFlags_InputHSV);
-            color = mtl::hsva_to_rgba(hsva);
+            color = vml::hsva_to_rgba(hsva);
             return result;
         };
         if (ImGui::BeginChild("##Colors")) {
@@ -267,7 +267,7 @@ static bool colorPreview(float4& color, char const* label) {
 void poppy::systemStyleInspector(bool* open) {
 #define COLOR_PREVIEW(NAME)                                                    \
     do {                                                                       \
-        mtl::float4 color = a.NAME;                                            \
+        vml::float4 color = a.NAME;                                            \
         colorPreview(color, #NAME);                                            \
     } while (0)
     SystemAppearance a = SystemAppearance::getCurrent();

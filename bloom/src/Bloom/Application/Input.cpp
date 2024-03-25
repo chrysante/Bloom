@@ -179,10 +179,10 @@ void Input::setMouseButton(MouseButton button, bool down) {
     _mouseButtons[(std::size_t)button] = down;
 }
 
-void Input::setMousePosition(mtl::float2 position) {
+void Input::setMousePosition(vml::float2 position) {
     auto lastPos = _mousePosition;
     _mousePosition = position;
     _mouseOffset = position - lastPos;
 }
 
-void Input::setScrollOffset(mtl::float2 offset) { _scrollOffset = offset; }
+void Input::setScrollOffset(vml::float2 offset) { _scrollOffset = offset; }

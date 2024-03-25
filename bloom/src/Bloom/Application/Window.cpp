@@ -12,7 +12,7 @@
 
 #define GLFW_WND ((GLFWwindow*)windowPtr.get())
 
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace bloom;
 
 void Window::PollEvents() { glfwPollEvents(); }
@@ -77,11 +77,11 @@ void Window::onFileDrop(
     callbacks.onFileDropFn = std::move(f);
 }
 
-void Window::onMove(std::function<void(mtl::int2 newPosition)> f) {
+void Window::onMove(std::function<void(vml::int2 newPosition)> f) {
     callbacks.onMoveFn = std::move(f);
 }
 
-void Window::onResize(std::function<void(mtl::int2 newSize)> f) {
+void Window::onResize(std::function<void(vml::int2 newSize)> f) {
     callbacks.onResizeFn = std::move(f);
 }
 
@@ -98,7 +98,7 @@ void Window::onClose(std::function<void()> f) {
 }
 
 void Window::onContentScaleChange(
-    std::function<void(mtl::float2 newContentScale)> f) {
+    std::function<void(vml::float2 newContentScale)> f) {
     callbacks.onContentScaleChangeFn = std::move(f);
 }
 
@@ -111,19 +111,19 @@ void Window::setTitle(std::string newTitle) {
     glfwSetWindowTitle(GLFW_WND, newTitle.data());
 }
 
-void Window::setPosition(mtl::int2 newPosition) {
+void Window::setPosition(vml::int2 newPosition) {
     glfwSetWindowPos(GLFW_WND, newPosition.x, newPosition.y);
     glfwGetWindowPos(GLFW_WND, &desc.position.x, &desc.position.y);
 }
 
-void Window::setSize(mtl::int2 newSize) {
+void Window::setSize(vml::int2 newSize) {
     newSize.x = std::max(newSize.x, 0);
     newSize.y = std::max(newSize.y, 0);
     glfwSetWindowSize(GLFW_WND, newSize.x, newSize.y);
     glfwGetWindowSize(GLFW_WND, &desc.size.x, &desc.size.y);
 }
 
-void Window::setMinSize(mtl::int2 size) {
+void Window::setMinSize(vml::int2 size) {
     size.x = std::max(size.x, 0);
     size.y = std::max(size.y, 0);
     desc.minSize = size;
@@ -138,7 +138,7 @@ void Window::setMinSize(mtl::int2 size) {
                                                  GLFW_DONT_CARE);
 }
 
-void Window::setMaxSize(mtl::int2 size) {
+void Window::setMaxSize(vml::int2 size) {
     size.x = std::max(size.x, 0);
     size.y = std::max(size.y, 0);
     desc.maxSize = size;
@@ -351,7 +351,7 @@ void Window::setCallbacks() {
     });
 }
 
-void Window::resizeSwapchain(mtl::int2 newSize) {
+void Window::resizeSwapchain(vml::int2 newSize) {
     if (_swapchain && desc.autoResizeSwapchain) {
         swapchain().resize(newSize * contentScaleFactor());
     }

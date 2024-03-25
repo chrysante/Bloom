@@ -1,7 +1,7 @@
 #ifndef POPPY_EDITOR_VIEWS_VIEWPORT_VIEWPORTCAMERACONTROLLER_H
 #define POPPY_EDITOR_VIEWS_VIEWPORT_VIEWPORTCAMERACONTROLLER_H
 
-#include <mtl/mtl.hpp>
+#include <vml/vml.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include "Bloom/Application/Input.h"
@@ -27,13 +27,13 @@ public:
     void update(bloom::Timestep ts, bloom::Input const& input);
 
     ///
-    void applyProjection(mtl::float2 screenSize);
+    void applyProjection(vml::float2 screenSize);
 
     /// \Returns the front vector
-    mtl::float3 front() const;
+    vml::float3 front() const;
 
     /// \Returns the up vector
-    mtl::float3 up() const { return { 0, 0, 1 }; }
+    vml::float3 up() const { return { 0, 0, 1 }; }
 
     /// \Returns the current projection mode
     Projection projection() const { return data.projection; }
@@ -64,10 +64,10 @@ private:
     bool deserialize(YAML::Node const& node);
 
     struct Data {
-        float angleLR = mtl::constants<>::pi / 2;
-        float angleUD = mtl::constants<>::pi / 2;
+        float angleLR = vml::constants<>::pi / 2;
+        float angleUD = vml::constants<>::pi / 2;
         float speed = 500;
-        mtl::float3 position = { 0, 0, 1 };
+        vml::float3 position = { 0, 0, 1 };
         Projection projection = Projection::Perspective;
         float fieldOfView = 60;
         float nearClip = 1;

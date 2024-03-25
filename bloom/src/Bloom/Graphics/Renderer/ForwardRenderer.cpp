@@ -9,21 +9,21 @@
 #include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Bloom/Graphics/StaticMesh.h"
 
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace bloom;
 
 /// MARK: Framebuffer Creation
 ///
 ///
 std::unique_ptr<Framebuffer> ForwardRenderer::createFramebuffer(
-    mtl::int2 size) const {
+    vml::int2 size) const {
     auto framebuffer = std::make_unique<ForwardRendererFramebuffer>();
     populateFramebuffer(device(), *framebuffer, size);
     return std::move(framebuffer);
 }
 
 std::unique_ptr<Framebuffer> ForwardRenderer::createDebugFramebuffer(
-    mtl::int2 size) const {
+    vml::int2 size) const {
     auto framebuffer = std::make_unique<ForwardRendererDebugFramebuffer>();
     populateFramebuffer(device(), *framebuffer, size);
     TextureDescription desc;
@@ -40,7 +40,7 @@ std::unique_ptr<Framebuffer> ForwardRenderer::createDebugFramebuffer(
 
 void ForwardRenderer::populateFramebuffer(
     HardwareDevice& device, ForwardRendererFramebuffer& framebuffer,
-    mtl::usize2 size) const {
+    vml::usize2 size) const {
     framebuffer.size = size;
     TextureDescription desc;
     desc.size = { size, 1 };
@@ -193,7 +193,7 @@ void ForwardRenderer::endScene() {
 
 void ForwardRenderer::submit(Reference<StaticMeshRenderer> mesh,
                              Reference<MaterialInstance> matInst,
-                             mtl::float4x4 const& transform) {
+                             vml::float4x4 const& transform) {
     RendererSanitizer::submit();
     assert((bool)matInst);
     assert(matInst->material());
@@ -210,7 +210,7 @@ void ForwardRenderer::submit(Reference<StaticMeshRenderer> mesh,
                                    sizeof(MaterialParameters));
     }
     scene.objects.push_back(
-        { mtl::transpose(transform), std::move(matInst), std::move(mesh) });
+        { vml::transpose(transform), std::move(matInst), std::move(mesh) });
 }
 
 void ForwardRenderer::submit(PointLight const& light) {
@@ -226,13 +226,13 @@ void ForwardRenderer::submit(SpotLight const& l) {
     scene.spotLights.push_back(light);
 }
 
-static mtl::float4x4 directionalLightSpaceTransform(
-    Camera const& camera, float dist, float zDist, mtl::float3 lightDirection) {
-    mtl::float4x4 const lsProj =
-        mtl::ortho<mtl::right_handed>(-dist, dist, -dist, dist, -zDist, zDist);
+static vml::float4x4 directionalLightSpaceTransform(
+    Camera const& camera, float dist, float zDist, vml::float3 lightDirection) {
+    vml::float4x4 const lsProj =
+        vml::ortho<vml::right_handed>(-dist, dist, -dist, dist, -zDist, zDist);
 
-    mtl::float4x4 const lsView =
-        mtl::look_at<mtl::right_handed>(camera.position(),
+    vml::float4x4 const lsView =
+        vml::look_at<vml::right_handed>(camera.position(),
                                         camera.position() - lightDirection,
                                         { 0, 1, 0 });
     return lsProj * lsView;
@@ -257,7 +257,7 @@ void ForwardRenderer::submit(DirectionalLight const& light) {
                                            light.shadowDistanceZ,
                                            light.direction);
         scene.shadows.lightSpaceTransforms.push_back(
-            mtl::transpose(lightSpaceTransform));
+            vml::transpose(lightSpaceTransform));
         distance *= light.cascadeDistributionExponent;
     }
 }
@@ -289,7 +289,7 @@ void ForwardRenderer::draw(Framebuffer& fb, CommandQueue& commandQueue) {
 RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
     RendererParameters result;
 
-    result.scene.camera = mtl::transpose(scene.camera.viewProjection());
+    result.scene.camera = vml::transpose(scene.camera.viewProjection());
     result.scene.cameraPosition = scene.camera.position();
     result.scene.screenResolution = framebufferSize;
 
@@ -354,7 +354,7 @@ void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
     RenderPassDescription desc{};
     RenderPassColorAttachmentDescription caDesc{};
     caDesc.texture = framebuffer.rawColor;
-    caDesc.clearColor = mtl::colors<>::black;
+    caDesc.clearColor = vml::colors<>::black;
     caDesc.loadAction = LoadAction::Clear;
     desc.colorAttachments.push_back(caDesc);
 
@@ -505,7 +505,7 @@ void ForwardRenderer::postprocessPass(ForwardRendererFramebuffer& framebuffer,
     auto const threadGroupHeight =
         renderObjects.postprocessPipeline.maxTotalThreadsPerThreadgroup /
         threadGroupWidth;
-    mtl::uint2 const threadGroupSize = {
+    vml::uint2 const threadGroupSize = {
         utl::narrow_cast<uint32_t>(threadGroupWidth),
         utl::narrow_cast<uint32_t>(threadGroupHeight)
     };

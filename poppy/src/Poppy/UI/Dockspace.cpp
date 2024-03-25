@@ -5,10 +5,10 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <mtl/mtl.hpp>
 #include <utl/function_view.hpp>
 #include <utl/scope_guard.hpp>
 #include <utl/stack.hpp>
+#include <vml/vml.hpp>
 
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
@@ -16,7 +16,7 @@
 
 using namespace poppy;
 using namespace bloom;
-using namespace mtl::short_types;
+using namespace vml::short_types;
 
 static constexpr auto MainWindowID = "__MainWindow__";
 static constexpr auto MainDockspaceID = "__MainWindow_Dockspace__";
@@ -27,7 +27,7 @@ static void makeUnique(utl::vector<T>& v) {
     v.resize(last - v.begin());
 }
 
-static void withWindowSizeConstraints(mtl::float2 minSize, auto&& block) {
+static void withWindowSizeConstraints(vml::float2 minSize, auto&& block) {
     ImGuiStyle& style = ImGui::GetStyle();
     utl::scope_guard restore = [&, oldSize = style.WindowMinSize] {
         style.WindowMinSize = oldSize;
@@ -113,12 +113,12 @@ void Dockspace::submitMasterDockspace() {
 }
 
 utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
-    utl::vector<mtl::rectangle<int>> const potentialRects = [this] {
+    utl::vector<vml::rectangle<int>> const potentialRects = [this] {
         ImGuiDockNode const* mainNode = ImGui::DockBuilderGetNode(mainDockID);
         BL_ASSERT(mainNode);
         utl::stack<ImGuiDockNode const*> stack;
         stack.push(mainNode);
-        utl::vector<mtl::rectangle<int>> result;
+        utl::vector<vml::rectangle<int>> result;
         while (!stack.empty()) {
             auto* node = stack.pop();
             if ((int)node->Pos.y == (int)mainNode->Pos.y && node->IsVisible &&

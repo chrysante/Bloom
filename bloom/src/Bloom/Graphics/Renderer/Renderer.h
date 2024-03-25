@@ -1,7 +1,7 @@
 #ifndef BLOOM_GRAPHICS_RENDERER_RENDERER_H
 #define BLOOM_GRAPHICS_RENDERER_RENDERER_H
 
-#include <mtl/mtl.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Application/MessageSystem.h"
 #include "Bloom/Core/Core.h"
@@ -23,7 +23,7 @@ public:
 
     virtual ~Framebuffer() = default;
 
-    mtl::int2 size = 0;
+    vml::int2 size = 0;
 
 protected:
     Framebuffer() = default;
@@ -36,9 +36,9 @@ public:
 
     virtual void init(HardwareDevice&){};
     virtual std::unique_ptr<Framebuffer> createFramebuffer(
-        mtl::int2 size) const = 0;
+        vml::int2 size) const = 0;
     virtual std::unique_ptr<Framebuffer> createDebugFramebuffer(
-        mtl::int2 size) const = 0;
+        vml::int2 size) const = 0;
 
     virtual void beginScene(Camera const&) = 0;
     virtual void endScene() = 0;
@@ -46,7 +46,7 @@ public:
 
     virtual void submit(Reference<StaticMeshRenderer>,
                         Reference<MaterialInstance>,
-                        [[maybe_unused]] mtl::float4x4 const& transform){};
+                        [[maybe_unused]] vml::float4x4 const& transform){};
     virtual void submit(PointLight const&){};
     virtual void submit(SpotLight const&){};
     virtual void submit(DirectionalLight const&){};

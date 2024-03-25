@@ -12,7 +12,7 @@ struct SwapchainDescription {
     PixelFormat pixelFormat = PixelFormat::BGRA8Unorm;
 
     /// The size of the framebuffer textures in pixels
-    mtl::usize2 size;
+    vml::usize2 size;
 
     /// The number of framebuffers to use
     std::size_t backBufferCount = 3;
@@ -40,13 +40,13 @@ public:
     virtual std::unique_ptr<Backbuffer> nextBackbuffer() = 0;
 
     /// Resizes the underlying framebuffers to \p newSize pixels
-    virtual void resize(mtl::usize2 newSize) = 0;
+    virtual void resize(vml::usize2 newSize) = 0;
 
     /// \Returns the descriptor that was used to create the swapchain
     SwapchainDescription const& description() const { return desc; }
 
     /// \Returns the size in pixels of the framebuffers
-    mtl::usize2 size() const { return desc.size; }
+    vml::usize2 size() const { return desc.size; }
 
 protected:
     SwapchainDescription desc;

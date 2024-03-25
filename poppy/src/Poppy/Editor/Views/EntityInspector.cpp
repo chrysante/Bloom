@@ -4,12 +4,12 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <mtl/mtl.hpp>
 #include <range/v3/view.hpp>
 #include <scatha/Common/Ranges.h>
 #include <scatha/Sema/Entity.h>
 #include <scatha/Sema/SymbolTable.h>
 #include <utl/typeinfo.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Runtime/ScriptSystem.h"
@@ -21,7 +21,7 @@
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace ranges::views;
 using namespace bloom;
 using namespace poppy;
@@ -170,10 +170,10 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
             ImGui::SetNextItemWidth(width);
             dragFloat3Pretty("##position", transform.position.data());
             beginProperty("Orientation");
-            float3 euler = mtl::to_euler(transform.orientation) * 180;
+            float3 euler = vml::to_euler(transform.orientation) * 180;
             ImGui::SetNextItemWidth(width);
             if (dragFloat3Pretty("##orientation", euler.data())) {
-                transform.orientation = mtl::to_quaternion(euler / 180);
+                transform.orientation = vml::to_quaternion(euler / 180);
             }
             beginProperty("Scale");
             ImGui::SetNextItemWidth(width);
@@ -182,7 +182,7 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
                 transformScaleLinked)
             {
                 bool3 const edited =
-                    mtl::map(transform.scale, oldScale, utl::unequals);
+                    vml::map(transform.scale, oldScale, utl::unequals);
                 if (edited.x) {
                     transform.scale = transform.scale.x;
                 }

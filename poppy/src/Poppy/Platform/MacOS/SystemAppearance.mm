@@ -6,7 +6,7 @@
 
 using namespace poppy;
 
-static mtl::double4 convertColor(NSColor* color) {
+static vml::double4 convertColor(NSColor* color) {
     CIColor* tmp = [[CIColor alloc] initWithColor:color];
     return { tmp.red, tmp.green, tmp.blue, tmp.alpha };
 }

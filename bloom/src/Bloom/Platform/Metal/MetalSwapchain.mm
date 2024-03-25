@@ -29,7 +29,7 @@ std::unique_ptr<Backbuffer> MetalSwapchain::nextBackbuffer() {
     return std::make_unique<MetalBackbuffer>(layer.nextDrawable);
 }
 
-void MetalSwapchain::resize(mtl::usize2 newSize) {
+void MetalSwapchain::resize(vml::usize2 newSize) {
     [layer setDrawableSize:CGSize{ (CGFloat)newSize.x, (CGFloat)newSize.y }];
     desc.size = newSize;
 }

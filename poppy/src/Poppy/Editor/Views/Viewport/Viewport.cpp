@@ -20,7 +20,7 @@
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace bloom;
 using namespace poppy;
 
@@ -402,7 +402,7 @@ void Viewport::dropdownMenu() {
     }
 }
 
-EntityHandle Viewport::readEntityID(mtl::float2 /*mousePosition*/) {
+EntityHandle Viewport::readEntityID(vml::float2 /*mousePosition*/) {
     return {};
 #if 0
     static_assert(
@@ -447,9 +447,9 @@ void Viewport::receiveSceneDragDrop() {
     sceneSystem.loadScene(as<Scene>(asset));
 }
 
-mtl::float3 Viewport::worldSpaceToViewSpace(mtl::float3 const positionWS) {
+vml::float3 Viewport::worldSpaceToViewSpace(vml::float3 const positionWS) {
     auto const viewProj = camera.camera().viewProjection();
-    auto const tmp = viewProj * mtl::float4(positionWS, 1);
+    auto const tmp = viewProj * vml::float4(positionWS, 1);
     auto const ndc = tmp.xyz / tmp.w;
 
     auto posVS = ndc.xy;
@@ -460,14 +460,14 @@ mtl::float3 Viewport::worldSpaceToViewSpace(mtl::float3 const positionWS) {
     return { posVS, ndc.z };
 }
 
-mtl::float3 Viewport::worldSpaceToWindowSpace(mtl::float3 position) {
+vml::float3 Viewport::worldSpaceToWindowSpace(vml::float3 position) {
     auto const vs = worldSpaceToViewSpace(position);
     return { viewSpaceToWindowSpace(vs.xy), vs.z };
 }
 
-mtl::float2 Viewport::worldSpaceDirToViewSpace(mtl::float3 const positionWS) {
+vml::float2 Viewport::worldSpaceDirToViewSpace(vml::float3 const positionWS) {
     auto const viewProj = camera.camera().viewProjection();
-    auto const tmp = viewProj * mtl::float4(positionWS, 0);
+    auto const tmp = viewProj * vml::float4(positionWS, 0);
     auto const ndc = tmp.xyz / tmp.w;
 
     auto dirVS = ndc.xy;
@@ -477,6 +477,6 @@ mtl::float2 Viewport::worldSpaceDirToViewSpace(mtl::float3 const positionWS) {
     return dirVS;
 }
 
-mtl::float2 Viewport::worldSpaceDirToWindowSpace(mtl::float3 direction) {
+vml::float2 Viewport::worldSpaceDirToWindowSpace(vml::float3 direction) {
     return worldSpaceDirToViewSpace(direction);
 }

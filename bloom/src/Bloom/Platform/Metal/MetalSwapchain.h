@@ -22,7 +22,7 @@ public:
 
     std::unique_ptr<Backbuffer> nextBackbuffer() override;
 
-    void resize(mtl::usize2 newSize) override;
+    void resize(vml::usize2 newSize) override;
 
     CAMetalLayer* layer;
 };

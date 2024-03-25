@@ -57,7 +57,7 @@ StaticMeshData bloom::importStaticMesh(std::filesystem::path const& path) {
                 auto& v = result.vertices[i];
                 if (position)
                     v.position = BaseWorldScale() *
-                                 mtl::float3{ position[i].x, position[i].y,
+                                 vml::float3{ position[i].x, position[i].y,
                                               position[i].z };
                 if (normal)
                     v.normal = { normal[i].x, normal[i].y, normal[i].z };

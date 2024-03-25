@@ -5,7 +5,7 @@
 #include "Bloom/GPU/CommandQueue.h"
 #include "Bloom/GPU/HardwareDevice.h"
 
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace bloom;
 
 void BloomRenderer::init(HardwareDevice& device) {
@@ -23,7 +23,7 @@ void BloomRenderer::init(HardwareDevice& device) {
 
 void BloomRenderer::populateFramebuffer(HardwareDevice& device,
                                         BloomFramebuffer& framebuffer,
-                                        mtl::usize2 size) const {
+                                        vml::usize2 size) const {
     TextureDescription desc;
     desc.size = { size / 2, 1 };
     desc.type = TextureType::Texture2D;
@@ -56,7 +56,7 @@ void BloomRenderer::populateFramebuffer(HardwareDevice& device,
 void BloomRenderer::render(CommandQueue& commandQueue,
                            BloomFramebuffer& framebuffer, TextureView rawColor,
                            BufferView renderParameters,
-                           mtl::uint2 const framebufferSize) {
+                           vml::uint2 const framebufferSize) {
     if (!settings.enabled) {
         return;
     }
@@ -69,7 +69,7 @@ void BloomRenderer::render(CommandQueue& commandQueue,
     auto threadGroupWidth = downsamplePipeline.threadExecutionWidth;
     auto threadGroupHeight =
         downsamplePipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth;
-    mtl::uint2 const threadGroupSize = {
+    vml::uint2 const threadGroupSize = {
         utl::narrow_cast<uint32_t>(threadGroupWidth),
         utl::narrow_cast<uint32_t>(threadGroupHeight)
     };

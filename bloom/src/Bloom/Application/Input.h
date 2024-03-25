@@ -3,8 +3,8 @@
 
 #include <array>
 
-#include <mtl/mtl.hpp>
 #include <utl/common.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/EnumCount.h"
@@ -156,13 +156,13 @@ enum struct MouseButton {
 class BLOOM_API Input {
 public:
     /// \Returns the current mouse position
-    mtl::float2 mousePosition() const { return _mousePosition; }
+    vml::float2 mousePosition() const { return _mousePosition; }
 
     /// \Returns the offset between the mouse position this frame and last frame
-    mtl::float2 mouseOffset() const { return _mouseOffset; }
+    vml::float2 mouseOffset() const { return _mouseOffset; }
 
     /// \Returns the current scroll offset
-    mtl::float2 scrollOffset() const { return _scrollOffset; }
+    vml::float2 scrollOffset() const { return _scrollOffset; }
 
     /// \Returns `true` if \p button is currently pressed
     bool mouseDown(MouseButton button) const {
@@ -189,14 +189,14 @@ private:
     void endFrame();
     void setKey(Key key, bool down);
     void setMouseButton(MouseButton button, bool down);
-    void setMousePosition(mtl::float2 position);
-    void setScrollOffset(mtl::float2 offset);
+    void setMousePosition(vml::float2 position);
+    void setScrollOffset(vml::float2 offset);
     /// @}
 
     ModFlags _modFlags = ModFlags::None;
-    mtl::float2 _mousePosition = 0;
-    mtl::float2 _mouseOffset = 0;
-    mtl::float2 _scrollOffset = 0;
+    vml::float2 _mousePosition = 0;
+    vml::float2 _mouseOffset = 0;
+    vml::float2 _scrollOffset = 0;
     std::array<int, EnumCount<Key>> _keys{};
     std::array<int, EnumCount<MouseButton>> _mouseButtons{};
 };

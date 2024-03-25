@@ -62,12 +62,12 @@ void SceneRenderer::submitScene(Scene const& scene) {
                                      [](auto& transform, auto& light) {
         light.light.position = transform.matrix.column(3).xyz;
         light.light.direction =
-            mtl::normalize((transform.matrix * mtl::float4{ 1, 0, 0, 0 }).xyz);
+            vml::normalize((transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
     });
     submitLights<DirectionalLightComponent>(renderer(), scene,
                                             [](auto& transform, auto& light) {
         light.light.direction =
-            mtl::normalize((transform.matrix * mtl::float4{ 0, 0, 1, 0 }).xyz);
+            vml::normalize((transform.matrix * vml::float4{ 0, 0, 1, 0 }).xyz);
     });
     submitLights<SkyLightComponent>(renderer(), scene);
 }

@@ -4,9 +4,9 @@
 #include <limits>
 #include <optional>
 
-#include <mtl/mtl.hpp>
 #include <utl/common.hpp>
 #include <utl/vector.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Core/Base.h"
 #include "Bloom/GPU/HardwareResourceHandle.h"
@@ -318,7 +318,7 @@ public:
 struct TextureDescription {
     TextureType type = TextureType::Texture2D;
     PixelFormat pixelFormat = PixelFormat::RGBA8Unorm;
-    mtl::usize3 size = 1;
+    vml::usize3 size = 1;
     std::size_t mipmapLevelCount = 1;
     std::size_t sampleCount = 1;
     std::size_t arrayLength = 1;
@@ -338,7 +338,7 @@ public:
     std::size_t width() const { return desc.size.x; }
     std::size_t height() const { return desc.size.y; }
     std::size_t depth() const { return desc.size.z; }
-    mtl::usize3 size() const { return desc.size; }
+    vml::usize3 size() const { return desc.size; }
 
 private:
     TextureDescription desc;
@@ -357,7 +357,7 @@ public:
     std::size_t width() const { return desc.size.x; }
     std::size_t height() const { return desc.size.y; }
     std::size_t depth() const { return desc.size.z; }
-    mtl::usize3 size() const { return desc.size; }
+    vml::usize3 size() const { return desc.size; }
 
 private:
     TextureDescription desc;

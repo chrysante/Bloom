@@ -3,8 +3,8 @@
 
 #include <memory>
 
-#include <mtl/mtl.hpp>
 #include <utl/structure_of_arrays.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Core.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
@@ -26,18 +26,18 @@ struct EditorFramebuffer: bloom::Framebuffer {
 namespace {
 UTL_SOA_TYPE(RenderObjectData,
              (bloom::Reference<bloom::StaticMeshRenderer>, mesh),
-             (mtl::float4x4, transform));
+             (vml::float4x4, transform));
 }
 
 class EditorRenderer: public bloom::Renderer {
 public:
     /// MARK: Framebuffer Creation
     std::unique_ptr<bloom::Framebuffer> createFramebuffer(
-        mtl::int2 size) const override;
+        vml::int2 size) const override;
     std::unique_ptr<bloom::Framebuffer> createDebugFramebuffer(
-        mtl::int2 size) const override;
+        vml::int2 size) const override;
     std::unique_ptr<EditorFramebuffer> createEditorFramebuffer(
-        mtl::int2 size) const;
+        vml::int2 size) const;
 
     /// MARK: Initialization
     explicit EditorRenderer(bloom::Receiver, std::shared_ptr<bloom::Renderer>);
@@ -49,9 +49,9 @@ public:
 
     void submit(bloom::Reference<bloom::StaticMeshRenderer>,
                 bloom::Reference<bloom::MaterialInstance>,
-                mtl::float4x4 const& transform) override;
+                vml::float4x4 const& transform) override;
     void submitSelected(bloom::Reference<bloom::StaticMeshRenderer>,
-                        mtl::float4x4 const& transform);
+                        vml::float4x4 const& transform);
     void submit(bloom::PointLight const&) override;
     void submit(bloom::SpotLight const&) override;
     void submit(bloom::DirectionalLight const&) override;

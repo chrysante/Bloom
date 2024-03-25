@@ -4,7 +4,7 @@
 #include <string>
 
 #include <entt/entt.hpp>
-#include <mtl/mtl.hpp>
+#include <vml/vml.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include "Bloom/Asset/Asset.h"
@@ -152,7 +152,7 @@ public:
     /// Computes the transform matrix of \p entity relative to the world by
     /// traversing the hierarchy and multiplying the transforms of all parents
     /// \pre \p entity must have a transform component
-    mtl::float4x4 calculateTransformRelativeToWorld(EntityID entity) const;
+    vml::float4x4 calculateTransformRelativeToWorld(EntityID entity) const;
 
 private:
     entt::registry _registry;

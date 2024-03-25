@@ -14,7 +14,7 @@
 #include "Poppy/Core/Debug.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace poppy;
 
 ToolbarDropdownMenu::ToolbarDropdownMenu():
@@ -170,7 +170,7 @@ void Toolbar::displayItem(ToolbarItemUnion const& item, std::size_t index) {
 }
 
 /// MARK: Buttons
-bool Toolbar::buttonEx(char const* label, std::size_t id, mtl::float2 size,
+bool Toolbar::buttonEx(char const* label, std::size_t id, vml::float2 size,
                        bool enabled, bool open) const {
     ImGui::BeginDisabled(!enabled);
     float4 color =
@@ -195,13 +195,13 @@ bool Toolbar::buttonEx(char const* label, std::size_t id, mtl::float2 size,
     return result;
 }
 
-bool Toolbar::button(char const* label, std::size_t id, mtl::float2 size,
+bool Toolbar::button(char const* label, std::size_t id, vml::float2 size,
                      bool enabled, bool open) const {
     return withFont(FontWeight::Semibold, FontStyle::Roman,
                     [&] { return buttonEx(label, id, size, enabled, open); });
 }
 
-bool Toolbar::iconButton(IconData icon, std::size_t id, mtl::float2 size,
+bool Toolbar::iconButton(IconData icon, std::size_t id, vml::float2 size,
                          char const* tooltip, bool enabled, bool open) const {
     bool result = withFont(icon.font, [&] {
         return buttonEx(icon.utf8Rep.data(), id, size, enabled, open);
@@ -223,7 +223,7 @@ bool Toolbar::iconButton(IconData icon, std::size_t id, mtl::float2 size,
 }
 
 bool Toolbar::beginCombo(ToolbarDropdownMenu const& menuData, std::size_t index,
-                         mtl::float2 size) const {
+                         vml::float2 size) const {
     char const* const tooltip = menuData._tooltip ? menuData._tooltip() :
                                                     nullptr;
     bool enabled = menuData._enabled == nullptr || menuData._enabled();

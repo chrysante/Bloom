@@ -2,7 +2,7 @@
 
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace bloom;
 
 MetalRenderContext::MetalRenderContext(id<MTLCommandBuffer> cb):

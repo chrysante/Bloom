@@ -1,7 +1,7 @@
 #ifndef BLOOM_SCENE_SCENECAMERA_H
 #define BLOOM_SCENE_SCENECAMERA_H
 
-#include <mtl/mtl.hpp>
+#include <vml/vml.hpp>
 
 namespace bloom {
 

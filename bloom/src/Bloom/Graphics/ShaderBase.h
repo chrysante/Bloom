@@ -10,8 +10,8 @@
 
 #else
 
-#include <mtl/mtl.hpp>
-namespace metal = mtl;
+#include <vml/vml.hpp>
+namespace metal = vml;
 #define BLOOM_SHADER_CONSTANT constexpr
 
 #endif

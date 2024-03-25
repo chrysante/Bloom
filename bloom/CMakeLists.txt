@@ -17,6 +17,7 @@ target_include_directories(bloom
 target_link_libraries(bloom
   PUBLIC
     utility
+    vml
   PRIVATE
     range-v3
     assimp

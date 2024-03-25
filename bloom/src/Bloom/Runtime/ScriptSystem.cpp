@@ -23,7 +23,7 @@
 #include "Bloom/Scene/SceneEvents.h"
 
 using namespace bloom;
-using namespace mtl;
+using namespace vml;
 
 template <typename... T>
     requires(std::is_standard_layout_v<T> && ...)

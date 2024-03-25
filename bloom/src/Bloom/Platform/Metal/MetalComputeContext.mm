@@ -4,7 +4,7 @@
 
 using namespace bloom;
 
-static MTLSize toMTLSize(mtl::usize3 const& size) {
+static MTLSize toMTLSize(vml::usize3 const& size) {
     return { size.x, size.y, size.z };
 }
 
@@ -55,8 +55,8 @@ void MetalComputeContext::setTexture(TextureView texture, std::size_t index) {
                        atIndex:index];
 }
 
-void MetalComputeContext::dispatchThreads(mtl::usize3 threadsPerGrid,
-                                          mtl::usize3 threadsPerThreadgroup) {
+void MetalComputeContext::dispatchThreads(vml::usize3 threadsPerGrid,
+                                          vml::usize3 threadsPerThreadgroup) {
     if (threadsPerGrid.map([](auto i) { return i == 0; }).any()) {
         return;
     }

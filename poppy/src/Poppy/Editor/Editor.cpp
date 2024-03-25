@@ -17,7 +17,7 @@
 
 using namespace poppy;
 using namespace bloom;
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace ranges::views;
 
 /// \Returns the duration in seconds after which the current editor config is

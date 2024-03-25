@@ -278,7 +278,7 @@ void poppy::ImGuiContext::shutdown() {
 void poppy::ImGuiContext::newFrame(Window& window) {
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = (mtl::float2)window.size();
+    io.DisplaySize = (vml::float2)window.size();
     io.DisplayFramebufferScale = window.contentScaleFactor();
     doNewFramePlatform(window);
     ImGui::NewFrame();

@@ -3,9 +3,9 @@
 
 #include <variant>
 
-#include <mtl/mtl.hpp>
 #include <utl/functional.hpp>
 #include <utl/vector.hpp>
+#include <vml/vml.hpp>
 
 namespace poppy {
 
@@ -103,7 +103,7 @@ public:
         return *this;
     }
 
-    ToolbarDropdownMenu minSize(mtl::float2 size) {
+    ToolbarDropdownMenu minSize(vml::float2 size) {
         _minSize = size;
         return *this;
     }
@@ -120,7 +120,7 @@ private:
     utl::function<std::string()> _preview;
     utl::function<char const*()> _icon;
     std::string _id;
-    mtl::float2 _minSize = 0;
+    vml::float2 _minSize = 0;
 };
 
 struct ToolbarSeparator {};
@@ -224,15 +224,15 @@ private:
 
     /// \Param open Use this flag to make the button look pressed. Used if popup
     /// is open
-    bool button(char const* label, std::size_t id, mtl::float2 size,
+    bool button(char const* label, std::size_t id, vml::float2 size,
                 bool enabled = true, bool open = false) const;
-    bool buttonEx(char const* label, std::size_t id, mtl::float2 size,
+    bool buttonEx(char const* label, std::size_t id, vml::float2 size,
                   bool enabled, bool open) const;
-    bool iconButton(IconData icon, std::size_t id, mtl::float2 size,
+    bool iconButton(IconData icon, std::size_t id, vml::float2 size,
                     char const* tooltip = nullptr, bool enabled = true,
                     bool open = false) const;
     bool beginCombo(ToolbarDropdownMenu const&, std::size_t id,
-                    mtl::float2 size) const;
+                    vml::float2 size) const;
 
     // called once after adding items
     void cook(bool full);
@@ -244,7 +244,7 @@ private:
     utl::vector<Block> blocks;
     ToolbarStyle style{};
     float actualHeight = 0;
-    mtl::float2 position;
+    vml::float2 position;
     bool cooked = false;
 };
 

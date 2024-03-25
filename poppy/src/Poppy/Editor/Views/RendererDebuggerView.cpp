@@ -11,7 +11,7 @@
 #include "Poppy/UI/PropertiesView.h"
 
 using namespace bloom;
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace poppy;
 
 POPPY_REGISTER_VIEW(RendererDebuggerView, "Renderer Debugger", {});

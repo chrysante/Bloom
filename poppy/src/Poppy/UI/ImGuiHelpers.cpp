@@ -4,8 +4,8 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <mtl/mtl.hpp>
 #include <utl/strcat.hpp>
+#include <vml/vml.hpp>
 
 #include "Poppy/Core/Debug.h"
 
@@ -23,7 +23,7 @@ ViewportInput poppy::detectViewportInput(ImGuiButtonFlags buttonFlags) {
     ImGuiID id = window->GetID("__Invisible_Button__");
     ImVec2 size = CalcItemSize(window->Size, 0.0f, 0.0f);
     ImRect bb(window->DC.CursorPos,
-              mtl::float2(window->DC.CursorPos) + mtl::float2(size));
+              vml::float2(window->DC.CursorPos) + vml::float2(size));
     ItemSize(size);
     if (!ItemAdd(bb, id)) return {};
     ViewportInput result{};

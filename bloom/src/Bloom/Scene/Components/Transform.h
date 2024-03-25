@@ -1,7 +1,7 @@
 #ifndef BLOOM_SCENE_COMPONENTS_TRANSFORM_H
 #define BLOOM_SCENE_COMPONENTS_TRANSFORM_H
 
-#include <mtl/mtl.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Scene/Components/ComponentBase.h"
 
@@ -10,23 +10,23 @@ namespace bloom {
 struct BLOOM_API Transform {
     BLOOM_REGISTER_COMPONENT("Transform")
 
-    mtl::float3 position = 0;
-    mtl::quaternion_float orientation = 1;
-    mtl::float3 scale = 1;
+    vml::float3 position = 0;
+    vml::quaternion_float orientation = 1;
+    vml::float3 scale = 1;
 
-    static Transform fromMatrix(mtl::float4x4 const& m) {
-        auto const [t, r, s] = mtl::decompose_transform(m);
+    static Transform fromMatrix(vml::float4x4 const& m) {
+        auto const [t, r, s] = vml::decompose_transform(m);
         return { t, r, s };
     }
 
-    [[nodiscard]] mtl::float4x4 calculate() const {
-        return mtl::make_transform(position, orientation, scale);
+    [[nodiscard]] vml::float4x4 calculate() const {
+        return vml::make_transform(position, orientation, scale);
     }
 };
 
 struct BLOOM_API TransformMatrixComponent {
     BLOOM_REGISTER_COMPONENT("Transform Matrix")
-    mtl::float4x4 matrix;
+    vml::float4x4 matrix;
 };
 
 } // namespace bloom

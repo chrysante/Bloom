@@ -9,7 +9,7 @@
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 #include "Bloom/Platform/Metal/ObjCBridging.h"
 
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace bloom;
 
 std::unique_ptr<HardwareDevice> bloom::createMetalDevice() {

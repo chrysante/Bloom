@@ -3,8 +3,8 @@
 
 #include "Bloom/Graphics/Renderer/Renderer.h"
 
-#include <mtl/mtl.hpp>
 #include <utl/structure_of_arrays.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Core/Core.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
@@ -31,7 +31,7 @@ struct BLOOM_API ForwardRendererDebugFramebuffer: ForwardRendererFramebuffer {
 
 namespace {
 
-UTL_SOA_TYPE(SceneRenderObject, (mtl::float4x4, transform),
+UTL_SOA_TYPE(SceneRenderObject, (vml::float4x4, transform),
              (Reference<MaterialInstance>, materialInstance),
              (Reference<StaticMeshRenderer>, mesh));
 
@@ -46,11 +46,11 @@ struct FWCPUSceneData {
 
     struct ShadowData {
         utl::small_vector<int> numCascades;
-        utl::vector<mtl::float4x4> lightSpaceTransforms;
+        utl::vector<vml::float4x4> lightSpaceTransforms;
 
         size_t numShadowCasters;
         size_t shadowMapArrayLength = 0;
-        mtl::uint2 shadowMapResolution = 1024;
+        vml::uint2 shadowMapResolution = 1024;
         bool needsNewShadowMaps = true;
     } shadows;
 
@@ -91,13 +91,13 @@ public:
 
     /// MARK: Framebuffer Creation
     std::unique_ptr<Framebuffer> createFramebuffer(
-        mtl::int2 size) const override;
+        vml::int2 size) const override;
     std::unique_ptr<Framebuffer> createDebugFramebuffer(
-        mtl::int2 size) const override;
+        vml::int2 size) const override;
 
     void populateFramebuffer(HardwareDevice& device,
                              ForwardRendererFramebuffer&,
-                             mtl::usize2 size) const;
+                             vml::usize2 size) const;
 
     /// MARK: Settings
 
@@ -111,7 +111,7 @@ public:
     void endScene() override;
 
     void submit(Reference<StaticMeshRenderer>, Reference<MaterialInstance>,
-                mtl::float4x4 const& transform) override;
+                vml::float4x4 const& transform) override;
     void submit(PointLight const&) override;
     void submit(SpotLight const&) override;
     void submit(DirectionalLight const&) override;
@@ -120,7 +120,7 @@ public:
     /// MARK: Draw
     void draw(Framebuffer&, CommandQueue&) override;
 
-    RendererParameters makeParameters(mtl::usize2 framebufferSize);
+    RendererParameters makeParameters(vml::usize2 framebufferSize);
 
     //	private: // this class is private anyways
     void mainPass(ForwardRendererFramebuffer&, CommandQueue&) const;

@@ -15,9 +15,9 @@ void ViewportCameraController::update(bloom::Timestep time,
     using namespace bloom;
 
     data.angleLR = utl::mod(data.angleLR - input.mouseOffset().x / 180.,
-                            mtl::constants<>::pi * 2);
+                            vml::constants<>::pi * 2);
     data.angleUD = std::clamp(data.angleUD + input.mouseOffset().y / 180.f,
-                              0.01f, mtl::constants<float>::pi - 0.01f);
+                              0.01f, vml::constants<float>::pi - 0.01f);
 
     float offset = data.speed * time.delta;
     if (input.keyDown(bloom::Key::LeftShift)) {
@@ -25,10 +25,10 @@ void ViewportCameraController::update(bloom::Timestep time,
     }
 
     if (input.keyDown(Key::A)) {
-        data.position -= mtl::normalize(mtl::cross(front(), up())) * offset;
+        data.position -= vml::normalize(vml::cross(front(), up())) * offset;
     }
     if (input.keyDown(Key::D)) {
-        data.position += mtl::normalize(mtl::cross(front(), up())) * offset;
+        data.position += vml::normalize(vml::cross(front(), up())) * offset;
     }
     if (input.keyDown(Key::W)) {
         data.position += front() * offset;
@@ -50,9 +50,9 @@ void ViewportCameraController::applyTransform() {
     cam.setTransform(data.position, front());
 }
 
-void ViewportCameraController::applyProjection(mtl::float2 screenSize) {
+void ViewportCameraController::applyProjection(vml::float2 screenSize) {
     if (data.projection == Projection::Perspective) {
-        cam.setProjection(mtl::to_radians(data.fieldOfView), screenSize,
+        cam.setProjection(vml::to_radians(data.fieldOfView), screenSize,
                           data.nearClip);
     }
     else {
@@ -64,7 +64,7 @@ void ViewportCameraController::applyProjection(mtl::float2 screenSize) {
     }
 }
 
-mtl::float3 ViewportCameraController::front() const {
+vml::float3 ViewportCameraController::front() const {
     using std::cos;
     using std::sin;
     return { sin(data.angleUD) * cos(data.angleLR),

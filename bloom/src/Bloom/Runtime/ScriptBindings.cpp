@@ -4,7 +4,7 @@
 #include "Bloom/Scene/Scene.h"
 
 using namespace bloom;
-using namespace mtl;
+using namespace vml;
 
 static_assert(sizeof(ScriptTransform) == 10 * sizeof(double));
 static_assert(alignof(ScriptTransform) == alignof(double));

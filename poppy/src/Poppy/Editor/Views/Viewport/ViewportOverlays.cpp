@@ -11,23 +11,23 @@
 #include "Poppy/Editor/Views/Viewport/Viewport.h"
 
 using namespace bloom;
-using namespace mtl::short_types;
+using namespace vml::short_types;
 using namespace poppy;
 
-static std::uint32_t toUCol32(mtl::float4 color) {
+static std::uint32_t toUCol32(vml::float4 color) {
     return ImGui::ColorConvertFloat4ToU32(color);
 }
 
-static std::uint32_t toUCol32(mtl::float3 color, float alpha = 1.0f) {
-    return toUCol32(mtl::float4{ color, alpha });
+static std::uint32_t toUCol32(vml::float3 color, float alpha = 1.0f) {
+    return toUCol32(vml::float4{ color, alpha });
 }
 
-static void drawArrow(mtl::float2 from, mtl::float2 to, float headSize,
-                      mtl::float4 color, float thickness) {
+static void drawArrow(vml::float2 from, vml::float2 to, float headSize,
+                      vml::float4 color, float thickness) {
     float2 const p0 = from;
     float2 const line = to - from;
 
-    float const angle = std::acos(mtl::dot(mtl::normalize(line), float2(1, 0)));
+    float const angle = std::acos(vml::dot(vml::normalize(line), float2(1, 0)));
     float2x2 const arrowRot = { std::cos(angle), -std::sin(angle),
                                 std::sin(angle), std::cos(angle) };
     float2 const t0 = arrowRot * headSize * float2{ 0, 0 };
@@ -37,7 +37,7 @@ static void drawArrow(mtl::float2 from, mtl::float2 to, float headSize,
     auto* const drawList = ImGui::GetWindowDrawList();
 
     std::array<float2, 5> const positions = {
-        p0, p0 + (mtl::norm(line) - headSize) * mtl::normalize(line),
+        p0, p0 + (vml::norm(line) - headSize) * vml::normalize(line),
         p0 + line + t0, p0 + line + t1, p0 + line + t2
     };
 
@@ -55,7 +55,7 @@ void ViewportOverlays::display() {
     drawLightOverlays<SkyLightComponent>();
 }
 
-bloom::EntityHandle ViewportOverlays::hitTest(mtl::float2 positionInView) {
+bloom::EntityHandle ViewportOverlays::hitTest(vml::float2 positionInView) {
     if (auto result = hitTestLightOverlays<PointLightComponent>(positionInView))
     {
         return result;
@@ -101,7 +101,7 @@ void ViewportOverlays::drawLightOverlays() {
 
 template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
-                                           mtl::float2 positionInWindow,
+                                           vml::float2 positionInWindow,
                                            bool selected, Transform const&,
                                            PointLight const& light) {
     drawPointLightIcon(positionInWindow, light.common.color, selected);
@@ -109,38 +109,38 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
 
 template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
-                                           mtl::float2 positionInWindow,
+                                           vml::float2 positionInWindow,
                                            bool selected, Transform const&,
                                            SpotLight const& s) {
     drawSpotLightIcon(positionInWindow, s.common.color);
     if (selected) {
         drawSpotlightVizWS(entity, s.radius,
                            (s.innerCutoff + s.outerCutoff) / 2,
-                           (s.common.color + mtl::colors<float3>::white) / 2);
+                           (s.common.color + vml::colors<float3>::white) / 2);
     }
 }
 
 template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
-                                           mtl::float2 positionInWindow,
+                                           vml::float2 positionInWindow,
                                            bool /* selected */,
                                            Transform const& transform,
                                            DirectionalLight const& light) {
-    float3 const lightDirWS = mtl::rotate({ 0, 0, 1 }, transform.orientation);
+    float3 const lightDirWS = vml::rotate({ 0, 0, 1 }, transform.orientation);
     drawDirectionalLightIcon(positionInWindow, lightDirWS, light.common.color);
 }
 
 template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
-                                           mtl::float2 positionInWindow,
+                                           vml::float2 positionInWindow,
                                            bool /* selected */,
                                            Transform const&,
                                            SkyLight const& light) {
     drawSkyLightIcon(positionInWindow, light.common.color);
 }
 
-void ViewportOverlays::drawPointLightIcon(mtl::float2 position,
-                                          mtl::float3 color, bool selected) {
+void ViewportOverlays::drawPointLightIcon(vml::float2 position,
+                                          vml::float3 color, bool selected) {
     float size = 20;
     float alphaFactor = selected ? 1.0 : 0.5;
     auto* drawList = ImGui::GetWindowDrawList();
@@ -153,14 +153,14 @@ void ViewportOverlays::drawPointLightIcon(mtl::float2 position,
                         /* thickness = */ 2);
 }
 
-void ViewportOverlays::drawSpotLightIcon(mtl::float2 position,
-                                         mtl::float3 color) {
+void ViewportOverlays::drawSpotLightIcon(vml::float2 position,
+                                         vml::float3 color) {
     float const radius = 25;
     float2 const v0 = float2(0, 1) * radius + position;
-    float const angle1 = mtl::constants<>::pi * (0.5 + 2. / 3.);
+    float const angle1 = vml::constants<>::pi * (0.5 + 2. / 3.);
     float2 const v1 =
         float2(std::cos(angle1), std::sin(angle1)) * radius + position;
-    float const angle2 = mtl::constants<>::pi * (0.5 + 4. / 3.);
+    float const angle2 = vml::constants<>::pi * (0.5 + 4. / 3.);
     float2 const v2 =
         float2(std::cos(angle2), std::sin(angle2)) * radius + position;
 
@@ -169,9 +169,9 @@ void ViewportOverlays::drawSpotLightIcon(mtl::float2 position,
     drawList->AddTriangle(v0, v1, v2, toUCol32(color), 2);
 }
 
-void ViewportOverlays::drawDirectionalLightIcon(mtl::float2 position,
-                                                mtl::float3 /* directionWS */,
-                                                mtl::float3 color) {
+void ViewportOverlays::drawDirectionalLightIcon(vml::float2 position,
+                                                vml::float3 /* directionWS */,
+                                                vml::float3 color) {
     float const size = 18;
     float2 const line = float2(-1, 2) * size;
     auto doDraw = [&](float4 color, float thickness) {
@@ -184,15 +184,15 @@ void ViewportOverlays::drawDirectionalLightIcon(mtl::float2 position,
     doDraw(float4(color, 1), 2);
 }
 
-void ViewportOverlays::drawSkyLightIcon(mtl::float2 position,
-                                        mtl::float3 color) {
+void ViewportOverlays::drawSkyLightIcon(vml::float2 position,
+                                        vml::float3 color) {
     float const size = 20;
     float const lineSize = size;
 
     auto doDraw = [&](float4 color, float thickness) {
         std::array<ImVec2, 9> points{};
         for (int i = 0; i < 9; ++i) {
-            float angle = mtl::constants<>::pi * (0.5 + (i - 4) / 4.0 * 0.25);
+            float angle = vml::constants<>::pi * (0.5 + (i - 4) / 4.0 * 0.25);
 
             float2 const dir = float2(std::cos(-angle), std::sin(-angle));
             float2 const from = position + (float2(0, 1) + dir * 2) * size;
@@ -213,12 +213,12 @@ void ViewportOverlays::drawSkyLightIcon(mtl::float2 position,
 
 void ViewportOverlays::drawSpotlightVizWS(bloom::EntityHandle entity,
                                           float radius, float angle,
-                                          mtl::float3 color) {
+                                          vml::float3 color) {
     auto* const drawList = ImGui::GetWindowDrawList();
     int const segments = 32;
     utl::small_vector<float3, 32> circlePoints1;
     for (int i = 0; i < segments; ++i) {
-        float const tau = mtl::constants<>::pi * 2;
+        float const tau = vml::constants<>::pi * 2;
         float const angle = i * tau / segments;
         circlePoints1.push_back({ 0, cos(angle), sin(angle) });
     }
@@ -274,7 +274,7 @@ void ViewportOverlays::drawSpotlightVizWS(bloom::EntityHandle entity,
 
 template <typename Light>
 EntityHandle ViewportOverlays::hitTestLightOverlays(
-    mtl::float2 hitPositionInView) {
+    vml::float2 hitPositionInView) {
     for (auto&& scene: viewport->editor().coreSystems().sceneSystem().scenes())
     {
         auto componentView =
@@ -301,6 +301,6 @@ EntityHandle ViewportOverlays::hitTestLightOverlays(
 
 template <typename Light>
 bool ViewportOverlays::hitTestOneLightOverlay(
-    mtl::float2 entityPositionInWindow, mtl::float2 hitPositionInWindow) {
-    return mtl::distance(entityPositionInWindow, hitPositionInWindow) < 30;
+    vml::float2 entityPositionInWindow, vml::float2 hitPositionInWindow) {
+    return vml::distance(entityPositionInWindow, hitPositionInWindow) < 30;
 }

@@ -4,15 +4,15 @@
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
-#include <mtl/mtl.hpp>
 #include <utl/utility.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Application/Window.h"
 #include "Bloom/Platform/Metal/MetalSwapchain.h"
 
 using namespace bloom;
-using namespace mtl;
+using namespace vml;
 
 static NSWindow* getNative(Window const* window) {
     return (__bridge NSWindow*)const_cast<Window*>(window)->nativeHandle();
@@ -268,7 +268,7 @@ float Window::toolbarHeight() const {
     return (float)window.contentView.safeAreaInsets.top;
 }
 
-mtl::AABB<float, 2> Window::titleButtonsArea() const {
+vml::AABB<float, 2> Window::titleButtonsArea() const {
     NSWindow* window = getNative(this);
     auto a = [window standardWindowButton:NSWindowCloseButton].frame;
     auto b = [window standardWindowButton:NSWindowMiniaturizeButton].frame;

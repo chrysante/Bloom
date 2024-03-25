@@ -24,8 +24,8 @@ public:
                     std::size_t index) override;
     void setTexture(TextureView, std::size_t index) override;
 
-    void dispatchThreads(mtl::usize3 threadsPerGrid,
-                         mtl::usize3 threadsPerThreadgroup) override;
+    void dispatchThreads(vml::usize3 threadsPerGrid,
+                         vml::usize3 threadsPerThreadgroup) override;
 
     void commit() override;
 

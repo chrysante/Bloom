@@ -1,7 +1,7 @@
 #ifndef POPPY_EDITOR_VIEWS_VIEWPORT_VIEWPORT_H
 #define POPPY_EDITOR_VIEWS_VIEWPORT_VIEWPORT_H
 
-#include <mtl/mtl.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Core/Serialize.h"
 #include "Poppy/Editor/Views/BasicSceneInspector.h"
@@ -19,11 +19,11 @@ class Viewport: public View, BasicSceneInspector {
 public:
     Viewport();
 
-    mtl::float3 worldSpaceToViewSpace(mtl::float3 position);
-    mtl::float3 worldSpaceToWindowSpace(mtl::float3 position);
+    vml::float3 worldSpaceToViewSpace(vml::float3 position);
+    vml::float3 worldSpaceToWindowSpace(vml::float3 position);
 
-    mtl::float2 worldSpaceDirToViewSpace(mtl::float3 direction);
-    mtl::float2 worldSpaceDirToWindowSpace(mtl::float3 direction);
+    vml::float2 worldSpaceDirToViewSpace(vml::float3 direction);
+    vml::float2 worldSpaceDirToWindowSpace(vml::float3 direction);
 
     //	private:
     void init() override;
@@ -44,7 +44,7 @@ public:
 
     void debugPanel();
 
-    bloom::EntityHandle readEntityID(mtl::float2 mousePositionInView);
+    bloom::EntityHandle readEntityID(vml::float2 mousePositionInView);
 
     void receiveSceneDragDrop();
 

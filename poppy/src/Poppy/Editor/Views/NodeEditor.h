@@ -9,6 +9,7 @@
 
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
+#include <utl/hashtable.hpp>
 #include <utl/vector.hpp>
 #include <vml/vml.hpp>
 
@@ -153,6 +154,20 @@ public:
                ranges::views::transform([](auto& p) { return p.get(); });
     }
 
+    /// \Returns the set of nodes that is directly linked to any output of this
+    /// node
+    utl::hashset<Node*> successors();
+
+    /// \overload
+    utl::hashset<Node const*> successors() const;
+
+    /// \Returns the set of nodes that is directly linked to any input of this
+    /// node
+    utl::hashset<Node*> predecessors();
+
+    /// \overload
+    utl::hashset<Node const*> predecessors() const;
+
     std::string const& name() const { return desc().name; }
 
     vml::float2 size() const { return desc().size; }
@@ -169,6 +184,43 @@ private:
     NodeDesc _desc;
     std::vector<nodeEditor::UniquePtr<nodeEditor::InputPin>> _inputs;
     std::vector<nodeEditor::UniquePtr<nodeEditor::OutputPin>> _outputs;
+};
+
+/// Underlying model of the node editor
+class Graph {
+public:
+    /// \Returns a view over the nodes in this graph
+    auto nodes() {
+        return _nodes | ranges::views::transform(
+                            [](auto& p) -> Node* { return p.get(); });
+    }
+
+    /// \overload
+    auto nodes() const {
+        return _nodes | ranges::views::transform(
+                            [](auto& p) -> Node const* { return p.get(); });
+    }
+
+    /// \Returns `true` if there are any cycles in this graph
+    bool hasCycles() const;
+
+    /// \Returns all nodes that have no inputs
+    utl::small_vector<Node*> sources();
+
+    /// \overload
+    utl::small_vector<Node const*> sources() const;
+
+    /// \Returns all nodes that have no outputs
+    utl::small_vector<Node*> sinks();
+
+    /// \overload
+    utl::small_vector<Node const*> sinks() const;
+
+    ///
+    void add(std::unique_ptr<Node> node) { _nodes.push_back(std::move(node)); }
+
+private:
+    std::vector<std::unique_ptr<Node>> _nodes;
 };
 
 } // namespace poppy::nodeEditor
@@ -188,6 +240,9 @@ public:
 
     /// Adds \p node to the editor
     void addNode(nodeEditor::NodeDesc desc);
+
+    /// \Returns the underlying graph
+    nodeEditor::Graph const& graph() const;
 
     struct Impl;
 

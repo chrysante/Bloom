@@ -11,7 +11,7 @@ void RenderGraphView::init() {
     nodeEditor.addNode({ .name = "Some Input",
                          .position = { 0, 0 },
                          .size = { 80, 40 },
-                         .inputs = {},
+                         .inputs = { { .name = "Optional Input" } },
                          .outputs = { { .name = "Texture" } } });
     nodeEditor.addNode(
         { .name = "Some Long Pass",

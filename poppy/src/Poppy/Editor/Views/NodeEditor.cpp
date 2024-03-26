@@ -67,11 +67,12 @@ bool OutputPin::isTarget(InputPin const* target) const {
     return ranges::contains(_targets, target);
 }
 
-void OutputPin::removeTarget(InputPin* target) {
-    auto itr = ranges::find(_targets, target);
+void OutputPin::removeTarget(InputPin* pin) {
+    auto itr = ranges::find(_targets, pin);
     if (itr != _targets.end()) {
-        (*itr)->setOrigin(nullptr);
+        auto* target = *itr;
         _targets.erase(itr);
+        target->setOrigin(nullptr);
     }
 }
 
@@ -82,11 +83,26 @@ void OutputPin::clearTargets() {
     _targets.clear();
 }
 
+static bool findCycleDFS(Node const* node, utl::hashset<Node const*>& visited) {
+    return ranges::any_of(node->successors(), [&](Node const* succ) {
+        return !visited.insert(succ).second || findCycleDFS(succ, visited);
+    });
+}
+
+static bool findCycle(Node const* node) {
+    utl::hashset<Node const*> visited;
+    return findCycleDFS(node, visited);
+}
+
 static void link(OutputPin& out, InputPin& in) {
-    // TODO: Check for cycles
-    Logger::Trace("Linking ", out.name(), " to ", in.name());
+    BL_ASSERT(!findCycle(&out.parent()));
     out.addTarget(&in);
     in.setOrigin(&out);
+    if (findCycle(&out.parent())) {
+        Logger::Error("Link would introduce a cycle. Not linking");
+        out.removeTarget(&in);
+        BL_ASSERT(!in.origin());
+    }
 }
 
 static void link(Pin& a, Pin& b) {
@@ -100,6 +116,73 @@ static void link(Pin& a, Pin& b) {
         },
         [&](Pin&, Pin&) {},
     }); // clang-format on
+}
+
+static auto succsImpl(auto const& outputs) {
+    return outputs |
+           ranges::views::transform([](auto* pin) { return pin->targets(); }) |
+           ranges::views::join |
+           ranges::views::transform([](auto* pin) { return &pin->parent(); });
+}
+
+utl::hashset<Node*> Node::successors() {
+    return succsImpl(outputs()) | ranges::to<utl::hashset<Node*>>;
+}
+
+utl::hashset<Node const*> Node::successors() const {
+    return succsImpl(outputs()) | ranges::to<utl::hashset<Node const*>>;
+}
+
+static auto predsImpl(auto const& inputs) {
+    return inputs |
+           ranges::views::transform([](auto* pin) { return pin->origin(); }) |
+           ranges::views::filter([](auto* node) { return node != nullptr; }) |
+           ranges::views::transform([](auto* pin) { return &pin->parent(); });
+}
+
+utl::hashset<Node*> Node::predecessors() {
+    return predsImpl(inputs()) | ranges::to<utl::hashset<Node*>>;
+}
+
+utl::hashset<Node const*> Node::predecessors() const {
+    return predsImpl(inputs()) | ranges::to<utl::hashset<Node const*>>;
+}
+
+bool Graph::hasCycles() const {
+    return ranges::any_of(sources(),
+                          [](auto* source) { return findCycle(source); });
+}
+
+static auto sourcesImpl(auto const& nodes) {
+    return nodes | filter([](Node const* node) {
+        return ranges::all_of(node->inputs(), [](InputPin const* pin) {
+            return pin->origin() == nullptr;
+        });
+    });
+}
+
+utl::small_vector<Node*> Graph::sources() {
+    return sourcesImpl(nodes()) | ranges::to<utl::small_vector<Node*>>;
+}
+
+utl::small_vector<Node const*> Graph::sources() const {
+    return sourcesImpl(nodes()) | ranges::to<utl::small_vector<Node const*>>;
+}
+
+static auto sinksImpl(auto const& nodes) {
+    return nodes | filter([](Node const* node) {
+        return ranges::all_of(node->outputs(), [](OutputPin const* pin) {
+            return pin->targets().empty();
+        });
+    });
+}
+
+utl::small_vector<Node*> Graph::sinks() {
+    return sinksImpl(nodes()) | ranges::to<utl::small_vector<Node*>>;
+}
+
+utl::small_vector<Node const*> Graph::sinks() const {
+    return sinksImpl(nodes()) | ranges::to<utl::small_vector<Node const*>>;
 }
 
 namespace {
@@ -141,7 +224,7 @@ struct NodeEditor::Impl {
     void onInput(bloom::InputEvent& event);
 
     std::vector<Node*> currentNodeOrder;
-    std::vector<std::unique_ptr<Node>> nodes;
+    Graph graph;
     Selection selection;
     ViewData viewData;
 };
@@ -234,8 +317,10 @@ void Impl::onInput(InputEvent& event) {
 void NodeEditor::addNode(NodeDesc desc) {
     auto p = std::make_unique<Node>(std::move(desc));
     impl->currentNodeOrder.push_back(p.get());
-    impl->nodes.push_back(std::move(p));
+    impl->graph.add(std::move(p));
 }
+
+Graph const& NodeEditor::graph() const { return impl->graph; }
 
 static float4 const WhiteOutlineColor = { 1, 1, 1, 0.5 };
 static float4 const BlackOutlineColor = { 0, 0, 0, 0.7 };

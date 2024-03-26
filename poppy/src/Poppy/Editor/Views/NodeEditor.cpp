@@ -1,5 +1,6 @@
 #include "Poppy/Editor/Views/NodeEditor.h"
 
+#include <optional>
 #include <vector>
 
 #include <imgui.h>
@@ -17,7 +18,29 @@ using namespace bloom;
 using namespace vml::short_types;
 using namespace ranges::views;
 
+/// # Style
+
+static float4 const WhiteOutlineColor = { 1, 1, 1, 0.5 };
+static float4 const BlackOutlineColor = { 0, 0, 0, 0.7 };
+static float4 const LinkColor = { 1, 1, 1, 0.8 };
+static float4 const PinColorConnected = { 0.2, 0.2, 0.2, 1 };
+static float4 const PinColorOptional = { 0.4, 0.4, 0.4, 1 };
+static float4 const PinColorMissing = { 1, 0, 0.2, 1 };
+static float const PinSize = 20;
+static float2 const NodeBodyPadding = { 5, 5 };
+static float2 const NodeOuterPadding = { PinSize * 0.6, 1 };
+static float4 const SelectionRectColor = { 1, 1, 1, 0.3 };
+static float2 const BackgroundLineDist = { 30, 30 };
+
 using Impl = NodeEditor::Impl;
+
+static ImRect toRect(float2 begin, float2 end) {
+    return ImRect(vml::min(begin, end), vml::max(begin, end));
+}
+
+static ImRect toRect(Node const& node) {
+    return ImRect(node.position(), node.position() + node.size());
+}
 
 size_t Pin::indexInParent() const {
     auto& node = parent();
@@ -212,25 +235,85 @@ struct PersistentViewData {
     float zoom = 1.0;
 };
 
-struct ViewData: PersistentViewData {
-    ImRect clipRect = {};
-    bool isBGHovered = false;
+/// Data that persists between frames when performing some actions
+struct ActiveViewData {
     /// True if a node is currently being dragged
     bool isDraggingNode = false;
     /// True if we already changed selection state since the mouse was pressed
     bool handledSelectionSinceMousePresed = false;
-    Node* hoveredNode = nullptr;
+    /// True if we are selecting be dragged the background
+    bool isSelectionDragging = false;
+    bool isMoveDragging = false;
     Node* activeNode = nullptr;
     Node* activeResize = nullptr;
     Pin* activePin = nullptr;
     float2 resizeSize = 0;
+    float2 selectionBegin = 0;
+    float2 selectionEnd = 0;
+
+    ImRect getSelectionRect() const {
+        return toRect(selectionBegin, selectionEnd);
+    }
 };
+
+struct ViewData: PersistentViewData, ActiveViewData {
+    ImRect clipRect = {};
+
+    void resetActiveData() {
+        static_cast<ActiveViewData&>(*this) = ActiveViewData{};
+    }
+};
+
+enum class SelectionMode {
+    Replace, /// Default, existing selection is replaced
+    Add,     /// Additive selection, new selection does not unselect existing
+             /// selection
+    Toggle   /// "Exclusive-or" selection. Items are selected iff not already
+             /// selected
+};
+
+static SelectionMode getSelectionMode() {
+    if (ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
+        return SelectionMode::Toggle;
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
+        return SelectionMode::Add;
+    }
+    return SelectionMode::Replace;
+}
 
 /// Selection manager
 class Selection {
 public:
     /// \Returns `true` if \p node is selected
-    bool contains(Node const* node) const { return _nodes.contains(node); }
+    bool contains(Node const* node) const {
+        if (!mode) {
+            return _nodes.contains(node);
+        }
+        switch (*mode) {
+        case SelectionMode::Replace:
+            return _candidates.contains(node);
+        case SelectionMode::Add:
+            return _nodes.contains(node) || _candidates.contains(node);
+        case SelectionMode::Toggle:
+            return _nodes.contains(node) != _candidates.contains(node);
+        }
+    }
+
+    ///
+    void amend(Node* node) {
+        switch (getSelectionMode()) {
+        case SelectionMode::Replace:
+            set(node);
+            break;
+        case SelectionMode::Add:
+            add(node);
+            break;
+        case SelectionMode::Toggle:
+            toggle(node);
+            break;
+        }
+    }
 
     /// Adds \p node to the selection
     void add(Node* node) { _nodes.insert(node); }
@@ -261,8 +344,46 @@ public:
     /// \Returns a view over all selected nodes
     std::span<Node* const> nodes() const { return _nodes.values(); }
 
+    ///
+    void beginCandidates() { this->mode = getSelectionMode(); }
+
+    ///
+    void setCandidates(utl::hashset<Node*> nodes) {
+        _candidates = std::move(nodes);
+    }
+
+    ///
+    void applyCandidates() {
+        if (!mode) {
+            return;
+        }
+        switch (*mode) {
+        case SelectionMode::Replace:
+            _nodes = std::move(_candidates);
+            break;
+        case SelectionMode::Add:
+            _nodes.insert(_candidates.begin(), _candidates.end());
+            _candidates.clear();
+            break;
+        case SelectionMode::Toggle: {
+            for (auto* node: _candidates) {
+                if (_nodes.contains(node)) {
+                    _nodes.erase(node);
+                }
+                else {
+                    _nodes.insert(node);
+                }
+            }
+            break;
+        }
+        }
+        mode = std::nullopt;
+    }
+
 private:
     utl::hashset<Node*> _nodes;
+    utl::hashset<Node*> _candidates;
+    std::optional<SelectionMode> mode;
 };
 
 } // namespace
@@ -282,6 +403,7 @@ struct NodeEditor::Impl {
     void display();
 
     void backgroundBehaviour();
+    void drawOverlays();
     void displayNodeBody(Node& node);
     void displayNode(Node& node);
 
@@ -294,6 +416,18 @@ struct NodeEditor::Impl {
 NodeEditor::NodeEditor(): impl(std::make_unique<Impl>()) {}
 
 NodeEditor::~NodeEditor() = default;
+
+static bool beginInvisibleWindow(
+    char const* name, float2 pos, float2 size,
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None) {
+    ImGui::SetNextWindowPos(pos);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32_BLACK_TRANS);
+    flags |= ImGuiWindowFlags_NoDecoration;
+    bool open = ImGui::BeginChildEx(name, ImGui::GetID(name), size,
+                                    ImGuiChildFlags_None, flags);
+    ImGui::PopStyleColor();
+    return open;
+}
 
 /// Draws lines perpendicular to \p axis starting from coordinate \p begin
 /// spanning the entire width or height of the current view
@@ -332,35 +466,82 @@ static void drawLines(float begin, float end, float dist, Axis axis,
     }
 }
 
-static void drawBackground(float2 viewPos, float zoom) {
-    float dist = 10;
-    dist *= zoom;
+static void drawBackground(float2 viewPos) {
     float4 color = ImGui::GetStyleColorVec4(ImGuiCol_Separator);
-    float2 begin = vml::fmod(viewPos, dist);
-    drawLines(begin.x, ImGui::GetWindowWidth(), dist, Axis::Horizontal, color);
-    drawLines(begin.y, ImGui::GetWindowHeight(), dist, Axis::Vertical, color);
-    ImGui::Text("Position: %f, %f", viewPos.x, viewPos.y);
-    ImGui::Text("Zoom: %f", zoom);
+    float2 begin = vml::fmod(viewPos, BackgroundLineDist);
+    drawLines(begin.x, ImGui::GetWindowWidth(), BackgroundLineDist.x,
+              Axis::Horizontal, color);
+    drawLines(begin.y, ImGui::GetWindowHeight(), BackgroundLineDist.y,
+              Axis::Vertical, color);
 }
 
 void Impl::backgroundBehaviour() {
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !viewData.activeNode &&
-        !viewData.activePin)
+    if (!viewData.clipRect.Contains(ImGui::GetMousePos()) ||
+        viewData.activeNode || viewData.activePin)
     {
-        selection.clear();
+        return;
     }
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        if (!viewData.isSelectionDragging) {
+            viewData.isSelectionDragging = true;
+            viewData.selectionBegin = ImGui::GetMousePos();
+            selection.beginCandidates();
+        }
+        viewData.selectionEnd = ImGui::GetMousePos();
+        ImRect selectionRect = viewData.getSelectionRect();
+        auto candidates = graph.nodes() |
+                          ranges::views::filter([&](Node const* node) {
+            auto rect = toRect(*node);
+            rect.Translate((float2)viewData.clipRect.Min + viewData.position);
+            Logger::Trace("Node Rect Min: ", float2(rect.Min));
+            return selectionRect.Overlaps(rect);
+        });
+        selection.setCandidates(candidates | ranges::to<utl::hashset<Node*>>);
+    }
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+        viewData.isMoveDragging = true;
+    }
+}
+
+void Impl::drawOverlays() {
+    if (!beginInvisibleWindow("Overlays", ImGui::GetWindowPos(),
+                              ImGui::GetWindowSize(),
+                              ImGuiWindowFlags_NoInputs))
+    {
+        ImGui::EndChild();
+        return;
+    }
+    if (viewData.isSelectionDragging) {
+        Logger::Trace("Selection Dragging");
+        Logger::Trace("Begin: ", viewData.selectionBegin);
+        Logger::Trace("End:   ", viewData.selectionEnd);
+        auto rect = viewData.getSelectionRect();
+        auto* DL = ImGui::GetWindowDrawList();
+        DL->AddRectFilled(rect.Min, rect.Max,
+                          ImGui::ColorConvertFloat4ToU32(SelectionRectColor));
+        DL->AddRect(rect.Min, rect.Max,
+                    ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
+    }
+    ImGui::EndChild();
 }
 
 void NodeEditor::onInput(InputEvent& event) { impl->onInput(event); }
 
 void Impl::onInput(InputEvent& event) {
     using enum InputEventMask;
-    event.dispatch<RightMouseDragged>([&](MouseDragEvent event) {
-        viewData.position += event.offset;
+    event.dispatch<MouseDragged>([&](MouseDragEvent event) {
+        if (viewData.isMoveDragging) {
+            viewData.position += event.offset;
+        }
+        if (viewData.isSelectionDragging) {
+            viewData.selectionEnd = event.locationInWindow;
+        }
         return true;
     });
     event.dispatch<ScrollWheel>([&](ScrollEvent event) {
-        if (!event.isTrackpad) {
+        if (!event.isTrackpad ||
+            !viewData.clipRect.Contains(ImGui::GetMousePos()))
+        {
             return false;
         }
         viewData.position += event.offset;
@@ -380,16 +561,6 @@ void NodeEditor::addNode(NodeDesc desc) {
 }
 
 Graph const& NodeEditor::graph() const { return impl->graph; }
-
-static float4 const WhiteOutlineColor = { 1, 1, 1, 0.5 };
-static float4 const BlackOutlineColor = { 0, 0, 0, 0.7 };
-static float4 const LinkColor = { 1, 1, 1, 0.8 };
-static float4 const PinColorConnected = { 0.2, 0.2, 0.2, 1 };
-static float4 const PinColorOptional = { 0.4, 0.4, 0.4, 1 };
-static float4 const PinColorMissing = { 1, 0, 0.2, 1 };
-static float const PinSize = 20;
-static float2 const NodeBodyPadding = { 5, 5 };
-static float2 const NodeOuterPadding = { PinSize * 0.6, 1 };
 
 /// Computes the position of \p pin relative to its parent node
 static float2 computePinPosition(Pin const& pin, size_t index) {
@@ -635,22 +806,13 @@ static ImRect drawNodeBody(Node const& node, bool selected) {
                       float2(contentPaddingRight, 0));
 }
 
-static bool beginInvisibleWindow(float2 pos, float2 size) {
-    ImGui::SetNextWindowPos(pos);
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32_BLACK_TRANS);
-    static constexpr auto name = "Node_Body_Content";
-    bool open = ImGui::BeginChildEx(name, ImGui::GetID(name), size,
-                                    ImGuiChildFlags_None,
-                                    ImGuiWindowFlags_NoDecoration);
-    ImGui::PopStyleColor();
-    return open;
-}
-
 static bool displayNodeContent(ImRect contentRect, Node const& node) {
     if (!node.desc().content) {
         return false;
     }
-    if (!beginInvisibleWindow(contentRect.Min, contentRect.GetSize())) {
+    if (!beginInvisibleWindow("Content", contentRect.Min,
+                              contentRect.GetSize()))
+    {
         ImGui::EndChild();
         return false;
     }
@@ -690,22 +852,10 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node) {
     }
 }
 
-static void handleSelection(Node& node, Selection& selection) {
-    if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
-        selection.add(&node);
-    }
-    else if (ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
-        selection.toggle(&node);
-    }
-    else {
-        selection.set(&node);
-    }
-}
-
 void Impl::displayNodeBody(Node& node) {
     float2 pos =
         (float2)ImGui::GetWindowPos() + viewData.position + node.position();
-    if (!beginInvisibleWindow(pos - NodeOuterPadding,
+    if (!beginInvisibleWindow("Body", pos - NodeOuterPadding,
                               node.size() + 2 * NodeOuterPadding))
     {
         ImGui::EndChild();
@@ -719,10 +869,6 @@ void Impl::displayNodeBody(Node& node) {
     ImRect bb(pos, pos + node.size());
     ImGui::ItemSize(node.size());
     ImGui::ItemAdd(bb, id);
-    bool hovered = ImGui::ItemHoverable(bb, id, ImGuiItemFlags_AllowOverlap);
-    if (hovered) {
-        viewData.hoveredNode = &node;
-    }
     bool bgClicked = ImGui::IsItemClicked();
     displayInputsOutputs(viewData, node);
     bgClicked |= displayNodeContent(contentRect, node);
@@ -735,14 +881,14 @@ void Impl::displayNodeBody(Node& node) {
         ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
         !viewData.isDraggingNode && !viewData.handledSelectionSinceMousePresed)
     {
-        handleSelection(node, selection);
+        selection.amend(&node);
     }
     /// Not selected nodes change selection state when mouse is pressed
     if (!isSelected && bgClicked) {
         /// We use this flag so we don't select and immediately unselect when
         /// the mouse is released
         viewData.handledSelectionSinceMousePresed = true;
-        handleSelection(node, selection);
+        selection.amend(&node);
     }
     bool dragging = [&] {
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -782,18 +928,17 @@ void Impl::display() {
     }
     auto* window = ImGui::GetCurrentWindow();
     viewData.clipRect = window->ContentRegionRect;
-    drawBackground(viewData.position, viewData.zoom);
-    viewData.hoveredNode = nullptr;
+    drawBackground(viewData.position);
     for (auto* node: currentNodeOrder) {
         displayNode(*node);
     }
     backgroundBehaviour();
-    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-        viewData.handledSelectionSinceMousePresed = false;
-        viewData.isDraggingNode = false;
-        viewData.activeNode = nullptr;
-        viewData.activeResize = nullptr;
-        viewData.activePin = nullptr;
+    drawOverlays();
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
+        ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+    {
+        viewData.resetActiveData();
+        selection.applyCandidates();
     }
     ImGui::EndChild();
 }

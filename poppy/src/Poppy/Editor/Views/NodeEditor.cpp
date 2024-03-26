@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <range/v3/view.hpp>
+#include <utl/utility.hpp>
 
 #include "Bloom/Core/Debug.h"
 #include "Poppy/UI/Font.h"
@@ -16,7 +17,34 @@ using namespace ranges::views;
 
 namespace {
 
+static constexpr size_t InvalidIndex = ~size_t{};
+
 enum class Axis { Horizontal, Vertical };
+
+enum class PinType : char { Input, Output };
+
+union PinID {
+    constexpr PinID(uint64_t raw): raw(raw) {}
+
+    constexpr PinID(PinType type, size_t pinIndex, size_t nodeIndex):
+        type(type),
+        pinIndex(utl::narrow_cast<uint16_t>(pinIndex)),
+        nodeIndex(utl::narrow_cast<uint32_t>(nodeIndex)) {}
+
+    bool operator==(PinID const& rhs) const {
+        return type == rhs.type && pinIndex == rhs.pinIndex &&
+               nodeIndex == rhs.nodeIndex;
+    }
+
+    struct {
+        PinType type;
+        uint16_t pinIndex;
+        uint32_t nodeIndex;
+    };
+    uint64_t raw;
+};
+
+static constexpr PinID InvalidPinID = InvalidIndex;
 
 struct PersistentViewData {
     vml::float2 position = { 0.0, 0.0 };
@@ -29,6 +57,7 @@ struct ViewData: PersistentViewData {
     size_t hoveredNode = ~size_t{};
     size_t activeNode = ~size_t{};
     size_t activeResize = ~size_t{};
+    PinID activePin = ~size_t{};
 };
 
 struct Selection {
@@ -38,9 +67,8 @@ struct Selection {
 } // namespace
 
 using Node = NodeEditor::Node;
+using Pin = NodeEditor::Pin;
 using Impl = NodeEditor::Impl;
-
-static constexpr size_t InvalidIndex = ~size_t{};
 
 struct NodeEditor::Impl {
     void display();
@@ -141,29 +169,130 @@ std::span<Node const> NodeEditor::nodes() const { return impl->nodes; }
 
 void NodeEditor::addNode(Node node) { impl->nodes.push_back(std::move(node)); }
 
+static float4 const WhiteOutlineColor = { 1, 1, 1, 0.25 };
+static float4 const BlackOutlineColor = { 1, 1, 1, 0.25 };
+static float2 const MinNodeSize = { 80, 40 };
+static float2 const NodeBodyPadding = { 5, 5 };
+static float const PinSize = 20;
+
+static void drawPin(float2 position) {
+    auto* DL = ImGui::GetWindowDrawList();
+    float radius = 6;
+    DL->AddCircleFilled(position + PinSize / 2, radius, IM_COL32(0, 0, 0, 255));
+    DL->AddCircle(position + PinSize / 2, radius,
+                  ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
+}
+
+static void displayPinLabel(std::string_view label, float2 pinPosition,
+                            PinType type) {
+    auto* DL = ImGui::GetWindowDrawList();
+    auto* textBegin = label.data();
+    auto* textEnd = textBegin + label.size();
+    float2 textSize = ImGui::CalcTextSize(textBegin, textEnd);
+    float ypos = PinSize / 2 - textSize.y / 2;
+    float2 textPos = type == PinType::Input ?
+                         pinPosition + float2(-textSize.x, ypos) :
+                         pinPosition + float2(PinSize, ypos);
+    DL->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), textBegin, textEnd);
+}
+
+static void displayPin(ViewData& viewData, Pin const& pin, PinType type,
+                       float2 position, size_t pinIndex, size_t nodeIndex) {
+    ImGui::PushID((int)pinIndex);
+    ImRect bb(position, position + float2(PinSize));
+    ImGui::ItemSize(float2(PinSize));
+    auto ID = ImGui::GetID("Pin_Handle");
+    ImGui::ItemAdd(bb, ID);
+    bool hovered = ImGui::ItemHoverable(bb, ID, ImGuiItemFlags_AllowOverlap);
+    PinID pinID = { type, pinIndex, nodeIndex };
+    if (ImGui::IsItemClicked()) {
+        viewData.activePin = pinID;
+    }
+    auto* DL = ImGui::GetWindowDrawList();
+    bool dragging = viewData.activePin == pinID &&
+                    ImGui::IsMouseDown(ImGuiMouseButton_Left);
+    if (dragging) {
+        float2 begin = bb.GetCenter();
+        float2 end = ImGui::GetMousePos();
+        float2 mid = (begin + end) / 2;
+        float2 area = vml::abs(end - begin);
+        float crtlPointFactor =
+            2.0f * std::atan(area.y / 100) / vml::constants<float>::pi;
+        float ctrlPointX = (type == PinType::Input ? -1.0f : 1.0f) *
+                           crtlPointFactor * std::clamp(area.x, 100.f, 200.0f);
+        float2 beginControlPoint = begin + float2(ctrlPointX, 0);
+        float2 endControlPoint = end - float2(ctrlPointX, 0);
+        DL->PathLineTo(begin);
+        DL->PathBezierQuadraticCurveTo(beginControlPoint, mid, 0);
+        DL->PathBezierQuadraticCurveTo(endControlPoint, end, 0);
+        DL->PathStroke(IM_COL32(255, 0, 255, 255), ImDrawFlags_None, 2);
+    }
+    if (hovered && !dragging &&
+        (viewData.activePin == InvalidPinID || viewData.activePin.type != type))
+    {
+        displayPinLabel(pin.name, position, type);
+    }
+    drawPin(position);
+    ImGui::PopID();
+}
+
+static float2 computeMinNodeSize(Node const& node, float2 bodyPadding) {
+    float2 inner = { MinNodeSize.x,
+                     std::max(MinNodeSize.y,
+                              PinSize * std::max(node.inputs.size(),
+                                                 node.outputs.size())) };
+    return inner + 2 * bodyPadding;
+}
+
+static void displayInputsOutputs(ViewData& viewData, Node& node,
+                                 size_t nodeIndex) {
+    float2 winpos = ImGui::GetWindowPos();
+    float2 pos = winpos + viewData.position + node.position;
+    ImGui::PushID("Inputs");
+    for (auto [pinIndex, pin]: node.inputs | enumerate) {
+        float2 position = pos + float2(PinSize * -0.4, NodeBodyPadding.y) +
+                          float2(0, 20 * pinIndex);
+        displayPin(viewData, pin, PinType::Input, position, pinIndex,
+                   nodeIndex);
+    }
+    ImGui::PopID();
+    ImGui::PushID("Outputs");
+    for (auto [pinIndex, pin]: node.outputs | enumerate) {
+        float2 position =
+            pos + float2(node.size.x + PinSize * -0.6, NodeBodyPadding.y) +
+            float2(0, 20 * pinIndex);
+        displayPin(viewData, pin, PinType::Output, position, pinIndex,
+                   nodeIndex);
+    }
+    ImGui::PopID();
+}
+
 static void drawNodeBody(ViewData const& viewData, Node const& node) {
     float2 winpos = ImGui::GetWindowPos();
     float2 pos = winpos + viewData.position + node.position;
     float rounding = 5;
-    float2 padding = { 5, 5 };
     auto* DL = ImGui::GetWindowDrawList();
     DL->AddRectFilled(pos, pos + node.size, IM_COL32(255, 127, 0, 255),
-                      rounding);
-    float outlineAlpha = ImGui::GetStyleColorVec4(ImGuiCol_Border).x;
-    auto outlineCol =
-        ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, outlineAlpha));
-    DL->AddRect(pos, pos + node.size, outlineCol, rounding);
+                      rounding + 1);
+    DL->AddRect(pos + float2(1, 1), pos + node.size - float2(2, 2),
+                ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor),
+                rounding - 1);
+    DL->AddRect(pos, pos + node.size,
+                ImGui::ColorConvertFloat4ToU32(BlackOutlineColor), rounding);
     auto* label = node.name.data();
     auto* labelEnd = node.name.data() + node.name.size();
-    float2 labelSize = vml::min((float2)ImGui::CalcTextSize(label, labelEnd),
-                                node.size - float2(2 * padding.x, 0));
+    float2 labelSize =
+        vml::min((float2)ImGui::CalcTextSize(label, labelEnd),
+                 node.size - float2(PinSize + 2 * NodeBodyPadding.x, 0));
     float2 labelPos = pos + float2((node.size.x - labelSize.x) / 2, rounding);
     auto labelCol =
         ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
     auto* font =
         FontManager::get(FontDesc::UIDefault().setWeight(FontWeight::Bold));
+    ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
     DL->AddText(font, ImGui::GetFontSize(), labelPos, labelCol, label,
                 labelEnd);
+    ImGui::PopClipRect();
 }
 
 static void displayNodeBody(ViewData& viewData, Node& node, size_t index) {
@@ -183,18 +312,18 @@ static void displayNodeBody(ViewData& viewData, Node& node, size_t index) {
     bool dragging = [&] {
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) return false;
         return viewData.activeNode == index &&
-               viewData.activeResize == InvalidIndex;
+               viewData.activeResize == InvalidIndex &&
+               viewData.activePin == InvalidPinID;
     }();
     if (dragging) {
         node.position += ImGui::GetIO().MouseDelta;
     }
     drawNodeBody(viewData, node);
+    displayInputsOutputs(viewData, node, index);
 }
 
-static float2 const MinNodeSize = { 80, 40 };
-
-static void displayNodeResizeGrip(ViewData& viewData, Node& node,
-                                  size_t index) {
+static void displayNodeResizeGrip(ViewData& viewData, Node& node, size_t index,
+                                  float2 minSize) {
     float2 areaSize = { 10, 10 };
     float2 winpos = ImGui::GetWindowPos();
     float2 pos =
@@ -210,8 +339,8 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node,
     bool dragging = viewData.activeResize == index &&
                     ImGui::IsMouseDown(ImGuiMouseButton_Left);
     if (dragging) {
-        node.size = vml::max(node.size + (float2)ImGui::GetIO().MouseDelta,
-                             MinNodeSize);
+        node.size =
+            vml::max(node.size + (float2)ImGui::GetIO().MouseDelta, minSize);
     }
     if (hovered || dragging) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
@@ -219,9 +348,11 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node,
 }
 
 static void displayNode(ViewData& viewData, Node& node, size_t index) {
+    float2 minSize = computeMinNodeSize(node, NodeBodyPadding);
+    node.size = vml::max(node.size, minSize);
     ImGui::PushID((int)index);
     displayNodeBody(viewData, node, index);
-    displayNodeResizeGrip(viewData, node, index);
+    displayNodeResizeGrip(viewData, node, index, minSize);
     ImGui::PopID();
 }
 
@@ -242,6 +373,7 @@ void Impl::display() {
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
         viewData.activeNode = InvalidIndex;
         viewData.activeResize = InvalidIndex;
+        viewData.activePin = InvalidIndex;
     }
     ImGui::EndChild();
 }

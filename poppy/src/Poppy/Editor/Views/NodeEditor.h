@@ -4,6 +4,8 @@
 #include <any>
 #include <memory>
 #include <span>
+#include <string>
+#include <vector>
 
 #include <vml/vml.hpp>
 
@@ -14,10 +16,16 @@ namespace poppy {
 /// Generic customizable node editor
 class NodeEditor {
 public:
+    struct Pin {
+        std::string name;
+    };
+
     struct Node {
         std::string name;
         vml::float2 position;
         vml::float2 size;
+        std::vector<Pin> inputs;
+        std::vector<Pin> outputs;
         std::any userData;
     };
 

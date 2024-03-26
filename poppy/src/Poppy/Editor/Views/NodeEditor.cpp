@@ -220,6 +220,7 @@ struct ViewData: PersistentViewData {
     Node* activeNode = nullptr;
     Node* activeResize = nullptr;
     Pin* activePin = nullptr;
+    float2 resizeSize = 0;
 };
 
 struct Selection {
@@ -619,13 +620,14 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node) {
     bool hovered = ImGui::ItemHoverable(bb, id, ImGuiItemFlags_AllowOverlap);
     if (ImGui::IsItemClicked()) {
         viewData.activeResize = &node;
+        viewData.resizeSize = node.size();
     }
     bool dragging = viewData.activeResize == &node &&
                     ImGui::IsMouseDown(ImGuiMouseButton_Left);
     if (dragging) {
         float2 minSize = computeMinNodeSize(node, NodeBodyPadding);
-        float2 newSize =
-            vml::max(node.size() + (float2)ImGui::GetIO().MouseDelta, minSize);
+        viewData.resizeSize += ImGui::GetIO().MouseDelta;
+        float2 newSize = vml::max(viewData.resizeSize, minSize);
         node.setSize(newSize);
     }
     if (hovered || dragging) {

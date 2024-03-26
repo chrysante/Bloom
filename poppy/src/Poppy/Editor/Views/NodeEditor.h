@@ -54,15 +54,26 @@ class Node;
 /// Base class of pins
 class Pin {
 public:
+    /// The description from which this pin was created
     PinDesc const& desc() const { return _desc; }
 
+    /// Runtime type of this pin
     PinType type() const { return _type; }
 
+    /// Label name
     std::string const& name() const { return desc().name; }
 
+    /// The node in which this pin exists
     Node& parent() { return *_parent; }
 
+    /// \overload
     Node const& parent() const { return *_parent; }
+
+    /// Computes the index of this pin in its parent node
+    size_t indexInParent() const;
+
+    /// Removes all links from this pin
+    void clearLinks();
 
 protected:
     explicit Pin(PinType type, PinDesc const& desc, Node& parent):
@@ -78,41 +89,52 @@ private:
     Node* _parent;
 };
 
+///
 class InputPin: public Pin {
 public:
     explicit InputPin(PinDesc const& desc, Node& parent):
         Pin(PinType::InputPin, desc, parent) {}
 
+    /// \Returns the output that is linked to this pin
     OutputPin* origin() const { return _origin; }
 
+    /// Sets the output that is linked to this pin
     void setOrigin(OutputPin* origin);
 
 private:
     OutputPin* _origin = nullptr;
 };
 
+///
 class OutputPin: public Pin {
 public:
     explicit OutputPin(PinDesc const& desc, Node& parent):
         Pin(PinType::OutputPin, desc, parent) {}
 
-    std::span<Pin* const> targets() const { return _targets; }
+    /// \Returns a view over the input pins that are linked to this putput
+    std::span<InputPin* const> targets() const { return _targets; }
 
-    void addTarget(Pin* target);
+    /// Adds \p pin as a target of this pin. This does not update \p target
+    void addTarget(InputPin* pin);
 
-    bool isTarget(Pin const* target) const;
+    /// \Returns `true` if a link from this pin to \p target exists
+    bool isTarget(InputPin const* target) const;
 
-    void removeTarget(Pin* target);
+    /// Removes the link to \p target
+    /// This also updates \p target
+    void removeTarget(InputPin* target);
 
+    /// Removes all targets. This also updates all targets
     void clearTargets();
 
 private:
-    utl::small_vector<Pin*> _targets;
+    utl::small_vector<InputPin*> _targets;
 };
 
 template <typename T>
 using UniquePtr = std::unique_ptr<T, utl::dyn_deleter>;
 
+///
 class Node {
 public:
     Node(NodeDesc desc);
@@ -142,6 +164,8 @@ public:
     void setPosition(vml::float2 pos) { _desc.position = pos; }
 
 private:
+    friend class Pin;
+
     NodeDesc _desc;
     std::vector<nodeEditor::UniquePtr<nodeEditor::InputPin>> _inputs;
     std::vector<nodeEditor::UniquePtr<nodeEditor::OutputPin>> _outputs;

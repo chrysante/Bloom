@@ -18,37 +18,88 @@ using namespace ranges::views;
 
 using Impl = NodeEditor::Impl;
 
-void InputPin::setOrigin(OutputPin* origin) {
-    if (_origin) {
-        _origin->removeTarget(this);
-    }
-    _origin = origin;
+size_t Pin::indexInParent() const {
+    auto& node = parent();
+    // clang-format off
+    return visit(*this, utl::overload{
+        [&](OutputPin const& pin) {
+            auto itr = ranges::find(node._outputs, &pin, 
+                                    [](auto& p) { return p.get(); });
+            BL_ASSERT(itr != node._outputs.end());
+            return utl::narrow_cast<size_t>(itr - node._outputs.begin());
+        },
+        [&](InputPin const& pin) {
+            auto itr = ranges::find(node._inputs, &pin, 
+                                    [](auto& p) { return p.get(); });
+            BL_ASSERT(itr != node._inputs.end());
+            return utl::narrow_cast<size_t>(itr - node._inputs.begin());
+        }
+    }); // clang-format on
 }
 
-void OutputPin::addTarget(Pin* target) {
+void Pin::clearLinks() {
+    // clang-format off
+    visit(*this, utl::overload{
+        [&](OutputPin& pin) {
+            pin.clearTargets();
+        },
+        [&](InputPin& pin) {
+            pin.setOrigin(nullptr);
+        }
+    }); // clang-format on
+}
+
+void InputPin::setOrigin(OutputPin* origin) {
+    auto* last = _origin;
+    _origin = origin;
+    if (last) {
+        last->removeTarget(this);
+    }
+}
+
+void OutputPin::addTarget(InputPin* target) {
     if (!isTarget(target)) {
         _targets.push_back(target);
     }
 }
 
-bool OutputPin::isTarget(Pin const* target) const {
+bool OutputPin::isTarget(InputPin const* target) const {
     return ranges::contains(_targets, target);
 }
 
-void OutputPin::removeTarget(Pin* target) {
+void OutputPin::removeTarget(InputPin* target) {
     auto itr = ranges::find(_targets, target);
     if (itr != _targets.end()) {
+        (*itr)->setOrigin(nullptr);
         _targets.erase(itr);
     }
 }
 
-void OutputPin::clearTargets() { _targets.clear(); }
+void OutputPin::clearTargets() {
+    for (auto* target: targets()) {
+        target->setOrigin(nullptr);
+    }
+    _targets.clear();
+}
 
 static void link(OutputPin& out, InputPin& in) {
     // TODO: Check for cycles
     Logger::Trace("Linking ", out.name(), " to ", in.name());
     out.addTarget(&in);
     in.setOrigin(&out);
+}
+
+static void link(Pin& a, Pin& b) {
+    // clang-format off
+    visit(a, b, utl::overload{
+        [&](InputPin& in, OutputPin& out) {
+            link(out, in);
+        },
+        [&](OutputPin& out, InputPin& in) {
+            link(out, in);
+        },
+        [&](Pin&, Pin&) {},
+    }); // clang-format on
 }
 
 namespace {
@@ -186,11 +237,34 @@ void NodeEditor::addNode(NodeDesc desc) {
     impl->nodes.push_back(std::move(p));
 }
 
-static float4 const WhiteOutlineColor = { 1, 1, 1, 0.25 };
-static float4 const BlackOutlineColor = { 1, 1, 1, 0.25 };
+static float4 const WhiteOutlineColor = { 1, 1, 1, 0.5 };
+static float4 const BlackOutlineColor = { 0, 0, 0, 0.7 };
+static float4 const LinkColor = { 1, 1, 1, 0.8 };
 static float2 const MinNodeSize = { 80, 40 };
 static float2 const NodeBodyPadding = { 5, 5 };
 static float const PinSize = 20;
+
+/// Computes the position of \p pin relative to its parent node
+static float2 computePinPosition(Pin const& pin, size_t index) {
+    // clang-format off
+    return visit(pin, utl::overload{
+        [&](InputPin const&) {
+            return float2(PinSize * -0.4, NodeBodyPadding.y) +
+                float2(0, PinSize * index);
+        },
+        [&](OutputPin const& pin) {
+            return float2(pin.parent().size().x + PinSize * -0.6,
+                          NodeBodyPadding.y) +
+                float2(0, PinSize * index);
+        }
+    }); // clang-format on
+}
+
+/// Computes the position of \p pin relative to the view
+static float2 computeAbsPinPosition(Pin const& pin) {
+    return pin.parent().position() +
+           computePinPosition(pin, pin.indexInParent());
+}
 
 static void drawPin(float2 position) {
     auto* DL = ImGui::GetWindowDrawList();
@@ -216,6 +290,85 @@ static bool isCompatible(Pin const& a, Pin const& b) {
     return &a.parent() != &b.parent() && a.type() != b.type();
 }
 
+namespace {
+
+struct LinkDrawData {
+    float2 begin;
+    float2 end;
+    float2 mid;
+    float2 area;
+    float2 beginControlPoint;
+    float2 endControlPoint;
+};
+
+} // namespace
+
+static LinkDrawData getLinkDrawData(float2 begin, float2 end) {
+    LinkDrawData dd{};
+    dd.begin = begin;
+    dd.end = end;
+    dd.mid = (begin + end) / 2;
+    dd.area = vml::abs(end - begin);
+    float crtlPointFactor =
+        2.0f * std::atan(dd.area.y / 100) / vml::constants<float>::pi;
+    float ctrlPointX = crtlPointFactor * std::clamp(dd.area.x, 100.f, 200.0f);
+    dd.beginControlPoint = dd.begin + float2(ctrlPointX, 0);
+    dd.endControlPoint = dd.end - float2(ctrlPointX, 0);
+    return dd;
+}
+
+static void strokeLink(ImDrawList* DL) {
+    auto col = ImGui::ColorConvertFloat4ToU32(LinkColor);
+    DL->PathStroke(col, ImDrawFlags_None, 2);
+}
+
+static void drawLinkBegin(float2 begin, float2 end) {
+    auto* DL = ImGui::GetWindowDrawList();
+    auto dd = getLinkDrawData(begin, end);
+    DL->PathLineTo(begin);
+    DL->PathBezierQuadraticCurveTo(dd.beginControlPoint, dd.mid, 0);
+    strokeLink(DL);
+}
+
+static void drawLinkEnd(float2 begin, float2 end) {
+    auto* DL = ImGui::GetWindowDrawList();
+    auto dd = getLinkDrawData(begin, end);
+    DL->PathLineTo(dd.mid);
+    DL->PathBezierQuadraticCurveTo(dd.endControlPoint, end, 0);
+    strokeLink(DL);
+}
+
+static void drawLink(float2 begin, float2 end) {
+    auto* DL = ImGui::GetWindowDrawList();
+    auto dd = getLinkDrawData(begin, end);
+    DL->PathLineTo(begin);
+    DL->PathBezierQuadraticCurveTo(dd.beginControlPoint, dd.mid, 0);
+    DL->PathBezierQuadraticCurveTo(dd.endControlPoint, end, 0);
+    strokeLink(DL);
+}
+
+static void drawPinLinks(ViewData const& viewData, Pin const& pin,
+                         float2 pinPosition) {
+    float2 basePos = (float2)ImGui::GetWindowPos() + viewData.position;
+    // clang-format off
+    visit(pin, utl::overload{
+        [&](InputPin const& pin) {
+            if (auto* origin = pin.origin()) {
+                float2 begin = basePos + computeAbsPinPosition(*origin) +
+                               PinSize / 2;
+                drawLinkEnd(begin, pinPosition + PinSize / 2);
+            }
+        },
+        [&](OutputPin const& pin) {
+            for (auto* target: pin.targets()) {
+                float2 end = basePos + computeAbsPinPosition(*target) +
+                             PinSize / 2;
+                drawLinkBegin(pinPosition + PinSize / 2, end);
+            }
+        }
+    }); // clang-format on
+}
+
 static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
     ImGui::PushID(&pin);
     ImRect bb(position, position + float2(PinSize));
@@ -225,25 +378,19 @@ static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
     bool hovered = ImGui::ItemHoverable(bb, ID, ImGuiItemFlags_AllowOverlap);
     if (ImGui::IsItemClicked()) {
         viewData.activePin = &pin;
+        if (ImGui::GetMouseClickedCount(ImGuiMouseButton_Left) == 2) {
+            pin.clearLinks();
+        }
     }
-    auto* DL = ImGui::GetWindowDrawList();
     bool dragging = viewData.activePin == &pin &&
                     ImGui::IsMouseDown(ImGuiMouseButton_Left);
     if (dragging) {
-        float2 begin = bb.GetCenter();
-        float2 end = ImGui::GetMousePos();
-        float2 mid = (begin + end) / 2;
-        float2 area = vml::abs(end - begin);
-        float crtlPointFactor =
-            2.0f * std::atan(area.y / 100) / vml::constants<float>::pi;
-        float ctrlPointX = (isa<InputPin>(pin) ? -1.0f : 1.0f) *
-                           crtlPointFactor * std::clamp(area.x, 100.f, 200.0f);
-        float2 beginControlPoint = begin + float2(ctrlPointX, 0);
-        float2 endControlPoint = end - float2(ctrlPointX, 0);
-        DL->PathLineTo(begin);
-        DL->PathBezierQuadraticCurveTo(beginControlPoint, mid, 0);
-        DL->PathBezierQuadraticCurveTo(endControlPoint, end, 0);
-        DL->PathStroke(IM_COL32(255, 0, 255, 255), ImDrawFlags_None, 2);
+        if (isa<InputPin>(pin)) {
+            drawLink(ImGui::GetMousePos(), bb.GetCenter());
+        }
+        else {
+            drawLink(bb.GetCenter(), ImGui::GetMousePos());
+        }
     }
     bool isDraggingCompatiblePin = viewData.activePin &&
                                    isCompatible(*viewData.activePin, pin);
@@ -255,17 +402,9 @@ static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
     if (hovered && isDraggingCompatiblePin &&
         ImGui::IsMouseReleased(ImGuiMouseButton_Left))
     {
-        // clang-format off
-        visit(*viewData.activePin, pin, utl::overload{
-            [&](InputPin& in, OutputPin& out) {
-                link(out, in);
-            },
-            [&](OutputPin& out, InputPin& in) {
-                link(out, in);
-            },
-            [&](Pin&, Pin&) {},
-        }); // clang-format on
+        link(*viewData.activePin, pin);
     }
+    drawPinLinks(viewData, pin, position);
     drawPin(position);
     ImGui::PopID();
 }
@@ -280,20 +419,15 @@ static float2 computeMinNodeSize(Node const& node, float2 bodyPadding) {
 
 static void displayInputsOutputs(ViewData& viewData, Node& node) {
     float2 winpos = ImGui::GetWindowPos();
-    float2 pos = winpos + viewData.position + node.position();
+    float2 nodepos = winpos + viewData.position + node.position();
     ImGui::PushID("Inputs");
-    for (auto [pinIndex, pin]: node.inputs() | enumerate) {
-        float2 position = pos + float2(PinSize * -0.4, NodeBodyPadding.y) +
-                          float2(0, 20 * pinIndex);
-        displayPin(viewData, *pin, position);
+    for (auto [index, pin]: node.inputs() | enumerate) {
+        displayPin(viewData, *pin, nodepos + computePinPosition(*pin, index));
     }
     ImGui::PopID();
     ImGui::PushID("Outputs");
-    for (auto [pinIndex, pin]: node.outputs() | enumerate) {
-        float2 position =
-            pos + float2(node.size().x + PinSize * -0.6, NodeBodyPadding.y) +
-            float2(0, 20 * pinIndex);
-        displayPin(viewData, *pin, position);
+    for (auto [index, pin]: node.outputs() | enumerate) {
+        displayPin(viewData, *pin, nodepos + computePinPosition(*pin, index));
     }
     ImGui::PopID();
 }
@@ -349,7 +483,6 @@ static void displayNodeBody(ViewData& viewData, Node& node) {
         node.setPosition(node.position() + (float2)ImGui::GetIO().MouseDelta);
     }
     drawNodeBody(viewData, node);
-    displayInputsOutputs(viewData, node);
 }
 
 static void displayNodeResizeGrip(ViewData& viewData, Node& node,
@@ -383,6 +516,7 @@ static void displayNode(ViewData& viewData, Node& node) {
     ImGui::PushID(&node);
     displayNodeBody(viewData, node);
     displayNodeResizeGrip(viewData, node, minSize);
+    displayInputsOutputs(viewData, node);
     ImGui::PopID();
 }
 

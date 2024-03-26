@@ -407,6 +407,8 @@ struct NodeEditor::Impl {
     void displayNodeBody(Node& node);
     void displayNode(Node& node);
 
+    void orderFront(Node* node);
+
     std::vector<Node*> currentNodeOrder;
     Graph graph;
     Selection selection;
@@ -874,6 +876,7 @@ void Impl::displayNodeBody(Node& node) {
     bgClicked |= displayNodeContent(contentRect, node);
     displayNodeResizeGrip(viewData, node);
     if (bgClicked) {
+        orderFront(&node);
         viewData.activeNode = &node;
     }
     /// Selected nodes change selection state when mouse is released
@@ -929,7 +932,9 @@ void Impl::display() {
     auto* window = ImGui::GetCurrentWindow();
     viewData.clipRect = window->ContentRegionRect;
     drawBackground(viewData.position);
-    for (auto* node: currentNodeOrder) {
+    /// We make a copy here because we may reorder the nodes during traversal.
+    /// This may seem wasteful but I'm sure it's fine
+    for (auto* node: std::vector{ currentNodeOrder }) {
         displayNode(*node);
     }
     backgroundBehaviour();
@@ -941,4 +946,11 @@ void Impl::display() {
         selection.applyCandidates();
     }
     ImGui::EndChild();
+}
+
+void Impl::orderFront(Node* node) {
+    auto itr = ranges::find(currentNodeOrder, node);
+    BL_ASSERT(itr != currentNodeOrder.end());
+    currentNodeOrder.erase(itr);
+    currentNodeOrder.push_back(node);
 }

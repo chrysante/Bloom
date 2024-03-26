@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <utl/overload.hpp>
+#include <utl/stack.hpp>
 #include <utl/utility.hpp>
 
 #include "Bloom/Core/Debug.h"
@@ -56,7 +57,7 @@ void InputPin::setOrigin(OutputPin* origin) {
     auto* last = _origin;
     _origin = origin;
     if (last) {
-        last->removeTarget(this);
+        last->removeTargetWeak(this);
     }
 }
 
@@ -71,12 +72,18 @@ bool OutputPin::isTarget(InputPin const* target) const {
 }
 
 void OutputPin::removeTarget(InputPin* pin) {
+    if (removeTargetWeak(pin)) {
+        pin->setOrigin(nullptr);
+    }
+}
+
+bool OutputPin::removeTargetWeak(InputPin* pin) {
     auto itr = ranges::find(_targets, pin);
     if (itr != _targets.end()) {
-        auto* target = *itr;
         _targets.erase(itr);
-        target->setOrigin(nullptr);
+        return true;
     }
+    return false;
 }
 
 void OutputPin::clearTargets() {
@@ -86,26 +93,34 @@ void OutputPin::clearTargets() {
     _targets.clear();
 }
 
-static bool findCycleDFS(Node const* node, utl::hashset<Node const*>& visited) {
+static bool findCycleDFS(Node const* node, utl::stack<Node const*>& stack) {
     return ranges::any_of(node->successors(), [&](Node const* succ) {
-        return !visited.insert(succ).second || findCycleDFS(succ, visited);
+        if (ranges::contains(stack, succ)) {
+            return true;
+        }
+        stack.push(succ);
+        bool result = findCycleDFS(succ, stack);
+        stack.pop();
+        return result;
     });
 }
 
 static bool findCycle(Node const* node) {
-    utl::hashset<Node const*> visited;
-    return findCycleDFS(node, visited);
+    utl::stack<Node const*> stack;
+    return findCycleDFS(node, stack);
 }
 
-static void link(OutputPin& out, InputPin& in) {
+void nodeEditor::link(OutputPin& out, InputPin& in) {
     BL_ASSERT(!findCycle(&out.parent()));
+    out._targets.push_back(&in);
+    bool wouldIntroduceCycle = findCycle(&out.parent());
+    out._targets.pop_back();
+    if (wouldIntroduceCycle) {
+        Logger::Error("Link would introduce a cycle. Not linking");
+        return;
+    }
     out.addTarget(&in);
     in.setOrigin(&out);
-    if (findCycle(&out.parent())) {
-        Logger::Error("Link would introduce a cycle. Not linking");
-        out.removeTarget(&in);
-        BL_ASSERT(!in.origin());
-    }
 }
 
 static void link(Pin& a, Pin& b) {
@@ -580,6 +595,7 @@ static bool displayNodeContent(ImRect contentRect, Node const& node) {
         return false;
     }
     if (!beginInvisibleWindow(contentRect.Min, contentRect.GetSize())) {
+        ImGui::EndChild();
         return false;
     }
     ImGui::SetNextItemAllowOverlap();
@@ -623,6 +639,7 @@ static void displayNodeBody(ViewData& viewData, Node& node) {
     if (!beginInvisibleWindow(pos - NodeOuterPadding,
                               node.size() + 2 * NodeOuterPadding))
     {
+        ImGui::EndChild();
         return;
     }
     auto* DL = ImGui::GetWindowDrawList();

@@ -94,6 +94,9 @@ private:
 };
 
 ///
+void link(OutputPin& output, InputPin& input);
+
+///
 class InputPin: public Pin {
 public:
     explicit InputPin(PinDesc const& desc, Node& parent):
@@ -106,6 +109,8 @@ public:
     void setOrigin(OutputPin* origin);
 
 private:
+    friend void link(OutputPin&, InputPin&);
+
     OutputPin* _origin = nullptr;
 };
 
@@ -132,6 +137,11 @@ public:
     void clearTargets();
 
 private:
+    friend class InputPin;
+    friend void link(OutputPin&, InputPin&);
+
+    bool removeTargetWeak(InputPin* pin);
+
     utl::small_vector<InputPin*> _targets;
 };
 

@@ -2,6 +2,7 @@
 #define POPPY_EDITOR_VIEWS_NODEEDITOR_H
 
 #include <any>
+#include <functional>
 #include <memory>
 #include <span>
 #include <string>
@@ -47,6 +48,8 @@ struct NodeDesc {
     vml::float2 size;
     std::vector<PinDesc> inputs;
     std::vector<PinDesc> outputs;
+    std::function<void()> content;
+    vml::float4 color = { 1, 0, 0.5, 1 };
     std::any userData;
 };
 

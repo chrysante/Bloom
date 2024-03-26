@@ -50,6 +50,9 @@ void Pin::clearLinks() {
 }
 
 void InputPin::setOrigin(OutputPin* origin) {
+    if (_origin == origin) {
+        return;
+    }
     auto* last = _origin;
     _origin = origin;
     if (last) {
@@ -325,6 +328,7 @@ Graph const& NodeEditor::graph() const { return impl->graph; }
 static float4 const WhiteOutlineColor = { 1, 1, 1, 0.5 };
 static float4 const BlackOutlineColor = { 0, 0, 0, 0.7 };
 static float4 const LinkColor = { 1, 1, 1, 0.8 };
+static float4 PinColor() { return ImGui::GetStyleColorVec4(ImGuiCol_PopupBg); }
 static float2 const MinNodeSize = { 80, 40 };
 static float2 const NodeBodyPadding = { 5, 5 };
 static float const PinSize = 20;
@@ -354,7 +358,8 @@ static float2 computeAbsPinPosition(Pin const& pin) {
 static void drawPin(float2 position) {
     auto* DL = ImGui::GetWindowDrawList();
     float radius = 6;
-    DL->AddCircleFilled(position + PinSize / 2, radius, IM_COL32(0, 0, 0, 255));
+    DL->AddCircleFilled(position + PinSize / 2, radius,
+                        ImGui::ColorConvertFloat4ToU32(PinColor()));
     DL->AddCircle(position + PinSize / 2, radius,
                   ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
 }
@@ -365,9 +370,14 @@ static void displayPinLabel(Pin const& pin, float2 pinPosition) {
     auto* textEnd = textBegin + pin.name().size();
     float2 textSize = ImGui::CalcTextSize(textBegin, textEnd);
     float ypos = PinSize / 2 - textSize.y / 2;
+    float2 bgPadding = 3;
+    float bgRounding = 3;
+    auto bgCol = ImGui::GetColorU32(ImGuiCol_PopupBg);
     float2 textPos = isa<InputPin>(pin) ?
                          pinPosition + float2(-textSize.x, ypos) :
                          pinPosition + float2(PinSize, ypos);
+    DL->AddRectFilled(textPos - bgPadding, textPos + textSize + bgPadding,
+                      bgCol, bgRounding);
     DL->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), textBegin, textEnd);
 }
 
@@ -477,6 +487,8 @@ static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
             drawLink(bb.GetCenter(), ImGui::GetMousePos());
         }
     }
+    drawPinLinks(viewData, pin, position);
+    drawPin(position);
     bool isDraggingCompatiblePin = viewData.activePin &&
                                    isCompatible(*viewData.activePin, pin);
     if (hovered && !dragging &&
@@ -489,8 +501,6 @@ static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
     {
         link(*viewData.activePin, pin);
     }
-    drawPinLinks(viewData, pin, position);
-    drawPin(position);
     ImGui::PopID();
 }
 
@@ -522,13 +532,17 @@ static void drawNodeBody(ViewData const& viewData, Node const& node) {
     float2 pos = winpos + viewData.position + node.position();
     float rounding = 5;
     auto* DL = ImGui::GetWindowDrawList();
-    DL->AddRectFilled(pos, pos + node.size(), IM_COL32(255, 127, 0, 255),
+    DL->AddRectFilled(pos, pos + node.size(),
+                      ImGui::ColorConvertFloat4ToU32(node.desc().color),
                       rounding + 1);
     DL->AddRect(pos + float2(1, 1), pos + node.size() - float2(2, 2),
                 ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor),
                 rounding - 1);
     DL->AddRect(pos, pos + node.size(),
                 ImGui::ColorConvertFloat4ToU32(BlackOutlineColor), rounding);
+    auto* font =
+        FontManager::get(FontDesc::UIDefault().setWeight(FontWeight::Bold));
+    ImGui::PushFont(font);
     auto* label = node.name().data();
     auto* labelEnd = node.name().data() + node.name().size();
     float2 labelSize =
@@ -537,15 +551,14 @@ static void drawNodeBody(ViewData const& viewData, Node const& node) {
     float2 labelPos = pos + float2((node.size().x - labelSize.x) / 2, rounding);
     auto labelCol =
         ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
-    auto* font =
-        FontManager::get(FontDesc::UIDefault().setWeight(FontWeight::Bold));
     ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
-    DL->AddText(font, ImGui::GetFontSize(), labelPos, labelCol, label,
-                labelEnd);
+    DL->AddText(labelPos, labelCol, label, labelEnd);
     ImGui::PopClipRect();
+    ImGui::PopFont();
 }
 
 static void displayNodeBody(ViewData& viewData, Node& node) {
+    drawNodeBody(viewData, node);
     float2 winpos = ImGui::GetWindowPos();
     float2 pos = winpos + viewData.position + node.position();
     ImGuiID id = ImGui::GetID("Node_Body");
@@ -567,7 +580,6 @@ static void displayNodeBody(ViewData& viewData, Node& node) {
     if (dragging) {
         node.setPosition(node.position() + (float2)ImGui::GetIO().MouseDelta);
     }
-    drawNodeBody(viewData, node);
 }
 
 static void displayNodeResizeGrip(ViewData& viewData, Node& node,

@@ -687,9 +687,9 @@ static void displayNode(ViewData& viewData, Node& node) {
 void NodeEditor::display() { impl->display(); }
 
 void Impl::display() {
-    if (!ImGui::BeginChild("Node_Editor", {}, ImGuiChildFlags_None,
-                           ImGuiWindowFlags_NoScrollbar))
-    {
+    auto flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs;
+    if (!ImGui::BeginChild("Node_Editor", {}, ImGuiChildFlags_None, flags)) {
+        ImGui::EndChild();
         return;
     }
     auto* window = ImGui::GetCurrentWindow();

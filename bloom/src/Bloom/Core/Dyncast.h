@@ -7,6 +7,7 @@ namespace bloom {
 
 using utl::cast;
 using utl::dyncast;
+using utl::isa;
 using utl::visit;
 
 } // namespace bloom

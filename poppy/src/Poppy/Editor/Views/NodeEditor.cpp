@@ -4,21 +4,52 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <utl/overload.hpp>
 #include <utl/utility.hpp>
 
 #include "Bloom/Core/Debug.h"
 #include "Poppy/UI/Font.h"
 
 using namespace poppy;
+using namespace nodeEditor;
 using namespace bloom;
 using namespace vml::short_types;
 using namespace ranges::views;
 
-using NodeDesc = NodeEditor::NodeDesc;
-using Node = NodeEditor::Node;
-using Pin = NodeEditor::Pin;
-using PinType = NodeEditor::PinType;
 using Impl = NodeEditor::Impl;
+
+void InputPin::setOrigin(OutputPin* origin) {
+    if (_origin) {
+        _origin->removeTarget(this);
+    }
+    _origin = origin;
+}
+
+void OutputPin::addTarget(Pin* target) {
+    if (!isTarget(target)) {
+        _targets.push_back(target);
+    }
+}
+
+bool OutputPin::isTarget(Pin const* target) const {
+    return ranges::contains(_targets, target);
+}
+
+void OutputPin::removeTarget(Pin* target) {
+    auto itr = ranges::find(_targets, target);
+    if (itr != _targets.end()) {
+        _targets.erase(itr);
+    }
+}
+
+void OutputPin::clearTargets() { _targets.clear(); }
+
+static void link(OutputPin& out, InputPin& in) {
+    // TODO: Check for cycles
+    Logger::Trace("Linking ", out.name(), " to ", in.name());
+    out.addTarget(&in);
+    in.setOrigin(&out);
+}
 
 namespace {
 
@@ -32,10 +63,10 @@ struct PersistentViewData {
 struct ViewData: PersistentViewData {
     bool isBGHovered = false;
     bool isDraggingNode = false;
-    Node const* hoveredNode = nullptr;
-    Node const* activeNode = nullptr;
-    Node const* activeResize = nullptr;
-    Pin const* activePin = nullptr;
+    Node* hoveredNode = nullptr;
+    Node* activeNode = nullptr;
+    Node* activeResize = nullptr;
+    Pin* activePin = nullptr;
 };
 
 struct Selection {
@@ -45,11 +76,11 @@ struct Selection {
 } // namespace
 
 Node::Node(NodeDesc desc): _desc(std::move(desc)) {
-    _inputs = _desc.inputs | transform([](PinDesc const& pin) {
-        return std::make_unique<Pin>(pin, PinType::Input);
+    _inputs = _desc.inputs | transform([&](PinDesc const& pin) {
+        return UniquePtr<InputPin>(new InputPin(pin, *this));
     }) | ranges::to<std::vector>;
-    _outputs = _desc.outputs | transform([](PinDesc const& pin) {
-        return std::make_unique<Pin>(pin, PinType::Output);
+    _outputs = _desc.outputs | transform([&](PinDesc const& pin) {
+        return UniquePtr<OutputPin>(new OutputPin(pin, *this));
     }) | ranges::to<std::vector>;
 }
 
@@ -169,20 +200,23 @@ static void drawPin(float2 position) {
                   ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
 }
 
-static void displayPinLabel(std::string_view label, PinType type,
-                            float2 pinPosition) {
+static void displayPinLabel(Pin const& pin, float2 pinPosition) {
     auto* DL = ImGui::GetWindowDrawList();
-    auto* textBegin = label.data();
-    auto* textEnd = textBegin + label.size();
+    auto* textBegin = pin.name().data();
+    auto* textEnd = textBegin + pin.name().size();
     float2 textSize = ImGui::CalcTextSize(textBegin, textEnd);
     float ypos = PinSize / 2 - textSize.y / 2;
-    float2 textPos = type == PinType::Input ?
+    float2 textPos = isa<InputPin>(pin) ?
                          pinPosition + float2(-textSize.x, ypos) :
                          pinPosition + float2(PinSize, ypos);
     DL->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), textBegin, textEnd);
 }
 
-static void displayPin(ViewData& viewData, Pin const& pin, float2 position) {
+static bool isCompatible(Pin const& a, Pin const& b) {
+    return &a.parent() != &b.parent() && a.type() != b.type();
+}
+
+static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
     ImGui::PushID(&pin);
     ImRect bb(position, position + float2(PinSize));
     ImGui::ItemSize(float2(PinSize));
@@ -202,7 +236,7 @@ static void displayPin(ViewData& viewData, Pin const& pin, float2 position) {
         float2 area = vml::abs(end - begin);
         float crtlPointFactor =
             2.0f * std::atan(area.y / 100) / vml::constants<float>::pi;
-        float ctrlPointX = (pin.type() == PinType::Input ? -1.0f : 1.0f) *
+        float ctrlPointX = (isa<InputPin>(pin) ? -1.0f : 1.0f) *
                            crtlPointFactor * std::clamp(area.x, 100.f, 200.0f);
         float2 beginControlPoint = begin + float2(ctrlPointX, 0);
         float2 endControlPoint = end - float2(ctrlPointX, 0);
@@ -211,10 +245,26 @@ static void displayPin(ViewData& viewData, Pin const& pin, float2 position) {
         DL->PathBezierQuadraticCurveTo(endControlPoint, end, 0);
         DL->PathStroke(IM_COL32(255, 0, 255, 255), ImDrawFlags_None, 2);
     }
+    bool isDraggingCompatiblePin = viewData.activePin &&
+                                   isCompatible(*viewData.activePin, pin);
     if (hovered && !dragging &&
-        (!viewData.activePin || viewData.activePin->type() != pin.type()))
+        (!viewData.activePin || isDraggingCompatiblePin))
     {
-        displayPinLabel(pin.name(), pin.type(), position);
+        displayPinLabel(pin, position);
+    }
+    if (hovered && isDraggingCompatiblePin &&
+        ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+    {
+        // clang-format off
+        visit(*viewData.activePin, pin, utl::overload{
+            [&](InputPin& in, OutputPin& out) {
+                link(out, in);
+            },
+            [&](OutputPin& out, InputPin& in) {
+                link(out, in);
+            },
+            [&](Pin&, Pin&) {},
+        }); // clang-format on
     }
     drawPin(position);
     ImGui::PopID();

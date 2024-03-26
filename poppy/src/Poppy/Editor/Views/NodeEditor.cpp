@@ -215,7 +215,10 @@ struct PersistentViewData {
 struct ViewData: PersistentViewData {
     ImRect clipRect = {};
     bool isBGHovered = false;
+    /// True if a node is currently being dragged
     bool isDraggingNode = false;
+    /// True if we already changed selection state since the mouse was pressed
+    bool handledSelectionSinceMousePresed = false;
     Node* hoveredNode = nullptr;
     Node* activeNode = nullptr;
     Node* activeResize = nullptr;
@@ -223,8 +226,43 @@ struct ViewData: PersistentViewData {
     float2 resizeSize = 0;
 };
 
-struct Selection {
-    std::vector<size_t> indices;
+/// Selection manager
+class Selection {
+public:
+    /// \Returns `true` if \p node is selected
+    bool contains(Node const* node) const { return _nodes.contains(node); }
+
+    /// Adds \p node to the selection
+    void add(Node* node) { _nodes.insert(node); }
+
+    /// If \p node is not selection, adds \p node to the selection. Otherwise
+    /// removes \p node from the selection
+    bool toggle(Node* node) {
+        auto itr = _nodes.find(node);
+        if (itr != _nodes.end()) {
+            _nodes.erase(itr);
+            return false;
+        }
+        else {
+            add(node);
+            return true;
+        }
+    }
+
+    /// Clears the selection and selects \p node
+    void set(Node* node) {
+        clear();
+        add(node);
+    }
+
+    /// Unselectes all nodes
+    void clear() { _nodes.clear(); }
+
+    /// \Returns a view over all selected nodes
+    std::span<Node* const> nodes() const { return _nodes.values(); }
+
+private:
+    utl::hashset<Node*> _nodes;
 };
 
 } // namespace
@@ -239,9 +277,13 @@ Node::Node(NodeDesc desc): _desc(std::move(desc)) {
 }
 
 struct NodeEditor::Impl {
+    void onInput(bloom::InputEvent& event);
+
     void display();
 
-    void onInput(bloom::InputEvent& event);
+    void backgroundBehaviour();
+    void displayNodeBody(Node& node);
+    void displayNode(Node& node);
 
     std::vector<Node*> currentNodeOrder;
     Graph graph;
@@ -301,15 +343,12 @@ static void drawBackground(float2 viewPos, float zoom) {
     ImGui::Text("Zoom: %f", zoom);
 }
 
-static void backgroundBehaviour(ViewData& viewData) {
-    ImGui::SetNextItemAllowOverlap();
-    if (ImGui::InvisibleButton("Node_Editor_Background_Button",
-                               ImGui::GetContentRegionAvail(),
-                               ImGuiButtonFlags_MouseButtonRight))
+void Impl::backgroundBehaviour() {
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !viewData.activeNode &&
+        !viewData.activePin)
     {
-        // Clear selection
+        selection.clear();
     }
-    viewData.isBGHovered = ImGui::IsItemHovered();
 }
 
 void NodeEditor::onInput(InputEvent& event) { impl->onInput(event); }
@@ -345,10 +384,12 @@ Graph const& NodeEditor::graph() const { return impl->graph; }
 static float4 const WhiteOutlineColor = { 1, 1, 1, 0.5 };
 static float4 const BlackOutlineColor = { 0, 0, 0, 0.7 };
 static float4 const LinkColor = { 1, 1, 1, 0.8 };
-static float4 PinColor() { return ImGui::GetStyleColorVec4(ImGuiCol_PopupBg); }
+static float4 const PinColorConnected = { 0.2, 0.2, 0.2, 1 };
+static float4 const PinColorOptional = { 0.4, 0.4, 0.4, 1 };
+static float4 const PinColorMissing = { 1, 0, 0.2, 1 };
 static float const PinSize = 20;
 static float2 const NodeBodyPadding = { 5, 5 };
-static float2 const NodeOuterPadding = PinSize;
+static float2 const NodeOuterPadding = { PinSize * 0.6, 1 };
 
 /// Computes the position of \p pin relative to its parent node
 static float2 computePinPosition(Pin const& pin, size_t index) {
@@ -372,11 +413,22 @@ static float2 computeAbsPinPosition(Pin const& pin) {
            computePinPosition(pin, pin.indexInParent());
 }
 
-static void drawPin(float2 position) {
+static float4 selectPinColor(Pin const& pin) {
+    auto* input = dyncast<InputPin const*>(&pin);
+    if (!input || input->origin()) {
+        return PinColorConnected;
+    }
+    if (test(input->desc().flags & PinFlags::Optional)) {
+        return PinColorOptional;
+    }
+    return PinColorMissing;
+}
+
+static void drawPin(Pin const& pin, float2 position) {
     auto* DL = ImGui::GetWindowDrawList();
     float radius = 6;
     DL->AddCircleFilled(position + PinSize / 2, radius,
-                        ImGui::ColorConvertFloat4ToU32(PinColor()));
+                        ImGui::ColorConvertFloat4ToU32(selectPinColor(pin)));
     DL->AddCircle(position + PinSize / 2, radius,
                   ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
 }
@@ -505,7 +557,7 @@ static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
         }
     }
     drawPinLinks(viewData, pin, position);
-    drawPin(position);
+    drawPin(pin, position);
     bool isDraggingCompatiblePin = viewData.activePin &&
                                    isCompatible(*viewData.activePin, pin);
     if (hovered && !dragging &&
@@ -542,14 +594,19 @@ static void displayInputsOutputs(ViewData& viewData, Node& node) {
 }
 
 /// \Returns the area in which content can be drawn
-static ImRect drawNodeBody(Node const& node) {
+static ImRect drawNodeBody(Node const& node, bool selected) {
     float2 pos = (float2)ImGui::GetWindowPos() + NodeOuterPadding;
-    float rounding = 5;
+    float rounding = 6;
     auto* DL = ImGui::GetWindowDrawList();
     DL->AddRectFilled(pos, pos + node.size(),
                       ImGui::ColorConvertFloat4ToU32(node.desc().color),
                       rounding + 1);
-    DL->AddRect(pos + float2(1, 1), pos + node.size() - float2(2, 2),
+    if (selected) {
+        DL->AddRect(pos + 2, pos + node.size() - 2,
+                    ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor),
+                    rounding - 1.5f, ImDrawFlags_None, 3);
+    }
+    DL->AddRect(pos + 1, pos + node.size() - 1,
                 ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor),
                 rounding - 1);
     DL->AddRect(pos, pos + node.size(),
@@ -584,9 +641,7 @@ static bool beginInvisibleWindow(float2 pos, float2 size) {
     static constexpr auto name = "Node_Body_Content";
     bool open = ImGui::BeginChildEx(name, ImGui::GetID(name), size,
                                     ImGuiChildFlags_None,
-                                    ImGuiWindowFlags_NoDecoration |
-                                        ImGuiWindowFlags_NoMove |
-                                        ImGuiWindowFlags_NoScrollbar);
+                                    ImGuiWindowFlags_NoDecoration);
     ImGui::PopStyleColor();
     return open;
 }
@@ -635,7 +690,19 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node) {
     }
 }
 
-static void displayNodeBody(ViewData& viewData, Node& node) {
+static void handleSelection(Node& node, Selection& selection) {
+    if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
+        selection.add(&node);
+    }
+    else if (ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
+        selection.toggle(&node);
+    }
+    else {
+        selection.set(&node);
+    }
+}
+
+void Impl::displayNodeBody(Node& node) {
     float2 pos =
         (float2)ImGui::GetWindowPos() + viewData.position + node.position();
     if (!beginInvisibleWindow(pos - NodeOuterPadding,
@@ -644,9 +711,10 @@ static void displayNodeBody(ViewData& viewData, Node& node) {
         ImGui::EndChild();
         return;
     }
+    bool isSelected = selection.contains(&node);
     auto* DL = ImGui::GetWindowDrawList();
     DL->PushClipRect(viewData.clipRect.Min, viewData.clipRect.Max);
-    ImRect contentRect = drawNodeBody(node);
+    ImRect contentRect = drawNodeBody(node, isSelected);
     ImGuiID id = ImGui::GetID("Node_Body");
     ImRect bb(pos, pos + node.size());
     ImGui::ItemSize(node.size());
@@ -662,6 +730,20 @@ static void displayNodeBody(ViewData& viewData, Node& node) {
     if (bgClicked) {
         viewData.activeNode = &node;
     }
+    /// Selected nodes change selection state when mouse is released
+    if (isSelected && viewData.activeNode == &node &&
+        ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
+        !viewData.isDraggingNode && !viewData.handledSelectionSinceMousePresed)
+    {
+        handleSelection(node, selection);
+    }
+    /// Not selected nodes change selection state when mouse is pressed
+    if (!isSelected && bgClicked) {
+        /// We use this flag so we don't select and immediately unselect when
+        /// the mouse is released
+        viewData.handledSelectionSinceMousePresed = true;
+        handleSelection(node, selection);
+    }
     bool dragging = [&] {
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             return false;
@@ -670,17 +752,23 @@ static void displayNodeBody(ViewData& viewData, Node& node) {
                !viewData.activePin;
     }();
     if (dragging) {
-        node.setPosition(node.position() + (float2)ImGui::GetIO().MouseDelta);
+        float2 delta = ImGui::GetIO().MouseDelta;
+        if (vml::max_norm(delta) >= 1) {
+            viewData.isDraggingNode = true;
+        }
+        for (auto* node: selection.nodes()) {
+            node->setPosition(node->position() + delta);
+        }
     }
     DL->PopClipRect();
     ImGui::EndChild();
 }
 
-static void displayNode(ViewData& viewData, Node& node) {
+void Impl::displayNode(Node& node) {
     node.setSize(
         vml::max(node.size(), computeMinNodeSize(node, NodeBodyPadding)));
     ImGui::PushID(&node);
-    displayNodeBody(viewData, node);
+    displayNodeBody(node);
     ImGui::PopID();
 }
 
@@ -695,12 +783,14 @@ void Impl::display() {
     auto* window = ImGui::GetCurrentWindow();
     viewData.clipRect = window->ContentRegionRect;
     drawBackground(viewData.position, viewData.zoom);
-    backgroundBehaviour(viewData);
     viewData.hoveredNode = nullptr;
     for (auto* node: currentNodeOrder) {
-        displayNode(viewData, *node);
+        displayNode(*node);
     }
+    backgroundBehaviour();
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        viewData.handledSelectionSinceMousePresed = false;
+        viewData.isDraggingNode = false;
         viewData.activeNode = nullptr;
         viewData.activeResize = nullptr;
         viewData.activePin = nullptr;

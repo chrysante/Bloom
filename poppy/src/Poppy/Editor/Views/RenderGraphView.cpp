@@ -8,19 +8,23 @@ using namespace bloom;
 POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
 
 void RenderGraphView::init() {
+    using namespace nodeEditor;
     // clang-format off
     nodeEditor.addNode({
         .name = "Some Input",
         .position = { 0, 0 },
         .minSize = { 80, 0 },
-        .inputs = { { .name = "Optional Input" } },
+        .inputs = { { .name = "Optional Input", .flags = PinFlags::Optional } },
         .outputs = { { .name = "Texture" } }
     });
     nodeEditor.addNode({
         .name = "Some Long Pass",
         .position = { 200, 400 },
         .minSize = { 150, 100 },
-        .inputs = { { .name = "Depth Buffer" }, { .name = "Raw Image" } },
+        .inputs = {
+            { .name = "Depth Buffer" },
+            { .name = "Raw Image", .flags = PinFlags::Optional }
+        },
         .outputs = { { .name = "Result" } },
         .content = [] {
             if (ImGui::Button("Button")) {

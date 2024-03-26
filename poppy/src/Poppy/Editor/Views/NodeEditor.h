@@ -10,8 +10,10 @@
 
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
+#include <utl/common.hpp>
 #include <utl/hashtable.hpp>
 #include <utl/vector.hpp>
+
 #include <vml/vml.hpp>
 
 #include "Bloom/Application/InputEvent.h"
@@ -38,8 +40,13 @@ UTL_DYNCAST_DEFINE(poppy::nodeEditor::OutputPin,
 
 namespace poppy::nodeEditor {
 
+enum class PinFlags { Optional = 1 << 0 };
+
+UTL_ENUM_OPERATORS(PinFlags)
+
 struct PinDesc {
     std::string name;
+    PinFlags flags;
 };
 
 struct NodeDesc {

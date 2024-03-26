@@ -198,6 +198,7 @@ struct PersistentViewData {
 };
 
 struct ViewData: PersistentViewData {
+    ImRect clipRect = {};
     bool isBGHovered = false;
     bool isDraggingNode = false;
     Node* hoveredNode = nullptr;
@@ -329,9 +330,9 @@ static float4 const WhiteOutlineColor = { 1, 1, 1, 0.5 };
 static float4 const BlackOutlineColor = { 0, 0, 0, 0.7 };
 static float4 const LinkColor = { 1, 1, 1, 0.8 };
 static float4 PinColor() { return ImGui::GetStyleColorVec4(ImGuiCol_PopupBg); }
-static float2 const MinNodeSize = { 80, 40 };
-static float2 const NodeBodyPadding = { 5, 5 };
 static float const PinSize = 20;
+static float2 const NodeBodyPadding = { 5, 5 };
+static float2 const NodeOuterPadding = PinSize;
 
 /// Computes the position of \p pin relative to its parent node
 static float2 computePinPosition(Pin const& pin, size_t index) {
@@ -444,7 +445,7 @@ static void drawLink(float2 begin, float2 end) {
 
 static void drawPinLinks(ViewData const& viewData, Pin const& pin,
                          float2 pinPosition) {
-    float2 basePos = (float2)ImGui::GetWindowPos() + viewData.position;
+    float2 basePos = (float2)viewData.clipRect.Min + viewData.position;
     // clang-format off
     visit(pin, utl::overload{
         [&](InputPin const& pin) {
@@ -511,8 +512,7 @@ static float2 computeMinNodeSize(Node const& node, float2 bodyPadding) {
 }
 
 static void displayInputsOutputs(ViewData& viewData, Node& node) {
-    float2 winpos = ImGui::GetWindowPos();
-    float2 nodepos = winpos + viewData.position + node.position();
+    float2 nodepos = (float2)ImGui::GetWindowPos() + NodeOuterPadding;
     ImGui::PushID("Inputs");
     for (auto [index, pin]: node.inputs() | enumerate) {
         displayPin(viewData, *pin, nodepos + computePinPosition(*pin, index));
@@ -526,9 +526,8 @@ static void displayInputsOutputs(ViewData& viewData, Node& node) {
 }
 
 /// \Returns the area in which content can be drawn
-static ImRect drawNodeBody(ViewData const& viewData, Node const& node) {
-    float2 winpos = ImGui::GetWindowPos();
-    float2 pos = winpos + viewData.position + node.position();
+static ImRect drawNodeBody(Node const& node) {
+    float2 pos = (float2)ImGui::GetWindowPos() + NodeOuterPadding;
     float rounding = 5;
     auto* DL = ImGui::GetWindowDrawList();
     DL->AddRectFilled(pos, pos + node.size(),
@@ -563,67 +562,40 @@ static ImRect drawNodeBody(ViewData const& viewData, Node const& node) {
                       float2(contentPaddingRight, 0));
 }
 
+static bool beginInvisibleWindow(float2 pos, float2 size) {
+    ImGui::SetNextWindowPos(pos);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32_BLACK_TRANS);
+    static constexpr auto name = "Node_Body_Content";
+    bool open = ImGui::BeginChildEx(name, ImGui::GetID(name), size,
+                                    ImGuiChildFlags_None,
+                                    ImGuiWindowFlags_NoDecoration |
+                                        ImGuiWindowFlags_NoMove |
+                                        ImGuiWindowFlags_NoScrollbar);
+    ImGui::PopStyleColor();
+    return open;
+}
+
 static bool displayNodeContent(ImRect contentRect, Node const& node) {
     if (!node.desc().content) {
         return false;
     }
-    static constexpr auto name = "Node_Body_Content";
-    ImGui::SetNextWindowPos(contentRect.Min);
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32_BLACK_TRANS);
-    ImGui::BeginChildEx(name, ImGui::GetID(name), contentRect.GetSize(),
-                        ImGuiChildFlags_None,
-                        ImGuiWindowFlags_NoDecoration |
-                            ImGuiWindowFlags_NoMove |
-                            ImGuiWindowFlags_NoScrollbar);
+    if (!beginInvisibleWindow(contentRect.Min, contentRect.GetSize())) {
+        return false;
+    }
     ImGui::SetNextItemAllowOverlap();
-    bool bgPressed = ImGui::InvisibleButton("Content_BG_Button",
+    bool bgPressed = ImGui::InvisibleButton("Content_View_Background_Button",
                                             ImGui::GetContentRegionAvail(),
                                             ImGuiButtonFlags_PressedOnClick);
     ImGui::SetCursorPos({});
-    ImGui::PopStyleColor();
     node.desc().content();
     ImGui::EndChild();
-    if (bgPressed) {
-        Logger::Trace("BG pressed");
-    }
     return bgPressed;
 }
 
-static void displayNodeBody(ViewData& viewData, Node& node) {
-    auto contentRect = drawNodeBody(viewData, node);
-    bool bgPressed = displayNodeContent(contentRect, node);
-    float2 winpos = ImGui::GetWindowPos();
-    float2 pos = winpos + viewData.position + node.position();
-    ImGuiID id = ImGui::GetID("Node_Body");
-    ImRect bb(pos, pos + node.size());
-    ImGui::ItemSize(node.size());
-    ImGui::ItemAdd(bb, id);
-    bool hovered = ImGui::ItemHoverable(bb, id, ImGuiItemFlags_AllowOverlap);
-    if (hovered) {
-        viewData.hoveredNode = &node;
-    }
-    if (ImGui::IsItemClicked() || bgPressed) {
-        viewData.activeNode = &node;
-    }
-    displayInputsOutputs(viewData, node);
-    bool dragging = [&] {
-        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-            return false;
-        }
-        return viewData.activeNode == &node && !viewData.activeResize &&
-               !viewData.activePin;
-    }();
-    if (dragging) {
-        node.setPosition(node.position() + (float2)ImGui::GetIO().MouseDelta);
-    }
-}
-
-static void displayNodeResizeGrip(ViewData& viewData, Node& node,
-                                  float2 minSize) {
+static void displayNodeResizeGrip(ViewData& viewData, Node& node) {
     float2 areaSize = { 10, 10 };
-    float2 winpos = ImGui::GetWindowPos();
-    float2 pos =
-        winpos + viewData.position + node.position() + node.size() - areaSize;
+    float2 pos = (float2)ImGui::GetWindowPos() + NodeOuterPadding +
+                 node.size() - areaSize;
     ImGuiID id = ImGui::GetID("Node_Resize_Grip");
     ImRect bb(pos, pos + areaSize);
     ImGui::ItemSize(areaSize);
@@ -635,19 +607,60 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node,
     bool dragging = viewData.activeResize == &node &&
                     ImGui::IsMouseDown(ImGuiMouseButton_Left);
     if (dragging) {
-        node.setSize(
-            vml::max(node.size() + (float2)ImGui::GetIO().MouseDelta, minSize));
+        float2 minSize = computeMinNodeSize(node, NodeBodyPadding);
+        float2 newSize =
+            vml::max(node.size() + (float2)ImGui::GetIO().MouseDelta, minSize);
+        node.setSize(newSize);
     }
     if (hovered || dragging) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
     }
 }
 
+static void displayNodeBody(ViewData& viewData, Node& node) {
+    float2 pos =
+        (float2)ImGui::GetWindowPos() + viewData.position + node.position();
+    if (!beginInvisibleWindow(pos - NodeOuterPadding,
+                              node.size() + 2 * NodeOuterPadding))
+    {
+        return;
+    }
+    auto* DL = ImGui::GetWindowDrawList();
+    DL->PushClipRect(viewData.clipRect.Min, viewData.clipRect.Max);
+    ImRect contentRect = drawNodeBody(node);
+    ImGuiID id = ImGui::GetID("Node_Body");
+    ImRect bb(pos, pos + node.size());
+    ImGui::ItemSize(node.size());
+    ImGui::ItemAdd(bb, id);
+    bool hovered = ImGui::ItemHoverable(bb, id, ImGuiItemFlags_AllowOverlap);
+    if (hovered) {
+        viewData.hoveredNode = &node;
+    }
+    bool bgClicked = ImGui::IsItemClicked();
+    displayInputsOutputs(viewData, node);
+    bgClicked |= displayNodeContent(contentRect, node);
+    displayNodeResizeGrip(viewData, node);
+    if (bgClicked) {
+        viewData.activeNode = &node;
+    }
+    bool dragging = [&] {
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            return false;
+        }
+        return viewData.activeNode == &node && !viewData.activeResize &&
+               !viewData.activePin;
+    }();
+    if (dragging) {
+        node.setPosition(node.position() + (float2)ImGui::GetIO().MouseDelta);
+    }
+    DL->PopClipRect();
+    ImGui::EndChild();
+}
+
 static void displayNode(ViewData& viewData, Node& node) {
-    float2 minSize = computeMinNodeSize(node, NodeBodyPadding);
-    node.setSize(vml::max(node.size(), minSize));
+    node.setSize(
+        vml::max(node.size(), computeMinNodeSize(node, NodeBodyPadding)));
     ImGui::PushID(&node);
-    displayNodeResizeGrip(viewData, node, minSize);
     displayNodeBody(viewData, node);
     ImGui::PopID();
 }
@@ -660,6 +673,8 @@ void Impl::display() {
     {
         return;
     }
+    auto* window = ImGui::GetCurrentWindow();
+    viewData.clipRect = window->ContentRegionRect;
     drawBackground(viewData.position, viewData.zoom);
     backgroundBehaviour(viewData);
     viewData.hoveredNode = nullptr;

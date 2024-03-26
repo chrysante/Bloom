@@ -114,9 +114,9 @@ static InputEventMask translateType(NSEventType type) {
     }
 }
 
-static InputEvent makeInputEvent(InputEventMask type, MouseButton button,
-                                 bool isDown, int clickCount,
-                                 Input const& input) {
+static InputEvent makeMouseButtonEvent(InputEventMask type, MouseButton button,
+                                       bool isDown, int clickCount,
+                                       Input const& input) {
     MouseEvent base{ { input.modFlags() }, input.mousePosition() };
     if (isDown) {
         MouseDownEvent downEvent{ base, .button = button,
@@ -127,6 +127,24 @@ static InputEvent makeInputEvent(InputEventMask type, MouseButton button,
         MouseUpEvent upEvent{ base, .button = button };
         return InputEvent(type, upEvent);
     }
+}
+
+static InputEvent makeScrollEvent(NSEvent* event) {
+    ScrollEvent result{};
+    result.isTrackpad = event.momentumPhase != NSEventPhaseNone ||
+                        event.phase != NSEventPhaseNone;
+    result.modifierFlags = translateModFlags(event.modifierFlags);
+    result.locationInWindow = event.locationInWindow;
+    result.offset = { event.scrollingDeltaX, event.scrollingDeltaY };
+    return InputEvent(InputEventMask::ScrollWheel, result);
+}
+
+static InputEvent makeMagnificationEvent(NSEvent* event) {
+    MagnificationEvent result{};
+    result.modifierFlags = translateModFlags(event.modifierFlags);
+    result.locationInWindow = event.locationInWindow;
+    result.offset = event.magnification;
+    return InputEvent(InputEventMask::Magnify, result);
 }
 
 /// \Returns `true` if the location of \p event is over the frame of \p button
@@ -212,10 +230,7 @@ void Window::platformInit() {
     /// Because GLFW down not get mouse input events over the toolbar we monitor
     /// these events ourself
     /// TODO: Remove the monitors when we destroy the window
-    auto mask = NSEventMaskLeftMouseDown | NSEventMaskLeftMouseUp |
-                NSEventMaskRightMouseDown | NSEventMaskRightMouseUp |
-                NSEventMaskOtherMouseDown | NSEventMaskOtherMouseUp;
-    auto inputHandler = ^NSEvent*(NSEvent* event) {
+    auto mouseButtonHandler = ^NSEvent*(NSEvent* event) {
         if (event.window != window) {
             return event;
         }
@@ -228,9 +243,9 @@ void Window::platformInit() {
             return event;
         }
         if (callbacks.onInputFn) {
-            auto inputEvent = makeInputEvent(translateType(event.type), button,
-                                             isDown, (int)event.clickCount,
-                                             userInput);
+            auto inputEvent =
+                makeMouseButtonEvent(translateType(event.type), button, isDown,
+                                     (int)event.clickCount, userInput);
             callbacks.onInputFn(inputEvent);
         }
         bool isInToolbar =
@@ -243,13 +258,42 @@ void Window::platformInit() {
         }
         return event;
     };
-    [NSEvent addLocalMonitorForEventsMatchingMask:mask handler:inputHandler];
+    auto mouseButtonMask = NSEventMaskLeftMouseDown | NSEventMaskLeftMouseUp |
+                           NSEventMaskRightMouseDown | NSEventMaskRightMouseUp |
+                           NSEventMaskOtherMouseDown | NSEventMaskOtherMouseUp;
+    [NSEvent addLocalMonitorForEventsMatchingMask:mouseButtonMask
+                                          handler:mouseButtonHandler];
+    auto scrollHandler = ^NSEvent*(NSEvent* event) {
+        if (event.window != window) {
+            return event;
+        }
+        userInput.setScrollOffset(
+            { event.scrollingDeltaX, event.scrollingDeltaY });
+        if (callbacks.onInputFn) {
+            callbacks.onInputFn(makeScrollEvent(event));
+        }
+        return event;
+    };
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskScrollWheel
+                                          handler:scrollHandler];
+    auto magnifyHandler = ^NSEvent*(NSEvent* event) {
+        if (event.window != window) {
+            return event;
+        }
+        if (callbacks.onInputFn) {
+            callbacks.onInputFn(makeMagnificationEvent(event));
+        }
+        return event;
+    };
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskMagnify
+                                          handler:magnifyHandler];
     auto appDefinedReceiver = ^NSEvent*(NSEvent* event) {
         if ((CocoaEventType)event.subtype == CocoaEventType::WindowShallZoom) {
             [event.window zoom:nil];
         }
         return event;
     };
+
     [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskApplicationDefined
                                           handler:appDefinedReceiver];
 }

@@ -19,10 +19,14 @@ set(poppy_sources
   src/Poppy/Editor/Views/DirectoryView.h
   src/Poppy/Editor/Views/EntityInspector.cpp
   src/Poppy/Editor/Views/EntityInspector.h
+  src/Poppy/Editor/Views/NodeEditor.cpp
+  src/Poppy/Editor/Views/NodeEditor.h
   src/Poppy/Editor/Views/MaterialInstanceViewer.cpp
   src/Poppy/Editor/Views/MaterialInstanceViewer.h
   src/Poppy/Editor/Views/RendererDebuggerView.cpp
   src/Poppy/Editor/Views/RendererDebuggerView.h
+  src/Poppy/Editor/Views/RenderGraphView.cpp
+  src/Poppy/Editor/Views/RenderGraphView.h
   src/Poppy/Editor/Views/RendererSettingsView.cpp
   src/Poppy/Editor/Views/RendererSettingsView.h
   src/Poppy/Editor/Views/SceneOutliner.cpp

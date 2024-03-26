@@ -243,6 +243,7 @@ void Window::setCallbacks() {
                                [](GLFWwindow* w, [[maybe_unused]] int entered) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
     });
+#if !defined(BLOOM_PLATFORM_APPLE)
     glfwSetScrollCallback(GLFW_WND,
                           [](GLFWwindow* w, double xoffset, double yoffset) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -253,6 +254,7 @@ void Window::setCallbacks() {
                                              yoffset));
         }
     });
+#endif
     glfwSetKeyCallback(GLFW_WND, [](GLFWwindow* w, int key, int scancode,
                                     int action, int mods) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);

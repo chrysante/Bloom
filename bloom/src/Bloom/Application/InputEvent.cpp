@@ -83,7 +83,7 @@ InputEvent bloom::makeInputEventFromGLFWCursorPos(Input const& input, double,
 
 InputEvent bloom::makeInputEventFromGLFWScroll(Input const& input,
                                                double xoffset, double yoffset) {
-    ScrollEvent event;
+    ScrollEvent event{};
     event.modifierFlags = input.modFlags();
     event.locationInWindow = input.mousePosition();
     event.offset = { xoffset, yoffset };

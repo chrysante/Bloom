@@ -505,11 +505,9 @@ static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
 }
 
 static float2 computeMinNodeSize(Node const& node, float2 bodyPadding) {
-    float2 inner = { MinNodeSize.x,
-                     std::max(MinNodeSize.y,
-                              PinSize * std::max(node.inputs().size(),
-                                                 node.outputs().size())) };
-    return inner + 2 * bodyPadding;
+    float pinHeight =
+        PinSize * std::max(node.inputs().size(), node.outputs().size());
+    return vml::max(node.minSize(), float2(0, pinHeight)) + 2 * bodyPadding;
 }
 
 static void displayInputsOutputs(ViewData& viewData, Node& node) {
@@ -527,7 +525,8 @@ static void displayInputsOutputs(ViewData& viewData, Node& node) {
     ImGui::PopID();
 }
 
-static void drawNodeBody(ViewData const& viewData, Node const& node) {
+/// \Returns the area in which content can be drawn
+static ImRect drawNodeBody(ViewData const& viewData, Node const& node) {
     float2 winpos = ImGui::GetWindowPos();
     float2 pos = winpos + viewData.position + node.position();
     float rounding = 5;
@@ -555,10 +554,44 @@ static void drawNodeBody(ViewData const& viewData, Node const& node) {
     DL->AddText(labelPos, labelCol, label, labelEnd);
     ImGui::PopClipRect();
     ImGui::PopFont();
+    float contentPaddingLeft = node.inputs().empty() ? 0.0f : PinSize * 0.6f;
+    float contentPaddingRight = node.outputs().empty() ? 0.0f : PinSize * 0.6f;
+    return ImRect(pos + NodeBodyPadding +
+                      float2(contentPaddingLeft,
+                             labelSize.y + NodeBodyPadding.y),
+                  pos + node.size() - NodeBodyPadding -
+                      float2(contentPaddingRight, 0));
+}
+
+static bool displayNodeContent(ImRect contentRect, Node const& node) {
+    if (!node.desc().content) {
+        return false;
+    }
+    static constexpr auto name = "Node_Body_Content";
+    ImGui::SetNextWindowPos(contentRect.Min);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32_BLACK_TRANS);
+    ImGui::BeginChildEx(name, ImGui::GetID(name), contentRect.GetSize(),
+                        ImGuiChildFlags_None,
+                        ImGuiWindowFlags_NoDecoration |
+                            ImGuiWindowFlags_NoMove |
+                            ImGuiWindowFlags_NoScrollbar);
+    ImGui::SetNextItemAllowOverlap();
+    bool bgPressed = ImGui::InvisibleButton("Content_BG_Button",
+                                            ImGui::GetContentRegionAvail(),
+                                            ImGuiButtonFlags_PressedOnClick);
+    ImGui::SetCursorPos({});
+    ImGui::PopStyleColor();
+    node.desc().content();
+    ImGui::EndChild();
+    if (bgPressed) {
+        Logger::Trace("BG pressed");
+    }
+    return bgPressed;
 }
 
 static void displayNodeBody(ViewData& viewData, Node& node) {
-    drawNodeBody(viewData, node);
+    auto contentRect = drawNodeBody(viewData, node);
+    bool bgPressed = displayNodeContent(contentRect, node);
     float2 winpos = ImGui::GetWindowPos();
     float2 pos = winpos + viewData.position + node.position();
     ImGuiID id = ImGui::GetID("Node_Body");
@@ -569,11 +602,14 @@ static void displayNodeBody(ViewData& viewData, Node& node) {
     if (hovered) {
         viewData.hoveredNode = &node;
     }
-    if (ImGui::IsItemClicked()) {
+    if (ImGui::IsItemClicked() || bgPressed) {
         viewData.activeNode = &node;
     }
+    displayInputsOutputs(viewData, node);
     bool dragging = [&] {
-        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) return false;
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            return false;
+        }
         return viewData.activeNode == &node && !viewData.activeResize &&
                !viewData.activePin;
     }();
@@ -611,9 +647,8 @@ static void displayNode(ViewData& viewData, Node& node) {
     float2 minSize = computeMinNodeSize(node, NodeBodyPadding);
     node.setSize(vml::max(node.size(), minSize));
     ImGui::PushID(&node);
-    displayNodeBody(viewData, node);
     displayNodeResizeGrip(viewData, node, minSize);
-    displayInputsOutputs(viewData, node);
+    displayNodeBody(viewData, node);
     ImGui::PopID();
 }
 

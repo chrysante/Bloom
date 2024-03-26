@@ -45,7 +45,7 @@ struct PinDesc {
 struct NodeDesc {
     std::string name;
     vml::float2 position;
-    vml::float2 size;
+    vml::float2 minSize;
     std::vector<PinDesc> inputs;
     std::vector<PinDesc> outputs;
     std::function<void()> content;
@@ -173,9 +173,11 @@ public:
 
     std::string const& name() const { return desc().name; }
 
-    vml::float2 size() const { return desc().size; }
+    vml::float2 size() const { return _size; }
 
-    void setSize(vml::float2 size) { _desc.size = size; }
+    void setSize(vml::float2 size) { _size = size; }
+
+    vml::float2 minSize() const { return desc().minSize; }
 
     vml::float2 position() const { return desc().position; }
 
@@ -185,6 +187,7 @@ private:
     friend class Pin;
 
     NodeDesc _desc;
+    vml::float2 _size;
     std::vector<nodeEditor::UniquePtr<nodeEditor::InputPin>> _inputs;
     std::vector<nodeEditor::UniquePtr<nodeEditor::OutputPin>> _outputs;
 };

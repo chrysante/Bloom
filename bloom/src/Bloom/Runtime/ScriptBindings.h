@@ -23,14 +23,7 @@ struct ScriptTransform {
     }
 
     explicit operator Transform() const {
-        return Transform{ position,
-                          vml::quaternion_float{
-                              orientation.x,
-                              orientation.y,
-                              orientation.z,
-                              orientation.w,
-                          },
-                          scale };
+        return Transform{ position, orientation, scale };
     }
 };
 

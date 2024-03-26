@@ -36,8 +36,8 @@
 - Handle:
     AssetType: ScriptSource
     AssetID: d5d03e7d f2e3d455 9f1ec432 b5521366
-  Name: OtherScript
-  Location: OtherScript.sc
+  Name: Print
+  Location: Print.sc
 - Handle:
     AssetType: MaterialInstance
     AssetID: e26ba1dc b9fd446e f9e537ac c56ff427

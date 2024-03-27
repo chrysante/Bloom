@@ -34,12 +34,16 @@ static float4 PinColorMissing = { 1, 0, 0.2, 1 };
 static float PinAreaSize = 20;
 static float NodeBodyRounding = 10;
 static float NodeBodySelectionOutlineInset = 3;
+static float MissingInputIndicatorWidth = 3;
 /// How far the pins are moved into the node. If this is zero the outer edge of
 /// the node aligns with the edge of the pin
 static float PinInset = 0;
 static float2 MinNodeBodyPadding = 5;
 static float4 SelectionRectColor = { 1, 1, 1, 0.3 };
 static float2 BackgroundLineDist = { 30, 30 };
+float LinkBezierControlPointXMin = 100;
+float LinkBezierControlPointXMax = 100;
+float LinkBezierControlPointYFalloff = 150;
 
 /// Derived properties
 static float2 NodeBodyPadding() {
@@ -63,10 +67,20 @@ static float2 NodeOuterPadding() {
     ImGui::SliderFloat("NodeBodyRounding", &NodeBodyRounding, 0, 100);
     ImGui::SliderFloat("NodeBodySelectionOutlineInset",
                        &NodeBodySelectionOutlineInset, 0, 100);
+    ImGui::SliderFloat("MissingInputIndicatorWidth",
+                       &MissingInputIndicatorWidth, 0, 10);
     ImGui::SliderFloat("PinInset", &PinInset, -100, 100);
     ImGui::SliderFloat2("MinNodeBodyPadding", MinNodeBodyPadding.data(), 0, 50);
     ImGui::SliderFloat2("BackgroundLineDist", BackgroundLineDist.data(), 0,
                         200);
+    ImGui::SliderFloat("LinkBezierControlPointXMin",
+                       &LinkBezierControlPointXMin, 0,
+                       LinkBezierControlPointXMax);
+    ImGui::SliderFloat("LinkBezierControlPointXMax",
+                       &LinkBezierControlPointXMax, LinkBezierControlPointXMin,
+                       1000);
+    ImGui::SliderFloat("LinkBezierControlPointYFalloff",
+                       &LinkBezierControlPointYFalloff, 0, 1000);
     ImGui::End();
 }
 
@@ -616,15 +630,26 @@ static float2 computeViewPinPosition(ViewData const& viewData, Pin const& pin) {
     return basePos + computeWorldPinPosition(pin);
 }
 
+static bool isOptional(Pin const& pin) {
+    return test(pin.desc().flags & PinFlags::Optional);
+}
+
 static float4 selectPinColor(Pin const& pin) {
-    auto* input = dyncast<InputPin const*>(&pin);
-    if (!input || input->origin()) {
-        return PinColorConnected;
-    }
-    if (test(input->desc().flags & PinFlags::Optional)) {
+    if (isOptional(pin)) {
         return PinColorOptional;
     }
-    return PinColorMissing;
+    return PinColorConnected;
+}
+
+static bool inputMissing(Pin const& pin) {
+    if (isOptional(pin)) {
+        return false;
+    }
+    auto* input = dyncast<InputPin const*>(&pin);
+    if (!input) {
+        return false;
+    }
+    return input->origin() == nullptr;
 }
 
 static void drawPin(Pin const& pin, float2 position) {
@@ -632,6 +657,12 @@ static void drawPin(Pin const& pin, float2 position) {
     float radius = 6;
     DL->AddCircleFilled(position + PinAreaSize / 2, radius,
                         ImGui::ColorConvertFloat4ToU32(selectPinColor(pin)));
+    if (inputMissing(pin)) {
+        DL->AddCircle(position + PinAreaSize / 2,
+                      radius + MissingInputIndicatorWidth / 2,
+                      ImGui::ColorConvertFloat4ToU32(PinColorMissing), 0,
+                      MissingInputIndicatorWidth);
+    }
     DL->AddCircle(position + PinAreaSize / 2, radius,
                   ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
 }
@@ -694,8 +725,11 @@ static LinkDrawData getLinkDrawData(float2 begin, float2 end) {
     dd.mid = (begin + end) / 2;
     dd.area = vml::abs(end - begin);
     float crtlPointFactor =
-        2.0f * std::atan(dd.area.y / 100) / vml::constants<float>::pi;
-    float ctrlPointX = crtlPointFactor * std::clamp(dd.area.x, 100.f, 200.0f);
+        2.0f * std::atan(dd.area.y / LinkBezierControlPointYFalloff) /
+        vml::constants<float>::pi;
+    float ctrlPointX = crtlPointFactor * std::clamp(dd.area.x,
+                                                    LinkBezierControlPointXMin,
+                                                    LinkBezierControlPointXMax);
     dd.beginControlPoint = dd.begin + float2(ctrlPointX, 0);
     dd.endControlPoint = dd.end - float2(ctrlPointX, 0);
     return dd;
@@ -1031,7 +1065,6 @@ void Impl::display() {
         selection.applyCandidates();
     }
     ImGui::EndChild();
-    styleViewer(nullptr);
 }
 
 void Impl::drawOverlays() {

@@ -541,25 +541,18 @@ static bool nodeOverlapsRect(ViewData const& viewData, Node const& node,
 }
 
 void Impl::backgroundBehaviour() {
-    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow) ||
-        !viewData.clipRect.Contains(ImGui::GetMousePos()) ||
-        viewData.activeNode || viewData.activePin)
-    {
+    bool windowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow);
+    bool haveNodeInteraction = viewData.activeNode || viewData.activePin;
+    if (!windowHovered || haveNodeInteraction) {
         return;
     }
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        if (!viewData.isSelectionDragging) {
-            viewData.isSelectionDragging = true;
-            viewData.selectionBegin = ImGui::GetMousePos();
-            selection.beginCandidates();
-        }
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
+        !viewData.isSelectionDragging)
+    {
+        viewData.isSelectionDragging = true;
+        viewData.selectionBegin = ImGui::GetMousePos();
         viewData.selectionEnd = ImGui::GetMousePos();
-        ImRect selectionRect = viewData.getSelectionRect();
-        auto candidates = graph.nodes() |
-                          ranges::views::filter([&](Node const* node) {
-            return nodeOverlapsRect(viewData, *node, selectionRect);
-        });
-        selection.setCandidates(candidates | ranges::to<utl::hashset<Node*>>);
+        selection.beginCandidates();
     }
     if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
         viewData.isMoveDragging = true;
@@ -576,6 +569,13 @@ void Impl::onInput(InputEvent& event) {
         }
         if (viewData.isSelectionDragging) {
             viewData.selectionEnd = event.locationInWindow;
+            ImRect selectionRect = viewData.getSelectionRect();
+            auto candidates = graph.nodes() |
+                              ranges::views::filter([&](Node const* node) {
+                return nodeOverlapsRect(viewData, *node, selectionRect);
+            });
+            selection.setCandidates(candidates |
+                                    ranges::to<utl::hashset<Node*>>);
         }
         return true;
     });

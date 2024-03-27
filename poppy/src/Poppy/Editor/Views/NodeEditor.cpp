@@ -34,8 +34,8 @@ static float2 const BackgroundLineDist = { 30, 30 };
 
 using Impl = NodeEditor::Impl;
 
-static ImRect toRect(float2 begin, float2 end) {
-    return ImRect(vml::min(begin, end), vml::max(begin, end));
+static ImRect toRect(float2 begin, float2 end, auto... rest) {
+    return ImRect(vml::min(begin, end, rest...), vml::max(begin, end, rest...));
 }
 
 static ImRect toRect(Node const& node) {
@@ -250,6 +250,10 @@ struct ActiveViewData {
     float2 resizeSize = 0;
     float2 selectionBegin = 0;
     float2 selectionEnd = 0;
+    /// We keep track of nodes whose links must be drawn despite the node being
+    /// offscreen and render these links with the next node onscreen or with the
+    /// overlays
+    utl::small_vector<Node const*> offscreenNodeQueue;
 
     ImRect getSelectionRect() const {
         return toRect(selectionBegin, selectionEnd);
@@ -477,6 +481,13 @@ static void drawBackground(float2 viewPos) {
               Axis::Vertical, color);
 }
 
+static bool nodeOverlapsRect(ViewData const& viewData, Node const& node,
+                             ImRect rect) {
+    auto nodeRect = toRect(node);
+    nodeRect.Translate((float2)viewData.clipRect.Min + viewData.position);
+    return rect.Overlaps(nodeRect);
+}
+
 void Impl::backgroundBehaviour() {
     if (!viewData.clipRect.Contains(ImGui::GetMousePos()) ||
         viewData.activeNode || viewData.activePin)
@@ -493,38 +504,13 @@ void Impl::backgroundBehaviour() {
         ImRect selectionRect = viewData.getSelectionRect();
         auto candidates = graph.nodes() |
                           ranges::views::filter([&](Node const* node) {
-            auto rect = toRect(*node);
-            rect.Translate((float2)viewData.clipRect.Min + viewData.position);
-            Logger::Trace("Node Rect Min: ", float2(rect.Min));
-            return selectionRect.Overlaps(rect);
+            return nodeOverlapsRect(viewData, *node, selectionRect);
         });
         selection.setCandidates(candidates | ranges::to<utl::hashset<Node*>>);
     }
     if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
         viewData.isMoveDragging = true;
     }
-}
-
-void Impl::drawOverlays() {
-    if (!beginInvisibleWindow("Overlays", ImGui::GetWindowPos(),
-                              ImGui::GetWindowSize(),
-                              ImGuiWindowFlags_NoInputs))
-    {
-        ImGui::EndChild();
-        return;
-    }
-    if (viewData.isSelectionDragging) {
-        Logger::Trace("Selection Dragging");
-        Logger::Trace("Begin: ", viewData.selectionBegin);
-        Logger::Trace("End:   ", viewData.selectionEnd);
-        auto rect = viewData.getSelectionRect();
-        auto* DL = ImGui::GetWindowDrawList();
-        DL->AddRectFilled(rect.Min, rect.Max,
-                          ImGui::ColorConvertFloat4ToU32(SelectionRectColor));
-        DL->AddRect(rect.Min, rect.Max,
-                    ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
-    }
-    ImGui::EndChild();
 }
 
 void NodeEditor::onInput(InputEvent& event) { impl->onInput(event); }
@@ -580,10 +566,16 @@ static float2 computePinPosition(Pin const& pin, size_t index) {
     }); // clang-format on
 }
 
-/// Computes the position of \p pin relative to the view
-static float2 computeAbsPinPosition(Pin const& pin) {
+/// Computes the position of \p pin relative to the world
+static float2 computeWorldPinPosition(Pin const& pin) {
     return pin.parent().position() +
            computePinPosition(pin, pin.indexInParent());
+}
+
+/// Computes the position of \p pin relative to the view
+static float2 computeViewPinPosition(ViewData const& viewData, Pin const& pin) {
+    float2 basePos = (float2)viewData.clipRect.Min + viewData.position;
+    return basePos + computeWorldPinPosition(pin);
 }
 
 static float4 selectPinColor(Pin const& pin) {
@@ -686,19 +678,18 @@ static void drawLink(float2 begin, float2 end) {
 
 static void drawPinLinks(ViewData const& viewData, Pin const& pin,
                          float2 pinPosition) {
-    float2 basePos = (float2)viewData.clipRect.Min + viewData.position;
     // clang-format off
     visit(pin, utl::overload{
         [&](InputPin const& pin) {
             if (auto* origin = pin.origin()) {
-                float2 begin = basePos + computeAbsPinPosition(*origin) +
+                float2 begin = computeViewPinPosition(viewData, *origin) +
                                PinSize / 2;
                 drawLinkEnd(begin, pinPosition + PinSize / 2);
             }
         },
         [&](OutputPin const& pin) {
             for (auto* target: pin.targets()) {
-                float2 end = basePos + computeAbsPinPosition(*target) +
+                float2 end = computeViewPinPosition(viewData, *target) +
                              PinSize / 2;
                 drawLinkBegin(pinPosition + PinSize / 2, end);
             }
@@ -750,6 +741,22 @@ static float2 computeMinNodeSize(Node const& node, float2 bodyPadding) {
     float pinHeight =
         PinSize * std::max(node.inputs().size(), node.outputs().size());
     return vml::max(node.minSize(), float2(0, pinHeight)) + 2 * bodyPadding;
+}
+
+/// This function is used to draw the beginnings or endings of links of which
+/// one node is not visible
+static void drawLinksForOffscreenNode(ViewData const& viewData,
+                                      Node const& node) {
+    ImGui::PushID("Inputs");
+    for (auto* pin: node.inputs()) {
+        drawPinLinks(viewData, *pin, computeViewPinPosition(viewData, *pin));
+    }
+    ImGui::PopID();
+    ImGui::PushID("Outputs");
+    for (auto* pin: node.outputs()) {
+        drawPinLinks(viewData, *pin, computeViewPinPosition(viewData, *pin));
+    }
+    ImGui::PopID();
 }
 
 static void displayInputsOutputs(ViewData& viewData, Node& node) {
@@ -854,18 +861,37 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node) {
     }
 }
 
+bool anyNeighboursVisible(ViewData const& viewData, Node const& node) {
+    auto preds = node.predecessors();
+    auto succs = node.successors();
+    return ranges::any_of(concat(preds, succs), [&](Node const* node) {
+        return nodeOverlapsRect(viewData, *node, viewData.clipRect);
+    });
+}
+
+static void clearOffscreenNodeQueue(ViewData& viewData) {
+    for (auto* node: viewData.offscreenNodeQueue) {
+        drawLinksForOffscreenNode(viewData, *node);
+    }
+    viewData.offscreenNodeQueue.clear();
+}
+
 void Impl::displayNodeBody(Node& node) {
+    clearOffscreenNodeQueue(viewData);
     float2 pos =
         (float2)ImGui::GetWindowPos() + viewData.position + node.position();
-    if (!beginInvisibleWindow("Body", pos - NodeOuterPadding,
-                              node.size() + 2 * NodeOuterPadding))
-    {
+    bool open = beginInvisibleWindow("Body", pos - NodeOuterPadding,
+                                     node.size() + 2 * NodeOuterPadding);
+    if (!open && anyNeighboursVisible(viewData, node)) {
+        viewData.offscreenNodeQueue.push_back(&node);
+    }
+    if (!open && viewData.activeNode != &node) {
         ImGui::EndChild();
         return;
     }
-    bool isSelected = selection.contains(&node);
     auto* DL = ImGui::GetWindowDrawList();
     DL->PushClipRect(viewData.clipRect.Min, viewData.clipRect.Max);
+    bool isSelected = selection.contains(&node);
     ImRect contentRect = drawNodeBody(node, isSelected);
     ImGuiID id = ImGui::GetID("Node_Body");
     ImRect bb(pos, pos + node.size());
@@ -944,6 +970,26 @@ void Impl::display() {
     {
         viewData.resetActiveData();
         selection.applyCandidates();
+    }
+    ImGui::EndChild();
+}
+
+void Impl::drawOverlays() {
+    if (!beginInvisibleWindow("Overlays", ImGui::GetWindowPos(),
+                              ImGui::GetWindowSize(),
+                              ImGuiWindowFlags_NoInputs))
+    {
+        ImGui::EndChild();
+        return;
+    }
+    clearOffscreenNodeQueue(viewData);
+    if (viewData.isSelectionDragging) {
+        auto rect = viewData.getSelectionRect();
+        auto* DL = ImGui::GetWindowDrawList();
+        DL->AddRectFilled(rect.Min, rect.Max,
+                          ImGui::ColorConvertFloat4ToU32(SelectionRectColor));
+        DL->AddRect(rect.Min, rect.Max,
+                    ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
     }
     ImGui::EndChild();
 }

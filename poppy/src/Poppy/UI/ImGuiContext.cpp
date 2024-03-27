@@ -322,34 +322,7 @@ void poppy::ImGuiContext::onInput(InputEvent e) {
     });
     e.dispatch<InputEventMask::Key>([&](KeyEvent const& event) {
         ImGuiKey const key = toImGuiKeyCode(event.key);
-        bool const down = e.type() == InputEventMask::KeyDown;
-        // Set Modifiers
-        switch (event.key) {
-        case Key::LeftCtrl:
-            [[fallthrough]];
-        case Key::RightCtrl:
-            io.KeyCtrl = down;
-            break;
-        case Key::LeftShift:
-            [[fallthrough]];
-        case Key::RightShift:
-            io.KeyShift = down;
-            break;
-        case Key::LeftAlt:
-            [[fallthrough]];
-        case Key::RightAlt:
-            io.KeyAlt = down;
-            break;
-
-        case Key::LeftSuper:
-            [[fallthrough]];
-        case Key::RightSuper:
-            io.KeySuper = down;
-            break;
-        default:
-            break;
-        }
-        io.AddKeyEvent(key, e.type() == InputEventMask::KeyDown);
+        io.AddKeyEvent(key, /* isDown = */ e.type() == InputEventMask::KeyDown);
         return true;
     });
 }

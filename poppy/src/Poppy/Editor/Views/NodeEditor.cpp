@@ -26,9 +26,15 @@ static float4 const LinkColor = { 1, 1, 1, 0.8 };
 static float4 const PinColorConnected = { 0.2, 0.2, 0.2, 1 };
 static float4 const PinColorOptional = { 0.4, 0.4, 0.4, 1 };
 static float4 const PinColorMissing = { 1, 0, 0.2, 1 };
-static float const PinSize = 20;
+/// The side length of the square that is occupied by a pin. This is the
+/// interaction area, the rendered size is smaller
+static float const OuterPinSize = 20;
 static float2 const NodeBodyPadding = { 5, 5 };
-static float2 const NodeOuterPadding = { PinSize * 0.6, 1 };
+static float NodeBodyRounding = 10;
+static float NodeBodySelectionOutlineInset = 3;
+static float RelativePinInset = 1;
+static float2 const NodeOuterPadding = { OuterPinSize * (1 - RelativePinInset),
+                                         1 };
 static float4 const SelectionRectColor = { 1, 1, 1, 0.3 };
 static float2 const BackgroundLineDist = { 30, 30 };
 
@@ -304,7 +310,7 @@ public:
         }
     }
 
-    ///
+    /// Calls `set`, `add` or `toggle` depending on the held modifier keys
     void amend(Node* node) {
         switch (getSelectionMode()) {
         case SelectionMode::Replace:
@@ -348,15 +354,15 @@ public:
     /// \Returns a view over all selected nodes
     std::span<Node* const> nodes() const { return _nodes.values(); }
 
-    ///
+    /// Begin rectangle selection
     void beginCandidates() { this->mode = getSelectionMode(); }
 
-    ///
+    /// Update rectangle selection
     void setCandidates(utl::hashset<Node*> nodes) {
         _candidates = std::move(nodes);
     }
 
-    ///
+    /// Finish rectangle selection
     void applyCandidates() {
         if (!mode) {
             return;
@@ -555,13 +561,12 @@ static float2 computePinPosition(Pin const& pin, size_t index) {
     // clang-format off
     return visit(pin, utl::overload{
         [&](InputPin const&) {
-            return float2(PinSize * -0.4, NodeBodyPadding.y) +
-                float2(0, PinSize * index);
+            return float2(-(1 - RelativePinInset) * OuterPinSize,
+                          NodeBodyPadding.y + index * OuterPinSize);
         },
         [&](OutputPin const& pin) {
-            return float2(pin.parent().size().x + PinSize * -0.6,
-                          NodeBodyPadding.y) +
-                float2(0, PinSize * index);
+            return float2(pin.parent().size().x - RelativePinInset * OuterPinSize,
+                          NodeBodyPadding.y + index * OuterPinSize);
         }
     }); // clang-format on
 }
@@ -592,9 +597,9 @@ static float4 selectPinColor(Pin const& pin) {
 static void drawPin(Pin const& pin, float2 position) {
     auto* DL = ImGui::GetWindowDrawList();
     float radius = 6;
-    DL->AddCircleFilled(position + PinSize / 2, radius,
+    DL->AddCircleFilled(position + OuterPinSize / 2, radius,
                         ImGui::ColorConvertFloat4ToU32(selectPinColor(pin)));
-    DL->AddCircle(position + PinSize / 2, radius,
+    DL->AddCircle(position + OuterPinSize / 2, radius,
                   ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
 }
 
@@ -603,13 +608,13 @@ static void displayPinLabel(Pin const& pin, float2 pinPosition) {
     auto* textBegin = pin.name().data();
     auto* textEnd = textBegin + pin.name().size();
     float2 textSize = ImGui::CalcTextSize(textBegin, textEnd);
-    float ypos = PinSize / 2 - textSize.y / 2;
+    float ypos = OuterPinSize / 2 - textSize.y / 2;
     float2 bgPadding = 3;
     float bgRounding = 3;
     auto bgCol = ImGui::GetColorU32(ImGuiCol_PopupBg);
     float2 textPos = isa<InputPin>(pin) ?
                          pinPosition + float2(-textSize.x, ypos) :
-                         pinPosition + float2(PinSize, ypos);
+                         pinPosition + float2(OuterPinSize, ypos);
     DL->AddRectFilled(textPos - bgPadding, textPos + textSize + bgPadding,
                       bgCol, bgRounding);
     DL->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), textBegin, textEnd);
@@ -683,15 +688,15 @@ static void drawPinLinks(ViewData const& viewData, Pin const& pin,
         [&](InputPin const& pin) {
             if (auto* origin = pin.origin()) {
                 float2 begin = computeViewPinPosition(viewData, *origin) +
-                               PinSize / 2;
-                drawLinkEnd(begin, pinPosition + PinSize / 2);
+                               OuterPinSize / 2;
+                drawLinkEnd(begin, pinPosition + OuterPinSize / 2);
             }
         },
         [&](OutputPin const& pin) {
             for (auto* target: pin.targets()) {
                 float2 end = computeViewPinPosition(viewData, *target) +
-                             PinSize / 2;
-                drawLinkBegin(pinPosition + PinSize / 2, end);
+                             OuterPinSize / 2;
+                drawLinkBegin(pinPosition + OuterPinSize / 2, end);
             }
         }
     }); // clang-format on
@@ -699,8 +704,8 @@ static void drawPinLinks(ViewData const& viewData, Pin const& pin,
 
 static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
     ImGui::PushID(&pin);
-    ImRect bb(position, position + float2(PinSize));
-    ImGui::ItemSize(float2(PinSize));
+    ImRect bb(position, position + float2(OuterPinSize));
+    ImGui::ItemSize(float2(OuterPinSize));
     auto ID = ImGui::GetID("Pin_Handle");
     ImGui::ItemAdd(bb, ID);
     bool hovered = ImGui::ItemHoverable(bb, ID, ImGuiItemFlags_AllowOverlap);
@@ -739,7 +744,7 @@ static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
 
 static float2 computeMinNodeSize(Node const& node, float2 bodyPadding) {
     float pinHeight =
-        PinSize * std::max(node.inputs().size(), node.outputs().size());
+        OuterPinSize * std::max(node.inputs().size(), node.outputs().size());
     return vml::max(node.minSize(), float2(0, pinHeight)) + 2 * bodyPadding;
 }
 
@@ -776,21 +781,25 @@ static void displayInputsOutputs(ViewData& viewData, Node& node) {
 /// \Returns the area in which content can be drawn
 static ImRect drawNodeBody(Node const& node, bool selected) {
     float2 pos = (float2)ImGui::GetWindowPos() + NodeOuterPadding;
-    float rounding = 6;
     auto* DL = ImGui::GetWindowDrawList();
     DL->AddRectFilled(pos, pos + node.size(),
                       ImGui::ColorConvertFloat4ToU32(node.desc().color),
-                      rounding + 1);
+                      NodeBodyRounding + 1);
     if (selected) {
-        DL->AddRect(pos + 2, pos + node.size() - 2,
+        DL->AddRect(pos + NodeBodySelectionOutlineInset,
+                    pos + node.size() - NodeBodySelectionOutlineInset,
                     ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor),
-                    rounding - 1.5f, ImDrawFlags_None, 3);
+                    NodeBodyRounding - NodeBodySelectionOutlineInset,
+                    ImDrawFlags_None, 2 * NodeBodySelectionOutlineInset);
     }
-    DL->AddRect(pos + 1, pos + node.size() - 1,
+    float highlightOutlineInset = 1;
+    DL->AddRect(pos + highlightOutlineInset,
+                pos + node.size() - highlightOutlineInset,
                 ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor),
-                rounding - 1);
+                NodeBodyRounding - highlightOutlineInset);
     DL->AddRect(pos, pos + node.size(),
-                ImGui::ColorConvertFloat4ToU32(BlackOutlineColor), rounding);
+                ImGui::ColorConvertFloat4ToU32(BlackOutlineColor),
+                NodeBodyRounding);
     auto* font =
         FontManager::get(FontDesc::UIDefault().setWeight(FontWeight::Bold));
     ImGui::PushFont(font);
@@ -798,21 +807,22 @@ static ImRect drawNodeBody(Node const& node, bool selected) {
     auto* labelEnd = node.name().data() + node.name().size();
     float2 labelSize =
         vml::min((float2)ImGui::CalcTextSize(label, labelEnd),
-                 node.size() - float2(PinSize + 2 * NodeBodyPadding.x, 0));
-    float2 labelPos = pos + float2((node.size().x - labelSize.x) / 2, rounding);
+                 node.size() - float2(OuterPinSize + 2 * NodeBodyPadding.x, 0));
+    float2 labelPos =
+        pos + float2((node.size().x - labelSize.x) / 2, NodeBodyPadding.y);
     auto labelCol =
         ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
     ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
     DL->AddText(labelPos, labelCol, label, labelEnd);
     ImGui::PopClipRect();
     ImGui::PopFont();
-    float contentPaddingLeft = node.inputs().empty() ? 0.0f : PinSize * 0.6f;
-    float contentPaddingRight = node.outputs().empty() ? 0.0f : PinSize * 0.6f;
-    return ImRect(pos + NodeBodyPadding +
-                      float2(contentPaddingLeft,
-                             labelSize.y + NodeBodyPadding.y),
-                  pos + node.size() - NodeBodyPadding -
-                      float2(contentPaddingRight, 0));
+    float contentPaddingSide = RelativePinInset * OuterPinSize;
+    float2 contentRectMin =
+        pos + NodeBodyPadding +
+        float2(contentPaddingSide, labelSize.y + NodeBodyPadding.y);
+    float2 contentRectMax =
+        pos + node.size() - NodeBodyPadding - float2(contentPaddingSide, 0);
+    return ImRect(contentRectMin, contentRectMax);
 }
 
 static bool displayNodeContent(ImRect contentRect, Node const& node) {

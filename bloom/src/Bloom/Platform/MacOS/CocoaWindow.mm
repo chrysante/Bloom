@@ -237,11 +237,13 @@ void Window::platformInit() {
         auto modFlags = translateModFlags(event.modifierFlags);
         auto button = translateMouseButton(event.type);
         bool isDown = isMouseButtonDown(event.type);
-        userInput._mouseButtons[(size_t)button] = isDown;
         userInput._modFlags = modFlags;
-        if (!mayMoveWindow(event)) {
+        /// Any events that interact with window resizing or the window buttons
+        /// are not forwarded to the application
+        if (!mayMoveWindow(event) && isDown) {
             return event;
         }
+        userInput._mouseButtons[(size_t)button] = isDown;
         if (callbacks.onInputFn) {
             auto inputEvent =
                 makeMouseButtonEvent(translateType(event.type), button, isDown,

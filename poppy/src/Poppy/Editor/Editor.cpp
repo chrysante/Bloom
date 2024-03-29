@@ -72,11 +72,9 @@ Editor::Editor(): mSelection(makeReceiver()) {
         ToolbarSpacer{},
         ToolbarIconButton("cw")
             .onClick([&] {
-#if 0
                 dispatch(DispatchToken::NextFrame, ReloadShadersCommand{});
-#endif
             })
-            .tooltip("Reload Shaders (currently disabled due to a bug)")
+            .tooltip("Reload Shaders")
     });
     dockspace.setRightToolbar({
         ToolbarIconButton("attention-circled")

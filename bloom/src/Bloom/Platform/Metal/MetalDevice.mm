@@ -236,13 +236,28 @@ void MetalDevice::fillManagedBuffer(BufferView buffer, void const* data,
     [mtlBuffer didModifyRange:NSRange{ offset, size }];
 }
 
+static std::filesystem::path getShaderLibPath() {
+    auto* path = std::getenv("BLOOM_SHADER_LIB");
+    if (path && std::filesystem::exists(path)) {
+        return path;
+    }
+    return resourceDir() / "default.metallib";
+}
+
 void MetalDevice::reloadDefaultLibrary() {
-    shaderLib = [device
-        newLibraryWithFile:[NSString stringWithCString:(resourceDir() /
-                                                        "default.metallib")
-                                                           .c_str()
-                                              encoding:NSUTF8StringEncoding]
-                     error:nil];
+    std::filesystem::path path = getShaderLibPath();
+    NSURL* url =
+        [NSURL fileURLWithPath:[NSString stringWithUTF8String:path.c_str()]];
+    NSError* error = nil;
+    id<MTLLibrary> newLib = [device newLibraryWithURL:url error:&error];
+    if (newLib) {
+        shaderLib = newLib;
+        Logger::Info("Successfully reloaded shaders");
+    }
+    else {
+        Logger::Error("Failed to reload shader library ", path);
+        NSLog(@"Native Error: %@", error);
+    }
 }
 
 void* MetalDevice::nativeHandle() { return (__bridge void*)device; }

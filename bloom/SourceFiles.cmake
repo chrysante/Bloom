@@ -79,6 +79,15 @@ set(bloom_sources
   src/Bloom/Graphics/Renderer/SceneRenderer.h
   src/Bloom/Graphics/Renderer/ShaderParameters.h
 
+  src/Bloom/Graphics/RenderGraph/Node.h
+  src/Bloom/Graphics/RenderGraph/Node.cpp
+  src/Bloom/Graphics/RenderGraph/RenderGraph.h
+  src/Bloom/Graphics/RenderGraph/RenderGraph.cpp
+  src/Bloom/Graphics/RenderGraph/ShadowPass.h
+  src/Bloom/Graphics/RenderGraph/ShadowPass.cpp
+  src/Bloom/Graphics/RenderGraph/ForwardShadingPass.h
+  src/Bloom/Graphics/RenderGraph/ForwardShadingPass.cpp
+
   src/Bloom/Graphics/Camera.cpp
   src/Bloom/Graphics/Camera.h
   src/Bloom/Graphics/Lights.cpp

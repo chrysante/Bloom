@@ -315,8 +315,9 @@ void poppy::ImGuiContext::onInput(InputEvent e) {
     });
     e.dispatch<InputEventMask::ScrollWheel>([&](ScrollEvent const& event) {
         if (event.offset.x != 0.0 || event.offset.y != 0.0) {
-            io.AddMouseWheelEvent((float)event.offset.x * 0.1f,
-                                  (float)event.offset.y * 0.1f);
+            float factor = event.isTrackpad ? 0.01f : 0.1f;
+            io.AddMouseWheelEvent((float)event.offset.x * factor,
+                                  (float)event.offset.y * factor);
         }
         return true;
     });

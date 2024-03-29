@@ -295,6 +295,7 @@ struct ActiveViewData {
     bool handledSelectionSinceMousePresed = false;
     /// True if we are selecting be dragged the background
     bool isSelectionDragging = false;
+    bool beginMoveDragging = false;
     bool isMoveDragging = false;
     Node* activeNode = nullptr;
     Node* activeResize = nullptr;
@@ -458,6 +459,7 @@ struct NodeEditor::Impl {
 
     void display();
 
+    void backgroundPopup(bool show);
     void backgroundBehaviour();
     void drawOverlays();
     void displayNodeBody(Node& node);
@@ -469,11 +471,20 @@ struct NodeEditor::Impl {
     Graph graph;
     Selection selection;
     ViewData viewData;
+    NodeEditorDelegate delegate;
 };
 
 NodeEditor::NodeEditor(): impl(std::make_unique<Impl>()) {}
 
+NodeEditor::NodeEditor(NodeEditorDelegate delegate): NodeEditor() {
+    setDelegate(std::move(delegate));
+}
+
 NodeEditor::~NodeEditor() = default;
+
+void NodeEditor::setDelegate(NodeEditorDelegate delegate) {
+    impl->delegate = std::move(delegate);
+}
 
 static bool beginInvisibleWindow(
     char const* name, float2 pos, float2 size,
@@ -540,23 +551,40 @@ static bool nodeOverlapsRect(ViewData const& viewData, Node const& node,
     return rect.Overlaps(nodeRect);
 }
 
+void Impl::backgroundPopup(bool show) {
+    if (!delegate.backgroundPopupMenu) {
+        return;
+    }
+    static constexpr auto name = "Background_Popup";
+    if (show) {
+        ImGui::OpenPopup(name);
+    }
+    if (ImGui::BeginPopup(name)) {
+        delegate.backgroundPopupMenu();
+        ImGui::EndPopup();
+    }
+}
+
 void Impl::backgroundBehaviour() {
     bool windowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow);
     bool haveNodeInteraction = viewData.activeNode || viewData.activePin;
-    if (!windowHovered || haveNodeInteraction) {
-        return;
+    bool showPopup = false;
+    if (windowHovered && !haveNodeInteraction) {
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
+            !viewData.isSelectionDragging)
+        {
+            viewData.isSelectionDragging = true;
+            viewData.selectionBegin = ImGui::GetMousePos();
+            viewData.selectionEnd = ImGui::GetMousePos();
+            selection.beginCandidates();
+        }
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+            viewData.beginMoveDragging = true;
+        }
+        showPopup = ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
+                    !viewData.isMoveDragging;
     }
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
-        !viewData.isSelectionDragging)
-    {
-        viewData.isSelectionDragging = true;
-        viewData.selectionBegin = ImGui::GetMousePos();
-        viewData.selectionEnd = ImGui::GetMousePos();
-        selection.beginCandidates();
-    }
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
-        viewData.isMoveDragging = true;
-    }
+    backgroundPopup(showPopup);
 }
 
 void NodeEditor::onInput(InputEvent& event) { impl->onInput(event); }
@@ -564,8 +592,12 @@ void NodeEditor::onInput(InputEvent& event) { impl->onInput(event); }
 void Impl::onInput(InputEvent& event) {
     using enum InputEventMask;
     event.dispatch<MouseDragged>([&](MouseDragEvent event) {
-        if (viewData.isMoveDragging) {
-            viewData.position += event.offset;
+        if (viewData.beginMoveDragging) {
+            float2 delta = event.offset;
+            if (vml::max_norm(delta) >= 1) {
+                viewData.isMoveDragging = true;
+            }
+            viewData.position += delta;
         }
         if (viewData.isSelectionDragging) {
             viewData.selectionEnd = event.locationInWindow;

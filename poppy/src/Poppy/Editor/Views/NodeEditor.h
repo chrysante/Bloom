@@ -250,12 +250,22 @@ private:
 
 namespace poppy {
 
+/// Callbacks to customize the behaviour of a node editor
+struct NodeEditorDelegate {
+    ///
+    std::function<void()> backgroundPopupMenu;
+};
+
 /// Generic customizable node editor
 class NodeEditor {
 public:
     NodeEditor();
 
+    NodeEditor(NodeEditorDelegate delegate);
+
     ~NodeEditor();
+
+    void setDelegate(NodeEditorDelegate delegate);
 
     void display();
 

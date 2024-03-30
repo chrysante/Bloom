@@ -7,7 +7,7 @@ using namespace metal;
 
 vertex float4 outlinePassVS(bloom::Vertex3D device const* vertices [[ buffer(1) ]],
 							uint const vertexID [[ vertex_id ]],
-							bloom::SceneRenderData device const& scene [[ buffer(0) ]],
+							bloom::SceneRenderParameters device const& scene [[ buffer(0) ]],
 							float4x4 device const& transform [[ buffer(2) ]])
 {
 	bloom::Vertex3D const v = vertices[vertexID];

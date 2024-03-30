@@ -3,6 +3,7 @@
 
 #include <span>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include <range/v3/algorithm.hpp>
@@ -12,13 +13,13 @@
 
 namespace bloom {
 
+class RenderContext;
+class BufferHandle;
+class TextureHandle;
+class SamplerHandle;
+class DepthStencilHandle;
 class RGResourceNode;
-
-///
-struct RGResource {
-    /// The resource once it's allocated
-    RGResourceNode* node = nullptr;
-};
+class RenderScene;
 
 ///
 enum class RGBufferNodeFlags { Dynamic };
@@ -29,6 +30,27 @@ UTL_ENUM_OPERATORS(RGBufferNodeFlags)
 struct RGBufferDescription {
     std::string name;
     RGBufferNodeFlags flags;
+    BufferHandle* handle = nullptr;
+};
+
+struct RGTextureDescription {
+    std::string name;
+    TextureHandle* handle = nullptr;
+};
+
+struct RGSceneDescription {
+    std::string name;
+    RenderScene** handle;
+};
+
+///
+struct RGResource {
+    /// The resource once it's allocated
+    RGResourceNode* node = nullptr;
+
+    /// The resource descriptor
+    std::variant<RGBufferDescription, RGTextureDescription, RGSceneDescription>
+        desc;
 };
 
 /// Base class for all render graph pass nodes
@@ -40,29 +62,32 @@ public:
     std::string const& name() const { return _name; };
 
     /// Renders this pass
-    void execute() { doExecute(); }
+    void execute(RenderContext& ctx) { doExecute(ctx); }
 
     ///
-    std::span<RGResource const> inputs() const { return _inputs; }
+    RGResource* findInput(std::string_view name);
 
     ///
-    std::span<RGResource const> outputs() const { return _outputs; }
+    RGResource* findOutput(std::string_view name);
 
 protected:
     RGPassNode(std::string name): _name(std::move(name)) {}
 
     ///
     void declareInput(RGBufferDescription const& desc);
+    void declareInput(RGTextureDescription const& desc);
+    void declareInput(RGSceneDescription const& desc);
 
     ///
     void declareOutput(RGBufferDescription const& desc);
+    void declareOutput(RGTextureDescription const& desc);
 
 private:
-    virtual void doExecute() = 0;
+    virtual void doExecute(RenderContext& ctx) = 0;
 
     std::string _name;
-    std::vector<RGResource> _inputs;
-    std::vector<RGResource> _outputs;
+    std::vector<std::unique_ptr<RGResource>> _inputs;
+    std::vector<std::unique_ptr<RGResource>> _outputs;
 };
 
 /// Base class for all render graph data nodes

@@ -13,7 +13,7 @@ struct ShadowPassInOut {
 vertex ShadowPassInOut shadowVertexShader(bloom::Vertex3D device const* vertices           [[ buffer(1) ]],
 										  uint const vertexID                              [[ vertex_id ]],
 										  uint const shadowMapIndex                        [[ instance_id ]],
-										  bloom::SceneRenderData device const& scene       [[ buffer(0) ]],
+										  bloom::SceneRenderParameters device const& scene       [[ buffer(0) ]],
 										  float4x4 device const* lightSpaceTransforms      [[ buffer(3) ]],
 										  float4x4 device const& objectTransform           [[ buffer(2) ]])
 {

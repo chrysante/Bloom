@@ -70,12 +70,12 @@ struct FWRenderData {
     BufferHandle transformBuffer;
     BufferHandle parameterBuffer;
 
-    DepthStencilHandle depthStencil;
     ComputePipelineHandle postprocessPipeline;
     SamplerHandle postprocessSampler;
 
     struct ShadowData {
         RenderPipelineHandle pipeline;
+        DepthStencilHandle depthStencil;
         SamplerHandle sampler;
         BufferHandle lightSpaceTransforms;
         TextureHandle shadowMaps;

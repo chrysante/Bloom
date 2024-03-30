@@ -18,7 +18,7 @@ struct MainPassData {
 	float3 color;
 };
 
-vertex MainPassData mainPassVS(SceneRenderData device const&  scene     [[ buffer(0) ]],
+vertex MainPassData mainPassVS(SceneRenderParameters device const&  scene     [[ buffer(0) ]],
 							   Vertex3D device const*         vertices  [[ buffer(1) ]],
 							   float4x4 device const&         transform [[ buffer(2) ]],
 							   uint const                     vertexID  [[ vertex_id ]])
@@ -50,7 +50,7 @@ fragment MainPassFragmentData mainPassFS(MainPassData                     in    
 										 texture2d_array<float>           shadowMaps           [[ texture(0) ]],
 										 sampler                          shadowMapSampler     [[ sampler(0) ]])
 {
-	SceneRenderData device const&  scene = params.scene;
+	SceneRenderParameters device const&  scene = params.scene;
 	ShadowRenderData device const& shadowData = params.shadowData;
 	
 	// Material Properties

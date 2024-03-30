@@ -109,15 +109,13 @@ void ForwardRenderer::createGPUState(HardwareDevice& device) {
         desc.size = sizeof(RendererParameters);
         renderObjects.parameterBuffer = device.createBuffer(desc);
     }
-    {
-        DepthStencilDescription desc{};
-        desc.depthWrite = true;
-        desc.depthCompareFunction = CompareFunction::LessEqual;
-
-        renderObjects.depthStencil = device.createDepthStencil(desc);
-    }
     renderObjects.shadows.pipeline = createShadowPipeline(device);
-    renderObjects.shadows.sampler = device.createSampler(SamplerDescription{});
+    renderObjects.shadows.depthStencil = device.createDepthStencil({
+        .depthWrite = true,
+        .depthCompareFunction = CompareFunction::LessEqual,
+
+    });
+    renderObjects.shadows.sampler = device.createSampler({});
     renderObjects.postprocessSampler =
         device.createSampler(SamplerDescription{});
     renderObjects.postprocessPipeline = createPostprocessPipeline(device);
@@ -384,7 +382,7 @@ void ForwardRenderer::mainPass(ForwardRendererFramebuffer& framebuffer,
             currentMaterial = object.materialInstance->material();
             ctx.setPipeline(currentMaterial->mainPass);
             ctx.setTriangleCullMode(currentMaterial->cullMode);
-            ctx.setDepthStencil(renderObjects.depthStencil);
+            ctx.setDepthStencil(currentMaterial->depthStencil);
         }
 
         if (object.materialInstance.get() != currentMaterialInstance) {
@@ -457,7 +455,7 @@ void ForwardRenderer::shadowMapPass(CommandQueue& commandQueue) {
 
     ctx.setPipeline(renderObjects.shadows.pipeline);
     ctx.setTriangleCullMode(TriangleCullMode::Front); /// TODO: temporary
-    ctx.setDepthStencil(renderObjects.depthStencil);
+    ctx.setDepthStencil(renderObjects.shadows.depthStencil);
     ctx.setVertexBuffer(renderObjects.parameterBuffer, 0,
                         offsetof(RendererParameters, scene));
     ctx.setVertexBuffer(renderObjects.transformBuffer, 2);

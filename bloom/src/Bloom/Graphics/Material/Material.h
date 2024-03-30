@@ -23,6 +23,7 @@ public:
     RenderPipelineHandle editorPass;
     RenderPipelineHandle outlinePass;
     TriangleCullMode cullMode = TriangleCullMode::Back;
+    DepthStencilHandle depthStencil;
     void* functionTable;
 };
 

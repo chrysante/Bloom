@@ -10,7 +10,7 @@
 using namespace metal;
 using namespace bloom;
 
-vertex float4 selectionPassVS(SceneRenderData device const&  scene     [[ buffer(0) ]],
+vertex float4 selectionPassVS(SceneRenderParameters device const&  scene     [[ buffer(0) ]],
 									  Vertex3D device const* vertices  [[ buffer(1) ]],
 									  float4x4 device const& transform [[ buffer(2) ]],
 
@@ -117,7 +117,7 @@ static EdgeDetectResult edgeDetect(texture2d<float> selectionMap,
 
 
 fragment float4 editorCompositionFS(PPRasterOutput in                          [[ stage_in   ]],
-									bloom::SceneRenderData device const& scene [[ buffer(0)  ]],
+									bloom::SceneRenderParameters device const& scene [[ buffer(0)  ]],
 									poppy::EditorDrawData device const& editor [[ buffer(1)  ]],
 									texture2d<float> postProcessed             [[ texture(0) ]],
 									texture2d<float> depthMap                  [[ texture(1) ]],
@@ -146,7 +146,7 @@ struct EditorPassData {
 	float3 color;
 };
 
-vertex EditorPassData editorPassVS(SceneRenderData device const&  scene     [[ buffer(0) ]],
+vertex EditorPassData editorPassVS(SceneRenderParameters device const&  scene     [[ buffer(0) ]],
 								   Vertex3D device const*         vertices  [[ buffer(1) ]],
 								   float4x4 device const&         transform [[ buffer(2) ]],
 								   uint const                     vertexID  [[ vertex_id ]])
@@ -168,7 +168,7 @@ struct EditorPassFragmentData {
 };
 
 fragment EditorPassFragmentData editorPassFS(EditorPassData in                           [[ stage_in   ]],
-											 SceneRenderData device const& scene         [[ buffer(0)  ]],
+											 SceneRenderParameters device const& scene         [[ buffer(0)  ]],
 											 DebugDrawData device const& debugData       [[ buffer(1)  ]],
 											 ShadowRenderData device const& shadowData   [[ buffer(2)  ]],
 											 float4x4 device const* lightSpaceTransforms [[ buffer(3)  ]],

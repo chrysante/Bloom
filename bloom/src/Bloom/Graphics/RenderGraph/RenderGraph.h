@@ -11,23 +11,26 @@ namespace bloom {
 class RenderGraph {
 public:
     ///
-    RGPassNode* addPass(std::unique_ptr<RGPassNode> pass) {
-        auto* result = pass.get();
-        passes.push_back(std::move(pass));
-        return result;
-    }
+    RGPassNode* addPass(std::unique_ptr<RGPassNode> pass);
 
     ///
-    RGResourceNode* addResource(std::unique_ptr<RGResourceNode> resource) {
-        auto* result = resource.get();
-        resources.push_back(std::move(resource));
-        return result;
-    }
+    RGResource* addResource(std::unique_ptr<RGResourceNode> node);
+
+    void addLink(RGResource* input, RGResource* output);
+
+    ///
+    void compile();
+
+    /// Executes the graph
+    void execute();
 
 private:
     std::vector<std::unique_ptr<RGPassNode>> passes;
-    std::vector<std::unique_ptr<RGResourceNode>> resources;
+    std::vector<std::unique_ptr<RGResourceNode>> resourceNodes;
+    std::vector<std::unique_ptr<RGResource>> resources;
 };
+
+std::unique_ptr<RenderGraph> createDefaultRenderGraph();
 
 } // namespace bloom
 

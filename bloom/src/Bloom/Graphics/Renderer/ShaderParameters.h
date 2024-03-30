@@ -6,7 +6,7 @@
 
 namespace bloom {
 
-struct SceneRenderData {
+struct SceneRenderParameters {
     metal::float4x4 camera;
     metal::float3 cameraPosition;
     metal::float2 screenSize;
@@ -60,7 +60,7 @@ struct DebugDrawData {
 
 struct RendererParameters {
     PostProcessParameters postprocess;
-    SceneRenderData scene;
+    SceneRenderParameters scene;
     ShadowRenderData shadowData;
 };
 

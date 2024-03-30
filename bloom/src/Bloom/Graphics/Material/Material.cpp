@@ -28,4 +28,10 @@ void Material::makeDefault(HardwareDevice& device) {
     desc.vertexFunction = device.createFunction("outlinePassVS");
     desc.fragmentFunction = device.createFunction("outlinePassFS");
     outlinePass = device.createRenderPipeline(desc);
+
+    // Depth stencil state
+    DepthStencilDescription dsDesc{};
+    dsDesc.depthWrite = true;
+    dsDesc.depthCompareFunction = CompareFunction::LessEqual;
+    depthStencil = device.createDepthStencil(dsDesc);
 }

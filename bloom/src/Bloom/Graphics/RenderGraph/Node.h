@@ -3,60 +3,95 @@
 
 #include <span>
 #include <string>
-#include <variant>
 #include <vector>
 
 #include <range/v3/algorithm.hpp>
-#include <utl/common.hpp>
 
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Graphics/RenderGraph/Interface.h"
 
 namespace bloom {
 
 class RenderContext;
-class BufferHandle;
-class TextureHandle;
-class SamplerHandle;
-class DepthStencilHandle;
-class RGResourceNode;
-class RenderScene;
 
-///
-enum class RGBufferNodeFlags { Dynamic };
+} // namespace bloom
 
-UTL_ENUM_OPERATORS(RGBufferNodeFlags)
+namespace bloom::rg {
 
-///
-struct RGBufferDescription {
-    std::string name;
-    RGBufferNodeFlags flags;
-    BufferHandle* handle = nullptr;
+using ResourceHandleVariant =
+    std::variant<BufferHandle, TextureHandle, std::unique_ptr<SceneGeometry>,
+                 std::unique_ptr<SceneLights>>;
+
+class PassInput;
+
+/// Base class for all render graph data nodes
+class Resource {
+public:
+    virtual ~Resource();
+
+    /// \Returns the debug name of this node
+    std::string const& name() const { return _name; };
+
+    ResourceHandleVariant const& handle() const { return _handle; }
+
+    std::span<PassInput* const> users() const { return _users; }
+
+protected:
+    Resource(std::string name, ResourceHandleVariant handle);
+
+private:
+    friend class RenderGraph;
+
+    void addUser(PassInput* user);
+
+    std::string _name;
+    ResourceHandleVariant _handle;
+    std::vector<PassInput*> _users;
 };
 
-struct RGTextureDescription {
-    std::string name;
-    TextureHandle* handle = nullptr;
-};
+///
+class UserResource: public Resource {
+public:
+    UserResource(std::string name, ResourceHandleVariant handle);
 
-struct RGSceneDescription {
-    std::string name;
-    RenderScene** handle;
+private:
 };
 
 ///
-struct RGResource {
-    /// The resource once it's allocated
-    RGResourceNode* node = nullptr;
+class PassInput {
+public:
+    explicit PassInput(InterfaceVariant interface);
 
-    /// The resource descriptor
-    std::variant<RGBufferDescription, RGTextureDescription, RGSceneDescription>
-        desc;
+    ///
+    std::string const& name() const { return interface().name(); }
+
+    ///
+    InterfaceVariant const& interface() const { return _interface; }
+
+    ///
+    Resource* resource() const { return _resource; }
+
+public:
+    InterfaceVariant _interface;
+    Resource* _resource;
+};
+
+///
+class PassOutput: public Resource {
+public:
+    PassOutput(InterfaceVariant interface);
+
+    ///
+    InterfaceVariant const& interface() const { return _interface; }
+
+private:
+    InterfaceVariant _interface;
 };
 
 /// Base class for all render graph pass nodes
-class RGPassNode {
+class Pass {
 public:
-    virtual ~RGPassNode() = default;
+    virtual ~Pass() = default;
 
     /// \Returns the debug name of this node
     std::string const& name() const { return _name; };
@@ -65,49 +100,32 @@ public:
     void execute(RenderContext& ctx) { doExecute(ctx); }
 
     ///
-    RGResource* findInput(std::string_view name);
+    PassInput* findInput(std::string_view name);
 
     ///
-    RGResource* findOutput(std::string_view name);
+    PassOutput* findOutput(std::string_view name);
 
 protected:
-    RGPassNode(std::string name): _name(std::move(name)) {}
+    Pass(std::string name): _name(std::move(name)) {}
 
     ///
-    void declareInput(RGBufferDescription const& desc);
-    void declareInput(RGTextureDescription const& desc);
-    void declareInput(RGSceneDescription const& desc);
+    void declareInput(BufferInterface const& interface);
+    void declareInput(TextureInterface const& interface);
+    void declareInput(SceneGeometryInterface const& interface);
+    void declareInput(SceneLightsInterface const& interface);
 
     ///
-    void declareOutput(RGBufferDescription const& desc);
-    void declareOutput(RGTextureDescription const& desc);
+    void declareOutput(BufferInterface const& interface);
+    void declareOutput(TextureInterface const& interface);
 
 private:
     virtual void doExecute(RenderContext& ctx) = 0;
 
     std::string _name;
-    std::vector<std::unique_ptr<RGResource>> _inputs;
-    std::vector<std::unique_ptr<RGResource>> _outputs;
+    std::vector<std::unique_ptr<PassInput>> _inputs;
+    std::vector<std::unique_ptr<PassOutput>> _outputs;
 };
 
-/// Base class for all render graph data nodes
-class RGResourceNode {
-public:
-    virtual ~RGResourceNode() = default;
-
-    /// \Returns the debug name of this node
-    std::string const& name() const { return _name; };
-
-protected:
-    RGResourceNode(std::string name): _name(std::move(name)) {}
-
-private:
-    std::string _name;
-};
-
-/// Generic buffer
-class RGBufferNode: public RGResourceNode {};
-
-} // namespace bloom
+} // namespace bloom::rg
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_NODE_H

@@ -1,5 +1,5 @@
-#ifndef RenderScene_hpp
-#define RenderScene_hpp
+#ifndef BLOOM_GRAPHICS_RENDERGRAPH_SCENE_H
+#define BLOOM_GRAPHICS_RENDERGRAPH_SCENE_H
 
 #include <vector>
 
@@ -12,45 +12,66 @@
 #include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/StaticMesh.h"
 
-namespace bloom {
+namespace bloom::rg {
 
 ///
-UTL_SOA_TYPE(RenderObject, (Reference<StaticMeshRenderer>, mesh),
+UTL_SOA_TYPE(Geometry, (Reference<StaticMeshRenderer>, mesh),
              (Reference<MaterialInstance>, materialInstance),
              (vml::float4x4, transform));
 
-/// Scene to be passed to the renderer. This is rebuilt every frame
-class RenderScene: public RGResourceNode {
+/// Geometry to be passed to the renderer. This is rebuilt every frame
+class SceneGeometry {
 public:
-    RenderScene();
-
-    void setCamera(Camera camera) { this->camera = std::move(camera); }
-
     void add(Reference<StaticMeshRenderer> mesh,
              Reference<MaterialInstance> material,
              vml::float4x4 const& transform);
+
+    ///
+    void clear();
+
+    ///
+    void prepare();
+
+    ///
+    utl::structure_of_arrays<Geometry> const& getObjects() const {
+        return objects;
+    }
+
+    ///
+    BufferHandle const& transformBuffer() const { return transforms; }
+
+private:
+    utl::structure_of_arrays<Geometry> objects;
+
+    BufferHandle transforms;
+};
+
+///
+class SceneLights {
+public:
     void add(PointLight const& light);
     void add(SpotLight const& light);
     void add(DirectionalLight const& light);
     void add(SkyLight const& light);
 
-    utl::structure_of_arrays<RenderObject> const& getObjects() const {
-        return objects;
-    }
+    ///
+    void clear();
 
-    BufferHandle const& transformBuffer() const { return transforms; }
+    ///
+    void prepare();
+
+    ///
+    BufferHandle const& buffer() const { return _buffer; }
 
 private:
-    Camera camera;
-    utl::structure_of_arrays<RenderObject> objects;
     std::vector<PointLight> pointLights;
     std::vector<SpotLight> spotLights;
     std::vector<DirectionalLight> dirLights;
     std::vector<SkyLight> skyLights;
 
-    BufferHandle transforms;
+    BufferHandle _buffer;
 };
 
-} // namespace bloom
+} // namespace bloom::rg
 
-#endif /* RenderScene_hpp */
+#endif // BLOOM_GRAPHICS_RENDERGRAPH_SCENE_H

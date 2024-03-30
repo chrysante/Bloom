@@ -3,11 +3,24 @@
 #include <imgui.h>
 #include <vml/vml.hpp>
 
+#include "Bloom/Graphics/RenderGraph/RenderGraph.h"
+#include "Bloom/Graphics/RenderGraph/Scene.h"
+#include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Scene/Scene.h"
+#include "Poppy/Editor/Editor.h"
+
 using namespace poppy;
 using namespace bloom;
 using namespace vml;
 
 POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
+
+static rg::RenderGraph* getGlobalRenderGraph(HardwareDevice* device) {
+    static auto g = rg::createDefaultRenderGraph(device);
+    return g.get();
+}
+
+RenderGraphView::RenderGraphView(): BasicSceneInspector(this) {}
 
 void RenderGraphView::init() {
     using namespace nodeEditor;
@@ -96,8 +109,83 @@ void RenderGraphView::init() {
         .color = OutputColor,
     });
     // clang-format on
+
+    /// For now!!
+    renderGraph = getGlobalRenderGraph(&editor().device());
 }
 
 void RenderGraphView::onInput(InputEvent& event) { nodeEditor.onInput(event); }
 
-void RenderGraphView::frame() { nodeEditor.display(); }
+template <typename LightComponent>
+static void submitLights(rg::SceneLights& lights, Scene const& scene,
+                         auto&& lightModifier) {
+    auto view =
+        scene.view<TransformMatrixComponent const, LightComponent const>();
+    view.each([&](auto /* ID */, TransformMatrixComponent const& transform,
+                  LightComponent light) {
+        lightModifier(transform, light);
+        lights.add(light.light);
+    });
+}
+
+template <typename Light>
+static void submitLights(rg::SceneLights& lights, Scene const& scene) {
+    submitLights<Light>(lights, scene, [](auto&...) {});
+}
+
+static void submitScene(SceneSystem& sceneSystem, rg::SceneGeometry& geometry,
+                        rg::SceneLights& lights) {
+    geometry.clear();
+    lights.clear();
+    auto* scene = sceneSystem.scenes().front();
+    std::unique_lock lock = sceneSystem.lock();
+    sceneSystem.applyTransformHierarchy();
+    auto view = scene->view<TransformMatrixComponent const,
+                            MeshRendererComponent const>();
+    view.each([&](auto /* ID */, TransformMatrixComponent const& transform,
+                  MeshRendererComponent const& meshRenderer) {
+        if (!meshRenderer.mesh || !meshRenderer.materialInstance ||
+            !meshRenderer.materialInstance->material())
+        {
+            return;
+        }
+        geometry.add(meshRenderer.mesh->getRenderer(),
+                     meshRenderer.materialInstance, transform.matrix);
+    });
+    submitLights<PointLightComponent>(lights, *scene,
+                                      [](auto& transform, auto& light) {
+        light.light.position = transform.matrix.column(3).xyz;
+    });
+    submitLights<SpotLightComponent>(lights, *scene,
+                                     [](auto& transform, auto& light) {
+        light.light.position = transform.matrix.column(3).xyz;
+        light.light.direction =
+            vml::normalize((transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
+    });
+    submitLights<DirectionalLightComponent>(lights, *scene,
+                                            [](auto& transform, auto& light) {
+        light.light.direction =
+            vml::normalize((transform.matrix * vml::float4{ 0, 0, 1, 0 }).xyz);
+    });
+    submitLights<SkyLightComponent>(lights, *scene);
+}
+
+void RenderGraphView::frame() {
+    if (scenes().empty()) {
+        displayEmptyWithReason("No Active Scene");
+        ImGui::EndChild();
+        return;
+    }
+    auto* mainPass = renderGraph->findPass("MainPass");
+    auto& geometry =
+        std::get<2>(renderGraph->findResource("Geometry")->handle());
+    auto& lights = std::get<3>(renderGraph->findResource("Lights")->handle());
+    auto& params = std::get<BufferHandle>(
+        renderGraph->findResource("Parameters")->handle());
+    submitScene(editor().coreSystems().sceneSystem(), *geometry, *lights);
+
+    renderGraph->execute();
+    auto output =
+        std::get<TextureHandle>(mainPass->findOutput("RawColor")->handle());
+    ImGui::Image(output.nativeHandle(), ImGui::GetContentRegionAvail());
+}

@@ -318,7 +318,7 @@ public:
 struct TextureDescription {
     TextureType type = TextureType::Texture2D;
     PixelFormat pixelFormat = PixelFormat::RGBA8Unorm;
-    vml::usize3 size = 1;
+    vml::usize3 size = 0;
     std::size_t mipmapLevelCount = 1;
     std::size_t sampleCount = 1;
     std::size_t arrayLength = 1;

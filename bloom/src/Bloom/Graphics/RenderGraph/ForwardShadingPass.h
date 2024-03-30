@@ -4,26 +4,28 @@
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/GPU/RenderContext.h"
 #include "Bloom/Graphics/RenderGraph/Node.h"
+#include "Bloom/Graphics/RenderGraph/Scene.h"
 
-namespace bloom {
+namespace bloom::rg {
 
 ///
-class ForwardShadingPass: public RGPassNode {
+class ForwardShadingPass: public Pass {
 public:
-    ForwardShadingPass();
+    explicit ForwardShadingPass(std::string name);
 
 private:
     void doExecute(RenderContext& ctx) override;
 
     // Inputs
     BufferHandle sceneParameters;
-    RenderScene* scene;
+    SceneGeometry* geometry;
+    SceneLights* lights;
 
     // Outputs
     TextureHandle rawColor;
     TextureHandle depth;
 };
 
-} // namespace bloom
+} // namespace bloom::rg
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_FORWARDSHADINGPASS_H

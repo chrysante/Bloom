@@ -1,22 +1,29 @@
 #ifndef BLOOM_GRAPHICS_RENDERGRAPH_RENDERGRAPH_H
 #define BLOOM_GRAPHICS_RENDERGRAPH_RENDERGRAPH_H
 
+#include <memory>
 #include <vector>
 
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Node.h"
 
-namespace bloom {
+namespace bloom::rg {
 
 ///
 class RenderGraph {
 public:
-    ///
-    RGPassNode* addPass(std::unique_ptr<RGPassNode> pass);
+    explicit RenderGraph(HardwareDevice* device);
 
     ///
-    RGResource* addResource(std::unique_ptr<RGResourceNode> node);
+    Pass* addPass(std::unique_ptr<Pass> pass);
 
-    void addLink(RGResource* input, RGResource* output);
+    ///
+    UserResource* addUserResource(std::string name,
+                                  ResourceHandleVariant handle);
+
+    ///
+    void addLink(Resource* from, PassInput* to);
 
     ///
     void compile();
@@ -24,14 +31,17 @@ public:
     /// Executes the graph
     void execute();
 
+    Pass* findPass(std::string_view name);
+    Resource* findResource(std::string_view name);
+
 private:
-    std::vector<std::unique_ptr<RGPassNode>> passes;
-    std::vector<std::unique_ptr<RGResourceNode>> resourceNodes;
-    std::vector<std::unique_ptr<RGResource>> resources;
+    HardwareDevice* device;
+    std::vector<std::unique_ptr<Pass>> passes;
+    std::vector<std::unique_ptr<Resource>> resources;
 };
 
-std::unique_ptr<RenderGraph> createDefaultRenderGraph();
+std::unique_ptr<RenderGraph> createDefaultRenderGraph(HardwareDevice* device);
 
-} // namespace bloom
+} // namespace bloom::rg
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_RENDERGRAPH_H

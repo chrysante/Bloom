@@ -5,21 +5,29 @@
 #include "Bloom/GPU/RenderContext.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
-#include "Bloom/Graphics/RenderGraph/RenderScene.h"
+#include "Bloom/Graphics/RenderGraph/Scene.h"
 #include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/StaticMesh.h"
 
 using namespace bloom;
+using namespace rg;
 using namespace vml;
 
-ForwardShadingPass::ForwardShadingPass(): RGPassNode("Forward Shading Pass") {
-    declareInput(RGBufferDescription{ .name = "Scene Parameters",
-                                      .handle = &sceneParameters });
-    declareInput(RGSceneDescription{ .name = "Scene", .handle = &scene });
-
-    declareOutput(
-        RGTextureDescription{ .name = "Raw Color", .handle = &rawColor });
-    declareOutput(RGTextureDescription{ .name = "Depth", .handle = &depth });
+ForwardShadingPass::ForwardShadingPass(std::string name):
+    Pass(std::move(name)) {
+    declareInput(BufferInterface{ .name = "Scene Parameters",
+                                  .handle = &sceneParameters });
+    declareInput(
+        SceneGeometryInterface{ .name = "Geometry", .handle = &geometry });
+    declareInput(SceneLightsInterface{ .name = "Lights", .handle = &lights });
+    declareOutput(TextureInterface{ .name = "Raw Color",
+                                    .handle = &rawColor,
+                                    .pixelFormat = PixelFormat::RGBA32Float,
+                                    .size = TextureSize::ScreenSize });
+    declareOutput(TextureInterface{ .name = "Depth",
+                                    .handle = &depth,
+                                    .pixelFormat = PixelFormat::Depth32Float,
+                                    .size = TextureSize::ScreenSize });
 }
 
 void ForwardShadingPass::doExecute(RenderContext& ctx) {
@@ -43,12 +51,12 @@ void ForwardShadingPass::doExecute(RenderContext& ctx) {
     // Fragment buffers
     ctx.setFragmentBuffer(sceneParameters, 0);
 
-    ctx.setVertexBuffer(scene->transformBuffer(), 2);
+    ctx.setVertexBuffer(geometry->transformBuffer(), 2);
     Material const* currentMaterial = nullptr;
     MaterialInstance const* currentMaterialInstance = nullptr;
     StaticMeshRenderer const* currentMesh = nullptr;
 
-    for (size_t index = 0; auto&& object: scene->getObjects()) {
+    for (size_t index = 0; auto&& object: geometry->getObjects()) {
         if (object.materialInstance->material() != currentMaterial) {
             currentMaterial = object.materialInstance->material();
             ctx.setPipeline(currentMaterial->mainPass);

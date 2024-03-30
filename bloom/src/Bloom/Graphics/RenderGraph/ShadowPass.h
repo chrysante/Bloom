@@ -3,13 +3,13 @@
 
 #include "Bloom/Graphics/RenderGraph/Node.h"
 
-namespace bloom {
+namespace bloom::rg {
 
-class RGShadowPass: public RGPassNode {
+class RGShadowPass: public Pass {
 public:
     RGShadowPass();
 };
 
-} // namespace bloom
+} // namespace bloom::rg
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_SHADOWPASS_H

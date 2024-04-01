@@ -4,7 +4,7 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
-#include "Bloom/Graphics/RenderGraph/ResourceNodes.h"
+#include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Editor/Editor.h"

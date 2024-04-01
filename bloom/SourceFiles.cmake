@@ -90,9 +90,9 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/Pass.h
   src/Bloom/Graphics/RenderGraph/RenderGraph.cpp
   src/Bloom/Graphics/RenderGraph/RenderGraph.h
-  src/Bloom/Graphics/RenderGraph/ResourceNodes.cpp
-  src/Bloom/Graphics/RenderGraph/ResourceNodes.def
-  src/Bloom/Graphics/RenderGraph/ResourceNodes.h
+  src/Bloom/Graphics/RenderGraph/Resource.cpp
+  src/Bloom/Graphics/RenderGraph/Resource.def
+  src/Bloom/Graphics/RenderGraph/Resource.h
   src/Bloom/Graphics/RenderGraph/ResourcePool.cpp
   src/Bloom/Graphics/RenderGraph/ResourcePool.h
 

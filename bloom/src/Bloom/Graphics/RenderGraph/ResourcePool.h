@@ -5,7 +5,7 @@
 
 #include "Bloom/Core/Dyncast.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
-#include "Bloom/Graphics/RenderGraph/ResourceNodes.h"
+#include "Bloom/Graphics/RenderGraph/Resource.h"
 
 namespace bloom::rg {
 

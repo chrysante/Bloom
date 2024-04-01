@@ -1,5 +1,5 @@
-#ifndef BLOOM_GRAPHICS_RENDERGRAPH_RESOURCENODES_H
-#define BLOOM_GRAPHICS_RENDERGRAPH_RESOURCENODES_H
+#ifndef BLOOM_GRAPHICS_RENDERGRAPH_RESOURCE_H
+#define BLOOM_GRAPHICS_RENDERGRAPH_RESOURCE_H
 
 #include <span>
 #include <vector>
@@ -18,8 +18,6 @@
 
 namespace bloom::rg {
 
-enum class LinkType { Input, Output };
-
 /// Base class of all resources
 class Resource {
 public:
@@ -29,8 +27,8 @@ public:
     /// \Returns a view over all sinks and sources that use this resource
     std::span<PassInterfaceBase* const> users() const { return _users; }
 
-    ///
-    void addUser(PassInterfaceBase* user);
+    /// Adds \p interface as a user of this resource
+    void addUser(PassInterfaceBase* interface);
 
 protected:
     Resource(ResourceNodeType type): _type(type) {}
@@ -46,7 +44,7 @@ private:
     utl::small_vector<PassInterfaceBase*> _users;
 };
 
-///
+/// Wrapper around a `BufferHandle`
 class BufferResource: public Resource {
 public:
     BufferResource(): Resource(ResourceNodeType::BufferResource) {}
@@ -59,7 +57,7 @@ private:
     BufferHandle _handle;
 };
 
-///
+/// Wrapper around a `TextureHandle`
 class TextureResource: public Resource {
 public:
     TextureResource(): Resource(ResourceNodeType::TextureResource) {}
@@ -78,7 +76,7 @@ UTL_SOA_TYPE(Geometry, (Reference<StaticMeshRenderer>, mesh),
              (Reference<MaterialInstance>, materialInstance),
              (vml::float4x4, transform));
 
-///
+/// Set of meshes in a scene. This is rebuild every frame
 class GeometryResource: public Resource {
 public:
     GeometryResource(): Resource(ResourceNodeType::GeometryResource) {}
@@ -110,7 +108,7 @@ private:
     BufferHandle transforms;
 };
 
-///
+/// Set of lights in a scene. This is rebuild every frame
 class LightsResource: public Resource {
 public:
     LightsResource(): Resource(ResourceNodeType::LightsResource) {}
@@ -143,4 +141,4 @@ private:
 
 } // namespace bloom::rg
 
-#endif // BLOOM_GRAPHICS_RENDERGRAPH_RESOURCENODES_H
+#endif // BLOOM_GRAPHICS_RENDERGRAPH_RESOURCE_H

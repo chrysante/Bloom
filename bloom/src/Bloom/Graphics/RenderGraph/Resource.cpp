@@ -1,4 +1,4 @@
-#include "Bloom/Graphics/RenderGraph/ResourceNodes.h"
+#include "Bloom/Graphics/RenderGraph/Resource.h"
 
 using namespace bloom;
 using namespace rg;

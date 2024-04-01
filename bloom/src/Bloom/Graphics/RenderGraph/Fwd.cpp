@@ -10,7 +10,7 @@ std::ostream& rg::operator<<(std::ostream& ostream, ResourceNodeType nodeType) {
 #define RG_RESOURCE_DEF(Name, ...)                                             \
     case ResourceNodeType::Name:                                               \
         return ostream << #Name;
-#include "Bloom/Graphics/RenderGraph/ResourceNodes.def"
+#include "Bloom/Graphics/RenderGraph/Resource.def"
     default:
         return ostream << "(ResourceNodeType)" << (int)nodeType;
     }

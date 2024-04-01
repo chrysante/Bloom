@@ -31,16 +31,16 @@ public:
 
     ///
     template <InterfaceType Interface>
-    auto* declareInput(Interface const& interface) {
-        using R = typename ToResourceType<Interface>::type;
-        inputs.push_back(allocate<R>(interface, LinkType::Output, nullptr));
-        return cast<R*>(inputs.back().get());
+    PassSource* declareInput(Interface interface) {
+        inputs.push_back(
+            std::make_unique<PassSource>(nullptr, std::move(interface)));
+        return inputs.back().get();
     }
 
-    ///
-    void addLink(Resource* from, Resource* to);
+    /// Links the source (output) \p source to the sink (input) \p sink
+    void addLink(PassSource* source, PassSink* sink);
 
-    ///
+    /// Prepares the graph for execution
     bool compile();
 
     /// Executes the graph
@@ -48,12 +48,12 @@ public:
 
     Pass* findPass(std::string_view name);
 
-    Resource* findInputResource(std::string_view name);
+    PassSource* findInputResource(std::string_view name);
 
 private:
     HardwareDevice* device;
     std::vector<std::unique_ptr<Pass>> passes;
-    std::vector<DynUniquePtr<Resource>> inputs;
+    std::vector<std::unique_ptr<PassSource>> inputs;
     std::vector<Pass*> executionOrder;
 };
 

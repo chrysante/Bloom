@@ -15,6 +15,8 @@ namespace bloom::rg {
 
 class RenderGraph;
 class Pass;
+class PassSink;
+class PassSource;
 
 /// Forward declaration of resource nodes
 #define RG_RESOURCE_DEF(Name, ...) class Name;

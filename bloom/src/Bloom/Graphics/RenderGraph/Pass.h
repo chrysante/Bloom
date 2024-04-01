@@ -8,7 +8,7 @@
 
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
-#include "Bloom/Graphics/RenderGraph/ResourceNodes.h"
+#include "Bloom/Graphics/RenderGraph/Interface.h"
 
 namespace bloom::rg {
 
@@ -25,56 +25,54 @@ public:
     /// Renders this pass
     void execute(RenderContext& ctx) { doExecute(ctx); }
 
-    ///
-    Resource* findInput(std::string_view name);
+    /// \Returns the resource sink (input) with name \p name
+    PassSink* findSink(std::string_view name);
 
-    ///
-    Resource* findOutput(std::string_view name);
+    /// \Returns the resource source (output) with name \p name
+    PassSource* findSource(std::string_view name);
 
-    ///
-    auto inputs() { return _inputs | ToAddress<>; }
-
-    /// \overload
-    auto inputs() const { return _inputs | ToAddress<Resource const>; }
-
-    ///
-    auto outputs() { return _outputs | ToAddress<>; }
+    /// \Returns a view over the resource sinks of this pass
+    auto sinks() { return _sinks | ToAddress<>; }
 
     /// \overload
-    auto outputs() const { return _outputs | ToAddress<Resource const>; }
+    auto sinks() const { return _sinks | ToAddress<PassSink const>; }
 
-    ///
-    void markSink() { _isSink = true; }
+    /// \Returns a view over the resource sources of this pass
+    auto sources() { return _sources | ToAddress<>; }
 
+    /// \overload
+    auto sources() const { return _sources | ToAddress<PassSource const>; }
+
+    /// Sink passes are passes that are executed regardless of other passes
+    /// depending on them \Returns `true` if this pass is a sink pass
     bool isSink() const { return _isSink; }
 
-protected:
-    Pass(std::string name): _name(std::move(name)) {}
+    /// Mark this pass as a sink pass
+    void markSink() { _isSink = true; }
 
-    ///
+protected:
+    explicit Pass(std::string name): _name(std::move(name)) {}
+
+    /// Declares a resource sink (input) to this pass
     template <InterfaceType Interface>
-    void declareInput(Interface const& interface) {
-        _inputs.push_back(
-            allocate<typename ToResourceType<Interface>::type>(interface,
-                                                               LinkType::Input,
-                                                               this));
+    void declareSink(Interface interface) {
+        _sinks.push_back(
+            std::make_unique<PassSink>(this, std::move(interface)));
     }
 
-    ///
+    /// Declares a resource source (output)) to this pass
     template <InterfaceType Interface>
-    void declareOutput(Interface const& interface) {
-        _outputs.push_back(
-            allocate<typename ToResourceType<Interface>::type>(interface,
-                                                               LinkType::Output,
-                                                               this));
+    void declareSource(Interface const& interface) {
+        _sources.push_back(
+            std::make_unique<PassSource>(this, std::move(interface)));
     }
 
 private:
     virtual void doExecute(RenderContext& ctx) = 0;
 
     std::string _name;
-    std::vector<DynUniquePtr<Resource>> _inputs;
-    std::vector<DynUniquePtr<Resource>> _outputs;
+    std::vector<std::unique_ptr<PassSink>> _sinks;
+    std::vector<std::unique_ptr<PassSource>> _sources;
     bool _isSink = false;
 };
 

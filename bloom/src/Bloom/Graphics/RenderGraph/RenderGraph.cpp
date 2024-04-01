@@ -17,56 +17,50 @@ Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
     return result;
 }
 
-void RenderGraph::addLink(Resource* from, Resource* to) {
-    BL_ASSERT(!to->predecessor(), "Pass input is already linked");
-    from->addSuccessor(to);
-    to->setPredecessor(from);
+void RenderGraph::addLink(PassSource* source, PassSink* sink) {
+    BL_ASSERT(!sink->source(), "Pass sink is already linked");
+    source->addSink(sink);
+    sink->setSource(source);
 }
 
 static bool validate(std::span<Pass* const> passes) {
     bool result = true;
     for (auto* pass: passes) {
-        for (auto* input: pass->inputs()) {
-            BL_ASSERT(input->isInput());
-            if (!input->predecessor()) {
-                Logger::Error("Pass is not linked: ", pass->name());
+        for (auto* sink: pass->sinks()) {
+            if (!sink->source()) {
+                Logger::Error("Sink is not linked: ", pass->name(), ".",
+                              sink->name());
                 result = false;
             }
-            BL_ASSERT(input->successors().empty(),
-                      "Inputs cannot have successors");
-        }
-        for (auto* output: pass->outputs()) {
-            BL_ASSERT(output->isOutput());
-            BL_ASSERT(!output->predecessor(),
-                      "Output cannot have predecessors");
         }
     }
     return result;
 }
 
-static utl::small_vector<Pass*> findLivePasses(std::span<Pass* const> sinks) {
-    utl::hashset<Pass*> live;
-    auto dfs = [&](auto& dfs, auto* pass) -> void {
-        live.insert(pass);
-        for (auto* input: pass->inputs()) {
-            auto* pred = input->predecessor();
-            if (pred && pred->parent()) {
-                dfs(dfs, pred->parent());
+static utl::small_vector<Pass*> findLivePasses(
+    std::span<Pass* const> sinkPasses) {
+    struct DFS {
+        utl::hashset<Pass*> live;
+        void search(Pass* pass) {
+            live.insert(pass);
+            for (auto* sink: pass->sinks()) {
+                if (auto* sourcePass = sink->getSourcePass()) {
+                    search(sourcePass);
+                }
             }
         }
     };
-    for (auto* sink: sinks) {
-        dfs(dfs, sink);
+    DFS dfs;
+    for (auto* sinkPass: sinkPasses) {
+        dfs.search(sinkPass);
     }
-    return live | ranges::to<utl::small_vector<Pass*>>;
+    return dfs.live | ToSmallVector<>;
 }
 
 static utl::small_vector<Pass*> findSources(std::span<Pass* const> passes) {
     return passes | filter([](Pass* pass) {
-        return ranges::all_of(pass->inputs(), [](auto* input) {
-            auto* pred = input->predecessor();
-            BL_ASSERT(pred, "Must be set");
-            return pred->parent() == nullptr;
+        return ranges::all_of(pass->sinks(), [](auto* sink) {
+            return sink->getSourcePass() == nullptr;
         });
     });
 }
@@ -84,16 +78,16 @@ static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
     std::vector<Pass*> order;
     order.reserve(passes.size());
     utl::hashset<Pass*> temporary, permanent;
-    auto visit = [&](auto& visit, Pass* pass) -> void {
+    auto dfs = [&](auto& dfs, Pass* pass) -> void {
+        BL_EXPECT(pass);
         if (permanent.contains(pass)) {
             return;
         }
         BL_ASSERT(!temporary.contains(pass), "Graph has a cycle");
         temporary.insert(pass);
-        for (auto* output: pass->outputs()) {
-            for (auto* succ: output->successors()) {
-                BL_ASSERT(succ->parent());
-                visit(visit, succ->parent());
+        for (auto* source: pass->sources()) {
+            for (auto* user: source->getSinkPasses()) {
+                dfs(dfs, user);
             }
         }
         temporary.erase(pass);
@@ -101,14 +95,15 @@ static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
         order.push_back(pass);
     };
     for (auto* pass: passes) {
-        visit(visit, pass);
+        dfs(dfs, pass);
     }
     ranges::reverse(order);
     return order;
 }
 
-static void allocateResource(HardwareDevice& device, Resource& resource) {
-    Logger::Debug("Allocating ", resource.type(), ": ", resource.name());
+static void allocateResource(HardwareDevice& device,
+                             PassInterfaceBase& interface) {
+    Logger::Debug("Allocating resource: ", interface.name());
 #if 0
     visit(resource, utl::overload{
         [&](BufferResource& buffer) {
@@ -130,26 +125,26 @@ static void allocateResource(HardwareDevice& device, Resource& resource) {
 static void allocateResources(HardwareDevice& device,
                               std::span<Pass* const> executionOrder) {
     for (auto* pass: executionOrder) {
-        for (auto* input: pass->inputs()) {
-            auto* pred = input->predecessor();
-            BL_ASSERT(pred);
-            if (!pred->parent()) {
-                allocateResource(device, *input);
+        for (auto* sink: pass->sinks()) {
+            auto* sourcePass = sink->getSourcePass();
+            if (!sourcePass) {
+                allocateResource(device, *sink);
+                continue;
             }
-            else {
-                visit(*input, *pred,
-                      utl::overload{
-                          [&]<typename T>(T const& input, T const& pred) {
-                    *input.interface().handle = *pred.interface().handle;
+            BL_ASSERT(sink->source(), "Sink not linked");
+            // clang-format off
+            std::visit(utl::overload{
+                [&]<typename I>(I const& source, I const& sink) {
+                    *source.handle = *sink.handle;
                 },
-                          [](auto&, auto&) {
+                [](auto&, auto&) {
                     /// Type mismatch
                     BL_UNREACHABLE();
-                } });
-            }
+                }
+            }, sink->source()->get(), sink->get()); // clang-format on
         }
-        for (auto* output: pass->outputs()) {
-            allocateResource(device, *output);
+        for (auto* source: pass->sources()) {
+            allocateResource(device, *source);
         }
     }
 }
@@ -177,7 +172,7 @@ Pass* RenderGraph::findPass(std::string_view name) {
     return itr != passes.end() ? itr->get() : nullptr;
 }
 
-Resource* RenderGraph::findInputResource(std::string_view name) {
+PassSource* RenderGraph::findInputResource(std::string_view name) {
     auto itr = ranges::find_if(inputs, [&](auto& resource) {
         return resource->name() == name;
     });
@@ -198,9 +193,9 @@ std::unique_ptr<RenderGraph> rg::createDefaultRenderGraph(
     auto* shadingPass =
         rg->addPass(std::make_unique<ForwardShadingPass>("MainPass"));
     shadingPass->markSink();
-    rg->addLink(geometry, shadingPass->findInput("Geometry"));
-    rg->addLink(lights, shadingPass->findInput("Lights"));
-    rg->addLink(sceneParams, shadingPass->findInput("Scene Parameters"));
+    rg->addLink(geometry, shadingPass->findSink("Geometry"));
+    rg->addLink(lights, shadingPass->findSink("Lights"));
+    rg->addLink(sceneParams, shadingPass->findSink("Scene Parameters"));
     rg->compile();
     return rg;
 }

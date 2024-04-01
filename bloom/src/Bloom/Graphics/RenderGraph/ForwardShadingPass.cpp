@@ -16,16 +16,16 @@ using namespace vml;
 
 ForwardShadingPass::ForwardShadingPass(std::string name):
     Pass(std::move(name)) {
-    declareInput(BufferInterface{ .name = "Scene Parameters",
-                                  .handle = &sceneParameters });
-    declareInput(
+    declareSink(BufferInterface{ .name = "Scene Parameters",
+                                 .handle = &sceneParameters });
+    declareSink(
         SceneGeometryInterface{ .name = "Geometry", .handle = &geometry });
-    declareInput(SceneLightsInterface{ .name = "Lights", .handle = &lights });
-    declareOutput(TextureInterface{ .name = "Raw Color",
+    declareSink(SceneLightsInterface{ .name = "Lights", .handle = &lights });
+    declareSource(TextureInterface{ .name = "Raw Color",
                                     .handle = &rawColor,
                                     .pixelFormat = PixelFormat::RGBA32Float,
                                     .size = TextureSize::ScreenSize });
-    declareOutput(TextureInterface{ .name = "Depth",
+    declareSource(TextureInterface{ .name = "Depth",
                                     .handle = &depth,
                                     .pixelFormat = PixelFormat::Depth32Float,
                                     .size = TextureSize::ScreenSize });

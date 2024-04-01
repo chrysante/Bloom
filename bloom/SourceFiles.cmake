@@ -93,6 +93,8 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/ResourceNodes.cpp
   src/Bloom/Graphics/RenderGraph/ResourceNodes.def
   src/Bloom/Graphics/RenderGraph/ResourceNodes.h
+  src/Bloom/Graphics/RenderGraph/ResourcePool.cpp
+  src/Bloom/Graphics/RenderGraph/ResourcePool.h
   src/Bloom/Graphics/RenderGraph/Scene.cpp
   src/Bloom/Graphics/RenderGraph/Scene.h
 

@@ -9,16 +9,16 @@ using namespace rg;
 
 Pass::~Pass() = default;
 
-Resource* Pass::findInput(std::string_view name) {
-    auto itr = ranges::find_if(_inputs, [&](auto& input) {
-        return input->name() == name;
+PassSink* Pass::findSink(std::string_view name) {
+    auto itr = ranges::find_if(_sinks, [&](auto& sink) {
+        return sink->name() == name;
     });
-    return itr != _inputs.end() ? itr->get() : nullptr;
+    return itr != _sinks.end() ? itr->get() : nullptr;
 }
 
-Resource* Pass::findOutput(std::string_view name) {
-    auto itr = ranges::find_if(_outputs, [&](auto& output) {
-        return output->name() == name;
+PassSource* Pass::findSource(std::string_view name) {
+    auto itr = ranges::find_if(_sources, [&](auto& source) {
+        return source->name() == name;
     });
-    return itr != _outputs.end() ? itr->get() : nullptr;
+    return itr != _sources.end() ? itr->get() : nullptr;
 }

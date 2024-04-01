@@ -15,6 +15,8 @@ class SceneLights;
 
 ///
 struct BufferInterface {
+    using ViewType = BufferHandle;
+
     ///
     std::string name;
 
@@ -52,6 +54,8 @@ constexpr TextureSize TextureSize::ScreenSize = {
 
 ///
 struct TextureInterface {
+    using ViewType = TextureHandle;
+
     ///
     std::string name;
 
@@ -79,6 +83,8 @@ struct TextureInterface {
 
 ///
 struct SceneGeometryInterface {
+    using ViewType = SceneGeometry*;
+
     ///
     std::string name;
 
@@ -88,22 +94,13 @@ struct SceneGeometryInterface {
 
 ///
 struct SceneLightsInterface {
+    using ViewType = SceneLights*;
+
     ///
     std::string name;
 
     ///
     SceneLights** handle;
-};
-
-class InterfaceVariant:
-    public std::variant<BufferInterface, TextureInterface,
-                        SceneGeometryInterface, SceneLightsInterface> {
-public:
-    using variant::variant;
-
-    std::string const& name() const {
-        return std::visit([](auto& alt) -> auto& { return alt.name; }, *this);
-    }
 };
 
 } // namespace bloom::rg

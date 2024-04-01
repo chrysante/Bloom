@@ -1,0 +1,20 @@
+
+#ifndef RG_RESOURCE_DEF
+#define RG_RESOURCE_DEF(Name, Parent, Corporeality)
+#endif
+
+RG_RESOURCE_DEF(Resource, NoParent, Abstract)
+
+#ifndef RG_CONCRETE_RESOURCE_DEF
+#define RG_CONCRETE_RESOURCE_DEF(Name) \
+    RG_RESOURCE_DEF(Name##Resource, Resource, Concrete)
+#endif
+
+RG_CONCRETE_RESOURCE_DEF(Buffer)
+RG_CONCRETE_RESOURCE_DEF(Texture)
+RG_CONCRETE_RESOURCE_DEF(SceneGeometry)
+RG_CONCRETE_RESOURCE_DEF(SceneLights) // Update LAST if this changes
+
+#undef RG_CONCRETE_RESOURCE_DEF
+
+#undef RG_RESOURCE_DEF

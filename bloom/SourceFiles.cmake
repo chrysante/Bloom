@@ -43,6 +43,7 @@ set(bloom_sources
   src/Bloom/Core/EnumCount.h
   src/Bloom/Core/Profile.cpp
   src/Bloom/Core/Profile.h
+  src/Bloom/Core/Ranges.h
   src/Bloom/Core/Reference.h
   src/Bloom/Core/Serialize.cpp
   src/Bloom/Core/Serialize.h
@@ -81,16 +82,19 @@ set(bloom_sources
 
   src/Bloom/Graphics/RenderGraph/ForwardShadingPass.cpp
   src/Bloom/Graphics/RenderGraph/ForwardShadingPass.h
+  src/Bloom/Graphics/RenderGraph/Fwd.cpp
+  src/Bloom/Graphics/RenderGraph/Fwd.h
   src/Bloom/Graphics/RenderGraph/Interface.cpp
   src/Bloom/Graphics/RenderGraph/Interface.h
-  src/Bloom/Graphics/RenderGraph/Node.cpp
-  src/Bloom/Graphics/RenderGraph/Node.h
+  src/Bloom/Graphics/RenderGraph/Pass.cpp
+  src/Bloom/Graphics/RenderGraph/Pass.h
   src/Bloom/Graphics/RenderGraph/RenderGraph.cpp
   src/Bloom/Graphics/RenderGraph/RenderGraph.h
+  src/Bloom/Graphics/RenderGraph/ResourceNodes.cpp
+  src/Bloom/Graphics/RenderGraph/ResourceNodes.def
+  src/Bloom/Graphics/RenderGraph/ResourceNodes.h
   src/Bloom/Graphics/RenderGraph/Scene.cpp
   src/Bloom/Graphics/RenderGraph/Scene.h
-  src/Bloom/Graphics/RenderGraph/ShadowPass.cpp
-  src/Bloom/Graphics/RenderGraph/ShadowPass.h
 
   src/Bloom/Graphics/Camera.cpp
   src/Bloom/Graphics/Camera.h

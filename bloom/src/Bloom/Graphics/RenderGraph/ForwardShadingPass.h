@@ -3,7 +3,7 @@
 
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/GPU/RenderContext.h"
-#include "Bloom/Graphics/RenderGraph/Node.h"
+#include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/Scene.h"
 
 namespace bloom::rg {

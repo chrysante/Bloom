@@ -8,7 +8,6 @@
 
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Graphics/Lights.h"
-#include "Bloom/Graphics/RenderGraph/Node.h"
 #include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/StaticMesh.h"
 

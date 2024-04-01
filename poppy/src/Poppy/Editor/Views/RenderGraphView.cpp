@@ -173,9 +173,9 @@ static void submitScene(SceneSystem& sceneSystem, rg::SceneGeometry& geometry,
 void RenderGraphView::frame() {
     if (scenes().empty()) {
         displayEmptyWithReason("No Active Scene");
-        ImGui::EndChild();
         return;
     }
+#if 0
     auto* mainPass = renderGraph->findPass("MainPass");
     auto& geometry =
         std::get<2>(renderGraph->findResource("Geometry")->handle());
@@ -188,4 +188,5 @@ void RenderGraphView::frame() {
     auto output =
         std::get<TextureHandle>(mainPass->findOutput("RawColor")->handle());
     ImGui::Image(output.nativeHandle(), ImGui::GetContentRegionAvail());
+#endif
 }

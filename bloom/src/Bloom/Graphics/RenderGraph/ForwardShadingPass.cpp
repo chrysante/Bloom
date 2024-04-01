@@ -6,7 +6,6 @@
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Bloom/Graphics/RenderGraph/ResourceNodes.h"
-#include "Bloom/Graphics/RenderGraph/Scene.h"
 #include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/StaticMesh.h"
 
@@ -18,9 +17,8 @@ ForwardShadingPass::ForwardShadingPass(std::string name):
     Pass(std::move(name)) {
     declareSink(BufferInterface{ .name = "Scene Parameters",
                                  .handle = &sceneParameters });
-    declareSink(
-        SceneGeometryInterface{ .name = "Geometry", .handle = &geometry });
-    declareSink(SceneLightsInterface{ .name = "Lights", .handle = &lights });
+    declareSink(GeometryInterface{ .name = "Geometry", .handle = &geometry });
+    declareSink(LightsInterface{ .name = "Lights", .handle = &lights });
     declareSource(TextureInterface{ .name = "Raw Color",
                                     .handle = &rawColor,
                                     .pixelFormat = PixelFormat::RGBA32Float,

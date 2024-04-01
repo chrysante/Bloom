@@ -4,7 +4,7 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
-#include "Bloom/Graphics/RenderGraph/Scene.h"
+#include "Bloom/Graphics/RenderGraph/ResourceNodes.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Editor/Editor.h"
@@ -117,7 +117,7 @@ void RenderGraphView::init() {
 void RenderGraphView::onInput(InputEvent& event) { nodeEditor.onInput(event); }
 
 template <typename LightComponent>
-static void submitLights(rg::SceneLights& lights, Scene const& scene,
+static void submitLights(rg::LightsResource& lights, Scene const& scene,
                          auto&& lightModifier) {
     auto view =
         scene.view<TransformMatrixComponent const, LightComponent const>();
@@ -129,12 +129,13 @@ static void submitLights(rg::SceneLights& lights, Scene const& scene,
 }
 
 template <typename Light>
-static void submitLights(rg::SceneLights& lights, Scene const& scene) {
+static void submitLights(rg::LightsResource& lights, Scene const& scene) {
     submitLights<Light>(lights, scene, [](auto&...) {});
 }
 
-static void submitScene(SceneSystem& sceneSystem, rg::SceneGeometry& geometry,
-                        rg::SceneLights& lights) {
+static void submitScene(SceneSystem& sceneSystem,
+                        rg::GeometryResource& geometry,
+                        rg::LightsResource& lights) {
     geometry.clear();
     lights.clear();
     auto* scene = sceneSystem.scenes().front();

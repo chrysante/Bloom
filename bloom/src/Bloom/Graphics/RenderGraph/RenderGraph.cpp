@@ -101,50 +101,31 @@ static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
     return order;
 }
 
-static void allocateResource(HardwareDevice& device,
+static void allocateResource(HardwareDevice& device, ResourcePool& pool,
                              PassInterfaceBase& interface) {
-    Logger::Debug("Allocating resource: ", interface.name());
-#if 0
-    visit(resource, utl::overload{
-        [&](BufferResource& buffer) {
-            BL_UNIMPLEMENTED();
-        },
-        [&](TextureResource& resource) {
-            BL_UNIMPLEMENTED();
-        },
-        [&](SceneGeometryResource& resource) {
-            BL_UNIMPLEMENTED();
-        },
-        [&](SceneLightsResource& resource) {
-            BL_UNIMPLEMENTED();
-        },
+    auto* resource = interface.visit([&]<typename I>(I const&) -> Resource* {
+        return pool.allocate<typename ToResourceType<I>::type>();
     });
-#endif
+    resource->addUser(&interface);
 }
 
-static void allocateResources(HardwareDevice& device,
+static void allocateResources(HardwareDevice& device, ResourcePool& pool,
                               std::span<Pass* const> executionOrder) {
     for (auto* pass: executionOrder) {
         for (auto* sink: pass->sinks()) {
             auto* sourcePass = sink->getSourcePass();
             if (!sourcePass) {
-                allocateResource(device, *sink);
+                allocateResource(device, pool, *sink);
                 continue;
             }
             BL_ASSERT(sink->source(), "Sink not linked");
-            // clang-format off
-            std::visit(utl::overload{
-                [&]<typename I>(I const& source, I const& sink) {
-                    *source.handle = *sink.handle;
-                },
-                [](auto&, auto&) {
-                    /// Type mismatch
-                    BL_UNREACHABLE();
-                }
-            }, sink->source()->get(), sink->get()); // clang-format on
+            auto* resource = sink->source()->resource();
+            BL_ASSERT(resource, "Source has no resource assigned");
+            sink->setResource(resource);
+            resource->addUser(sink);
         }
         for (auto* source: pass->sources()) {
-            allocateResource(device, *source);
+            allocateResource(device, pool, *source);
         }
     }
 }
@@ -158,7 +139,7 @@ bool RenderGraph::compile() {
                  ranges::to<utl::small_vector<Pass*>>;
     auto livePasses = findLivePasses(sinks);
     executionOrder = topsort(livePasses);
-    allocateResources(*device, executionOrder);
+    allocateResources(*device, pool, executionOrder);
 
     return true;
 }
@@ -180,14 +161,12 @@ PassSource* RenderGraph::findInputResource(std::string_view name) {
 }
 
 #include "Bloom/Graphics/RenderGraph/ForwardShadingPass.h"
-#include "Bloom/Graphics/RenderGraph/Scene.h"
 
 std::unique_ptr<RenderGraph> rg::createDefaultRenderGraph(
     HardwareDevice* device) {
     auto rg = std::make_unique<RenderGraph>(device);
-    auto* geometry =
-        rg->declareInput(SceneGeometryInterface{ .name = "Geometry" });
-    auto* lights = rg->declareInput(SceneLightsInterface{ .name = "Lights" });
+    auto* geometry = rg->declareInput(GeometryInterface{ .name = "Geometry" });
+    auto* lights = rg->declareInput(LightsInterface{ .name = "Lights" });
     auto* sceneParams =
         rg->declareInput(BufferInterface{ .name = "Parameters" });
     auto* shadingPass =

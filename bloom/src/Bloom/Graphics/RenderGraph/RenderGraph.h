@@ -11,6 +11,7 @@
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
+#include "Bloom/Graphics/RenderGraph/ResourcePool.h"
 
 namespace bloom::rg {
 
@@ -55,6 +56,7 @@ private:
     std::vector<std::unique_ptr<Pass>> passes;
     std::vector<std::unique_ptr<PassSource>> inputs;
     std::vector<Pass*> executionOrder;
+    ResourcePool pool;
 };
 
 std::unique_ptr<RenderGraph> createDefaultRenderGraph(HardwareDevice* device);

@@ -1,144 +1,145 @@
 #ifndef BLOOM_GRAPHICS_RENDERGRAPH_RESOURCENODES_H
 #define BLOOM_GRAPHICS_RENDERGRAPH_RESOURCENODES_H
 
+#include <span>
+#include <vector>
+
 #include <range/v3/algorithm.hpp>
+#include <utl/structure_of_arrays.hpp>
 #include <utl/vector.hpp>
 
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Graphics/Camera.h"
+#include "Bloom/Graphics/Lights.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
+#include "Bloom/Graphics/Renderer/ShaderParameters.h"
+#include "Bloom/Graphics/StaticMesh.h"
 
 namespace bloom::rg {
 
 enum class LinkType { Input, Output };
 
-/// Base class of all resource nodes.
-/// Resource nodes act as user inputs to the graph and as pass outputs.
-/// Resource nodes don't actually own resources. Instead they hold handles to
-/// resources that are owned by the render graph. It is also the responsibility
-/// of the render graph to populate the resource nodes.
+/// Base class of all resources
 class Resource {
 public:
-    /// \Returns the runtime type of this node
+    /// \Returns the most derived type of this resource
     ResourceNodeType type() const { return _type; }
 
-    std::string const& name() const;
-
-    /// The pass owning this resource. This may be null
-    Pass* parent() const { return _parent; }
+    /// \Returns a view over all sinks and sources that use this resource
+    std::span<PassInterfaceBase* const> users() const { return _users; }
 
     ///
-    std::span<Resource* const> successors() const { return succs; }
-
-    ///
-    Resource* predecessor() const { return pred; }
-
-    ///
-    LinkType linkType() const { return _linkType; }
-
-    ///
-    bool isInput() const { return linkType() == LinkType::Input; }
-
-    ///
-    bool isOutput() const { return linkType() == LinkType::Output; }
+    void addUser(PassInterfaceBase* user);
 
 protected:
-    Resource(ResourceNodeType type, LinkType linkType, Pass* parent):
-        _type(type), _linkType(linkType), _parent(parent) {}
+    Resource(ResourceNodeType type): _type(type) {}
+
+    void assignUsers();
 
 private:
     friend ResourceNodeType dyncast_get_type(Resource const& resource) {
         return resource.type();
     }
 
-    friend class RenderGraph;
-
-    void addSuccessor(Resource* succ) {
-        if (!ranges::contains(succs, succ)) {
-            succs.push_back(succ);
-        }
-    }
-
-    void setPredecessor(Resource* pred) { this->pred = pred; }
-
     ResourceNodeType _type;
-    LinkType _linkType;
-    Pass* _parent = nullptr;
-    utl::small_vector<Resource*> succs;
-    Resource* pred = nullptr;
+    utl::small_vector<PassInterfaceBase*> _users;
 };
 
 ///
-template <typename Derived, typename InterfaceType>
-class ResourceMixin {
-    using ViewType = InterfaceType::ViewType;
-
+class BufferResource: public Resource {
 public:
-    ///
-    InterfaceType const& interface() const { return _interface; }
+    BufferResource(): Resource(ResourceNodeType::BufferResource) {}
 
-    ///
-    void set(ViewType view) {
-        BL_ASSERT(_interface.handle, "Handle not set");
-        *_interface.handle = view;
-    }
+    void assign(BufferHandle buffer);
 
-protected:
-    ResourceMixin(InterfaceType interface): _interface(std::move(interface)) {}
+    BufferHandle const& handle() { return _handle; }
 
 private:
-    InterfaceType _interface;
+    BufferHandle _handle;
 };
 
 ///
-class BufferResource:
-    public Resource,
-    public ResourceMixin<BufferResource, BufferInterface> {
+class TextureResource: public Resource {
 public:
-    explicit BufferResource(BufferInterface interface, LinkType linkType,
-                            Pass* parent):
-        Resource(ResourceNodeType::BufferResource, linkType, parent),
-        ResourceMixin(std::move(interface)) {}
+    TextureResource(): Resource(ResourceNodeType::TextureResource) {}
+
+    void assign(TextureHandle texture);
+
+    ///
+    TextureHandle const& handle() { return _handle; }
+
+private:
+    TextureHandle _handle;
 };
 
 ///
-class TextureResource:
-    public Resource,
-    public ResourceMixin<TextureResource, TextureInterface> {
+UTL_SOA_TYPE(Geometry, (Reference<StaticMeshRenderer>, mesh),
+             (Reference<MaterialInstance>, materialInstance),
+             (vml::float4x4, transform));
+
+///
+class GeometryResource: public Resource {
 public:
-    explicit TextureResource(TextureInterface interface, LinkType linkType,
-                             Pass* parent):
-        Resource(ResourceNodeType::TextureResource, linkType, parent),
-        ResourceMixin(std::move(interface)) {}
+    GeometryResource(): Resource(ResourceNodeType::GeometryResource) {}
+
+    ///
+    GeometryResource* handle() { return this; }
+
+    ///
+    void add(Reference<StaticMeshRenderer> mesh,
+             Reference<MaterialInstance> material,
+             vml::float4x4 const& transform);
+
+    ///
+    void clear();
+
+    ///
+    void prepare();
+
+    ///
+    utl::structure_of_arrays<Geometry> const& getObjects() const {
+        return objects;
+    }
+
+    ///
+    BufferHandle const& transformBuffer() const { return transforms; }
+
+private:
+    utl::structure_of_arrays<Geometry> objects;
+    BufferHandle transforms;
 };
 
 ///
-class SceneGeometryResource:
-    public Resource,
-    public ResourceMixin<SceneGeometryResource, SceneGeometryInterface> {
+class LightsResource: public Resource {
 public:
-    explicit SceneGeometryResource(SceneGeometryInterface interface,
-                                   LinkType linkType, Pass* parent):
-        Resource(ResourceNodeType::SceneGeometryResource, linkType, parent),
-        ResourceMixin(std::move(interface)) {}
-};
+    LightsResource(): Resource(ResourceNodeType::LightsResource) {}
 
-///
-class SceneLightsResource:
-    public Resource,
-    public ResourceMixin<SceneLightsResource, SceneLightsInterface> {
-public:
-    explicit SceneLightsResource(SceneLightsInterface interface,
-                                 LinkType linkType, Pass* parent):
-        Resource(ResourceNodeType::SceneLightsResource, linkType, parent),
-        ResourceMixin(std::move(interface)) {}
-};
+    ///
+    LightsResource* handle() { return this; }
 
-inline std::string const& Resource::name() const {
-    return visit(*this, [](auto& resource) -> auto& {
-        return resource.interface().name;
-    });
-}
+    void add(PointLight const& light);
+    void add(SpotLight const& light);
+    void add(DirectionalLight const& light);
+    void add(SkyLight const& light);
+
+    ///
+    void clear();
+
+    ///
+    void prepare();
+
+    ///
+    BufferHandle const& buffer() const { return _buffer; }
+
+private:
+    std::vector<PointLight> pointLights;
+    std::vector<SpotLight> spotLights;
+    std::vector<DirectionalLight> dirLights;
+    std::vector<SkyLight> skyLights;
+
+    BufferHandle _buffer;
+};
 
 } // namespace bloom::rg
 

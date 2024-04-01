@@ -4,7 +4,7 @@
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/GPU/RenderContext.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
-#include "Bloom/Graphics/RenderGraph/Scene.h"
+#include "Bloom/Graphics/RenderGraph/ResourceNodes.h"
 
 namespace bloom::rg {
 
@@ -18,8 +18,8 @@ private:
 
     // Inputs
     BufferHandle sceneParameters;
-    SceneGeometry* geometry;
-    SceneLights* lights;
+    GeometryResource* geometry;
+    LightsResource* lights;
 
     // Outputs
     TextureHandle rawColor;

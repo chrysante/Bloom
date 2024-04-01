@@ -26,7 +26,7 @@ class PassSource;
 enum class ResourceNodeType {
 #define RG_RESOURCE_DEF(Name, ...) Name,
 #include "Bloom/Graphics/RenderGraph/ResourceNodes.def"
-    LAST = SceneLightsResource
+    LAST = LightsResource
 };
 
 ///

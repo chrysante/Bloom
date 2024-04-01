@@ -6,6 +6,8 @@
 #include <variant>
 
 #include <range/v3/view.hpp>
+#include <utl/hash.hpp>
+#include <utl/overload.hpp>
 #include <utl/vector.hpp>
 #include <vml/vml.hpp>
 
@@ -13,9 +15,6 @@
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 
 namespace bloom::rg {
-
-class SceneGeometry;
-class SceneLights;
 
 ///
 struct BufferInterface {
@@ -29,15 +28,30 @@ struct BufferInterface {
 
     ///
     size_t size;
+
+    struct Compare {
+        bool operator()(BufferInterface const& lhs,
+                        BufferInterface const& rhs) const {
+            return lhs.size == rhs.size;
+        }
+    };
+
+    struct Hash {
+        size_t operator()(BufferInterface const& interface) const {
+            return std::hash<size_t>{}(interface.size);
+        }
+    };
 };
 
 /// Size descriptor that supports absolute and relative values
 struct TextureSize {
     struct Absolute {
         size_t size;
+        bool operator==(Absolute const&) const = default;
     };
     struct RelativeToScreen {
         double factor = 1.0;
+        bool operator==(RelativeToScreen const&) const = default;
     };
 
     using Value = std::variant<Absolute, RelativeToScreen>;
@@ -48,6 +62,26 @@ struct TextureSize {
 
     /// Size descriptor that describes the screen size
     static TextureSize const ScreenSize;
+
+    bool operator==(TextureSize const&) const = default;
+
+    struct Hash {
+        size_t operator()(TextureSize const& size) const {
+            size_t seed = 0;
+            for (auto mem: { &TextureSize::width, &TextureSize::height,
+                             &TextureSize::depth })
+            {
+                // clang-format off
+                utl::hash_combine_seed(seed, std::visit(utl::overload{
+                    [](Absolute a) { return std::hash<size_t>{}(a.size); },
+                    [](RelativeToScreen r) {
+                        return std::hash<double>{}(r.factor);
+                    },
+                }, size.*mem)); // clang-format on
+            }
+            return seed;
+        }
+    };
 };
 
 constexpr TextureSize TextureSize::ScreenSize = {
@@ -83,34 +117,55 @@ struct TextureInterface {
 
     ///
     size_t arrayLength = 1;
+
+    struct Compare {
+        bool operator()(TextureInterface const& lhs,
+                        TextureInterface const& rhs) const {
+            return lhs.type == rhs.type && lhs.pixelFormat == rhs.pixelFormat &&
+                   lhs.size == rhs.size &&
+                   lhs.mipmapLevelCount == rhs.mipmapLevelCount &&
+                   lhs.sampleCount == rhs.sampleCount &&
+                   lhs.arrayLength == rhs.arrayLength;
+        }
+    };
+
+    struct Hash {
+        size_t operator()(TextureInterface const& interface) const {
+            return utl::hash_combine(interface.type, interface.pixelFormat,
+                                     TextureSize::Hash{}(interface.size),
+                                     interface.mipmapLevelCount,
+                                     interface.sampleCount,
+                                     interface.arrayLength);
+        }
+    };
 };
 
 ///
-struct SceneGeometryInterface {
-    using ViewType = SceneGeometry*;
+struct GeometryInterface {
+    using ViewType = GeometryResource*;
 
     ///
     std::string name;
 
     ///
-    SceneGeometry** handle;
+    GeometryResource** handle;
 };
 
 ///
-struct SceneLightsInterface {
-    using ViewType = SceneLights*;
+struct LightsInterface {
+    using ViewType = LightsResource*;
 
     ///
     std::string name;
 
     ///
-    SceneLights** handle;
+    LightsResource** handle;
 };
 
 /// Base class of `PassSource` and `PassSink`
 class PassInterfaceBase {
     using Variant = std::variant<BufferInterface, TextureInterface,
-                                 SceneGeometryInterface, SceneLightsInterface>;
+                                 GeometryInterface, LightsInterface>;
 
 public:
     /// \Returns the underlying `*Interface` variant
@@ -118,6 +173,18 @@ public:
 
     /// \overload
     Variant const& get() const { return _interface; }
+
+    /// \Returns the underlying `Interface` of type \p T
+    template <InterfaceType T>
+    T& get() {
+        return std::get<T>(get());
+    }
+
+    /// \overload
+    template <InterfaceType T>
+    T const& get() const {
+        return std::get<T>(get());
+    }
 
     /// \Returns `std::visit(vis, get())`
     decltype(auto) visit(auto&& vis) const { return std::visit(vis, get()); }
@@ -133,12 +200,19 @@ public:
     /// \overload
     Pass const* pass() const { return _pass; }
 
+    /// \Returns the backing resource or null if none exists
+    Resource* resource() const { return _resource; }
+
+    /// Assigns the backing resource
+    void setResource(Resource* resource) { _resource = resource; }
+
 protected:
     PassInterfaceBase(Pass* pass, InterfaceType auto interface):
         _pass(pass), _interface(std::move(interface)) {}
 
 private:
-    Pass* _pass;
+    Pass* _pass = nullptr;
+    Resource* _resource = nullptr;
     Variant _interface;
 };
 

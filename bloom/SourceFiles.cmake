@@ -95,8 +95,6 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/ResourceNodes.h
   src/Bloom/Graphics/RenderGraph/ResourcePool.cpp
   src/Bloom/Graphics/RenderGraph/ResourcePool.h
-  src/Bloom/Graphics/RenderGraph/Scene.cpp
-  src/Bloom/Graphics/RenderGraph/Scene.h
 
   src/Bloom/Graphics/Camera.cpp
   src/Bloom/Graphics/Camera.h

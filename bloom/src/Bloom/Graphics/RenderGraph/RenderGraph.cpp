@@ -4,6 +4,7 @@
 #include <utl/overload.hpp>
 
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/GPU/HardwareDevice.h"
 
 using namespace bloom;
 using namespace rg;
@@ -101,31 +102,32 @@ static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
     return order;
 }
 
-static void allocateResource(HardwareDevice& device, ResourcePool& pool,
-                             PassInterfaceBase& interface) {
+static void allocateBackingResource(ResourcePool& pool,
+                                    PassInterfaceBase& interface) {
     auto* resource = interface.visit([&]<typename I>(I const&) -> Resource* {
         return pool.allocate<typename ToResourceType<I>::type>();
     });
     resource->addUser(&interface);
+    interface.setResource(resource);
 }
 
-static void allocateResources(HardwareDevice& device, ResourcePool& pool,
-                              std::span<Pass* const> executionOrder) {
+static void allocateBackingResources(ResourcePool& pool,
+                                     std::span<Pass* const> executionOrder) {
     for (auto* pass: executionOrder) {
         for (auto* sink: pass->sinks()) {
-            auto* sourcePass = sink->getSourcePass();
-            if (!sourcePass) {
-                allocateResource(device, pool, *sink);
+            auto* source = sink->source();
+            BL_ASSERT(sink->source(), "Sink not linked");
+            if (!source->pass()) {
+                allocateBackingResource(pool, *source);
                 continue;
             }
-            BL_ASSERT(sink->source(), "Sink not linked");
             auto* resource = sink->source()->resource();
             BL_ASSERT(resource, "Source has no resource assigned");
             sink->setResource(resource);
             resource->addUser(sink);
         }
         for (auto* source: pass->sources()) {
-            allocateResource(device, pool, *source);
+            allocateBackingResource(pool, *source);
         }
     }
 }
@@ -139,12 +141,52 @@ bool RenderGraph::compile() {
                  ranges::to<utl::small_vector<Pass*>>;
     auto livePasses = findLivePasses(sinks);
     executionOrder = topsort(livePasses);
-    allocateResources(*device, pool, executionOrder);
-
+    allocateBackingResources(pool, executionOrder);
     return true;
 }
 
-void RenderGraph::execute() { BL_UNIMPLEMENTED(); }
+static void reallocateHardwareResource(HardwareDevice& device,
+                                       BufferResource& resource,
+                                       FrameParameters const&) {
+    if (resource.handle()) {
+        return;
+    }
+    BL_UNIMPLEMENTED();
+    resource.assign(device.createBuffer({
+
+    }));
+}
+
+static void reallocateHardwareResource(HardwareDevice& device,
+                                       TextureResource& resource,
+                                       FrameParameters const& params) {}
+
+static void reallocateHardwareResource(HardwareDevice&, GeometryResource&,
+                                       FrameParameters const&) {}
+
+static void reallocateHardwareResource(HardwareDevice&, LightsResource&,
+                                       FrameParameters const&) {}
+
+static void reallocateHardwareResources(HardwareDevice& device,
+                                        ResourcePool& pool,
+                                        FrameParameters const& frameParams) {
+    for (auto* resource: pool.resources()) {
+        visit(*resource, [&](auto& resource) {
+            reallocateHardwareResource(device, resource, frameParams);
+        });
+    }
+}
+
+void RenderGraph::execute(FrameParameters params, CommandQueue& cmdQueue) {
+    if (lastFrameParams != params) {
+        reallocateHardwareResources(*device, pool, params);
+        lastFrameParams = params;
+    }
+    for (auto* pass: executionOrder) {
+        auto ctx = cmdQueue.createRenderContext();
+        pass->execute(*ctx);
+    }
+}
 
 Pass* RenderGraph::findPass(std::string_view name) {
     auto itr = ranges::find_if(passes, [&](auto& pass) {
@@ -153,9 +195,9 @@ Pass* RenderGraph::findPass(std::string_view name) {
     return itr != passes.end() ? itr->get() : nullptr;
 }
 
-PassSource* RenderGraph::findInputResource(std::string_view name) {
-    auto itr = ranges::find_if(inputs, [&](auto& resource) {
-        return resource->name() == name;
+PassSource* RenderGraph::findInputSource(std::string_view name) {
+    auto itr = ranges::find_if(inputs, [&](auto& source) {
+        return source->name() == name;
     });
     return itr != inputs.end() ? itr->get() : nullptr;
 }

@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <vml/vml.hpp>
 
+#include "Bloom/Application/Window.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Runtime/SceneSystem.h"
@@ -176,18 +177,27 @@ void RenderGraphView::frame() {
         displayEmptyWithReason("No Active Scene");
         return;
     }
-#if 0
+    auto windows = editor().getWindows();
+    if (windows.empty()) {
+        return;
+    }
+    auto* window = windows.front();
     auto* mainPass = renderGraph->findPass("MainPass");
-    auto& geometry =
-        std::get<2>(renderGraph->findResource("Geometry")->handle());
-    auto& lights = std::get<3>(renderGraph->findResource("Lights")->handle());
-    auto& params = std::get<BufferHandle>(
-        renderGraph->findResource("Parameters")->handle());
+    auto* geometry = cast<rg::GeometryResource*>(
+        renderGraph->findInputSource("Geometry")->resource());
+    BL_ASSERT(geometry);
+    auto* lights = cast<rg::LightsResource*>(
+        renderGraph->findInputSource("Lights")->resource());
+    BL_ASSERT(lights);
+    auto* params = cast<rg::BufferResource*>(
+        renderGraph->findInputSource("Parameters")->resource());
+    BL_ASSERT(params);
     submitScene(editor().coreSystems().sceneSystem(), *geometry, *lights);
-
-    renderGraph->execute();
-    auto output =
-        std::get<TextureHandle>(mainPass->findOutput("RawColor")->handle());
-    ImGui::Image(output.nativeHandle(), ImGui::GetContentRegionAvail());
-#endif
+    rg::FrameParameters frameParams = { .screenSize =
+                                            ImGui::GetContentRegionAvail() };
+    renderGraph->execute(frameParams, window->commandQueue());
+    auto* output = cast<rg::TextureResource*>(
+        mainPass->findSource("RawColor")->resource());
+    ImGui::Image(output->handle().nativeHandle(),
+                 ImGui::GetContentRegionAvail());
 }

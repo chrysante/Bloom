@@ -7,6 +7,7 @@
 
 #include <utl/hashtable.hpp>
 #include <utl/vector.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
@@ -14,6 +15,12 @@
 #include "Bloom/Graphics/RenderGraph/ResourcePool.h"
 
 namespace bloom::rg {
+
+struct FrameParameters {
+    vml::int2 screenSize = 0;
+
+    bool operator==(FrameParameters const&) const = default;
+};
 
 ///
 class RenderGraph {
@@ -45,11 +52,11 @@ public:
     bool compile();
 
     /// Executes the graph
-    void execute();
+    void execute(FrameParameters params, CommandQueue& cmdQueue);
 
     Pass* findPass(std::string_view name);
 
-    PassSource* findInputResource(std::string_view name);
+    PassSource* findInputSource(std::string_view name);
 
 private:
     HardwareDevice* device;
@@ -57,6 +64,7 @@ private:
     std::vector<std::unique_ptr<PassSource>> inputs;
     std::vector<Pass*> executionOrder;
     ResourcePool pool;
+    FrameParameters lastFrameParams;
 };
 
 std::unique_ptr<RenderGraph> createDefaultRenderGraph(HardwareDevice* device);

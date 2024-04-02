@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Bloom/Core/Dyncast.h"
+#include "Bloom/Core/Ranges.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 
@@ -14,12 +15,18 @@ class ResourcePool {
 public:
     template <typename ResourceType>
     ResourceType* allocate() {
-        resources.push_back(bloom::allocate<ResourceType>());
-        return static_cast<ResourceType*>(resources.back().get());
+        _resources.push_back(bloom::allocate<ResourceType>());
+        return static_cast<ResourceType*>(_resources.back().get());
     }
 
+    /// \Returns a view over the allocated resources
+    auto resources() { return _resources | ToAddress<>; }
+
+    /// \overload
+    auto resources() const { return _resources | ToAddress<Resource const>; }
+
 private:
-    std::vector<DynUniquePtr<Resource>> resources;
+    std::vector<DynUniquePtr<Resource>> _resources;
 };
 
 } // namespace bloom::rg

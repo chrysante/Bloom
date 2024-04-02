@@ -18,8 +18,8 @@ private:
 
     // Inputs
     BufferHandle sceneParameters;
-    GeometryResource* geometry;
-    LightsResource* lights;
+    GeometryResource* geometry = nullptr;
+    LightsResource* lights = nullptr;
 
     // Outputs
     TextureHandle rawColor;

@@ -71,7 +71,14 @@ enum AssertionHandler { Break, Throw, Abort };
 // For now
 inline AssertionHandler getAssertionHandler() { return Break; }
 
-[[noreturn]] __attribute__((always_inline)) inline void debugfail() {
+[[noreturn]]
+#if defined(__GNUC__)
+__attribute__((always_inline, nodebug))
+#elif defined(_MSC_VER)
+__forceinline
+#endif
+inline void
+    debugfail() {
     switch (getAssertionHandler()) {
     case Break:
         __builtin_trap();

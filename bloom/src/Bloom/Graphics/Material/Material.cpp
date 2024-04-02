@@ -14,6 +14,11 @@ void Material::makeDefault(HardwareDevice& device) {
     desc.fragmentFunction = device.createFunction("mainPassFS");
     desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
     mainPass = device.createRenderPipeline(desc);
+
+    desc.vertexFunction = device.createFunction("rgMainPassVS");
+    desc.fragmentFunction = device.createFunction("rgMainPassFS");
+    rgMainPass = device.createRenderPipeline(desc);
+
 #if 0 // TODO: Reenable this
     // Editor Pass
     ca.pixelFormat = PixelFormat::RGBA32Float;

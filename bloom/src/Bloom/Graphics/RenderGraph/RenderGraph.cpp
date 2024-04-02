@@ -105,7 +105,7 @@ static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
 static void allocateBackingResource(ResourcePool& pool,
                                     PassInterfaceBase& interface) {
     auto* resource = interface.visit([&]<typename I>(I const&) -> Resource* {
-        return pool.allocate<typename ToResourceType<I>::type>();
+        return pool.allocate(interface.get<I>());
     });
     resource->addUser(&interface);
     interface.setResource(resource);
@@ -116,12 +116,11 @@ static void allocateBackingResources(ResourcePool& pool,
     for (auto* pass: executionOrder) {
         for (auto* sink: pass->sinks()) {
             auto* source = sink->source();
-            BL_ASSERT(sink->source(), "Sink not linked");
+            BL_ASSERT(source, "Sink not linked");
             if (!source->pass()) {
                 allocateBackingResource(pool, *source);
-                continue;
             }
-            auto* resource = sink->source()->resource();
+            auto* resource = source->resource();
             BL_ASSERT(resource, "Source has no resource assigned");
             sink->setResource(resource);
             resource->addUser(sink);
@@ -129,6 +128,9 @@ static void allocateBackingResources(ResourcePool& pool,
         for (auto* source: pass->sources()) {
             allocateBackingResource(pool, *source);
         }
+    }
+    for (auto* resource: pool.resources()) {
+        resource->assignUsers();
     }
 }
 
@@ -151,15 +153,28 @@ static void reallocateHardwareResource(HardwareDevice& device,
     if (resource.handle()) {
         return;
     }
-    BL_UNIMPLEMENTED();
     resource.assign(device.createBuffer({
-
+        .size = resource.interface().size,
+        .storageMode = StorageMode::Managed // For now!
     }));
 }
 
 static void reallocateHardwareResource(HardwareDevice& device,
                                        TextureResource& resource,
-                                       FrameParameters const& params) {}
+                                       FrameParameters const& params) {
+    if (resource.handle()) {
+        return;
+    }
+    auto const& interface = resource.interface();
+    resource.assign(device.createTexture(
+        { .type = interface.type,
+          .pixelFormat = interface.pixelFormat,
+          .size = interface.size.compute(params.screenSize),
+          .mipmapLevelCount = interface.mipmapLevelCount,
+          .sampleCount = interface.sampleCount,
+          .arrayLength = interface.arrayLength,
+          .usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget }));
+}
 
 static void reallocateHardwareResource(HardwareDevice&, GeometryResource&,
                                        FrameParameters const&) {}
@@ -177,11 +192,15 @@ static void reallocateHardwareResources(HardwareDevice& device,
     }
 }
 
-void RenderGraph::execute(FrameParameters params, CommandQueue& cmdQueue) {
-    if (lastFrameParams != params) {
-        reallocateHardwareResources(*device, pool, params);
-        lastFrameParams = params;
+void RenderGraph::allocateResources(FrameParameters params) {
+    if (lastFrameParams == params) {
+        return;
     }
+    reallocateHardwareResources(*device, pool, params);
+    lastFrameParams = params;
+}
+
+void RenderGraph::execute(CommandQueue& cmdQueue) {
     for (auto* pass: executionOrder) {
         auto ctx = cmdQueue.createRenderContext();
         pass->execute(*ctx);
@@ -207,16 +226,18 @@ PassSource* RenderGraph::findInputSource(std::string_view name) {
 std::unique_ptr<RenderGraph> rg::createDefaultRenderGraph(
     HardwareDevice* device) {
     auto rg = std::make_unique<RenderGraph>(device);
-    auto* geometry = rg->declareInput(GeometryInterface{ .name = "Geometry" });
-    auto* lights = rg->declareInput(LightsInterface{ .name = "Lights" });
+    auto* geometry = rg->declareInput("Geometry", GeometryInterface{});
+    auto* lights = rg->declareInput("Lights", LightsInterface{});
     auto* sceneParams =
-        rg->declareInput(BufferInterface{ .name = "Parameters" });
+        rg->declareInput("Parameters",
+                         BufferInterface{ .size =
+                                              sizeof(SceneRenderParameters) });
     auto* shadingPass =
         rg->addPass(std::make_unique<ForwardShadingPass>("MainPass"));
     shadingPass->markSink();
     rg->addLink(geometry, shadingPass->findSink("Geometry"));
     rg->addLink(lights, shadingPass->findSink("Lights"));
-    rg->addLink(sceneParams, shadingPass->findSink("Scene Parameters"));
+    rg->addLink(sceneParams, shadingPass->findSink("SceneParameters"));
     rg->compile();
     return rg;
 }

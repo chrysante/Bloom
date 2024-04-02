@@ -1,7 +1,13 @@
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 
+#include <algorithm>
+
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Graphics/Material/MaterialInstance.h"
+
 using namespace bloom;
 using namespace rg;
+using namespace vml;
 
 void Resource::addUser(PassInterfaceBase* user) {
     if (!ranges::contains(_users, user)) {
@@ -13,8 +19,9 @@ void Resource::assignUsers() {
     visit(*this, [this]<typename R>(R& self) {
         for (auto* user: users()) {
             using I = typename ToInterfaceType<R>::type;
-            I& interface = user->get<I>();
-            *interface.handle = self.handle();
+            if (auto* handle = user->handle<I>()) {
+                *handle = self.handle();
+            }
         }
     });
 }
@@ -32,12 +39,41 @@ void TextureResource::assign(TextureHandle texture) {
 void GeometryResource::add(Reference<StaticMeshRenderer> mesh,
                            Reference<MaterialInstance> material,
                            vml::float4x4 const& transform) {
-    objects.emplace_back(std::move(mesh), std::move(material), transform);
+    objects.emplace_back(std::move(mesh), std::move(material),
+                         vml::transpose(transform));
 }
 
 void GeometryResource::clear() { objects.clear(); }
 
-void GeometryResource::prepare() { BL_UNIMPLEMENTED(); }
+static constexpr auto RenderGeometryOrder = [](Geometry::reference a,
+                                               Geometry::reference b) {
+    auto& aMatInst = *a.materialInstance;
+    auto* const aMat = aMatInst.material();
+    auto& bMatInst = *b.materialInstance;
+    auto* const bMat = bMatInst.material();
+
+    if (aMat == bMat) { // Sort by material first
+        if (a.materialInstance == b.materialInstance) { // Then by instance
+            return a.mesh < b.mesh;                     // Then by mesh
+        }
+        return a.materialInstance < b.materialInstance;
+    }
+    return aMat < bMat;
+};
+
+void GeometryResource::prepare(HardwareDevice& device) {
+    std::sort(objects.begin(), objects.end(), RenderGeometryOrder);
+    size_t transformBufferSize = objects.size() * sizeof(float4x4);
+    if (transformBufferSize > 0) {
+        if (transforms.size() < transformBufferSize) {
+            transforms =
+                device.createBuffer({ .size = transformBufferSize,
+                                      .storageMode = StorageMode::Managed });
+        }
+        device.fillManagedBuffer(transforms, objects.data().transform,
+                                 transformBufferSize);
+    }
+}
 
 void LightsResource::add(PointLight const& light) {
     pointLights.push_back(light);
@@ -60,4 +96,4 @@ void LightsResource::clear() {
     skyLights.clear();
 }
 
-void LightsResource::prepare() { BL_UNIMPLEMENTED(); }
+void LightsResource::prepare(HardwareDevice&) {}

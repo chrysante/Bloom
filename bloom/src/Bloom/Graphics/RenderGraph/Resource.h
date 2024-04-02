@@ -16,6 +16,10 @@
 #include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/StaticMesh.h"
 
+namespace bloom {
+class HardwareDevice;
+} // namespace bloom
+
 namespace bloom::rg {
 
 /// Base class of all resources
@@ -30,10 +34,11 @@ public:
     /// Adds \p interface as a user of this resource
     void addUser(PassInterfaceBase* interface);
 
+    ///
+    void assignUsers();
+
 protected:
     Resource(ResourceNodeType type): _type(type) {}
-
-    void assignUsers();
 
 private:
     friend ResourceNodeType dyncast_get_type(Resource const& resource) {
@@ -47,28 +52,43 @@ private:
 /// Wrapper around a `BufferHandle`
 class BufferResource: public Resource {
 public:
-    BufferResource(): Resource(ResourceNodeType::BufferResource) {}
+    ///
+    explicit BufferResource(BufferInterface interface):
+        Resource(ResourceNodeType::BufferResource), _interface(interface) {}
 
+    ///
     void assign(BufferHandle buffer);
 
+    ///
     BufferHandle const& handle() { return _handle; }
+
+    ///
+    BufferInterface const& interface() const { return _interface; }
 
 private:
     BufferHandle _handle;
+    BufferInterface _interface;
 };
 
 /// Wrapper around a `TextureHandle`
 class TextureResource: public Resource {
 public:
-    TextureResource(): Resource(ResourceNodeType::TextureResource) {}
+    ///
+    explicit TextureResource(TextureInterface interface):
+        Resource(ResourceNodeType::TextureResource), _interface(interface) {}
 
+    ///
     void assign(TextureHandle texture);
 
     ///
     TextureHandle const& handle() { return _handle; }
 
+    ///
+    TextureInterface const& interface() const { return _interface; }
+
 private:
     TextureHandle _handle;
+    TextureInterface _interface;
 };
 
 ///
@@ -79,7 +99,8 @@ UTL_SOA_TYPE(Geometry, (Reference<StaticMeshRenderer>, mesh),
 /// Set of meshes in a scene. This is rebuild every frame
 class GeometryResource: public Resource {
 public:
-    GeometryResource(): Resource(ResourceNodeType::GeometryResource) {}
+    explicit GeometryResource(GeometryInterface):
+        Resource(ResourceNodeType::GeometryResource) {}
 
     ///
     GeometryResource* handle() { return this; }
@@ -93,7 +114,7 @@ public:
     void clear();
 
     ///
-    void prepare();
+    void prepare(HardwareDevice& device);
 
     ///
     utl::structure_of_arrays<Geometry> const& getObjects() const {
@@ -111,7 +132,8 @@ private:
 /// Set of lights in a scene. This is rebuild every frame
 class LightsResource: public Resource {
 public:
-    LightsResource(): Resource(ResourceNodeType::LightsResource) {}
+    explicit LightsResource(LightsInterface):
+        Resource(ResourceNodeType::LightsResource) {}
 
     ///
     LightsResource* handle() { return this; }
@@ -125,7 +147,7 @@ public:
     void clear();
 
     ///
-    void prepare();
+    void prepare(HardwareDevice& device);
 
     ///
     BufferHandle const& buffer() const { return _buffer; }

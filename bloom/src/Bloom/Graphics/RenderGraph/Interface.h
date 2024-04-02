@@ -5,6 +5,7 @@
 #include <string>
 #include <variant>
 
+#include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 #include <utl/hash.hpp>
 #include <utl/overload.hpp>
@@ -19,12 +20,6 @@ namespace bloom::rg {
 ///
 struct BufferInterface {
     using ViewType = BufferHandle;
-
-    ///
-    std::string name;
-
-    ///
-    BufferHandle* handle = nullptr;
 
     ///
     size_t size;
@@ -54,51 +49,61 @@ struct TextureSize {
         bool operator==(RelativeToScreen const&) const = default;
     };
 
-    using Value = std::variant<Absolute, RelativeToScreen>;
+    using Element = std::variant<Absolute, RelativeToScreen>;
 
-    Value width;
-    Value height;
-    Value depth;
+    vml::vector<Element, 3> value;
 
     /// Size descriptor that describes the screen size
     static TextureSize const ScreenSize;
 
     bool operator==(TextureSize const&) const = default;
 
+    ///
+    bool isAbsolute() const {
+        return ranges::all_of(value, [](auto& elem) {
+            return std::holds_alternative<Absolute>(elem);
+        });
+    }
+
+    vml::usize3 compute(vml::usize2 screenSize) const {
+        return vml::map(value, vml::usize3(screenSize, 1),
+                        [&](auto elem, size_t screen) {
+            // clang-format off
+            return std::visit(utl::overload{
+                [&](Absolute a) { return a.size; },
+                [&](RelativeToScreen r) -> size_t {
+                    return r.factor * screen;
+                },
+            }, elem); // clang-format on
+        });
+    }
+
     struct Hash {
         size_t operator()(TextureSize const& size) const {
             size_t seed = 0;
-            for (auto mem: { &TextureSize::width, &TextureSize::height,
-                             &TextureSize::depth })
-            {
+            for (auto& elem: size.value) {
                 // clang-format off
                 utl::hash_combine_seed(seed, std::visit(utl::overload{
                     [](Absolute a) { return std::hash<size_t>{}(a.size); },
                     [](RelativeToScreen r) {
                         return std::hash<double>{}(r.factor);
                     },
-                }, size.*mem)); // clang-format on
+                }, elem)); // clang-format on
             }
             return seed;
         }
     };
 };
 
-constexpr TextureSize TextureSize::ScreenSize = {
+constexpr TextureSize TextureSize::ScreenSize = { {
     TextureSize::RelativeToScreen{ 1.0 },
     TextureSize::RelativeToScreen{ 1.0 },
     TextureSize::Absolute{ 1 },
-};
+} };
 
 ///
 struct TextureInterface {
     using ViewType = TextureHandle;
-
-    ///
-    std::string name;
-
-    ///
-    TextureHandle* handle = nullptr;
 
     ///
     TextureType type = TextureType::Texture2D;
@@ -143,23 +148,11 @@ struct TextureInterface {
 ///
 struct GeometryInterface {
     using ViewType = GeometryResource*;
-
-    ///
-    std::string name;
-
-    ///
-    GeometryResource** handle;
 };
 
 ///
 struct LightsInterface {
     using ViewType = LightsResource*;
-
-    ///
-    std::string name;
-
-    ///
-    LightsResource** handle;
 };
 
 /// Base class of `PassSource` and `PassSink`
@@ -186,13 +179,17 @@ public:
         return std::get<T>(get());
     }
 
+    ///
+    template <InterfaceType T>
+    typename T::ViewType* handle() const {
+        return static_cast<typename T::ViewType*>(_handle);
+    }
+
     /// \Returns `std::visit(vis, get())`
     decltype(auto) visit(auto&& vis) const { return std::visit(vis, get()); }
 
     /// \Returns the name of this interface
-    std::string const& name() const {
-        return visit([](auto& interface) -> auto& { return interface.name; });
-    }
+    std::string const& name() const { return _name; }
 
     /// \Returns the pass the which this interface belongs
     Pass* pass() { return _pass; }
@@ -207,20 +204,30 @@ public:
     void setResource(Resource* resource) { _resource = resource; }
 
 protected:
-    PassInterfaceBase(Pass* pass, InterfaceType auto interface):
-        _pass(pass), _interface(std::move(interface)) {}
+    template <InterfaceType T>
+    PassInterfaceBase(Pass* pass, std::string name,
+                      typename T::ViewType* handle, T interface):
+        _name(std::move(name)),
+        _handle(handle),
+        _interface(std::move(interface)),
+        _pass(pass) {}
 
 private:
+    std::string _name;
+    void* _handle;
+    Variant _interface;
     Pass* _pass = nullptr;
     Resource* _resource = nullptr;
-    Variant _interface;
 };
 
 /// Resource input of a pass
 class PassSink: public PassInterfaceBase {
 public:
-    explicit PassSink(Pass* pass, InterfaceType auto interface):
-        PassInterfaceBase(pass, std::move(interface)) {}
+    template <InterfaceType T>
+    explicit PassSink(Pass* pass, std::string name,
+                      typename T::ViewType* handle, T interface):
+        PassInterfaceBase(pass, std::move(name), handle, std::move(interface)) {
+    }
 
     /// \Returns the source that is linked to this sink
     /// \Note `addSink` on \p source must be called manually
@@ -240,8 +247,11 @@ private:
 /// Resource input of a pass
 class PassSource: public PassInterfaceBase {
 public:
-    explicit PassSource(Pass* pass, InterfaceType auto interface):
-        PassInterfaceBase(pass, std::move(interface)) {}
+    template <InterfaceType T>
+    explicit PassSource(Pass* pass, std::string name,
+                        typename T::ViewType* handle, T interface):
+        PassInterfaceBase(pass, std::move(name), handle, std::move(interface)) {
+    }
 
     /// \Returns the source that is linked to this sink
     std::span<PassSink* const> sinks() const { return _sinks; }

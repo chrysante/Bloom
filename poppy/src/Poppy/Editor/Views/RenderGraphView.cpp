@@ -134,7 +134,7 @@ static void submitLights(rg::LightsResource& lights, Scene const& scene) {
     submitLights<Light>(lights, scene, [](auto&...) {});
 }
 
-static void submitScene(SceneSystem& sceneSystem,
+static void submitScene(HardwareDevice& device, SceneSystem& sceneSystem,
                         rg::GeometryResource& geometry,
                         rg::LightsResource& lights) {
     geometry.clear();
@@ -170,6 +170,8 @@ static void submitScene(SceneSystem& sceneSystem,
             vml::normalize((transform.matrix * vml::float4{ 0, 0, 1, 0 }).xyz);
     });
     submitLights<SkyLightComponent>(lights, *scene);
+    lights.prepare(device);
+    geometry.prepare(device);
 }
 
 void RenderGraphView::frame() {
@@ -181,6 +183,10 @@ void RenderGraphView::frame() {
     if (windows.empty()) {
         return;
     }
+    vml::float2 viewportSize = ImGui::GetContentRegionAvail();
+    rg::FrameParameters frameParams = { .screenSize = viewportSize };
+    renderGraph->allocateResources(frameParams);
+    auto& device = editor().device();
     auto* window = windows.front();
     auto* mainPass = renderGraph->findPass("MainPass");
     auto* geometry = cast<rg::GeometryResource*>(
@@ -189,15 +195,27 @@ void RenderGraphView::frame() {
     auto* lights = cast<rg::LightsResource*>(
         renderGraph->findInputSource("Lights")->resource());
     BL_ASSERT(lights);
-    auto* params = cast<rg::BufferResource*>(
+    auto* paramBuffer = cast<rg::BufferResource*>(
         renderGraph->findInputSource("Parameters")->resource());
-    BL_ASSERT(params);
-    submitScene(editor().coreSystems().sceneSystem(), *geometry, *lights);
-    rg::FrameParameters frameParams = { .screenSize =
-                                            ImGui::GetContentRegionAvail() };
-    renderGraph->execute(frameParams, window->commandQueue());
+    BL_ASSERT(paramBuffer && paramBuffer->handle());
+    Camera camera;
+    camera.setProjection(vml::constants<>::pi / 2, viewportSize);
+    camera.setTransform(/* position: */ { -1429, 431, 887 },
+                        /* front: */ { 1, 0, 0 },
+                        /* up: */ { 0, 0, 1 });
+    SceneRenderParameters sceneParams = { .camera = vml::transpose(
+                                              camera.viewProjection()),
+                                          .cameraPosition = camera.position(),
+                                          .screenSize = viewportSize,
+                                          .screenResolution = viewportSize };
+    device.fillManagedBuffer(paramBuffer->handle(), &sceneParams,
+                             sizeof sceneParams);
+    submitScene(device, editor().coreSystems().sceneSystem(), *geometry,
+                *lights);
+    renderGraph->execute(window->commandQueue());
     auto* output = cast<rg::TextureResource*>(
         mainPass->findSource("RawColor")->resource());
+    BL_ASSERT(output && output->handle());
     ImGui::Image(output->handle().nativeHandle(),
                  ImGui::GetContentRegionAvail());
 }

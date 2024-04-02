@@ -26,6 +26,8 @@ using namespace poppy;
 
 POPPY_REGISTER_VIEW(Viewport, "Viewport", {});
 
+static bool ShowDebugPanel = false;
+
 Viewport::Viewport(): BasicSceneInspector(this) {
     // clang-format off
     toolbar = {
@@ -109,6 +111,9 @@ void Viewport::init() {
 void Viewport::shutdown() {}
 
 void Viewport::frame() {
+    if (ShowDebugPanel) {
+        debugPanel();
+    }
     ImGui::BeginChild("Viewport Child");
     if (scenes().empty()) {
         displayEmptyWithReason("No Active Scene");
@@ -287,12 +292,26 @@ void Viewport::debugPanel() {
     ImGui::Begin("Viewport Debug");
     float4x4 view = camera.camera().view();
     float4x4 proj = camera.camera().projection();
+    float4x4 viewproj = camera.camera().viewProjection();
     withFont(FontDesc::UIDefault().setWeight(FontWeight::Semibold),
              [&] { ImGui::Text("View Matrix:"); });
     matrix(view);
     withFont(FontDesc::UIDefault().setWeight(FontWeight::Semibold),
              [&] { ImGui::Text("Projection Matrix:"); });
     matrix(proj);
+    withFont(FontDesc::UIDefault().setWeight(FontWeight::Semibold),
+             [&] { ImGui::Text("ViewProjection:"); });
+    matrix(proj);
+    if (ImGui::Button("Copy to clipboard")) {
+        std::stringstream sstr;
+        sstr << "View Matrix:\n";
+        sstr << view << "\n";
+        sstr << "Projection Matrix:\n";
+        sstr << proj << "\n";
+        sstr << "ViewProjection:\n";
+        sstr << viewproj << "\n";
+        ImGui::SetClipboardText(sstr.str().data());
+    }
     ImGui::End();
 }
 
@@ -398,6 +417,8 @@ void Viewport::dropdownMenu() {
             enumCombo(params.framebufferSlot);
             ImGui::EndCombo();
         }
+        beginProperty("Debug Panel");
+        ImGui::Checkbox("Show", &ShowDebugPanel);
         endSection();
     }
 }

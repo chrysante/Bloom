@@ -19,6 +19,9 @@ public:
     /// material is the only material there really is
     void makeDefault(HardwareDevice& device);
 
+    /// Main pass for the render graph. We will clean this up in the future
+    RenderPipelineHandle rgMainPass;
+
     RenderPipelineHandle mainPass;
     RenderPipelineHandle editorPass;
     RenderPipelineHandle outlinePass;

@@ -39,9 +39,10 @@ public:
 
     ///
     template <InterfaceType Interface>
-    PassSource* declareInput(Interface interface) {
-        inputs.push_back(
-            std::make_unique<PassSource>(nullptr, std::move(interface)));
+    PassSource* declareInput(std::string name, Interface interface) {
+        inputs.push_back(std::make_unique<PassSource>(nullptr, std::move(name),
+                                                      nullptr,
+                                                      std::move(interface)));
         return inputs.back().get();
     }
 
@@ -51,8 +52,11 @@ public:
     /// Prepares the graph for execution
     bool compile();
 
+    /// TODO: Document this
+    void allocateResources(FrameParameters params);
+
     /// Executes the graph
-    void execute(FrameParameters params, CommandQueue& cmdQueue);
+    void execute(CommandQueue& cmdQueue);
 
     Pass* findPass(std::string_view name);
 

@@ -55,16 +55,20 @@ protected:
 
     /// Declares a resource sink (input) to this pass
     template <InterfaceType Interface>
-    void declareSink(Interface interface) {
-        _sinks.push_back(
-            std::make_unique<PassSink>(this, std::move(interface)));
+    void declareSink(std::string name, Interface::ViewType* handle,
+                     Interface interface) {
+        _sinks.push_back(std::make_unique<PassSink>(this, std::move(name),
+                                                    handle,
+                                                    std::move(interface)));
     }
 
     /// Declares a resource source (output)) to this pass
     template <InterfaceType Interface>
-    void declareSource(Interface const& interface) {
-        _sources.push_back(
-            std::make_unique<PassSource>(this, std::move(interface)));
+    void declareSource(std::string name, Interface::ViewType* handle,
+                       Interface const& interface) {
+        _sources.push_back(std::make_unique<PassSource>(this, std::move(name),
+                                                        handle,
+                                                        std::move(interface)));
     }
 
 private:

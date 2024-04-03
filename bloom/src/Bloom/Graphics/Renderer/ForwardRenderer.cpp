@@ -290,46 +290,41 @@ RendererParameters ForwardRenderer::makeParameters(usize2 framebufferSize) {
     result.scene.camera = vml::transpose(scene.camera.viewProjection());
     result.scene.cameraPosition = scene.camera.position();
     result.scene.screenResolution = framebufferSize;
-
+    auto& lights = result.scene.lights;
     // Point Lights
     if (scene.pointLights.size() > 32) {
         Logger::Warn("Can't render more than 32 Point Lights");
         scene.pointLights.resize(32);
     }
-    result.scene.numPointLights =
+    lights.numPointLights =
         utl::narrow_cast<uint32_t>(scene.pointLights.size());
     std::copy(scene.pointLights.begin(), scene.pointLights.end(),
-              result.scene.pointLights);
+              lights.pointLights);
 
     // Spotlights
     if (scene.spotLights.size() > 32) {
         Logger::Warn("Can't render more than 32 Spot Lights");
         scene.spotLights.resize(32);
     }
-    result.scene.numSpotLights =
-        utl::narrow_cast<uint32_t>(scene.spotLights.size());
+    lights.numSpotLights = utl::narrow_cast<uint32_t>(scene.spotLights.size());
     std::copy(scene.spotLights.begin(), scene.spotLights.end(),
-              result.scene.spotLights);
+              lights.spotLights);
 
     // Directional Lights
     if (scene.dirLights.size() > 32) {
         Logger::Warn("Can't render more than 32 Directional Lights");
         scene.dirLights.resize(32);
     }
-    result.scene.numDirLights =
-        utl::narrow_cast<uint32_t>(scene.dirLights.size());
-    std::copy(scene.dirLights.begin(), scene.dirLights.end(),
-              result.scene.dirLights);
+    lights.numDirLights = utl::narrow_cast<uint32_t>(scene.dirLights.size());
+    std::copy(scene.dirLights.begin(), scene.dirLights.end(), lights.dirLights);
 
     // Skylights
     if (scene.skyLights.size() > 32) {
         Logger::Warn("Can't render more than 32 Sky Lights");
         scene.skyLights.resize(32);
     }
-    result.scene.numSkyLights =
-        utl::narrow_cast<uint32_t>(scene.skyLights.size());
-    std::copy(scene.skyLights.begin(), scene.skyLights.end(),
-              result.scene.skyLights);
+    lights.numSkyLights = utl::narrow_cast<uint32_t>(scene.skyLights.size());
+    std::copy(scene.skyLights.begin(), scene.skyLights.end(), lights.skyLights);
 
     result.shadowData.numShadowCasters =
         utl::narrow_cast<int>(scene.shadows.numShadowCasters);

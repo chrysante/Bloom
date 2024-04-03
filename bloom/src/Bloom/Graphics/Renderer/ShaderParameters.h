@@ -6,12 +6,7 @@
 
 namespace bloom {
 
-struct SceneRenderParameters {
-    metal::float4x4 camera;
-    metal::float3 cameraPosition;
-    metal::float2 screenSize;
-    metal::float2 screenResolution;
-
+struct LightBufferContents {
     uint numPointLights;
     PointLight pointLights[32];
 
@@ -23,6 +18,15 @@ struct SceneRenderParameters {
 
     uint numSkyLights;
     SkyLight skyLights[32];
+};
+
+struct SceneRenderParameters {
+    metal::float4x4 camera;
+    metal::float3 cameraPosition;
+    metal::float2 screenSize;
+    metal::float2 screenResolution;
+
+    LightBufferContents lights;
 };
 
 BLOOM_SHADER_CONSTANT int maxShadowCascades = 10; // do we need this?

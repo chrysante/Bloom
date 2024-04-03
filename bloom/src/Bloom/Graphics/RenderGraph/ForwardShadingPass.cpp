@@ -39,8 +39,9 @@ void ForwardShadingPass::doExecute(RenderContext& ctx) {
     desc.depthAttachment = dDesc;
     ctx.begin(desc);
     ctx.setVertexBuffer(sceneParameters, 0);
-    ctx.setFragmentBuffer(sceneParameters, 0);
     ctx.setVertexBuffer(geometry->transformBuffer(), 2);
+    ctx.setFragmentBuffer(sceneParameters, 0);
+    ctx.setFragmentBuffer(lights->lightBuffer(), 1);
     Material const* currentMaterial = nullptr;
     MaterialInstance const* currentMaterialInstance = nullptr;
     StaticMeshRenderer const* currentMesh = nullptr;
@@ -53,7 +54,7 @@ void ForwardShadingPass::doExecute(RenderContext& ctx) {
         }
         if (object.materialInstance.get() != currentMaterialInstance) {
             ctx.setFragmentBuffer(object.materialInstance->parameterBuffer(),
-                                  2);
+                                  3);
             currentMaterialInstance = object.materialInstance.get();
         }
         if (object.mesh.get() != currentMesh) {

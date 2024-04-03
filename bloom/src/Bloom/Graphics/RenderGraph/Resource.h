@@ -150,7 +150,7 @@ public:
     void prepare(HardwareDevice& device);
 
     ///
-    BufferHandle const& buffer() const { return _buffer; }
+    BufferHandle const& lightBuffer() const { return buffer; }
 
 private:
     std::vector<PointLight> pointLights;
@@ -158,7 +158,7 @@ private:
     std::vector<DirectionalLight> dirLights;
     std::vector<SkyLight> skyLights;
 
-    BufferHandle _buffer;
+    BufferHandle buffer;
 };
 
 } // namespace bloom::rg

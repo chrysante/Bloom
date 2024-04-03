@@ -1,6 +1,7 @@
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 
 #include <algorithm>
+#include <range/v3/algorithm.hpp>
 
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
@@ -96,4 +97,27 @@ void LightsResource::clear() {
     skyLights.clear();
 }
 
-void LightsResource::prepare(HardwareDevice&) {}
+template <typename L>
+static uint32_t copyLights(std::type_identity_t<std::span<L const>> source,
+                           L* dest) {
+    size_t const MaxNumLights = 32;
+    if (source.size() > MaxNumLights) {
+        Logger::Warn("Max number of lights exceeded");
+        source = source.subspan(0, MaxNumLights);
+    }
+    ranges::copy(source, dest);
+    return utl::narrow_cast<uint32_t>(source.size());
+}
+
+void LightsResource::prepare(HardwareDevice& device) {
+    LightBufferContents lights;
+    lights.numPointLights = copyLights(pointLights, lights.pointLights);
+    lights.numSpotLights = copyLights(spotLights, lights.spotLights);
+    lights.numDirLights = copyLights(dirLights, lights.dirLights);
+    lights.numSkyLights = copyLights(skyLights, lights.skyLights);
+    if (!buffer) {
+        buffer = device.createBuffer(
+            { .size = sizeof lights, .storageMode = StorageMode::Managed });
+    }
+    device.fillManagedBuffer(buffer, &lights, sizeof lights);
+}

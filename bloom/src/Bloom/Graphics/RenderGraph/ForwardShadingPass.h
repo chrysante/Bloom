@@ -9,7 +9,7 @@
 namespace bloom::rg {
 
 ///
-class ForwardShadingPass: public Pass {
+class ForwardShadingPass: public RenderPass {
 public:
     explicit ForwardShadingPass(std::string name);
 

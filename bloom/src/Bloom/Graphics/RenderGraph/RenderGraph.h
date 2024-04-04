@@ -16,12 +16,6 @@
 
 namespace bloom::rg {
 
-struct FrameParameters {
-    vml::int2 screenSize = 0;
-
-    bool operator==(FrameParameters const&) const = default;
-};
-
 ///
 class RenderGraph {
 public:
@@ -56,7 +50,7 @@ public:
     void allocateResources(FrameParameters params);
 
     /// Executes the graph
-    void execute(CommandQueue& cmdQueue);
+    void execute(FrameParameters params, CommandQueue& cmdQueue);
 
     Pass* findPass(std::string_view name);
 

@@ -8,6 +8,7 @@
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Scene.h"
+#include "Bloom/Shader/PostProcessing.h"
 #include "Poppy/Editor/Editor.h"
 
 using namespace poppy;
@@ -188,16 +189,16 @@ void RenderGraphView::frame() {
     renderGraph->allocateResources(frameParams);
     auto& device = editor().device();
     auto* window = windows.front();
-    auto* mainPass = renderGraph->findPass("MainPass");
+    auto* postProcessPass = renderGraph->findPass("PostProcess");
     auto* geometry = cast<rg::GeometryResource*>(
         renderGraph->findInputSource("Geometry")->resource());
     BL_ASSERT(geometry);
     auto* lights = cast<rg::LightsResource*>(
         renderGraph->findInputSource("Lights")->resource());
     BL_ASSERT(lights);
-    auto* paramBuffer = cast<rg::BufferResource*>(
-        renderGraph->findInputSource("Parameters")->resource());
-    BL_ASSERT(paramBuffer && paramBuffer->handle());
+    auto* sceneParamBuffer = cast<rg::BufferResource*>(
+        renderGraph->findInputSource("SceneParameters")->resource());
+    BL_ASSERT(sceneParamBuffer && sceneParamBuffer->handle());
     Camera camera;
     camera.setProjection(vml::constants<>::pi / 2, viewportSize);
     camera.setTransform(/* position: */ { -1429, 431, 887 },
@@ -208,13 +209,20 @@ void RenderGraphView::frame() {
                                           .cameraPosition = camera.position(),
                                           .screenSize = viewportSize,
                                           .screenResolution = viewportSize };
-    device.fillManagedBuffer(paramBuffer->handle(), &sceneParams,
+    device.fillManagedBuffer(sceneParamBuffer->handle(), &sceneParams,
                              sizeof sceneParams);
+    auto* ppParamBuffer = cast<rg::BufferResource*>(
+        renderGraph->findInputSource("PostProcessParameters")->resource());
+    BL_ASSERT(ppParamBuffer && ppParamBuffer->handle());
+    PostProcessParameters ppParams{ .toneMappingFunction =
+                                        ToneMappingFunction::ACES };
+    device.fillManagedBuffer(ppParamBuffer->handle(), &ppParams,
+                             sizeof ppParams);
     submitScene(device, editor().coreSystems().sceneSystem(), *geometry,
                 *lights);
-    renderGraph->execute(window->commandQueue());
+    renderGraph->execute(frameParams, window->commandQueue());
     auto* output = cast<rg::TextureResource*>(
-        mainPass->findSource("RawColor")->resource());
+        postProcessPass->findSource("Output")->resource());
     BL_ASSERT(output && output->handle());
     ImGui::Image(output->handle().nativeHandle(),
                  ImGui::GetContentRegionAvail());

@@ -19,6 +19,8 @@ Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
 }
 
 void RenderGraph::addLink(PassSource* source, PassSink* sink) {
+    BL_EXPECT(source);
+    BL_EXPECT(sink);
     BL_ASSERT(!sink->source(), "Pass sink is already linked");
     source->addSink(sink);
     sink->setSource(source);
@@ -184,11 +186,15 @@ static void reallocateHardwareResource(HardwareDevice&, LightsResource&,
 
 static void reallocateHardwareResources(HardwareDevice& device,
                                         ResourcePool& pool,
+                                        std::span<Pass* const> passes,
                                         FrameParameters const& frameParams) {
     for (auto* resource: pool.resources()) {
         visit(*resource, [&](auto& resource) {
             reallocateHardwareResource(device, resource, frameParams);
         });
+    }
+    for (auto* pass: passes) {
+        pass->allocateResources(device);
     }
 }
 
@@ -196,14 +202,13 @@ void RenderGraph::allocateResources(FrameParameters params) {
     if (lastFrameParams == params) {
         return;
     }
-    reallocateHardwareResources(*device, pool, params);
+    reallocateHardwareResources(*device, pool, executionOrder, params);
     lastFrameParams = params;
 }
 
-void RenderGraph::execute(CommandQueue& cmdQueue) {
+void RenderGraph::execute(FrameParameters params, CommandQueue& cmdQueue) {
     for (auto* pass: executionOrder) {
-        auto ctx = cmdQueue.createRenderContext();
-        pass->execute(*ctx);
+        pass->execute(params, cmdQueue);
     }
 }
 
@@ -222,6 +227,8 @@ PassSource* RenderGraph::findInputSource(std::string_view name) {
 }
 
 #include "Bloom/Graphics/RenderGraph/ForwardShadingPass.h"
+#include "Bloom/Graphics/RenderGraph/PostProcessPass.h"
+#include "Bloom/Shader/PostProcessing.h"
 
 std::unique_ptr<RenderGraph> rg::createDefaultRenderGraph(
     HardwareDevice* device) {
@@ -229,15 +236,24 @@ std::unique_ptr<RenderGraph> rg::createDefaultRenderGraph(
     auto* geometry = rg->declareInput("Geometry", GeometryInterface{});
     auto* lights = rg->declareInput("Lights", LightsInterface{});
     auto* sceneParams =
-        rg->declareInput("Parameters",
+        rg->declareInput("SceneParameters",
                          BufferInterface{ .size =
                                               sizeof(SceneRenderParameters) });
+    auto* postprocessParams =
+        rg->declareInput("PostProcessParameters",
+                         BufferInterface{ .size =
+                                              sizeof(PostProcessParameters) });
     auto* shadingPass =
         rg->addPass(std::make_unique<ForwardShadingPass>("MainPass"));
-    shadingPass->markSink();
+    auto* postProcessPass =
+        rg->addPass(std::make_unique<PostProcessPass>("PostProcess"));
+    postProcessPass->markSink();
     rg->addLink(geometry, shadingPass->findSink("Geometry"));
     rg->addLink(lights, shadingPass->findSink("Lights"));
     rg->addLink(sceneParams, shadingPass->findSink("SceneParameters"));
+    rg->addLink(postprocessParams, postProcessPass->findSink("Parameters"));
+    rg->addLink(shadingPass->findSource("RawColor"),
+                postProcessPass->findSink("RawColor"));
     rg->compile();
     return rg;
 }

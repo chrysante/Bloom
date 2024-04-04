@@ -427,13 +427,13 @@ struct ComputePipelineDescription {
 struct ComputePipelineParameters {
     /// The maximum number of threads in a threadgroup that you can dispatch to
     /// the pipeline
-    std::size_t maxTotalThreadsPerThreadgroup = 0;
+    size_t maxTotalThreadsPerThreadgroup = 0;
 
     /// The number of threads that the GPU executes simultaneously
-    std::size_t threadExecutionWidth = 0;
+    size_t threadExecutionWidth = 0;
 
     /// The length, in bytes, of statically allocated threadgroup memory
-    std::size_t staticThreadgroupMemoryLength = 0;
+    size_t staticThreadgroupMemoryLength = 0;
 };
 
 class ComputePipelineHandle:

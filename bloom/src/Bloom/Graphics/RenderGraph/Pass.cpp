@@ -2,6 +2,7 @@
 
 #include <range/v3/algorithm.hpp>
 
+#include "Bloom/GPU/CommandQueue.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 
 using namespace bloom;
@@ -21,4 +22,17 @@ PassSource* Pass::findSource(std::string_view name) {
         return source->name() == name;
     });
     return itr != _sources.end() ? itr->get() : nullptr;
+}
+
+void Pass::execute(FrameParameters params, CommandQueue& queue) {
+    _frameParams = params;
+    if (auto* renderPass = dynamic_cast<RenderPass*>(this)) {
+        renderPass->doExecute(*queue.createRenderContext());
+    }
+    else if (auto* computePass = dynamic_cast<ComputePass*>(this)) {
+        computePass->doExecute(*queue.createComputeContext());
+    }
+    else {
+        BL_UNIMPLEMENTED();
+    }
 }

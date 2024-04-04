@@ -14,7 +14,7 @@ using namespace rg;
 using namespace vml;
 
 ForwardShadingPass::ForwardShadingPass(std::string name):
-    Pass(std::move(name)) {
+    RenderPass(std::move(name)) {
     declareSink("SceneParameters", &sceneParameters,
                 BufferInterface{ .size = sizeof(SceneRenderParameters) });
     declareSink("Geometry", &geometry, GeometryInterface{});

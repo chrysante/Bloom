@@ -4,15 +4,16 @@
 #include <string>
 #include <vector>
 
-#include <range/v3/view.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
 
 namespace bloom::rg {
 
-/// Base class for all render graph pass nodes
+/// Base class for all render graph pass nodes.
 class Pass {
 public:
     Pass(Pass const&) = delete;
@@ -21,9 +22,6 @@ public:
 
     /// \Returns the debug name of this pass
     std::string const& name() const { return _name; };
-
-    /// Renders this pass
-    void execute(RenderContext& ctx) { doExecute(ctx); }
 
     /// \Returns the resource sink (input) with name \p name
     PassSink* findSink(std::string_view name);
@@ -50,9 +48,19 @@ public:
     /// Mark this pass as a sink pass
     void markSink() { _isSink = true; }
 
-protected:
-    explicit Pass(std::string name): _name(std::move(name)) {}
+    /// Called by the render graph on resource reallocation
+    void allocateResources(HardwareDevice& device) {
+        doAllocateResources(device);
+    }
 
+    /// \Returns the size of the screen that is drawn to. This is only valid
+    /// during execution
+    vml::int2 screenSize() const { return _frameParams.screenSize; }
+
+    /// Executes this pass
+    void execute(FrameParameters params, CommandQueue& queue);
+
+protected:
     /// Declares a resource sink (input) to this pass
     template <InterfaceType Interface>
     void declareSink(std::string name, Interface::ViewType* handle,
@@ -72,12 +80,43 @@ protected:
     }
 
 private:
-    virtual void doExecute(RenderContext& ctx) = 0;
+    friend class RenderPass;
+    friend class ComputePass;
+    explicit Pass(std::string name): _name(std::move(name)) {}
 
+    virtual void doAllocateResources(HardwareDevice&) {}
+
+    bool _isSink = false;
+    FrameParameters _frameParams;
     std::string _name;
     std::vector<std::unique_ptr<PassSink>> _sinks;
     std::vector<std::unique_ptr<PassSource>> _sources;
-    bool _isSink = false;
+};
+
+/// Base class for all passes that use the GPUs render pipeline
+class RenderPass: public Pass {
+public:
+    using Pass::Pass;
+
+protected:
+    explicit RenderPass(std::string name): Pass(std::move(name)) {}
+
+private:
+    friend class Pass;
+    virtual void doExecute(RenderContext& ctx) = 0;
+};
+
+/// Base class for all passes that use the GPUs compute pipeline
+class ComputePass: public Pass {
+public:
+    using Pass::Pass;
+
+protected:
+    explicit ComputePass(std::string name): Pass(std::move(name)) {}
+
+private:
+    friend class Pass;
+    virtual void doExecute(ComputeContext& ctx) = 0;
 };
 
 } // namespace bloom::rg

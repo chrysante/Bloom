@@ -53,6 +53,7 @@ set(bloom_sources
 
   src/Bloom/GPU.h
   src/Bloom/GPU/BlitContext.h
+  src/Bloom/GPU/Fwd.h
   src/Bloom/GPU/CommandQueue.h
   src/Bloom/GPU/ComputeContext.h
   src/Bloom/GPU/HardwareDevice.cpp
@@ -88,6 +89,8 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/Interface.h
   src/Bloom/Graphics/RenderGraph/Pass.cpp
   src/Bloom/Graphics/RenderGraph/Pass.h
+  src/Bloom/Graphics/RenderGraph/PostProcessPass.cpp
+  src/Bloom/Graphics/RenderGraph/PostProcessPass.h
   src/Bloom/Graphics/RenderGraph/RenderGraph.cpp
   src/Bloom/Graphics/RenderGraph/RenderGraph.h
   src/Bloom/Graphics/RenderGraph/Resource.cpp
@@ -154,6 +157,8 @@ set(bloom_sources
   src/Bloom/Scene/SceneEvents.h
   src/Bloom/Scene/SceneCamera.cpp
   src/Bloom/Scene/SceneCamera.h
+
+  src/Bloom/Shader/PostProcessing.h
 )
 
 set(bloom_test_sources

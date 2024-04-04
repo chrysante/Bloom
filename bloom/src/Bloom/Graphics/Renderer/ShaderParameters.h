@@ -50,7 +50,7 @@ struct BloomParameters {
 
 enum class ToneMapping { ACES, reinhard };
 
-struct PostProcessParameters {
+struct PostProcessParameters_Depr {
     BloomParameters bloom;
     ToneMapping tonemapping;
 };
@@ -63,7 +63,7 @@ struct DebugDrawData {
 };
 
 struct RendererParameters {
-    PostProcessParameters postprocess;
+    PostProcessParameters_Depr postprocess;
     SceneRenderParameters scene;
     ShadowRenderData shadowData;
 };

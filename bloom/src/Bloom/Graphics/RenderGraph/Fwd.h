@@ -3,18 +3,16 @@
 
 #include <iosfwd>
 
+#include <vml/vml.hpp>
+
 #include "Bloom/Core/Dyncast.h"
-
-namespace bloom {
-
-class RenderContext;
-
-} // namespace bloom
 
 namespace bloom::rg {
 
 class RenderGraph;
 class Pass;
+class RenderPass;
+class ComputePass;
 class PassSink;
 class PassSource;
 
@@ -73,5 +71,17 @@ struct ToInterfaceType;
     UTL_DYNCAST_DEFINE(bloom::rg::Name, bloom::rg::ResourceNodeType::Name,     \
                        bloom::rg::Parent, Corporeality)
 #include "Bloom/Graphics/RenderGraph/Resource.def"
+
+namespace bloom::rg {
+
+///
+struct FrameParameters {
+    ///
+    vml::int2 screenSize = 0;
+
+    bool operator==(FrameParameters const&) const = default;
+};
+
+} // namespace bloom::rg
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_FWD_H

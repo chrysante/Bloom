@@ -17,6 +17,13 @@ PostProcessPass::PostProcessPass(std::string name):
                     .pixelFormat = PixelFormat::RGBA32Float,
                     .size = TextureSize::ScreenSize,
                 });
+    declareSink("BloomParameters", &bloomParameterBuffer,
+                BufferInterface{ .size = sizeof(BloomParameters) });
+    declareSink("BloomColor", &bloomColor,
+                TextureInterface{
+                    .pixelFormat = PixelFormat::RG11B10Float,
+                    .size = TextureSize::Relative2D({ 0.5, 0.5 }),
+                });
     declareSource("Output", &output,
                   TextureInterface{
                       .pixelFormat = PixelFormat::RGBA8Unorm,
@@ -28,8 +35,10 @@ void PostProcessPass::doExecute(ComputeContext& ctx) {
     ctx.begin();
     ctx.setPipeline(pipeline);
     ctx.setBuffer(parameterBuffer, 0);
+    ctx.setBuffer(bloomParameterBuffer, 1);
     ctx.setTexture(output, 0);
     ctx.setTexture(rawColor, 1);
+    ctx.setTexture(bloomColor, 2);
     uint2 gridSize = screenSize();
     size_t threadGroupWidth = pipeline.threadExecutionWidth;
     size_t threadGroupHeight =
@@ -42,7 +51,8 @@ void PostProcessPass::doExecute(ComputeContext& ctx) {
     ctx.commit();
 }
 
-void PostProcessPass::doAllocateResources(HardwareDevice& device) {
+void PostProcessPass::doAllocateResources(FrameParameters const&,
+                                          HardwareDevice& device) {
     pipeline = device.createComputePipeline(
         { .computeFunction = device.createFunction("rgPostprocess") });
 }

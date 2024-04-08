@@ -49,8 +49,9 @@ public:
     void markSink() { _isSink = true; }
 
     /// Called by the render graph on resource reallocation
-    void allocateResources(HardwareDevice& device) {
-        doAllocateResources(device);
+    void allocateResources(FrameParameters const& frameParams,
+                           HardwareDevice& device) {
+        doAllocateResources(frameParams, device);
     }
 
     /// \Returns the size of the screen that is drawn to. This is only valid
@@ -84,7 +85,7 @@ private:
     friend class ComputePass;
     explicit Pass(std::string name): _name(std::move(name)) {}
 
-    virtual void doAllocateResources(HardwareDevice&) {}
+    virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
 
     bool _isSink = false;
     FrameParameters _frameParams;

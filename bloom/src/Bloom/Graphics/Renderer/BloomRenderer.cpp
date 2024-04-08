@@ -126,8 +126,8 @@ void BloomRenderer::render(CommandQueue& commandQueue,
     ctx.commit();
 }
 
-BloomParameters BloomRenderer::makeShaderParameters() const {
-    BloomParameters params{};
+BloomParameters_Depr BloomRenderer::makeShaderParameters() const {
+    BloomParameters_Depr params{};
 
     params.intensity = settings.intensity;
     params.curve = { settings.threshold - settings.knee, 2 * settings.knee,

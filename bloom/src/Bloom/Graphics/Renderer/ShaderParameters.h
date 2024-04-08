@@ -37,7 +37,7 @@ struct alignas(metal::float4x4) ShadowRenderData {
     int numCascades[maxShadowCasters];
 };
 
-struct BloomParameters {
+struct BloomParameters_Depr {
     bool enabled = true;
     bool physicallyCorrect = true;
     metal::float3 curve;
@@ -51,7 +51,7 @@ struct BloomParameters {
 enum class ToneMapping { ACES, reinhard };
 
 struct PostProcessParameters_Depr {
-    BloomParameters bloom;
+    BloomParameters_Depr bloom;
     ToneMapping tonemapping;
 };
 

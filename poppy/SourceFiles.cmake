@@ -31,6 +31,7 @@ set(poppy_sources
   src/Poppy/Editor/Views/RendererSettingsView.h
   src/Poppy/Editor/Views/SceneOutliner.cpp
   src/Poppy/Editor/Views/SceneOutliner.h
+  src/Poppy/Editor/Views/Viewport2.cpp
   src/Poppy/Editor/Views/Viewport/Gizmo.cpp
   src/Poppy/Editor/Views/Viewport/Gizmo.h
   src/Poppy/Editor/Views/Viewport/Viewport.cpp

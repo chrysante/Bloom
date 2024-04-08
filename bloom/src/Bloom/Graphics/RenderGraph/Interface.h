@@ -56,6 +56,12 @@ struct TextureSize {
     /// Size descriptor that describes the screen size
     static TextureSize const ScreenSize;
 
+    ///
+    static TextureSize Relative2D(vml::double2 factor) {
+        return { { RelativeToScreen{ factor.x }, RelativeToScreen{ factor.y },
+                   Absolute{ 1 } } };
+    }
+
     bool operator==(TextureSize const&) const = default;
 
     ///
@@ -96,9 +102,9 @@ struct TextureSize {
 };
 
 constexpr TextureSize TextureSize::ScreenSize = { {
-    TextureSize::RelativeToScreen{ 1.0 },
-    TextureSize::RelativeToScreen{ 1.0 },
-    TextureSize::Absolute{ 1 },
+    RelativeToScreen{ 1.0 },
+    RelativeToScreen{ 1.0 },
+    Absolute{ 1 },
 } };
 
 ///

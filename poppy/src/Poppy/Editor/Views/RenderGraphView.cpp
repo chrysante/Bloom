@@ -175,6 +175,33 @@ static void submitScene(HardwareDevice& device, SceneSystem& sceneSystem,
     geometry.prepare(device);
 }
 
+namespace {
+
+struct BloomSettings {
+    bool physicallyCorrect = true;
+    float intensity = 1;
+    float threshold = 1;
+    float knee = 0.1;
+    float clamp = 100;
+    float diffusion = 1;
+    float contribution = 0.1;
+};
+
+BloomParameters makeBloomParams(BloomSettings settings) {
+    BloomParameters params{};
+    params.intensity = settings.intensity;
+    params.curve = { settings.threshold - settings.knee, 2 * settings.knee,
+                     0.25 / settings.knee };
+    params.physicallyCorrect = settings.physicallyCorrect;
+    params.threshold = settings.threshold;
+    params.scale = settings.diffusion;
+    params.clamp = settings.clamp;
+    params.contribution = settings.contribution;
+    return params;
+}
+
+} // namespace
+
 void RenderGraphView::frame() {
     if (scenes().empty()) {
         displayEmptyWithReason("No Active Scene");
@@ -211,6 +238,22 @@ void RenderGraphView::frame() {
                                           .screenResolution = viewportSize };
     device.fillManagedBuffer(sceneParamBuffer->handle(), &sceneParams,
                              sizeof sceneParams);
+
+    auto* bloomParamBuffer = cast<rg::BufferResource*>(
+        renderGraph->findInputSource("BloomParameters")->resource());
+    BL_ASSERT(bloomParamBuffer && bloomParamBuffer->handle());
+    BloomParameters bloomParams = makeBloomParams({
+        .physicallyCorrect = false,
+        .intensity = .5,
+        .threshold = 5,
+        .knee = 0.1,
+        .clamp = 100,
+        .diffusion = 1,
+        .contribution = 0.1,
+    });
+    device.fillManagedBuffer(bloomParamBuffer->handle(), &bloomParams,
+                             sizeof bloomParams);
+
     auto* ppParamBuffer = cast<rg::BufferResource*>(
         renderGraph->findInputSource("PostProcessParameters")->resource());
     BL_ASSERT(ppParamBuffer && ppParamBuffer->handle());

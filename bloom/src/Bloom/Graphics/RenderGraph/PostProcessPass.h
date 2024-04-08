@@ -12,11 +12,14 @@ public:
 
 private:
     void doExecute(ComputeContext& ctx) override;
-    void doAllocateResources(HardwareDevice& device) override;
+    void doAllocateResources(FrameParameters const& params,
+                             HardwareDevice& device) override;
 
     ComputePipelineHandle pipeline;
     BufferHandle parameterBuffer;
+    BufferHandle bloomParameterBuffer;
     TextureHandle rawColor;
+    TextureHandle bloomColor;
     TextureHandle output;
 };
 

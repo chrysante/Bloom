@@ -1,0 +1,123 @@
+#include "Bloom/Graphics/RenderGraph/BloomPass.h"
+
+#include "Bloom/GPU/ComputeContext.h"
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Shader/PostProcessing.h"
+
+using namespace bloom;
+using namespace rg;
+using namespace vml::short_types;
+
+static constexpr size_t NumMips = BloomPass::NumMips;
+
+BloomPass::BloomPass(std::string name): ComputePass(std::move(name)) {
+    declareSink("Parameters", &parameters,
+                BufferInterface{ .size = sizeof(BloomParameters) });
+    declareSink("RawColor", &rawColor,
+                TextureInterface{
+                    .pixelFormat = PixelFormat::RGBA32Float,
+                    .size = TextureSize::ScreenSize,
+                });
+    declareSource("Output", &upsample,
+                  TextureInterface{ .type = TextureType::Texture2D,
+                                    .pixelFormat = PixelFormat::RG11B10Float,
+                                    .size =
+                                        TextureSize::Relative2D({ 0.5, 0.5 }),
+                                    .mipmapLevelCount = NumMips - 1 });
+}
+
+namespace {
+
+struct GridSizes {
+    std::array<uint2, NumMips> downsample;
+    std::array<uint2, NumMips - 1> upsample;
+
+    static GridSizes create(uint2 frameBufferSize) {
+        GridSizes result;
+        for (uint2 size = frameBufferSize; auto& s: result.downsample) {
+            size /= 2;
+            s = size;
+        }
+        for (uint2 size = frameBufferSize; auto& s: result.upsample) {
+            size /= 2;
+            s = size;
+        }
+        return result;
+    }
+};
+
+} // namespace
+
+void BloomPass::doExecute(ComputeContext& ctx) {
+    ctx.begin();
+    size_t threadGroupWidth = downsamplePipeline.threadExecutionWidth;
+    size_t threadGroupHeight =
+        downsamplePipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth;
+    vml::uint2 threadGroupSize = { utl::narrow_cast<uint32_t>(threadGroupWidth),
+                                   utl::narrow_cast<uint32_t>(
+                                       threadGroupHeight) };
+    auto gridSizes = GridSizes::create(screenSize());
+    // All bloom shaders want this
+    ctx.setBuffer(parameters, 0);
+    // Prefilter pass (including first downsampling
+    ctx.setPipeline(prefilterPipeline);
+    ctx.setTexture(rawColor, 0);          // Source
+    ctx.setTexture(downsampleMips[0], 1); // dest
+    ctx.dispatchThreads(gridSizes.downsample[0], threadGroupSize);
+    // Rest of downsample passes
+    ctx.setPipeline(downsamplePipeline);
+    for (int i = 0; i < (int)NumMips - 2; ++i) {
+        ctx.setTexture(downsampleMips[i], 0);     // Source
+        ctx.setTexture(downsampleMips[i + 1], 1); // Dest
+        ctx.dispatchThreads(gridSizes.downsample[i + 1], threadGroupSize);
+    }
+    // First upsample pass
+    ctx.setPipeline(upsamplePipeline);
+    ctx.setTexture(downsampleMips[NumMips - 1],
+                   0);                              // Upsample source
+    ctx.setTexture(downsampleMips[NumMips - 2], 1); // Copy source
+    ctx.setTexture(upsampleMips[NumMips - 2], 2);   // Dest
+    ctx.dispatchThreads(gridSizes.upsample[NumMips - 2], threadGroupSize);
+    // Rest of upsample passes
+    for (int i = NumMips - 2; i > 0; --i) {
+        ctx.setTexture(upsampleMips[i], 0);
+        ctx.setTexture(downsampleMips[i - 1], 1);
+        ctx.setTexture(upsampleMips[i - 1], 2);
+        ctx.dispatchThreads(gridSizes.upsample[i - 1], threadGroupSize);
+    }
+    ctx.end();
+    ctx.commit();
+}
+
+void BloomPass::doAllocateResources(FrameParameters const& params,
+                                    HardwareDevice& device) {
+    /// Textures
+    TextureDescription desc;
+    desc.size = { params.screenSize / 2, 1 };
+    desc.type = TextureType::Texture2D;
+    desc.mipmapLevelCount = NumMips;
+    desc.storageMode = StorageMode::GPUOnly;
+    desc.usage = TextureUsage::ShaderRead | TextureUsage::ShaderWrite;
+    desc.pixelFormat = PixelFormat::RG11B10Float;
+    downsample = device.createTexture(desc);
+    /// Upsample texture is created by the render graph framework
+    for (int i = 0; i < (int)NumMips; ++i) {
+        downsampleMips[i] =
+            device.createSharedTextureView(downsample, TextureType::Texture2D,
+                                           PixelFormat::RG11B10Float, i, 1, 0,
+                                           1);
+    }
+    for (int i = 0; i < (int)NumMips - 1; ++i) {
+        upsampleMips[i] =
+            device.createSharedTextureView(upsample, TextureType::Texture2D,
+                                           PixelFormat::RG11B10Float, i, 1, 0,
+                                           1);
+    }
+    /// Pipelines
+    downsamplePipeline = device.createComputePipeline(
+        { .computeFunction = device.createFunction("rgBloomDownsample") });
+    upsamplePipeline = device.createComputePipeline(
+        { .computeFunction = device.createFunction("rgBloomUpsample") });
+    prefilterPipeline = device.createComputePipeline(
+        { .computeFunction = device.createFunction("rgBloomPrefilter") });
+}

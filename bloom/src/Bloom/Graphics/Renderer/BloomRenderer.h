@@ -34,7 +34,7 @@ public:
     void render(CommandQueue&, BloomFramebuffer&, TextureView rawColor,
                 BufferView renderParameters, vml::uint2 framebufferSize);
 
-    BloomParameters makeShaderParameters() const;
+    BloomParameters_Depr makeShaderParameters() const;
 
     BloomRenderParameters getParameters() const { return settings; }
     void setParameters(BloomRenderParameters const&);

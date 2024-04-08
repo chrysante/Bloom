@@ -152,9 +152,6 @@ bool RenderGraph::compile() {
 static void reallocateHardwareResource(HardwareDevice& device,
                                        BufferResource& resource,
                                        FrameParameters const&) {
-    if (resource.handle()) {
-        return;
-    }
     resource.assign(device.createBuffer({
         .size = resource.interface().size,
         .storageMode = StorageMode::Managed // For now!
@@ -164,9 +161,6 @@ static void reallocateHardwareResource(HardwareDevice& device,
 static void reallocateHardwareResource(HardwareDevice& device,
                                        TextureResource& resource,
                                        FrameParameters const& params) {
-    if (resource.handle()) {
-        return;
-    }
     auto const& interface = resource.interface();
     resource.assign(device.createTexture(
         { .type = interface.type,
@@ -194,7 +188,7 @@ static void reallocateHardwareResources(HardwareDevice& device,
         });
     }
     for (auto* pass: passes) {
-        pass->allocateResources(device);
+        pass->allocateResources(frameParams, device);
     }
 }
 
@@ -226,6 +220,7 @@ PassSource* RenderGraph::findInputSource(std::string_view name) {
     return itr != inputs.end() ? itr->get() : nullptr;
 }
 
+#include "Bloom/Graphics/RenderGraph/BloomPass.h"
 #include "Bloom/Graphics/RenderGraph/ForwardShadingPass.h"
 #include "Bloom/Graphics/RenderGraph/PostProcessPass.h"
 #include "Bloom/Shader/PostProcessing.h"
@@ -239,21 +234,33 @@ std::unique_ptr<RenderGraph> rg::createDefaultRenderGraph(
         rg->declareInput("SceneParameters",
                          BufferInterface{ .size =
                                               sizeof(SceneRenderParameters) });
+    auto* bloomParams =
+        rg->declareInput("BloomParameters",
+                         BufferInterface{ .size = sizeof(BloomParameters) });
     auto* postprocessParams =
         rg->declareInput("PostProcessParameters",
                          BufferInterface{ .size =
                                               sizeof(PostProcessParameters) });
     auto* shadingPass =
         rg->addPass(std::make_unique<ForwardShadingPass>("MainPass"));
+    auto* bloomPass = rg->addPass(std::make_unique<BloomPass>("Bloom"));
     auto* postProcessPass =
         rg->addPass(std::make_unique<PostProcessPass>("PostProcess"));
     postProcessPass->markSink();
+    auto* rawColor = shadingPass->findSource("RawColor");
+    auto* bloomColor = bloomPass->findSource("Output");
+    /// Shading pass
     rg->addLink(geometry, shadingPass->findSink("Geometry"));
     rg->addLink(lights, shadingPass->findSink("Lights"));
     rg->addLink(sceneParams, shadingPass->findSink("SceneParameters"));
+    /// Bloom pass
+    rg->addLink(bloomParams, bloomPass->findSink("Parameters"));
+    rg->addLink(rawColor, bloomPass->findSink("RawColor"));
+    /// Post process pass
     rg->addLink(postprocessParams, postProcessPass->findSink("Parameters"));
-    rg->addLink(shadingPass->findSource("RawColor"),
-                postProcessPass->findSink("RawColor"));
+    rg->addLink(bloomParams, postProcessPass->findSink("BloomParameters"));
+    rg->addLink(rawColor, postProcessPass->findSink("RawColor"));
+    rg->addLink(bloomColor, postProcessPass->findSink("BloomColor"));
     rg->compile();
     return rg;
 }

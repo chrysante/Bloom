@@ -1,5 +1,3 @@
-#if 0
-
 #include <array>
 #include <string>
 
@@ -8,8 +6,11 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Application/Window.h"
+#include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Serialize.h"
+#include "Bloom/Runtime/SceneSystem.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/Views/AssetBrowser.h"
 #include "Poppy/Editor/Views/BasicSceneInspector.h"
 #include "Poppy/Editor/Views/Viewport/Gizmo.h"
 #include "Poppy/Editor/Views/Viewport/ViewportCameraController.h"
@@ -31,8 +32,7 @@ struct Parameters {
         Postprocessed,
         LAST = Postprocessed
     };
-    FramebufferElements framebufferSlot =
-        FramebufferElements::Postprocessed;
+    FramebufferElements framebufferSlot = FramebufferElements::Postprocessed;
 };
 
 struct DebugDrawOptions {
@@ -47,23 +47,33 @@ static std::string toString(DebugDrawOptions::Mode mode) {
     return std::array{ "Lit", "Wireframe" }[(size_t)mode];
 };
 
+struct MouseState {
+    bool hovered, held, pressed;
+};
+
 struct Viewport2: View, BasicSceneInspector {
     Viewport2();
     void init() override;
+
     void frame() override;
     void displayScenes();
     void displayToolbar();
+    void readInput();
+    void acceptDragDrop();
+    void receiveSceneDragDrop();
     void onInput(bloom::InputEvent&) override;
     YAML::Node serialize() const override;
     void deserialize(YAML::Node) override;
-    
+
     Toolbar makeToolbar();
-    
+    void dropdownMenu();
+
     Toolbar toolbar;
     Gizmo gizmo;
     Parameters params;
     DebugDrawOptions drawOptions;
     ViewportCameraController cameraController;
+    MouseState mouseState;
 };
 
 } // namespace
@@ -83,89 +93,109 @@ void Viewport2::init() {
     gizmo.setInput(window().input());
 }
 
-static ViewportInput detectViewportInput(ImGuiButtonFlags buttonFlags) {
-    using namespace ImGui;
-    buttonFlags |= ImGuiButtonFlags_NoNavFocus;
-    // Save to restore later
-    ImVec2 cursorPos = GetCursorPos();
-    ImGuiID hovered = ImGui::GetCurrentContext()->HoveredId;
-    SetCursorPos({ 0, 0 });
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems) return ViewportInput{};
-    ImGuiID id = window->GetID("__Invisible_Button__");
-    ImVec2 size = CalcItemSize(window->Size, 0.0f, 0.0f);
-    ImRect bb(window->DC.CursorPos,
-              vml::float2(window->DC.CursorPos) + vml::float2(size));
-    ItemSize(size);
-    if (!ItemAdd(bb, id)) return {};
-    ViewportInput result{};
-    result.pressed =
-        ButtonBehavior(bb, id, &result.hovered, &result.held, buttonFlags);
-    ImGui::SetHoveredID(hovered);
-    SetCursorPos(cursorPos);
-    return result;
-}
-
 void Viewport2::frame() {
-    if (scenes().empty()) {
-        displayEmptyWithReason("No Active Scene");
-    }
-    else {
+    ImGui::BeginChild("Child");
+    if (!scenes().empty()) {
         displayScenes();
     }
+    else {
+        displayEmptyWithReason("No Active Scene");
+    }
     displayToolbar();
-    if (!scenes().empty()) {
-        auto wantsInput =
-            ::detectViewportInput(ImGuiButtonFlags_MouseButtonRight);
-        viewportHovered = wantsInput.hovered;
-        if (wantsInput.held) {
-            camera.update(Timestep{ 0, 0.166 }, window().input());
-        }
-    }
-    if (!isSimulating() && GImGui->DragDropActive) {
-        float spacing = 6.5;
-        ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-        ImGui::SetCursorPos({ spacing, spacing });
-        ImGui::InvisibleButton("viewport-drag-drop-button",
-                               ImGui::GetContentRegionAvail() -
-                                   ImVec2(spacing, spacing));
-        ImGui::PopItemFlag();
-        receiveSceneDragDrop();
-    }
+    readInput();
+    acceptDragDrop();
+    ImGui::EndChild();
 }
+
+void Viewport2::displayScenes() { displayEmptyWithReason("Placeholder Text"); }
 
 void Viewport2::displayToolbar() {
     float2 padding = ImGui::GetStyle().WindowPadding;
     ImGui::SetCursorPos(padding);
-    float4 color = float4(ImGui::GetStyleColorVec4(ImGuiCol_WindowBg)) * float4(1, 1, 1, 0.5);
+    float4 color = float4(ImGui::GetStyleColorVec4(ImGuiCol_WindowBg)) *
+                   float4(1, 1, 1, 0.5);
     auto* DL = ImGui::GetWindowDrawList();
     float2 winpos = ImGui::GetWindowPos();
     float2 winsize = ImGui::GetWindowSize();
     DL->AddRectFilled(winpos,
-                      winpos + float2(winsize.x, toolbar.getHeight() + 2 * padding.y),
+                      winpos + float2(winsize.x,
+                                      toolbar.getHeight() + 2 * padding.y),
                       ImGui::ColorConvertFloat4ToU32(color));
     toolbar.display(size().x - 2 * padding.x);
 }
 
-void Viewport2::onInput(bloom::InputEvent&) {
-    
+static MouseState detectViewportInput(ImGuiButtonFlags buttonFlags) {
+    buttonFlags |= ImGuiButtonFlags_NoNavFocus;
+    // Save to restore later
+    ImVec2 cursorPos = ImGui::GetCursorPos();
+    ImGuiID hovered = ImGui::GetCurrentContext()->HoveredId;
+    ImGui::SetCursorPos({ 0, 0 });
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return MouseState{};
+    ImGuiID id = window->GetID("__Invisible_Button__");
+    ImVec2 size = ImGui::CalcItemSize(window->Size, 0.0f, 0.0f);
+    ImRect bb(window->DC.CursorPos,
+              vml::float2(window->DC.CursorPos) + vml::float2(size));
+    ImGui::ItemSize(size);
+    if (!ImGui::ItemAdd(bb, id)) return {};
+    MouseState result{};
+    result.pressed = ImGui::ButtonBehavior(bb, id, &result.hovered,
+                                           &result.held, buttonFlags);
+    ImGui::SetHoveredID(hovered);
+    ImGui::SetCursorPos(cursorPos);
+    return result;
 }
 
-YAML::Node Viewport2::serialize() const {
-    
+void Viewport2::readInput() {
+    if (scenes().empty()) {
+        return;
+    }
+    mouseState = ::detectViewportInput(ImGuiButtonFlags_MouseButtonRight);
+    if (mouseState.held) {
+        cameraController.update(Timestep{ 0, 0.166 }, window().input());
+    }
 }
 
-void Viewport2::deserialize(YAML::Node) {
-    
+void Viewport2::acceptDragDrop() {
+    if (isSimulating() || !GImGui->DragDropActive) {
+        return;
+    }
+    float spacing = 6.5;
+    ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+    ImGui::SetCursorPos({ spacing, spacing });
+    ImGui::InvisibleButton("viewport-drag-drop-button",
+                           (float2)ImGui::GetContentRegionAvail() -
+                               float2(spacing, spacing));
+    ImGui::PopItemFlag();
+    receiveSceneDragDrop();
 }
+
+void Viewport2::receiveSceneDragDrop() {
+    auto payload = acceptAssetDragDrop({ AssetType::Scene });
+    if (!payload) {
+        return;
+    }
+    AssetHandle const handle = *payload;
+    auto& AM = assetManager();
+    auto asset = AM.get(handle);
+    AM.makeAvailable(handle, AssetRepresentation::CPU);
+    auto& sceneSystem = editor().coreSystems().sceneSystem();
+    sceneSystem.unloadAll();
+    sceneSystem.loadScene(as<Scene>(asset));
+}
+
+void Viewport2::onInput(bloom::InputEvent&) {}
+
+YAML::Node Viewport2::serialize() const { return YAML::Node{}; }
+
+void Viewport2::deserialize(YAML::Node) {}
 
 Toolbar Viewport2::makeToolbar() {
     // clang-format off
     return {
         ToolbarDropdownMenu()
-            .content([this] {
-                dropdownMenu();
-            }).minWidth(400),
+            .content([this] { dropdownMenu(); })
+            .minWidth(400),
 
         ToolbarSpacer{},
 
@@ -199,11 +229,12 @@ Toolbar Viewport2::makeToolbar() {
 
         ToolbarDropdownMenu()
             .content([this] {
-                enumCombo(camera.projection(),
-                          [&](auto proj) { camera.setProjection(proj); });
+                enumCombo(cameraController.projection(), [&](auto proj) {
+                    cameraController.setProjection(proj);
+                });
             })
             .previewValue([this] {
-                return toString(camera.projection());
+                return toString(cameraController.projection());
             }),
 
         ToolbarSpacer{},
@@ -226,4 +257,4 @@ Toolbar Viewport2::makeToolbar() {
     }; // clang-format on
 }
 
-#endif
+void Viewport2::dropdownMenu() {}

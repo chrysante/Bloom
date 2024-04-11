@@ -10,7 +10,7 @@ using namespace bloom;
 using namespace rg;
 using namespace ranges::views;
 
-RenderGraph::RenderGraph(HardwareDevice* device): device(device) {}
+RenderGraph::RenderGraph(HardwareDevice* device): mDevice(device) {}
 
 Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
     auto* result = pass.get();
@@ -196,7 +196,7 @@ void RenderGraph::allocateResources(FrameParameters params) {
     if (lastFrameParams == params) {
         return;
     }
-    reallocateHardwareResources(*device, pool, executionOrder, params);
+    reallocateHardwareResources(*device(), pool, executionOrder, params);
     lastFrameParams = params;
 }
 
@@ -225,42 +225,46 @@ PassSource* RenderGraph::findInputSource(std::string_view name) {
 #include "Bloom/Graphics/RenderGraph/PostProcessPass.h"
 #include "Bloom/Shader/PostProcessing.h"
 
-std::unique_ptr<RenderGraph> rg::createDefaultRenderGraph(
-    HardwareDevice* device) {
-    auto rg = std::make_unique<RenderGraph>(device);
-    auto* geometry = rg->declareInput("Geometry", GeometryInterface{});
-    auto* lights = rg->declareInput("Lights", LightsInterface{});
+static RenderGraph createDefaultRenderGraph(HardwareDevice* device) {
+    RenderGraph rg(device);
+    auto* geometry = rg.declareInput("Geometry", GeometryInterface{});
+    auto* lights = rg.declareInput("Lights", LightsInterface{});
     auto* sceneParams =
-        rg->declareInput("SceneParameters",
-                         BufferInterface{ .size =
-                                              sizeof(SceneRenderParameters) });
+        rg.declareInput("SceneParameters",
+                        BufferInterface{ .size =
+                                             sizeof(SceneRenderParameters) });
     auto* bloomParams =
-        rg->declareInput("BloomParameters",
-                         BufferInterface{ .size = sizeof(BloomParameters) });
+        rg.declareInput("BloomParameters",
+                        BufferInterface{ .size = sizeof(BloomParameters) });
     auto* postprocessParams =
-        rg->declareInput("PostProcessParameters",
-                         BufferInterface{ .size =
-                                              sizeof(PostProcessParameters) });
+        rg.declareInput("PostProcessParameters",
+                        BufferInterface{ .size =
+                                             sizeof(PostProcessParameters) });
     auto* shadingPass =
-        rg->addPass(std::make_unique<ForwardShadingPass>("MainPass"));
-    auto* bloomPass = rg->addPass(std::make_unique<BloomPass>("Bloom"));
+        rg.addPass(std::make_unique<ForwardShadingPass>("MainPass"));
+    auto* bloomPass = rg.addPass(std::make_unique<BloomPass>("Bloom"));
     auto* postProcessPass =
-        rg->addPass(std::make_unique<PostProcessPass>("PostProcess"));
+        rg.addPass(std::make_unique<PostProcessPass>("PostProcess"));
     postProcessPass->markSink();
     auto* rawColor = shadingPass->findSource("RawColor");
     auto* bloomColor = bloomPass->findSource("Output");
     /// Shading pass
-    rg->addLink(geometry, shadingPass->findSink("Geometry"));
-    rg->addLink(lights, shadingPass->findSink("Lights"));
-    rg->addLink(sceneParams, shadingPass->findSink("SceneParameters"));
+    rg.addLink(geometry, shadingPass->findSink("Geometry"));
+    rg.addLink(lights, shadingPass->findSink("Lights"));
+    rg.addLink(sceneParams, shadingPass->findSink("SceneParameters"));
     /// Bloom pass
-    rg->addLink(bloomParams, bloomPass->findSink("Parameters"));
-    rg->addLink(rawColor, bloomPass->findSink("RawColor"));
+    rg.addLink(bloomParams, bloomPass->findSink("Parameters"));
+    rg.addLink(rawColor, bloomPass->findSink("RawColor"));
     /// Post process pass
-    rg->addLink(postprocessParams, postProcessPass->findSink("Parameters"));
-    rg->addLink(bloomParams, postProcessPass->findSink("BloomParameters"));
-    rg->addLink(rawColor, postProcessPass->findSink("RawColor"));
-    rg->addLink(bloomColor, postProcessPass->findSink("BloomColor"));
-    rg->compile();
+    rg.addLink(postprocessParams, postProcessPass->findSink("Parameters"));
+    rg.addLink(bloomParams, postProcessPass->findSink("BloomParameters"));
+    rg.addLink(rawColor, postProcessPass->findSink("RawColor"));
+    rg.addLink(bloomColor, postProcessPass->findSink("BloomColor"));
+    rg.compile();
     return rg;
+}
+
+RenderGraph* rg::getGlobalRenderGraph(HardwareDevice* device) {
+    static RenderGraph instance = createDefaultRenderGraph(device);
+    return &instance;
 }

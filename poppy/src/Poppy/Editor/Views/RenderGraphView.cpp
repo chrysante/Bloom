@@ -6,6 +6,7 @@
 #include "Bloom/Application/Window.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
+#include "Bloom/Graphics/RenderGraph/SceneRenderer.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Scene.h"
 #include "Bloom/Shader/PostProcessing.h"
@@ -16,11 +17,6 @@ using namespace bloom;
 using namespace vml;
 
 POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
-
-static rg::RenderGraph* getGlobalRenderGraph(HardwareDevice* device) {
-    static auto g = rg::createDefaultRenderGraph(device);
-    return g.get();
-}
 
 RenderGraphView::RenderGraphView(): BasicSceneInspector(this) {}
 
@@ -113,94 +109,15 @@ void RenderGraphView::init() {
     // clang-format on
 
     /// For now!!
-    renderGraph = getGlobalRenderGraph(&editor().device());
+    renderGraph = rg::getGlobalRenderGraph(&editor().device());
 }
 
 void RenderGraphView::onInput(InputEvent& event) { nodeEditor.onInput(event); }
 
-template <typename LightComponent>
-static void submitLights(rg::LightsResource& lights, Scene const& scene,
-                         auto&& lightModifier) {
-    auto view =
-        scene.view<TransformMatrixComponent const, LightComponent const>();
-    view.each([&](auto /* ID */, TransformMatrixComponent const& transform,
-                  LightComponent light) {
-        lightModifier(transform, light);
-        lights.add(light.light);
-    });
+static rg::SceneRenderer& getSceneRenderer(rg::RenderGraph* renderGraph) {
+    static rg::SceneRenderer instance(renderGraph);
+    return instance;
 }
-
-template <typename Light>
-static void submitLights(rg::LightsResource& lights, Scene const& scene) {
-    submitLights<Light>(lights, scene, [](auto&...) {});
-}
-
-static void submitScene(HardwareDevice& device, SceneSystem& sceneSystem,
-                        rg::GeometryResource& geometry,
-                        rg::LightsResource& lights) {
-    geometry.clear();
-    lights.clear();
-    auto* scene = sceneSystem.scenes().front();
-    std::unique_lock lock = sceneSystem.lock();
-    sceneSystem.applyTransformHierarchy();
-    auto view = scene->view<TransformMatrixComponent const,
-                            MeshRendererComponent const>();
-    view.each([&](auto /* ID */, TransformMatrixComponent const& transform,
-                  MeshRendererComponent const& meshRenderer) {
-        if (!meshRenderer.mesh || !meshRenderer.materialInstance ||
-            !meshRenderer.materialInstance->material())
-        {
-            return;
-        }
-        geometry.add(meshRenderer.mesh->getRenderer(),
-                     meshRenderer.materialInstance, transform.matrix);
-    });
-    submitLights<PointLightComponent>(lights, *scene,
-                                      [](auto& transform, auto& light) {
-        light.light.position = transform.matrix.column(3).xyz;
-    });
-    submitLights<SpotLightComponent>(lights, *scene,
-                                     [](auto& transform, auto& light) {
-        light.light.position = transform.matrix.column(3).xyz;
-        light.light.direction =
-            vml::normalize((transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
-    });
-    submitLights<DirectionalLightComponent>(lights, *scene,
-                                            [](auto& transform, auto& light) {
-        light.light.direction =
-            vml::normalize((transform.matrix * vml::float4{ 0, 0, 1, 0 }).xyz);
-    });
-    submitLights<SkyLightComponent>(lights, *scene);
-    lights.prepare(device);
-    geometry.prepare(device);
-}
-
-namespace {
-
-struct BloomSettings {
-    bool physicallyCorrect = true;
-    float intensity = 1;
-    float threshold = 1;
-    float knee = 0.1;
-    float clamp = 100;
-    float diffusion = 1;
-    float contribution = 0.1;
-};
-
-BloomParameters makeBloomParams(BloomSettings settings) {
-    BloomParameters params{};
-    params.intensity = settings.intensity;
-    params.curve = { settings.threshold - settings.knee, 2 * settings.knee,
-                     0.25 / settings.knee };
-    params.physicallyCorrect = settings.physicallyCorrect;
-    params.threshold = settings.threshold;
-    params.scale = settings.diffusion;
-    params.clamp = settings.clamp;
-    params.contribution = settings.contribution;
-    return params;
-}
-
-} // namespace
 
 void RenderGraphView::frame() {
     if (scenes().empty()) {
@@ -213,60 +130,25 @@ void RenderGraphView::frame() {
     }
     vml::float2 viewportSize = ImGui::GetContentRegionAvail();
     rg::FrameParameters frameParams = { .screenSize = viewportSize };
-    renderGraph->allocateResources(frameParams);
-    auto& device = editor().device();
-    auto* window = windows.front();
-    auto* postProcessPass = renderGraph->findPass("PostProcess");
-    auto* geometry = cast<rg::GeometryResource*>(
-        renderGraph->findInputSource("Geometry")->resource());
-    BL_ASSERT(geometry);
-    auto* lights = cast<rg::LightsResource*>(
-        renderGraph->findInputSource("Lights")->resource());
-    BL_ASSERT(lights);
-    auto* sceneParamBuffer = cast<rg::BufferResource*>(
-        renderGraph->findInputSource("SceneParameters")->resource());
-    BL_ASSERT(sceneParamBuffer && sceneParamBuffer->handle());
     Camera camera;
     camera.setProjection(vml::constants<>::pi / 2, viewportSize);
     camera.setTransform(/* position: */ { -1429, 431, 887 },
                         /* front: */ { 1, 0, 0 },
                         /* up: */ { 0, 0, 1 });
-    SceneRenderParameters sceneParams = { .camera = vml::transpose(
-                                              camera.viewProjection()),
-                                          .cameraPosition = camera.position(),
-                                          .screenSize = viewportSize,
-                                          .screenResolution = viewportSize };
-    device.fillManagedBuffer(sceneParamBuffer->handle(), &sceneParams,
-                             sizeof sceneParams);
 
-    auto* bloomParamBuffer = cast<rg::BufferResource*>(
-        renderGraph->findInputSource("BloomParameters")->resource());
-    BL_ASSERT(bloomParamBuffer && bloomParamBuffer->handle());
-    BloomParameters bloomParams = makeBloomParams({
-        .physicallyCorrect = false,
-        .intensity = .5,
-        .threshold = 5,
-        .knee = 0.1,
-        .clamp = 100,
-        .diffusion = 1,
-        .contribution = 0.1,
-    });
-    device.fillManagedBuffer(bloomParamBuffer->handle(), &bloomParams,
-                             sizeof bloomParams);
-
-    auto* ppParamBuffer = cast<rg::BufferResource*>(
-        renderGraph->findInputSource("PostProcessParameters")->resource());
-    BL_ASSERT(ppParamBuffer && ppParamBuffer->handle());
-    PostProcessParameters ppParams{ .toneMappingFunction =
-                                        ToneMappingFunction::ACES };
-    device.fillManagedBuffer(ppParamBuffer->handle(), &ppParams,
-                             sizeof ppParams);
-    submitScene(device, editor().coreSystems().sceneSystem(), *geometry,
-                *lights);
-    renderGraph->execute(frameParams, window->commandQueue());
+    auto& renderer = getSceneRenderer(renderGraph);
+    renderer.begin(frameParams, camera);
+    auto& sceneSystem = editor().coreSystems().sceneSystem();
+    std::unique_lock lock = sceneSystem.lock();
+    sceneSystem.applyTransformHierarchy();
+    for (auto* scene: sceneSystem.scenes()) {
+        renderer.submit(*scene);
+    }
+    lock.unlock();
+    renderer.draw(windows.front()->commandQueue());
+    auto* postProcessPass = renderGraph->findPass("PostProcess");
     auto* output = cast<rg::TextureResource*>(
         postProcessPass->findSource("Output")->resource());
-    BL_ASSERT(output && output->handle());
     ImGui::Image(output->handle().nativeHandle(),
                  ImGui::GetContentRegionAvail());
 }

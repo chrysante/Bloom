@@ -56,8 +56,11 @@ public:
 
     PassSource* findInputSource(std::string_view name);
 
+    /// \Returns the associated device
+    HardwareDevice* device() const { return mDevice; }
+
 private:
-    HardwareDevice* device;
+    HardwareDevice* mDevice;
     std::vector<std::unique_ptr<Pass>> passes;
     std::vector<std::unique_ptr<PassSource>> inputs;
     std::vector<Pass*> executionOrder;
@@ -65,7 +68,9 @@ private:
     FrameParameters lastFrameParams;
 };
 
-std::unique_ptr<RenderGraph> createDefaultRenderGraph(HardwareDevice* device);
+/// Global render graph instance. This is a temporary function and will be
+/// removed soon
+RenderGraph* getGlobalRenderGraph(HardwareDevice* device);
 
 } // namespace bloom::rg
 

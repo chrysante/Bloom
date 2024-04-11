@@ -41,10 +41,10 @@ public:
     /// Sets the projection mode to \p proj
     void setProjection(Projection proj) { data.projection = proj; }
 
-    ///
+    /// \Returns the current field of view in degrees
     float fieldOfView() const { return data.fieldOfView; }
 
-    ///
+    /// Sets the field of view to \p fov in degrees
     void setFieldOfView(float fov) { data.fieldOfView = fov; }
 
     ///

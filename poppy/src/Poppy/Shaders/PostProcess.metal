@@ -111,6 +111,7 @@ kernel void rgPostprocess(
     float3 rawColor = rawColorTex.read(position).rgb;
     float3 bloomColor = readBloomTexture(bloomColorTex, uv, bloomParams.scale);
     float3 bloomAdded = addBloomColor(rawColor, bloomColor, bloomParams);
+    //    float3 bloomAdded = rawColor;
     float3 toneMapped = tonemap(bloomAdded, params.toneMappingFunction);
     float3 gammaCorrected = gammaCorrect(toneMapped);
     dest.write(float4(gammaCorrected, 1), position);

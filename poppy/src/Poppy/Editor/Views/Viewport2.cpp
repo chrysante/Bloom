@@ -8,7 +8,11 @@
 #include "Bloom/Application/Window.h"
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Serialize.h"
+#include "Bloom/Graphics/RenderGraph/RenderGraph.h"
+#include "Bloom/Graphics/RenderGraph/Resource.h"
+#include "Bloom/Graphics/RenderGraph/SceneRenderer.h"
 #include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Shader/PostProcessing.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/Views/AssetBrowser.h"
 #include "Poppy/Editor/Views/BasicSceneInspector.h"
@@ -80,7 +84,9 @@ struct Viewport2: View, BasicSceneInspector {
 
 POPPY_REGISTER_VIEW(Viewport2, "Viewport2", {});
 
-Viewport2::Viewport2(): BasicSceneInspector(this), toolbar(makeToolbar()) {}
+Viewport2::Viewport2(): BasicSceneInspector(this), toolbar(makeToolbar()) {
+    cameraController.setFieldOfView(60);
+}
 
 void Viewport2::init() {
     setPadding(0);
@@ -107,7 +113,36 @@ void Viewport2::frame() {
     ImGui::EndChild();
 }
 
-void Viewport2::displayScenes() { displayEmptyWithReason("Placeholder Text"); }
+static rg::SceneRenderer& getSceneRenderer(rg::RenderGraph& renderGraph) {
+    static rg::SceneRenderer instance(&renderGraph);
+    return instance;
+}
+
+void Viewport2::displayScenes() {
+    auto windows = editor().getWindows();
+    if (windows.empty()) {
+        return;
+    }
+    float2 viewportSize = ImGui::GetContentRegionAvail();
+    rg::FrameParameters frameParams = { .screenSize = viewportSize };
+    auto& renderGraph = *rg::getGlobalRenderGraph(&editor().device());
+    auto& renderer = getSceneRenderer(renderGraph);
+    cameraController.applyProjection(viewportSize);
+    renderer.begin(frameParams, cameraController.camera());
+    auto& sceneSystem = editor().coreSystems().sceneSystem();
+    std::unique_lock lock = sceneSystem.lock();
+    sceneSystem.applyTransformHierarchy();
+    for (auto* scene: sceneSystem.scenes()) {
+        renderer.submit(*scene);
+    }
+    lock.unlock();
+    renderer.draw(windows.front()->commandQueue());
+    auto* postProcessPass = renderGraph.findPass("PostProcess");
+    auto* output = cast<rg::TextureResource*>(
+        postProcessPass->findSource("Output")->resource());
+    ImGui::Image(output->handle().nativeHandle(),
+                 ImGui::GetContentRegionAvail());
+}
 
 void Viewport2::displayToolbar() {
     float2 padding = ImGui::GetStyle().WindowPadding;

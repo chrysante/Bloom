@@ -10,6 +10,8 @@
 #include <utl/utility.hpp>
 
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Ranges.h"
+#include "Bloom/Core/Yaml.h"
 #include "Poppy/UI/Font.h"
 
 using namespace poppy;
@@ -241,7 +243,7 @@ utl::hashset<Node const*> Node::predecessors() const {
     return predsImpl(inputs()) | ranges::to<utl::hashset<Node const*>>;
 }
 
-bool Graph::hasCycles() const {
+bool NodeEditorGraph::hasCycles() const {
     return ranges::any_of(sources(),
                           [](auto* source) { return findCycle(source); });
 }
@@ -254,11 +256,11 @@ static auto sourcesImpl(auto const& nodes) {
     });
 }
 
-utl::small_vector<Node*> Graph::sources() {
+utl::small_vector<Node*> NodeEditorGraph::sources() {
     return sourcesImpl(nodes()) | ranges::to<utl::small_vector<Node*>>;
 }
 
-utl::small_vector<Node const*> Graph::sources() const {
+utl::small_vector<Node const*> NodeEditorGraph::sources() const {
     return sourcesImpl(nodes()) | ranges::to<utl::small_vector<Node const*>>;
 }
 
@@ -270,12 +272,140 @@ static auto sinksImpl(auto const& nodes) {
     });
 }
 
-utl::small_vector<Node*> Graph::sinks() {
+utl::small_vector<Node*> NodeEditorGraph::sinks() {
     return sinksImpl(nodes()) | ranges::to<utl::small_vector<Node*>>;
 }
 
-utl::small_vector<Node const*> Graph::sinks() const {
+utl::small_vector<Node const*> NodeEditorGraph::sinks() const {
     return sinksImpl(nodes()) | ranges::to<utl::small_vector<Node const*>>;
+}
+
+static YAML::Node serializePin(Pin const& pin) {
+    YAML::Node root;
+    root["Name"] = pin.name();
+    root["Flags"] = (unsigned)pin.desc().flags;
+    return root;
+}
+
+static YAML::Node serializeInput(InputPin const& pin) {
+    return serializePin(pin);
+}
+
+static YAML::Node serializeOutput(OutputPin const& pin) {
+    auto root = serializePin(pin);
+    YAML::Node targets;
+    for (auto* target: pin.targets()) {
+        YAML::Node targetNode;
+        targetNode["NodeID"] = target->parent().ID();
+        targetNode["Index"] = target->indexInParent();
+        targets.push_back(targetNode);
+    }
+    root["Targets"] = targets;
+    return root;
+}
+
+static YAML::Node serializeNode(
+    Node const& node,
+    utl::function_view<YAML::Node(std::any const&)> serializeUserData) {
+    auto& desc = node.desc();
+    YAML::Node root;
+    root["ID"] = desc.ID;
+    root["Name"] = desc.name;
+    root["Position"] = desc.position;
+    root["MinSize"] = desc.minSize;
+    root["Size"] = desc.size;
+    root["Color"] = desc.color;
+    if (serializeUserData) {
+        root["UserData"] = serializeUserData(desc.userData);
+    }
+    for (auto inputs = root["Inputs"]; auto* input: node.inputs()) {
+        inputs.push_back(serializeInput(*input));
+    }
+    for (auto outputs = root["Outputs"]; auto* output: node.outputs()) {
+        outputs.push_back(serializeOutput(*output));
+    }
+    return root;
+}
+
+static PinDesc deserializePin(YAML::Node const& node) {
+    PinDesc desc;
+    desc.name = node["Name"].as<std::string>();
+    desc.flags = (PinFlags)node["Flags"].as<unsigned>();
+    return desc;
+}
+
+static PinDesc deserializeInput(YAML::Node const& node) {
+    return deserializePin(node);
+}
+
+static PinDesc deserializeOutput(YAML::Node const& node) {
+    return deserializePin(node);
+}
+
+static std::unique_ptr<Node> deserializeNode(
+    YAML::Node const& source,
+    utl::function_view<std::any(YAML::Node const&)> deserializeUserData) {
+    NodeDesc desc{};
+    desc.ID = source["ID"].as<utl::uuid>();
+    desc.name = source["Name"].as<std::string>();
+    desc.position = source["Position"].as<vml::float2>();
+    desc.minSize = source["MinSize"].as<vml::float2>();
+    desc.size = source["Size"].as<vml::float2>();
+    desc.color = source["Color"].as<vml::float4>();
+    if (deserializeUserData) {
+        desc.userData = deserializeUserData(source["UserData"]);
+    }
+    for (auto& input: source["Inputs"]) {
+        desc.inputs.push_back(deserializeInput(input));
+    }
+    for (auto& output: source["Outputs"]) {
+        desc.outputs.push_back(deserializeOutput(output));
+    }
+    return std::make_unique<Node>(desc);
+}
+
+YAML::Node NodeEditorGraph::serialize(
+    utl::function_view<YAML::Node(std::any const&)> serializeUserData) const {
+    YAML::Node root;
+    for (auto* node: nodes()) {
+        root.push_back(serializeNode(*node, serializeUserData));
+    }
+    return root;
+}
+
+bool NodeEditorGraph::deserialize(
+    YAML::Node const& source,
+    utl::function_view<std::any(YAML::Node const&)> deserializeUserData) {
+    try {
+        _nodes.clear();
+        utl::hashmap<utl::uuid, Node*> map;
+        for (auto& nodeSource: source) {
+            auto node = deserializeNode(nodeSource, deserializeUserData);
+            if (!utl::is_null(node->ID())) {
+                map[node->ID()] = node.get();
+            }
+            add(std::move(node));
+        }
+        for (auto [nodeSource, node]: zip(source, nodes())) {
+            auto outputs = nodeSource["Outputs"];
+            for (auto [outputSource, outputPin]: zip(outputs, node->outputs()))
+            {
+                for (auto targetSource: outputSource["Targets"]) {
+                    if (auto* destNode =
+                            map[targetSource["NodeID"].as<utl::uuid>()])
+                    {
+                        size_t index = targetSource["Index"].as<size_t>();
+                        link(*outputPin, *destNode->input(index));
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    catch (YAML::Exception const& e) {
+        Logger::Error("Failed to deserialize: ", e.what());
+        return false;
+    }
 }
 
 namespace {
@@ -446,11 +576,15 @@ private:
 } // namespace
 
 Node::Node(NodeDesc desc): _desc(std::move(desc)) {
+    if (utl::is_null(_desc.ID)) {
+        _desc.ID = utl::uuid::generate();
+    }
+    _desc.size = vml::max(_desc.size, _desc.minSize);
     _inputs = _desc.inputs | transform([&](PinDesc const& pin) {
-        return UniquePtr<InputPin>(new InputPin(pin, *this));
+        return DynUniquePtr<InputPin>(new InputPin(pin, *this));
     }) | ranges::to<std::vector>;
     _outputs = _desc.outputs | transform([&](PinDesc const& pin) {
-        return UniquePtr<OutputPin>(new OutputPin(pin, *this));
+        return DynUniquePtr<OutputPin>(new OutputPin(pin, *this));
     }) | ranges::to<std::vector>;
 }
 
@@ -468,7 +602,7 @@ struct NodeEditor::Impl {
     void orderFront(Node* node);
 
     std::vector<Node*> currentNodeOrder;
-    Graph graph;
+    NodeEditorGraph graph;
     Selection selection;
     ViewData viewData;
     NodeEditorDelegate delegate;
@@ -484,6 +618,12 @@ NodeEditor::~NodeEditor() = default;
 
 void NodeEditor::setDelegate(NodeEditorDelegate delegate) {
     impl->delegate = std::move(delegate);
+}
+
+void NodeEditor::setGraph(NodeEditorGraph graph) {
+    impl->graph = std::move(graph);
+    impl->currentNodeOrder = impl->graph.nodes() | ToAddress<> |
+                             ranges::to<std::vector>;
 }
 
 static bool beginInvisibleWindow(
@@ -633,7 +773,7 @@ void NodeEditor::addNode(NodeDesc desc) {
     impl->graph.add(std::move(p));
 }
 
-Graph const& NodeEditor::graph() const { return impl->graph; }
+NodeEditorGraph const& NodeEditor::graph() const { return impl->graph; }
 
 /// Computes the position of \p pin relative to its parent node
 static float2 computePinPosition(Pin const& pin, size_t index) {

@@ -11,10 +11,12 @@
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 #include <utl/common.hpp>
+#include <utl/function_view.hpp>
 #include <utl/hashtable.hpp>
+#include <utl/uuid.hpp>
 #include <utl/vector.hpp>
-
 #include <vml/vml.hpp>
+#include <yaml-cpp/yaml.h>
 
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Core/Dyncast.h"
@@ -50,9 +52,11 @@ struct PinDesc {
 };
 
 struct NodeDesc {
+    utl::uuid ID;
     std::string name;
     vml::float2 position;
     vml::float2 minSize;
+    vml::float2 size;
     std::vector<PinDesc> inputs;
     std::vector<PinDesc> outputs;
     std::function<void()> content;
@@ -152,13 +156,10 @@ private:
     utl::small_vector<InputPin*> _targets;
 };
 
-template <typename T>
-using UniquePtr = std::unique_ptr<T, utl::dyn_deleter>;
-
 ///
 class Node {
 public:
-    Node(NodeDesc desc);
+    explicit Node(NodeDesc desc);
 
     NodeDesc const& desc() const { return _desc; };
 
@@ -168,10 +169,22 @@ public:
                ranges::views::transform([](auto& p) { return p.get(); });
     }
 
+    /// \Returns the input pin at index \p index
+    InputPin* input(size_t index) const {
+        BL_EXPECT(index < _inputs.size());
+        return _inputs[index].get();
+    }
+
     /// \Returns a view over all outputs
     auto outputs() const {
         return _outputs |
                ranges::views::transform([](auto& p) { return p.get(); });
+    }
+
+    /// \Returns the output pin at index \p index
+    OutputPin* output(size_t index) const {
+        BL_EXPECT(index < _outputs.size());
+        return _outputs[index].get();
     }
 
     /// \Returns the set of nodes that is directly linked to any output of this
@@ -188,30 +201,44 @@ public:
     /// \overload
     utl::hashset<Node const*> predecessors() const;
 
+    /// \Returns the unique ID of this node
+    utl::uuid ID() const { return desc().ID; }
+
+    /// \Returns the name of this node
     std::string const& name() const { return desc().name; }
 
-    vml::float2 size() const { return _size; }
+    /// \Returns the size of this node
+    vml::float2 size() const { return desc().size; }
 
-    void setSize(vml::float2 size) { _size = size; }
+    /// Sets the size of this node to \p size
+    void setSize(vml::float2 size) { _desc.size = size; }
 
+    /// \Returns the minimum size of this node
     vml::float2 minSize() const { return desc().minSize; }
 
+    /// \Returns the position of this node
     vml::float2 position() const { return desc().position; }
 
-    void setPosition(vml::float2 pos) { _desc.position = pos; }
+    /// Sets the position of this node to \p position
+    void setPosition(vml::float2 position) { _desc.position = position; }
 
 private:
     friend class Pin;
 
     NodeDesc _desc;
-    vml::float2 _size;
-    std::vector<nodeEditor::UniquePtr<nodeEditor::InputPin>> _inputs;
-    std::vector<nodeEditor::UniquePtr<nodeEditor::OutputPin>> _outputs;
+    std::vector<bloom::DynUniquePtr<nodeEditor::InputPin>> _inputs;
+    std::vector<bloom::DynUniquePtr<nodeEditor::OutputPin>> _outputs;
 };
 
-/// Underlying model of the node editor
-class Graph {
+} // namespace poppy::nodeEditor
+
+namespace poppy {
+
+/// Underlying document model of the node editor
+class NodeEditorGraph {
 public:
+    using Node = nodeEditor::Node;
+
     /// \Returns a view over the nodes in this graph
     auto nodes() {
         return _nodes | ranges::views::transform(
@@ -223,6 +250,9 @@ public:
         return _nodes | ranges::views::transform(
                             [](auto& p) -> Node const* { return p.get(); });
     }
+
+    ///
+    bool empty() const { return _nodes.empty(); }
 
     /// \Returns `true` if there are any cycles in this graph
     bool hasCycles() const;
@@ -239,16 +269,21 @@ public:
     /// \overload
     utl::small_vector<Node const*> sinks() const;
 
-    ///
+    /// Inserts the node \p node into the graph
     void add(std::unique_ptr<Node> node) { _nodes.push_back(std::move(node)); }
+
+    /// \Returns a YAML node representing this document
+    YAML::Node serialize(utl::function_view<YAML::Node(std::any const&)>
+                             serializeUserData = {}) const;
+
+    /// Deserializes the document stored in \p node
+    bool deserialize(YAML::Node const& node,
+                     utl::function_view<std::any(YAML::Node const&)>
+                         deserializeUserData = {});
 
 private:
     std::vector<std::unique_ptr<Node>> _nodes;
 };
-
-} // namespace poppy::nodeEditor
-
-namespace poppy {
 
 /// Callbacks to customize the behaviour of a node editor
 struct NodeEditorDelegate {
@@ -267,6 +302,8 @@ public:
 
     void setDelegate(NodeEditorDelegate delegate);
 
+    void setGraph(NodeEditorGraph graph);
+
     void display();
 
     void onInput(bloom::InputEvent& event);
@@ -275,7 +312,7 @@ public:
     void addNode(nodeEditor::NodeDesc desc);
 
     /// \Returns the underlying graph
-    nodeEditor::Graph const& graph() const;
+    NodeEditorGraph const& graph() const;
 
     struct Impl;
 

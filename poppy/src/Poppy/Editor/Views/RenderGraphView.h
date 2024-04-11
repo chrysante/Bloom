@@ -14,7 +14,7 @@ class RenderGraph;
 
 namespace poppy {
 
-class RenderGraphView: public View, BasicSceneInspector {
+class RenderGraphView: public View {
 public:
     RenderGraphView();
 
@@ -23,6 +23,10 @@ public:
     void onInput(bloom::InputEvent& event) override;
 
     void frame() override;
+
+    YAML::Node serialize() const override;
+
+    void deserialize(YAML::Node node) override;
 
 private:
     NodeEditor nodeEditor;

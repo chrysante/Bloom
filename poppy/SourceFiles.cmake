@@ -26,7 +26,6 @@ set(poppy_sources
   src/Poppy/Editor/Views/RendererDebuggerView.cpp
   src/Poppy/Editor/Views/RendererDebuggerView.h
   src/Poppy/Editor/Views/RenderGraphView.cpp
-  src/Poppy/Editor/Views/RenderGraphView.h
   src/Poppy/Editor/Views/RendererSettingsView.cpp
   src/Poppy/Editor/Views/RendererSettingsView.h
   src/Poppy/Editor/Views/SceneOutliner.cpp

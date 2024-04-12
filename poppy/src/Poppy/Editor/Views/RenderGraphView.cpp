@@ -1,15 +1,63 @@
-#include "Poppy/Editor/Views/RenderGraphView.h"
+#include <functional>
+#include <string>
+#include <vector>
 
 #include <imgui.h>
+#include <utl/hashtable.hpp>
 #include <vml/vml.hpp>
 
+#include "Bloom/Application/InputEvent.h"
+#include "Bloom/Core/Debug.h"
+#include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/Views/BasicSceneInspector.h"
+#include "Poppy/Editor/Views/NodeEditor.h"
+#include "Poppy/UI/Toolbar.h"
+#include "Poppy/UI/View.h"
 
 using namespace poppy;
 using namespace bloom;
+using namespace rg;
 using namespace vml;
 
+namespace {
+
+struct RenderGraphView: View {
+    RenderGraphView();
+
+    void init() override;
+
+    void onInput(bloom::InputEvent& event) override;
+
+    void frame() override;
+
+    YAML::Node serialize() const override;
+
+    void deserialize(YAML::Node node) override;
+
+    Toolbar makeToolbar();
+
+    RenderGraph* renderGraph;
+    NodeEditor nodeEditor;
+    Toolbar toolbar;
+};
+
+} // namespace
+
 POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
+
+namespace {
+
+struct PassEntry {
+    std::string name;
+};
+
+struct PassRegistry {
+
+    std::vector<PassEntry> entries;
+};
+
+}; // namespace
 
 static void createDefaultGraph(NodeEditor& nodeEditor) {
     using namespace nodeEditor;
@@ -83,7 +131,7 @@ static void createDefaultGraph(NodeEditor& nodeEditor) {
     // clang-format on
 }
 
-RenderGraphView::RenderGraphView() {
+RenderGraphView::RenderGraphView(): toolbar(makeToolbar()) {
     nodeEditor.setDelegate({ .backgroundPopupMenu = [] {
         if (ImGui::BeginMenu("Inputs")) {
             if (ImGui::MenuItem("Scene Geometry")) {
@@ -113,7 +161,24 @@ void RenderGraphView::init() {
 
 void RenderGraphView::onInput(InputEvent& event) { nodeEditor.onInput(event); }
 
-void RenderGraphView::frame() { nodeEditor.display(); }
+void RenderGraphView::frame() {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 6, 6 });
+    toolbar.display();
+    ImGui::PopStyleVar();
+    nodeEditor.display();
+}
+
+Toolbar RenderGraphView::makeToolbar() {
+    // clang-format off
+    return {
+        ToolbarIconButton("resize-small")
+            .onClick([this] {
+                dispatch(DispatchToken::NextFrame,  [] {
+                    Logger::Warn("Unimplemented");
+                });
+            })
+    }; // clang-format on
+}
 
 YAML::Node RenderGraphView::serialize() const {
     /// We use these functions to serialize our graph for now. This is not

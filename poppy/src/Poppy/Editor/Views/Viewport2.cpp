@@ -277,18 +277,19 @@ Toolbar Viewport2::makeToolbar() {
         ToolbarIconButton([this] {
             return maximized() ? "resize-small" : "resize-full";
         })
-        .onClick([this] {
-            dispatch(DispatchToken::NextFrame, [maximized = maximized(), this] {
-                if (maximized) {
-                    restore();
-                    window().makeWindowed();
-                }
-                else {
-                    maximize();
-                    window().makeFullscreen();
-                }
-            });
-        })
+            .onClick([this] {
+                dispatch(DispatchToken::NextFrame, 
+                         [maximized = maximized(), this] {
+                    if (maximized) {
+                        restore();
+                        window().makeWindowed();
+                    }
+                    else {
+                        maximize();
+                        window().makeFullscreen();
+                    }
+                });
+            })
     }; // clang-format on
 }
 

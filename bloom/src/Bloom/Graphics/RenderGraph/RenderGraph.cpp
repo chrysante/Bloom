@@ -10,7 +10,9 @@ using namespace bloom;
 using namespace rg;
 using namespace ranges::views;
 
-RenderGraph::RenderGraph(HardwareDevice* device): mDevice(device) {}
+RenderGraph::RenderGraph(std::string name, RenderGraphContext& ctx,
+                         HardwareDevice& device):
+    Pass(std::move(name)), ctx(&ctx), mDevice(&device) {}
 
 Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
     auto* result = pass.get();
@@ -58,23 +60,6 @@ static utl::small_vector<Pass*> findLivePasses(
         dfs.search(sinkPass);
     }
     return dfs.live | ToSmallVector<>;
-}
-
-static utl::small_vector<Pass*> findSources(std::span<Pass* const> passes) {
-    return passes | filter([](Pass* pass) {
-        return ranges::all_of(pass->sinks(), [](auto* sink) {
-            return sink->getSourcePass() == nullptr;
-        });
-    });
-}
-
-#include <iostream>
-
-static void print(std::string_view label, std::span<Pass* const> passes) {
-    Logger::Info(label, ":");
-    for (auto* pass: passes) {
-        std::cout << pass->name() << std::endl;
-    }
 }
 
 static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
@@ -145,7 +130,7 @@ bool RenderGraph::compile() {
                  ranges::to<utl::small_vector<Pass*>>;
     auto livePasses = findLivePasses(sinks);
     executionOrder = topsort(livePasses);
-    allocateBackingResources(pool, executionOrder);
+    allocateBackingResources(context().resourcePool, executionOrder);
     return true;
 }
 
@@ -196,14 +181,9 @@ void RenderGraph::allocateResources(FrameParameters params) {
     if (lastFrameParams == params) {
         return;
     }
-    reallocateHardwareResources(*device(), pool, executionOrder, params);
+    reallocateHardwareResources(device(), context().resourcePool,
+                                executionOrder, params);
     lastFrameParams = params;
-}
-
-void RenderGraph::execute(FrameParameters params, CommandQueue& cmdQueue) {
-    for (auto* pass: executionOrder) {
-        pass->execute(params, cmdQueue);
-    }
 }
 
 Pass* RenderGraph::findPass(std::string_view name) {
@@ -220,51 +200,60 @@ PassSource* RenderGraph::findInputSource(std::string_view name) {
     return itr != inputs.end() ? itr->get() : nullptr;
 }
 
+void RenderGraph::doExecute(FrameParameters const& params,
+                            CommandQueue& cmdQueue) {
+    for (auto* pass: executionOrder) {
+        pass->execute(params, cmdQueue);
+    }
+}
+
 #include "Bloom/Graphics/RenderGraph/BloomPass.h"
 #include "Bloom/Graphics/RenderGraph/ForwardShadingPass.h"
 #include "Bloom/Graphics/RenderGraph/PostProcessPass.h"
 #include "Bloom/Shader/PostProcessing.h"
 
-static RenderGraph createDefaultRenderGraph(HardwareDevice* device) {
-    RenderGraph rg(device);
-    auto* geometry = rg.declareInput("Geometry", GeometryInterface{});
-    auto* lights = rg.declareInput("Lights", LightsInterface{});
+static std::unique_ptr<RenderGraph> createDefaultRenderGraph(
+    RenderGraphContext& ctx, HardwareDevice& device) {
+    auto rg = std::make_unique<RenderGraph>("DefaultRenderGraph", ctx, device);
+    auto* geometry = rg->declareInput("Geometry", GeometryInterface{});
+    auto* lights = rg->declareInput("Lights", LightsInterface{});
     auto* sceneParams =
-        rg.declareInput("SceneParameters",
-                        BufferInterface{ .size =
-                                             sizeof(SceneRenderParameters) });
+        rg->declareInput("SceneParameters",
+                         BufferInterface{ .size =
+                                              sizeof(SceneRenderParameters) });
     auto* bloomParams =
-        rg.declareInput("BloomParameters",
-                        BufferInterface{ .size = sizeof(BloomParameters) });
+        rg->declareInput("BloomParameters",
+                         BufferInterface{ .size = sizeof(BloomParameters) });
     auto* postprocessParams =
-        rg.declareInput("PostProcessParameters",
-                        BufferInterface{ .size =
-                                             sizeof(PostProcessParameters) });
+        rg->declareInput("PostProcessParameters",
+                         BufferInterface{ .size =
+                                              sizeof(PostProcessParameters) });
     auto* shadingPass =
-        rg.addPass(std::make_unique<ForwardShadingPass>("MainPass"));
-    auto* bloomPass = rg.addPass(std::make_unique<BloomPass>("Bloom"));
+        rg->addPass(std::make_unique<ForwardShadingPass>("MainPass"));
+    auto* bloomPass = rg->addPass(std::make_unique<BloomPass>("Bloom"));
     auto* postProcessPass =
-        rg.addPass(std::make_unique<PostProcessPass>("PostProcess"));
+        rg->addPass(std::make_unique<PostProcessPass>("PostProcess"));
     postProcessPass->markSink();
     auto* rawColor = shadingPass->findSource("RawColor");
     auto* bloomColor = bloomPass->findSource("Output");
     /// Shading pass
-    rg.addLink(geometry, shadingPass->findSink("Geometry"));
-    rg.addLink(lights, shadingPass->findSink("Lights"));
-    rg.addLink(sceneParams, shadingPass->findSink("SceneParameters"));
+    rg->addLink(geometry, shadingPass->findSink("Geometry"));
+    rg->addLink(lights, shadingPass->findSink("Lights"));
+    rg->addLink(sceneParams, shadingPass->findSink("SceneParameters"));
     /// Bloom pass
-    rg.addLink(bloomParams, bloomPass->findSink("Parameters"));
-    rg.addLink(rawColor, bloomPass->findSink("RawColor"));
+    rg->addLink(bloomParams, bloomPass->findSink("Parameters"));
+    rg->addLink(rawColor, bloomPass->findSink("RawColor"));
     /// Post process pass
-    rg.addLink(postprocessParams, postProcessPass->findSink("Parameters"));
-    rg.addLink(bloomParams, postProcessPass->findSink("BloomParameters"));
-    rg.addLink(rawColor, postProcessPass->findSink("RawColor"));
-    rg.addLink(bloomColor, postProcessPass->findSink("BloomColor"));
-    rg.compile();
+    rg->addLink(postprocessParams, postProcessPass->findSink("Parameters"));
+    rg->addLink(bloomParams, postProcessPass->findSink("BloomParameters"));
+    rg->addLink(rawColor, postProcessPass->findSink("RawColor"));
+    rg->addLink(bloomColor, postProcessPass->findSink("BloomColor"));
+    rg->compile();
     return rg;
 }
 
 RenderGraph* rg::getGlobalRenderGraph(HardwareDevice* device) {
-    static RenderGraph instance = createDefaultRenderGraph(device);
-    return &instance;
+    static RenderGraphContext ctx;
+    static auto instance = createDefaultRenderGraph(ctx, *device);
+    return instance.get();
 }

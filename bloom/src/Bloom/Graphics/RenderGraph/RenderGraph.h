@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <span>
+#include <string>
 #include <vector>
 
 #include <utl/hashtable.hpp>
@@ -16,10 +17,16 @@
 
 namespace bloom::rg {
 
+/// Data that is shared between nested render graphs
+struct RenderGraphContext {
+    ResourcePool resourcePool;
+};
+
 ///
-class RenderGraph {
+class RenderGraph: public Pass {
 public:
-    explicit RenderGraph(HardwareDevice* device);
+    explicit RenderGraph(std::string name, RenderGraphContext& context,
+                         HardwareDevice& device);
 
     ///
     Pass* addPass(std::unique_ptr<Pass> pass);
@@ -49,22 +56,27 @@ public:
     /// TODO: Document this
     void allocateResources(FrameParameters params);
 
-    /// Executes the graph
-    void execute(FrameParameters params, CommandQueue& cmdQueue);
-
+    ///
     Pass* findPass(std::string_view name);
 
+    ///
     PassSource* findInputSource(std::string_view name);
 
+    /// \Returns the shared render graph context
+    RenderGraphContext& context() const { return *ctx; }
+
     /// \Returns the associated device
-    HardwareDevice* device() const { return mDevice; }
+    HardwareDevice& device() const { return *mDevice; }
 
 private:
+    virtual void doExecute(FrameParameters const& params,
+                           CommandQueue& queue) final;
+
+    RenderGraphContext* ctx;
     HardwareDevice* mDevice;
     std::vector<std::unique_ptr<Pass>> passes;
     std::vector<std::unique_ptr<PassSource>> inputs;
     std::vector<Pass*> executionOrder;
-    ResourcePool pool;
     FrameParameters lastFrameParams;
 };
 

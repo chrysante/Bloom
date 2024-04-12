@@ -108,9 +108,9 @@ static BloomParameters makeBloomParams(BloomSettings settings) {
 }
 
 void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
-    auto& device = *mRenderGraph->device();
+    auto& device = mRenderGraph->device();
     lights->prepare(device);
-    geometry->prepare(*mRenderGraph->device());
+    geometry->prepare(mRenderGraph->device());
     mRenderGraph->allocateResources(frameParams);
     SceneRenderParameters sceneParams = {
         .camera = vml::transpose(camera.viewProjection()),

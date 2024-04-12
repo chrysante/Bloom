@@ -16,6 +16,8 @@ namespace bloom::rg {
 /// Base class for all render graph pass nodes.
 class Pass {
 public:
+    explicit Pass(std::string name): _name(std::move(name)) {}
+
     Pass(Pass const&) = delete;
 
     virtual ~Pass();
@@ -80,10 +82,6 @@ private:
     virtual void doExecute(FrameParameters const& params,
                            CommandQueue& queue) = 0;
     virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
-
-    friend class RenderPass;
-    friend class ComputePass;
-    explicit Pass(std::string name): _name(std::move(name)) {}
 
     bool _isSink = false;
     std::string _name;

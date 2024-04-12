@@ -11,7 +11,7 @@ public:
     PostProcessPass(std::string name);
 
 private:
-    void doExecute(ComputeContext& ctx) override;
+    void doExecute(FrameParameters const& params, ComputeContext& ctx) override;
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
 

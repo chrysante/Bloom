@@ -54,12 +54,8 @@ public:
         doAllocateResources(frameParams, device);
     }
 
-    /// \Returns the size of the screen that is drawn to. This is only valid
-    /// during execution
-    vml::int2 screenSize() const { return _frameParams.screenSize; }
-
     /// Executes this pass
-    void execute(FrameParameters params, CommandQueue& queue);
+    void execute(FrameParameters const& params, CommandQueue& queue);
 
 protected:
     /// Declares a resource sink (input) to this pass
@@ -81,14 +77,15 @@ protected:
     }
 
 private:
+    virtual void doExecute(FrameParameters const& params,
+                           CommandQueue& queue) = 0;
+    virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
+
     friend class RenderPass;
     friend class ComputePass;
     explicit Pass(std::string name): _name(std::move(name)) {}
 
-    virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
-
     bool _isSink = false;
-    FrameParameters _frameParams;
     std::string _name;
     std::vector<std::unique_ptr<PassSink>> _sinks;
     std::vector<std::unique_ptr<PassSource>> _sources;
@@ -103,8 +100,10 @@ protected:
     explicit RenderPass(std::string name): Pass(std::move(name)) {}
 
 private:
-    friend class Pass;
-    virtual void doExecute(RenderContext& ctx) = 0;
+    virtual void doExecute(FrameParameters const& params,
+                           CommandQueue& queue) final;
+    virtual void doExecute(FrameParameters const& params,
+                           RenderContext& ctx) = 0;
 };
 
 /// Base class for all passes that use the GPUs compute pipeline
@@ -116,8 +115,10 @@ protected:
     explicit ComputePass(std::string name): Pass(std::move(name)) {}
 
 private:
-    friend class Pass;
-    virtual void doExecute(ComputeContext& ctx) = 0;
+    virtual void doExecute(FrameParameters const& params,
+                           CommandQueue& queue) final;
+    virtual void doExecute(FrameParameters const& params,
+                           ComputeContext& ctx) = 0;
 };
 
 } // namespace bloom::rg

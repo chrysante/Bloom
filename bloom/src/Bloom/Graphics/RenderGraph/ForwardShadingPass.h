@@ -14,7 +14,7 @@ public:
     explicit ForwardShadingPass(std::string name);
 
 private:
-    void doExecute(RenderContext& ctx) override;
+    void doExecute(FrameParameters const& params, RenderContext& ctx) override;
 
     // Inputs
     BufferHandle sceneParameters;

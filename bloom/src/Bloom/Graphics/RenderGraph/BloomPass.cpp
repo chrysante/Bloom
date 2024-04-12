@@ -48,7 +48,7 @@ struct GridSizes {
 
 } // namespace
 
-void BloomPass::doExecute(ComputeContext& ctx) {
+void BloomPass::doExecute(FrameParameters const& params, ComputeContext& ctx) {
     ctx.begin();
     size_t threadGroupWidth = downsamplePipeline.threadExecutionWidth;
     size_t threadGroupHeight =
@@ -56,7 +56,7 @@ void BloomPass::doExecute(ComputeContext& ctx) {
     vml::uint2 threadGroupSize = { utl::narrow_cast<uint32_t>(threadGroupWidth),
                                    utl::narrow_cast<uint32_t>(
                                        threadGroupHeight) };
-    auto gridSizes = GridSizes::create(screenSize());
+    auto gridSizes = GridSizes::create(params.screenSize);
     // All bloom shaders want this
     ctx.setBuffer(parameters, 0);
     // Prefilter pass (including first downsampling

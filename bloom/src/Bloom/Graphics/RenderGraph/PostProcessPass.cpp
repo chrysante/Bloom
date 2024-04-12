@@ -31,7 +31,8 @@ PostProcessPass::PostProcessPass(std::string name):
                   });
 }
 
-void PostProcessPass::doExecute(ComputeContext& ctx) {
+void PostProcessPass::doExecute(FrameParameters const& params,
+                                ComputeContext& ctx) {
     ctx.begin();
     ctx.setPipeline(pipeline);
     ctx.setBuffer(parameterBuffer, 0);
@@ -39,7 +40,7 @@ void PostProcessPass::doExecute(ComputeContext& ctx) {
     ctx.setTexture(output, 0);
     ctx.setTexture(rawColor, 1);
     ctx.setTexture(bloomColor, 2);
-    uint2 gridSize = screenSize();
+    uint2 gridSize = params.screenSize;
     size_t threadGroupWidth = pipeline.threadExecutionWidth;
     size_t threadGroupHeight =
         pipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth;

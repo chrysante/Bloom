@@ -24,15 +24,15 @@ PassSource* Pass::findSource(std::string_view name) {
     return itr != _sources.end() ? itr->get() : nullptr;
 }
 
-void Pass::execute(FrameParameters params, CommandQueue& queue) {
-    _frameParams = params;
-    if (auto* renderPass = dynamic_cast<RenderPass*>(this)) {
-        renderPass->doExecute(*queue.createRenderContext());
-    }
-    else if (auto* computePass = dynamic_cast<ComputePass*>(this)) {
-        computePass->doExecute(*queue.createComputeContext());
-    }
-    else {
-        BL_UNIMPLEMENTED();
-    }
+void Pass::execute(FrameParameters const& params, CommandQueue& queue) {
+    doExecute(params, queue);
+}
+
+void RenderPass::doExecute(FrameParameters const& params, CommandQueue& queue) {
+    doExecute(params, *queue.createRenderContext());
+}
+
+void ComputePass::doExecute(FrameParameters const& params,
+                            CommandQueue& queue) {
+    doExecute(params, *queue.createComputeContext());
 }

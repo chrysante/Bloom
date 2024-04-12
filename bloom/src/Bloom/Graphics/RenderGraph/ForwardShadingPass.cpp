@@ -27,7 +27,7 @@ ForwardShadingPass::ForwardShadingPass(std::string name):
                                     .size = TextureSize::ScreenSize });
 }
 
-void ForwardShadingPass::doExecute(RenderContext& ctx) {
+void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     RenderPassDescription desc{};
     RenderPassColorAttachmentDescription caDesc{};
     caDesc.texture = rawColor;

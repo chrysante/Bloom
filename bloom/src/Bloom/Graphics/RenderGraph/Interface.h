@@ -167,6 +167,8 @@ class PassInterfaceBase {
                                  GeometryInterface, LightsInterface>;
 
 public:
+    virtual ~PassInterfaceBase() = default;
+
     /// \Returns the underlying `*Interface` variant
     Variant& get() { return _interface; }
 
@@ -250,7 +252,7 @@ private:
     PassSource* _source = nullptr;
 };
 
-/// Resource input of a pass
+/// Resource output of a pass
 class PassSource: public PassInterfaceBase {
 public:
     template <InterfaceType T>
@@ -274,6 +276,56 @@ public:
 
 private:
     utl::small_vector<PassSink*, 3> _sinks;
+};
+
+/// Resource input of a render graph.
+/// Models the sink into the graph and the corresponding source for passes
+/// within the graph
+class RenderGraphSink: public PassSink {
+public:
+    template <InterfaceType T>
+    explicit RenderGraphSink(Pass* pass, std::string name,
+                             typename T::ViewType* handle, T interface):
+        PassSink(pass, std::move(name), handle, std::move(interface)),
+        src(nullptr, name, handle, interface) {
+        internalSource()->addSink(this);
+        setSource(internalSource());
+    }
+
+    /// \Returns the source that makes this sink readable to passes within the
+    /// render graph
+    PassSource* internalSource() { return &src; }
+
+    /// \overload
+    PassSource const* internalSource() const { return &src; }
+
+private:
+    PassSource src;
+};
+
+/// Resource output of a render graph.
+/// Models the source of the graph and the corresponding sink for passes within
+/// the graph
+class RenderGraphSource: public PassSource {
+public:
+    template <InterfaceType T>
+    explicit RenderGraphSource(Pass* pass, std::string name,
+                               typename T::ViewType* handle, T interface):
+        PassSource(pass, name, handle, interface),
+        snk(nullptr, name, handle, interface) {
+        addSink(internalSink());
+        internalSink()->setSource(this);
+    }
+
+    /// \Returns the sink that makes this source definable by passes within the
+    /// render graph
+    PassSink* internalSink() { return &snk; }
+
+    /// \overload
+    PassSink const* internalSink() const { return &snk; }
+
+private:
+    PassSink snk;
 };
 
 /// # Inline implementation

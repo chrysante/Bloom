@@ -16,6 +16,7 @@ RenderGraph::RenderGraph(std::string name, RenderGraphContext& ctx,
 
 Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
     auto* result = pass.get();
+    result->_parent = this;
     passes.push_back(std::move(pass));
     return result;
 }
@@ -194,10 +195,16 @@ Pass* RenderGraph::findPass(std::string_view name) {
 }
 
 PassSource* RenderGraph::findInputSource(std::string_view name) {
-    auto itr = ranges::find_if(inputs, [&](auto& source) {
-        return source->name() == name;
+    auto sinks = this->sinks();
+    auto itr = ranges::find_if(sinks, [&](auto* sink) {
+        return sink->name() == name;
     });
-    return itr != inputs.end() ? itr->get() : nullptr;
+    if (itr == sinks.end()) {
+        return nullptr;
+    }
+    auto* sink = dynamic_cast<RenderGraphSink*>(*itr);
+    BL_ASSERT(sink);
+    return sink->source();
 }
 
 void RenderGraph::doExecute(FrameParameters const& params,
@@ -215,19 +222,19 @@ void RenderGraph::doExecute(FrameParameters const& params,
 static std::unique_ptr<RenderGraph> createDefaultRenderGraph(
     RenderGraphContext& ctx, HardwareDevice& device) {
     auto rg = std::make_unique<RenderGraph>("DefaultRenderGraph", ctx, device);
-    auto* geometry = rg->declareInput("Geometry", GeometryInterface{});
-    auto* lights = rg->declareInput("Lights", LightsInterface{});
+    auto* geometry = rg->declareSink("Geometry", GeometryInterface{});
+    auto* lights = rg->declareSink("Lights", LightsInterface{});
     auto* sceneParams =
-        rg->declareInput("SceneParameters",
-                         BufferInterface{ .size =
-                                              sizeof(SceneRenderParameters) });
+        rg->declareSink("SceneParameters",
+                        BufferInterface{ .size =
+                                             sizeof(SceneRenderParameters) });
     auto* bloomParams =
-        rg->declareInput("BloomParameters",
-                         BufferInterface{ .size = sizeof(BloomParameters) });
+        rg->declareSink("BloomParameters",
+                        BufferInterface{ .size = sizeof(BloomParameters) });
     auto* postprocessParams =
-        rg->declareInput("PostProcessParameters",
-                         BufferInterface{ .size =
-                                              sizeof(PostProcessParameters) });
+        rg->declareSink("PostProcessParameters",
+                        BufferInterface{ .size =
+                                             sizeof(PostProcessParameters) });
     auto* shadingPass =
         rg->addPass(std::make_unique<ForwardShadingPass>("MainPass"));
     auto* bloomPass = rg->addPass(std::make_unique<BloomPass>("Bloom"));
@@ -237,15 +244,19 @@ static std::unique_ptr<RenderGraph> createDefaultRenderGraph(
     auto* rawColor = shadingPass->findSource("RawColor");
     auto* bloomColor = bloomPass->findSource("Output");
     /// Shading pass
-    rg->addLink(geometry, shadingPass->findSink("Geometry"));
-    rg->addLink(lights, shadingPass->findSink("Lights"));
-    rg->addLink(sceneParams, shadingPass->findSink("SceneParameters"));
+    rg->addLink(geometry->internalSource(), shadingPass->findSink("Geometry"));
+    rg->addLink(lights->internalSource(), shadingPass->findSink("Lights"));
+    rg->addLink(sceneParams->internalSource(),
+                shadingPass->findSink("SceneParameters"));
     /// Bloom pass
-    rg->addLink(bloomParams, bloomPass->findSink("Parameters"));
+    rg->addLink(bloomParams->internalSource(),
+                bloomPass->findSink("Parameters"));
     rg->addLink(rawColor, bloomPass->findSink("RawColor"));
     /// Post process pass
-    rg->addLink(postprocessParams, postProcessPass->findSink("Parameters"));
-    rg->addLink(bloomParams, postProcessPass->findSink("BloomParameters"));
+    rg->addLink(postprocessParams->internalSource(),
+                postProcessPass->findSink("Parameters"));
+    rg->addLink(bloomParams->internalSource(),
+                postProcessPass->findSink("BloomParameters"));
     rg->addLink(rawColor, postProcessPass->findSink("RawColor"));
     rg->addLink(bloomColor, postProcessPass->findSink("BloomColor"));
     rg->compile();

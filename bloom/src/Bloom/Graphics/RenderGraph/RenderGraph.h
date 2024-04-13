@@ -38,15 +38,6 @@ public:
         return static_cast<P*>(p);
     }
 
-    ///
-    template <InterfaceType Interface>
-    PassSource* declareInput(std::string name, Interface interface) {
-        inputs.push_back(std::make_unique<PassSource>(nullptr, std::move(name),
-                                                      nullptr,
-                                                      std::move(interface)));
-        return inputs.back().get();
-    }
-
     /// Links the source (output) \p source to the sink (input) \p sink
     void addLink(PassSource* source, PassSink* sink);
 
@@ -68,6 +59,21 @@ public:
     /// \Returns the associated device
     HardwareDevice& device() const { return *mDevice; }
 
+    /// Declares a resource sink (input) to this graph
+    template <InterfaceType Interface>
+    RenderGraphSink* declareSink(std::string name, Interface interface) {
+        return Pass::declareSink<RenderGraphSink>(std::move(name), nullptr,
+                                                  std::move(interface));
+    }
+
+    /// Declares a resource source (output) to this graph
+    template <InterfaceType Interface>
+    RenderGraphSource* declareSource(std::string name,
+                                     Interface const& interface) {
+        return Pass::declareSource<RenderGraphSource>(std::move(name), nullptr,
+                                                      std::move(interface));
+    }
+
 private:
     virtual void doExecute(FrameParameters const& params,
                            CommandQueue& queue) final;
@@ -75,7 +81,6 @@ private:
     RenderGraphContext* ctx;
     HardwareDevice* mDevice;
     std::vector<std::unique_ptr<Pass>> passes;
-    std::vector<std::unique_ptr<PassSource>> inputs;
     std::vector<Pass*> executionOrder;
     FrameParameters lastFrameParams;
 };

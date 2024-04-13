@@ -77,8 +77,7 @@ __attribute__((always_inline, nodebug))
 #elif defined(_MSC_VER)
 __forceinline
 #endif
-inline void
-    debugfail() {
+inline void debugfail() {
     switch (getAssertionHandler()) {
     case Break:
         __builtin_trap();

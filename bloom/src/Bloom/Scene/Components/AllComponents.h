@@ -27,7 +27,7 @@ constexpr auto except = Except<T...>{};
 template <typename F, typename... E>
 void forEachComponent(Except<E...>, F&& f) {
     auto invokeOne = [&]<typename T>(utl::tag<T>) {
-        if constexpr (((!std::is_same_v<T, E>)&&...)) {
+        if constexpr (((!std::is_same_v<T, E>) && ...)) {
             std::invoke(f, utl::tag<T>{});
         }
     };

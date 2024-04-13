@@ -15,7 +15,7 @@
 
 namespace bloom {
 
-///
+/// Unique entity identifier
 struct BLOOM_API EntityID {
 public:
     friend class Scene;
@@ -25,22 +25,22 @@ public:
     ///
     EntityID() = default;
 
-    ///
+    /// Construct from an `entt::entity`
     EntityID(entt::entity value): _value(value) {}
 
-    ///
+    /// Construct from a raw ID value
     explicit EntityID(RawType value): _value((entt::entity)value) {}
 
-    ///
+    /// \Returns the underlying `entt::entity`
     entt::entity value() const { return _value; }
 
-    ///
+    /// \Returns the underlying identifier value
     RawType raw() const { return utl::to_underlying(_value); }
 
-    ///
+    /// \Returns `true` is this is not the null entity
     explicit operator bool() const { return value() != entt::null; }
 
-    ///
+    /// Compares the underlying values
     friend bool operator==(EntityID const&, EntityID const&) = default;
 
 private:
@@ -131,14 +131,12 @@ public:
         requires(!IsConst)
     {
         auto& s = scene();
-        (
-            [&] {
+        ([&] {
             using DT = std::decay_t<T>;
             if (!s.template hasComponent<DT>(*this)) {
                 s.template addComponents(*this, std::forward<T>(components));
             }
-        }(),
-            ...);
+        }(), ...);
     }
 
     /// Removes the component types \p T... from if present

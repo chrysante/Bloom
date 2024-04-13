@@ -85,9 +85,9 @@ public:
 
 private:
     /// MARK: Virtual Interface
-    virtual void init(){};
-    virtual void shutdown(){};
-    virtual void frame(){};
+    virtual void init() {};
+    virtual void shutdown() {};
+    virtual void frame() {};
     virtual void onInput(bloom::InputEvent&) {}
     virtual YAML::Node serialize() const { return YAML::Node{}; }
     virtual void deserialize(YAML::Node) {}

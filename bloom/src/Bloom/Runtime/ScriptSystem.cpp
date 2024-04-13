@@ -31,12 +31,10 @@ static auto toWordArray(T const&... args) {
     static constexpr size_t NumWords = (utl::ceil_divide(sizeof(T), 8) + ...);
     std::array<uint64_t, NumWords> data{};
     size_t i = 0;
-    (
-        [&] {
+    ([&] {
         std::memcpy(&data[i], &args, sizeof args);
         i += utl::ceil_divide(sizeof(T), 8);
-    }(),
-        ...);
+    }(), ...);
     return data;
 }
 

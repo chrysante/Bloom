@@ -27,16 +27,16 @@ public:
     virtual ~RuntimeDelegate() = default;
 
     ///
-    virtual void start(){};
+    virtual void start() {};
 
     ///
-    virtual void stop(){};
+    virtual void stop() {};
 
     ///
-    virtual void pause(){};
+    virtual void pause() {};
 
     ///
-    virtual void resume(){};
+    virtual void resume() {};
 
     ///
     virtual void step(Timestep){};

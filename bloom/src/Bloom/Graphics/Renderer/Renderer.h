@@ -34,7 +34,7 @@ public:
     explicit Renderer(Receiver receiver): Receiver(std::move(receiver)) {}
     virtual ~Renderer() = default;
 
-    virtual void init(HardwareDevice&){};
+    virtual void init(HardwareDevice&) {};
     virtual std::unique_ptr<Framebuffer> createFramebuffer(
         vml::int2 size) const = 0;
     virtual std::unique_ptr<Framebuffer> createDebugFramebuffer(
@@ -46,11 +46,11 @@ public:
 
     virtual void submit(Reference<StaticMeshRenderer>,
                         Reference<MaterialInstance>,
-                        [[maybe_unused]] vml::float4x4 const& transform){};
-    virtual void submit(PointLight const&){};
-    virtual void submit(SpotLight const&){};
-    virtual void submit(DirectionalLight const&){};
-    virtual void submit(SkyLight const&){};
+                        [[maybe_unused]] vml::float4x4 const& transform) {};
+    virtual void submit(PointLight const&) {};
+    virtual void submit(SpotLight const&) {};
+    virtual void submit(DirectionalLight const&) {};
+    virtual void submit(SkyLight const&) {};
 
     HardwareDevice& device() const { return *mDevice; }
 

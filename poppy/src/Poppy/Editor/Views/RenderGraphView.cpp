@@ -19,7 +19,7 @@
 using namespace poppy;
 using namespace bloom;
 using namespace rg;
-using namespace vml;
+using namespace vml::short_types;
 
 namespace {
 
@@ -48,10 +48,12 @@ struct RenderGraphView: View {
 POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
 
 RenderGraphView::RenderGraphView(): toolbar(makeToolbar()) {
-    nodeEditor.setDelegate({ .backgroundPopupMenu = [&] {
+    nodeEditor.setDelegate({ .backgroundPopupMenu = [&](float2 position) {
         for (auto& entry: PassRegistry::get()) {
             if (ImGui::MenuItem(entry.name.c_str())) {
-                nodeEditor.addNode(entry.create());
+                auto desc = entry.create();
+                desc.position = position;
+                nodeEditor.addNode(desc);
             }
         }
     } });
@@ -71,7 +73,7 @@ void RenderGraphView::frame() {
 Toolbar RenderGraphView::makeToolbar() {
     // clang-format off
     return {
-        ToolbarIconButton("resize-small")
+        ToolbarIconButton("flash")
             .onClick([this] {
                 dispatch(DispatchToken::NextFrame,  [] {
                     Logger::Warn("Unimplemented");

@@ -220,6 +220,15 @@ static auto succsImpl(auto const& outputs) {
            ranges::views::transform([](auto* pin) { return &pin->parent(); });
 }
 
+Node::~Node() {
+    for (auto* pin: inputs()) {
+        pin->clearLinks();
+    }
+    for (auto* pin: outputs()) {
+        pin->clearLinks();
+    }
+}
+
 utl::hashset<Node*> Node::successors() {
     return succsImpl(outputs()) | ranges::to<utl::hashset<Node*>>;
 }
@@ -408,6 +417,12 @@ bool NodeEditorGraph::deserialize(
     }
 }
 
+void NodeEditorGraph::removeIf(utl::function_view<bool(Node const&)> pred) {
+    auto itr =
+        ranges::remove_if(_nodes, [&](auto& node) { return pred(*node); });
+    _nodes.erase(itr, _nodes.end());
+}
+
 namespace {
 
 enum class Axis { Horizontal, Vertical };
@@ -505,6 +520,12 @@ public:
     /// Adds \p node to the selection
     void add(Node* node) { _nodes.insert(node); }
 
+    /// \overload for ranges
+    template <typename Itr, typename Sentinel>
+    void add(Itr first, Sentinel last) {
+        _nodes.insert(first, last);
+    }
+
     /// If \p node is not selection, adds \p node to the selection. Otherwise
     /// removes \p node from the selection
     bool toggle(Node* node) {
@@ -523,6 +544,13 @@ public:
     void set(Node* node) {
         clear();
         add(node);
+    }
+
+    /// \overload for ranges
+    template <typename Itr, typename Sentinel>
+    void set(Itr first, Sentinel last) {
+        clear();
+        add(first, last);
     }
 
     /// Unselectes all nodes
@@ -600,6 +628,8 @@ struct NodeEditor::Impl {
     void displayNode(Node& node);
 
     void orderFront(Node* node);
+
+    void deleteSelected();
 
     std::vector<Node*> currentNodeOrder;
     NodeEditorGraph graph;
@@ -699,8 +729,11 @@ void Impl::backgroundPopup(bool show) {
     if (show) {
         ImGui::OpenPopup(name);
     }
+    float2 windowPos = ImGui::GetWindowPos();
     if (ImGui::BeginPopup(name)) {
-        delegate.backgroundPopupMenu();
+        float2 position =
+            (float2)ImGui::GetWindowPos() - windowPos - viewData.position;
+        delegate.backgroundPopupMenu(position);
         ImGui::EndPopup();
     }
 }
@@ -728,6 +761,15 @@ void Impl::backgroundBehaviour() {
 }
 
 void NodeEditor::onInput(InputEvent& event) { impl->onInput(event); }
+
+static bool isDelete(KeyEvent const& event) {
+    return event.key == Key::Backspace &&
+           test(event.modifierFlags & ModFlags::Super);
+}
+
+static bool isSelectAll(KeyEvent const& event) {
+    return event.key == Key::A && test(event.modifierFlags & ModFlags::Super);
+}
 
 void Impl::onInput(InputEvent& event) {
     using enum InputEventMask;
@@ -764,6 +806,17 @@ void Impl::onInput(InputEvent& event) {
         viewData.zoom =
             std::clamp(viewData.zoom + (float)event.offset, 0.5f, 4.0f);
         return true;
+    });
+    event.dispatch<Key>([&](KeyEvent event) {
+        if (isDelete(event)) {
+            deleteSelected();
+            return true;
+        }
+        if (isSelectAll(event)) {
+            selection.set(currentNodeOrder.begin(), currentNodeOrder.end());
+            return true;
+        }
+        return false;
     });
 }
 
@@ -1264,4 +1317,12 @@ void Impl::orderFront(Node* node) {
     BL_ASSERT(itr != currentNodeOrder.end());
     currentNodeOrder.erase(itr);
     currentNodeOrder.push_back(node);
+}
+
+void Impl::deleteSelected() {
+    auto pred = [&](Node const& node) { return selection.contains(&node); };
+    graph.removeIf(pred);
+    auto itr = ranges::remove_if(currentNodeOrder,
+                                 [&](auto* node) { return pred(*node); });
+    currentNodeOrder.erase(itr, currentNodeOrder.end());
 }

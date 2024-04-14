@@ -161,6 +161,12 @@ class Node {
 public:
     explicit Node(NodeDesc desc);
 
+    /// Nodes need address stability and are therefore not copyable
+    Node(Node const&) = delete;
+
+    /// Calls `clearLinks` on all input and output pins
+    ~Node();
+
     NodeDesc const& desc() const { return _desc; };
 
     /// \Returns a view over all inputs
@@ -281,14 +287,17 @@ public:
                      utl::function_view<std::any(YAML::Node const&)>
                          deserializeUserData = {});
 
+    /// Deletes all nodes for which \p predicate returns true
+    void removeIf(utl::function_view<bool(Node const&)> predicate);
+
 private:
     std::vector<std::unique_ptr<Node>> _nodes;
 };
 
 /// Callbacks to customize the behaviour of a node editor
 struct NodeEditorDelegate {
-    ///
-    std::function<void()> backgroundPopupMenu;
+    /// Content callback for the editor background popup menu
+    std::function<void(vml::float2 position)> backgroundPopupMenu;
 };
 
 /// Generic customizable node editor

@@ -7,6 +7,7 @@
 
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
+#include <utl/common.hpp>
 #include <utl/hash.hpp>
 #include <utl/overload.hpp>
 #include <utl/vector.hpp>
@@ -18,8 +19,21 @@
 namespace bloom::rg {
 
 ///
+enum class InterfaceFlags {
+    None,
+
+    /// Indicates that an interface is not required. Only valid for sinks
+    Optional
+};
+
+UTL_ENUM_OPERATORS(InterfaceFlags)
+
+///
 struct BufferInterface {
     using ViewType = BufferHandle;
+
+    ///
+    InterfaceFlags flags = InterfaceFlags::None;
 
     ///
     size_t size;
@@ -112,6 +126,9 @@ struct TextureInterface {
     using ViewType = TextureHandle;
 
     ///
+    InterfaceFlags flags = InterfaceFlags::None;
+
+    ///
     TextureType type = TextureType::Texture2D;
 
     ///
@@ -154,11 +171,17 @@ struct TextureInterface {
 ///
 struct GeometryInterface {
     using ViewType = GeometryResource*;
+
+    ///
+    InterfaceFlags flags = InterfaceFlags::None;
 };
 
 ///
 struct LightsInterface {
     using ViewType = LightsResource*;
+
+    ///
+    InterfaceFlags flags = InterfaceFlags::None;
 };
 
 /// Base class of `PassSource` and `PassSink`
@@ -248,6 +271,12 @@ public:
     ///
     void setSource(PassSource* source) { _source = source; }
 
+    /// \Returns `true` if this sink is not required to be connected
+    bool isOptional() const {
+        return visit(
+            [](auto& i) { return test(i.flags & InterfaceFlags::Optional); });
+    }
+
 private:
     PassSource* _source = nullptr;
 };
@@ -261,7 +290,7 @@ public:
         PassInterfaceBase(pass, std::move(name), handle, std::move(interface)) {
     }
 
-    /// \Returns the source that is linked to this sink
+    /// \Returns the sinks that are linked to this source
     std::span<PassSink* const> sinks() const { return _sinks; }
 
     /// \Returns a view over the passes that use this source

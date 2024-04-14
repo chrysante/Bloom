@@ -25,6 +25,8 @@ set(poppy_sources
   src/Poppy/Editor/Views/MaterialInstanceViewer.h
   src/Poppy/Editor/Views/RendererDebuggerView.cpp
   src/Poppy/Editor/Views/RendererDebuggerView.h
+  src/Poppy/Editor/Views/RenderGraphNodeController.h
+  src/Poppy/Editor/Views/RenderGraphNodeController.cpp
   src/Poppy/Editor/Views/RenderGraphView.cpp
   src/Poppy/Editor/Views/RendererSettingsView.cpp
   src/Poppy/Editor/Views/RendererSettingsView.h

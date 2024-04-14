@@ -15,7 +15,7 @@ inline constexpr auto ToAddress = ranges::views::transform([](auto&& p) {
         return std::to_address((decltype(p)&&)p);
     }
     else {
-        return [&]() -> T* { return std::to_address((decltype(p)&&)p); };
+        return [&]() -> T* { return std::to_address((decltype(p)&&)p); }();
     }
 });
 

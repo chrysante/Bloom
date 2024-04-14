@@ -18,9 +18,11 @@ PostProcessPass::PostProcessPass(std::string name):
                     .size = TextureSize::ScreenSize,
                 });
     declareSink("BloomParameters", &bloomParameterBuffer,
-                BufferInterface{ .size = sizeof(BloomParameters) });
+                BufferInterface{ .flags = InterfaceFlags::Optional,
+                                 .size = sizeof(BloomParameters) });
     declareSink("BloomColor", &bloomColor,
                 TextureInterface{
+                    .flags = InterfaceFlags::Optional,
                     .pixelFormat = PixelFormat::RG11B10Float,
                     .size = TextureSize::Relative2D({ 0.5, 0.5 }),
                 });

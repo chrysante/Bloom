@@ -1,5 +1,5 @@
-#ifndef BLOOM_GRAPHICS_RENDERER_SCENERENDERER_H
-#define BLOOM_GRAPHICS_RENDERER_SCENERENDERER_H
+#ifndef BLOOM_GRAPHICS_RENDERGRAPH_SCENERENDERER_H
+#define BLOOM_GRAPHICS_RENDERGRAPH_SCENERENDERER_H
 
 /// This file will replace Renderer/SceneRenderer once we get rid of the old
 /// renderer class
@@ -50,4 +50,4 @@ private:
 
 } // namespace bloom::rg
 
-#endif // BLOOM_GRAPHICS_RENDERER_SCENERENDERER_H
+#endif // BLOOM_GRAPHICS_RENDERGRAPH_SCENERENDERER_H

@@ -7,6 +7,7 @@
 
 #include <vml/vml.hpp>
 
+#include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
@@ -35,11 +36,47 @@ public:
     /// \Returns the resource source (output) with name \p name
     PassSource* findSource(std::string_view name);
 
+    /// \Returns the sink at index \p index
+    PassSink* sink(size_t index) {
+        return const_cast<PassSink*>(
+            static_cast<Pass const*>(this)->sink(index));
+    }
+
+    /// \overload
+    PassSink const* sink(size_t index) const {
+        BL_EXPECT(index < _sinks.size());
+        return _sinks[index].get();
+    }
+
     /// \Returns a view over the resource sinks of this pass
     auto sinks() { return _sinks | ToAddress<>; }
 
     /// \overload
     auto sinks() const { return _sinks | ToAddress<PassSink const>; }
+
+    /// \Returns a view over the sinks that are connected to a resource
+    auto activeSinks() {
+        return sinks() | ranges::views::filter(
+                             [](auto* s) -> bool { return s->source(); });
+    }
+
+    /// \overload
+    auto activeSinks() const {
+        return sinks() | ranges::views::filter(
+                             [](auto* s) -> bool { return s->source(); });
+    }
+
+    /// \Returns the source at index \p index
+    PassSource* source(size_t index) {
+        return const_cast<PassSource*>(
+            static_cast<Pass const*>(this)->source(index));
+    }
+
+    /// \overload
+    PassSource const* source(size_t index) const {
+        BL_EXPECT(index < _sources.size());
+        return _sources[index].get();
+    }
 
     /// \Returns a view over the resource sources of this pass
     auto sources() { return _sources | ToAddress<>; }

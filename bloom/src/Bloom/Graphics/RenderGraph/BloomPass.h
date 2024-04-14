@@ -1,5 +1,5 @@
-#ifndef BloomPass_hpp
-#define BloomPass_hpp
+#ifndef BLOOM_GRAPHICS_RENDERGRAPH_BLOOMPASS_H
+#define BLOOM_GRAPHICS_RENDERGRAPH_BLOOMPASS_H
 
 #include <array>
 
@@ -35,4 +35,4 @@ private:
 
 } // namespace bloom::rg
 
-#endif /* BloomPass_hpp */
+#endif // BLOOM_GRAPHICS_RENDERGRAPH_BLOOMPASS_H

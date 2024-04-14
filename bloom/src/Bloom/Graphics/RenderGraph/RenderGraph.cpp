@@ -33,7 +33,7 @@ static bool validate(std::span<Pass* const> passes) {
     bool result = true;
     for (auto* pass: passes) {
         for (auto* sink: pass->sinks()) {
-            if (!sink->source()) {
+            if (!sink->isOptional() && !sink->source()) {
                 Logger::Error("Sink is not linked: ", pass->name(), ".",
                               sink->name());
                 result = false;
@@ -102,9 +102,8 @@ static void allocateBackingResource(ResourcePool& pool,
 static void allocateBackingResources(ResourcePool& pool,
                                      std::span<Pass* const> executionOrder) {
     for (auto* pass: executionOrder) {
-        for (auto* sink: pass->sinks()) {
+        for (auto* sink: pass->activeSinks()) {
             auto* source = sink->source();
-            BL_ASSERT(source, "Sink not linked");
             if (!source->pass()) {
                 allocateBackingResource(pool, *source);
             }
@@ -255,10 +254,10 @@ static std::unique_ptr<RenderGraph> createDefaultRenderGraph(
     /// Post process pass
     rg->addLink(postprocessParams->internalSource(),
                 postProcessPass->findSink("Parameters"));
-    rg->addLink(bloomParams->internalSource(),
-                postProcessPass->findSink("BloomParameters"));
+    //    rg->addLink(bloomParams->internalSource(),
+    //                postProcessPass->findSink("BloomParameters"));
     rg->addLink(rawColor, postProcessPass->findSink("RawColor"));
-    rg->addLink(bloomColor, postProcessPass->findSink("BloomColor"));
+    //    rg->addLink(bloomColor, postProcessPass->findSink("BloomColor"));
     rg->compile();
     return rg;
 }

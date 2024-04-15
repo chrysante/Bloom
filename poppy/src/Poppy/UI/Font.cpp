@@ -6,6 +6,7 @@
 #include <span>
 
 #include <imgui_internal.h>
+#include <range/v3/algorithm.hpp>
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <utl/strcat.hpp>
@@ -26,6 +27,14 @@ static auto end(auto&& x) { return x.End(); }
 
 using namespace bloom;
 using namespace poppy;
+
+struct FontManager::Impl {
+    using FontKey = FontManager::FontKey;
+    using ImGuiData = FontManager::ImGuiData;
+};
+
+using FontKey = FontManager::Impl::FontKey;
+using ImGuiData = FontManager::Impl::ImGuiData;
 
 static std::string toString(FontWeight w) {
     return std::array{
@@ -57,10 +66,6 @@ static std::string toFontFileName(FontDesc const& font) {
     return std::move(sstr).str();
 }
 
-using FontKey = FontManager::FontKey;
-
-using ImGuiData = FontManager::ImGuiData;
-
 static ImFont* loadFont(FontDesc const& font, ImFontAtlas& atlas,
                         float scaleFactor) {
     if (font.style == FontStyle::Monospaced &&
@@ -88,13 +93,12 @@ static void loadFonts(ImGuiData& data, float scaleFactor) {
     }
 }
 
-static void loadIcons(ImGuiData& data, float scaleFactor,
-                      std::span<uint16_t const> glyphs) {
+static void loadIcons(
+    ImGuiData& data, float scaleFactor,
+    utl::hashmap<IconSize, std::vector<uint16_t>> const& sortedGlyphMap) {
     std::filesystem::path iconPath = resourceDir() / "Icons/Icons.ttf";
-    auto iconSizes = { IconSize::_16, IconSize::_24, IconSize::_32,
-                       IconSize::_48 };
-    for (auto size: iconSizes) {
-        auto imguiFontPtr =
+    for (auto& [size, glyphs]: sortedGlyphMap) {
+        ImFont* imguiFontPtr =
             data.atlas->AddFontFromFileTTF(iconPath.c_str(),
                                            (int)size * scaleFactor, nullptr,
                                            glyphs.data());
@@ -127,14 +131,15 @@ static utl::hashmap<std::string, uint16_t> loadAllIconCodes() {
     return codes;
 }
 
-static void loadAll(ImGuiData& data, float scaleFactor,
-                    std::vector<uint16_t> glyphs) {
+static void loadAll(
+    ImGuiData& data, float scaleFactor,
+    utl::hashmap<IconSize, std::vector<uint16_t>> const& sortedGlyphMap) {
     if (!data.atlas) {
         data.atlas = IM_NEW(ImFontAtlas);
     }
     data.atlas->Clear();
     loadFonts(data, scaleFactor);
-    loadIcons(data, scaleFactor, glyphs);
+    loadIcons(data, scaleFactor, sortedGlyphMap);
     data.atlas->Build();
 }
 
@@ -150,9 +155,7 @@ FontManager::FontManager(float scaleFactor):
     allIconCodes(loadAllIconCodes()),
     scaleFactor(scaleFactor),
     imguiData{ .atlas = IM_NEW(ImFontAtlas) } {
-    populateGlyphs();
     imguiData.map.insert({ FontDesc::UIDefault(), nullptr });
-    loadAll(imguiData, scaleFactor, glyphs);
 }
 
 FontManager::~FontManager() {
@@ -175,23 +178,24 @@ ImFont* FontManager::get(FontDesc const& desc) {
 
 IconData FontManager::get(IconFontDesc const& desc, std::string name) {
     return { gFontManager->getImpl(desc),
-             gFontManager->getUnicodeStrImpl(std::move(name)) };
+             gFontManager->getUnicodeStrImpl(desc.size, std::move(name)) };
 }
 
-void FontManager::populateGlyphs() {
-    glyphs.clear();
-    glyphs.reserve(allIconCodes.size() + 1);
-    std::transform(allIconCodes.begin(), allIconCodes.end(),
-                   std::back_inserter(glyphs),
-                   [](auto const& p) { return p.second; });
-    std::sort(glyphs.begin(), glyphs.end());
-    glyphs.push_back(0); // Null terminator
+static utl::hashmap<IconSize, std::vector<uint16_t>> makeSortedGlyphMap(
+    utl::hashmap<IconSize, utl::hashset<uint16_t>> const& iconGlyphs) {
+    utl::hashmap<IconSize, std::vector<uint16_t>> result;
+    for (auto& [key, set]: iconGlyphs) {
+        auto& glyphs = result[key];
+        glyphs = set.values();
+        ranges::sort(glyphs);
+        glyphs.push_back(0); // Null terminator
+    }
+    return result;
 }
 
 ImFont* FontManager::getImpl(FontKey const& key) {
     auto [itr, inserted] = imguiData.map.insert({ key, { nullptr } });
     if (inserted) {
-        BL_ASSERT(std::holds_alternative<FontDesc>(key));
         reloadAsync();
     }
     return itr->second;
@@ -207,12 +211,17 @@ static std::string unicodeToUTF8(uint16_t code) {
     return std::string(result.data());
 }
 
-std::string FontManager::getUnicodeStrImpl(std::string name) {
+std::string FontManager::getUnicodeStrImpl(IconSize size,
+                                           std::string_view name) {
     auto itr = allIconCodes.find(name);
     if (itr == allIconCodes.end()) {
         return {};
     }
-    return unicodeToUTF8(itr->second);
+    auto code = itr->second;
+    if (glyphMap[size].insert(code).second) {
+        reloadAsync();
+    }
+    return unicodeToUTF8(code);
 }
 
 void FontManager::reloadAsync() {
@@ -226,10 +235,11 @@ void FontManager::reloadAsync() {
     dispatch(DispatchToken::NextFrame, [this] {
         haveSignaledReload = false;
         Logger::Info("Reloading Fonts");
-        std::thread([this, scaleFactor = scaleFactor, glyphs = glyphs,
+        std::thread([this, scaleFactor = scaleFactor,
+                     sortedGlyphMap = makeSortedGlyphMap(glyphMap),
                      data = imguiData]() mutable {
             data.atlas = IM_NEW(ImFontAtlas);
-            loadAll(data, scaleFactor, glyphs);
+            loadAll(data, scaleFactor, sortedGlyphMap);
             postEmptySystemEvent();
             dispatch(DispatchToken::NextFrame, [this, data = std::move(data)] {
                 IM_FREE(imguiData.atlas);

@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 #include <imgui.h>
 #include <utl/hash.hpp>
@@ -124,33 +125,32 @@ public:
     ///
     static IconData get(IconFontDesc const& font, std::string iconName);
 
-    /// # Temporary interface
-
+    ///  \Returns the ImGui font atlas
     ImFontAtlas* getAtlas() { return imguiData.atlas; }
 
+    struct Impl;
+
+private:
     using FontKey = std::variant<FontDesc, IconFontDesc>;
+
     struct ImGuiData {
         ImFontAtlas* atlas = nullptr;
         utl::hashmap<FontKey, ImFont*> map;
     };
 
-private:
     ImFont* getImpl(FontKey const& key);
 
-    std::string getUnicodeStrImpl(std::string name);
+    std::string getUnicodeStrImpl(IconSize size, std::string_view name);
 
     void reloadAsync();
-
-    void populateGlyphs();
 
     /// Maps CSS icon names to unicode representation. This lists all icons
     /// available in the resource files
     utl::hashmap<std::string, uint16_t> allIconCodes;
+    utl::hashmap<IconSize, utl::hashset<uint16_t>> glyphMap;
     float scaleFactor = 1;
     ImGuiData imguiData;
     bool haveSignaledReload = false;
-    // Keep this for now
-    std::vector<uint16_t> glyphs;
 };
 
 struct ReloadedFontAtlasCommand {

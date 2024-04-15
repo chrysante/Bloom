@@ -6,6 +6,7 @@
 #ifdef BLOOM_CPP
 
 #include <cassert>
+#include <chrono>
 #include <cstdlib>
 #include <ostream>
 #include <string_view>
@@ -132,6 +133,24 @@ private:
     static void endLog();
 
     static std::ostream& ostream();
+};
+
+#define BL_PROFILE_FUNCTION()                                                  \
+    FunctionProfiler UTL_UNIQUE_NAME(BL_Profiler_)(__func__, __FILE__)
+
+///
+class FunctionProfiler {
+public:
+    FunctionProfiler(char const* function, char const* file);
+
+    FunctionProfiler(FunctionProfiler const&) = delete;
+
+    ~FunctionProfiler();
+
+private:
+    char const* function;
+    char const* file;
+    std::chrono::high_resolution_clock::time_point start;
 };
 
 } // namespace bloom

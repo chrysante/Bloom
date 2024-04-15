@@ -117,15 +117,15 @@ bool Editor::isSimulating() const {
 }
 
 void Editor::init() {
-    Logger::Trace("Editor::doInit()");
+    BL_PROFILE_FUNCTION();
     initRenderer();
     createMainWindow();
     initImGui();
     restoreConfigFromDisk();
-    Logger::Trace("Editor::init() done");
 }
 
 void Editor::initRenderer() {
+    BL_PROFILE_FUNCTION();
     auto editorRenderer =
         std::make_unique<EditorRenderer>(makeReceiver(),
                                          coreSystems().takeRenderer());
@@ -134,6 +134,7 @@ void Editor::initRenderer() {
 }
 
 void Editor::createMainWindow() {
+    BL_PROFILE_FUNCTION();
     auto delegate = std::make_unique<EditorWindowDelegate>();
     delegate->onFrame = [this, delegate = delegate.get()] {
         imguiCtx.drawFrame(device(), delegate->window());
@@ -147,6 +148,7 @@ void Editor::createMainWindow() {
 }
 
 void Editor::initImGui() {
+    BL_PROFILE_FUNCTION();
     ImGuiContextDescription desc;
     desc.iniFilePath = libraryDir() / "imgui.ini";
     imguiCtx.init(*this, desc);
@@ -291,6 +293,7 @@ void Editor::saveConfigToDisk() {
 }
 
 void Editor::restoreConfigFromDisk() {
+    BL_PROFILE_FUNCTION();
     YAML::Node root = getStoredConfig();
     Logger::Warn("Resetting style colors on startup");
     ImGui::StyleColorsDark();

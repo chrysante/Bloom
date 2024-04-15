@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <termfmt/termfmt.h>
+#include <utl/format_time.hpp>
 #include <utl/streammanip.hpp>
 
 using namespace bloom;
@@ -128,3 +129,14 @@ void Logger::endLog() {
 }
 
 std::ostream& Logger::ostream() { return std::cout; }
+
+FunctionProfiler::FunctionProfiler(char const* function, char const* file):
+    function(function),
+    file(file),
+    start(std::chrono::high_resolution_clock::now()) {}
+
+FunctionProfiler::~FunctionProfiler() {
+    (void)file;
+    auto elapsed = std::chrono::high_resolution_clock::now() - start;
+    Logger::Trace(function, " : ", utl::format_duration(elapsed));
+}

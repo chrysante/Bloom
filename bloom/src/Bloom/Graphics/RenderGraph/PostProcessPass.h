@@ -6,7 +6,7 @@
 
 namespace bloom::rg {
 
-class PostProcessPass: public ComputePass, PassImpl<PostProcessPass> {
+class PostProcessPass: public ComputePass, public PassImpl<PostProcessPass> {
 public:
     PostProcessPass(std::string name);
 

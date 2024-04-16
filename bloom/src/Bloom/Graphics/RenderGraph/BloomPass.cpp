@@ -14,9 +14,8 @@ static constexpr size_t NumMips = BloomPass::NumMips;
 
 // clang-format off
 
-template <>
-Impl::InterfaceVector const Impl::Sinks = {
-    BufferInterface{ 
+BEGIN_SINK_DECL(BloomPass) {
+    BufferInterface{
         "Parameters",
         &BloomPass::parameters,
         { .size = sizeof(BloomParameters) }
@@ -24,15 +23,15 @@ Impl::InterfaceVector const Impl::Sinks = {
     TextureInterface{
         "RawColor",
         &BloomPass::rawColor,
-        { 
+        {
             .pixelFormat = PixelFormat::RGBA32Float,
             .size = TextureSize::ScreenSize,
         }
     }
-};
+}
+END_DECL()
 
-template <>
-Impl::InterfaceVector const Impl::Sources = { 
+BEGIN_SOURCE_DECL(BloomPass) {
     TextureInterface{
         "Output",
         &BloomPass::output,
@@ -42,7 +41,8 @@ Impl::InterfaceVector const Impl::Sources = {
             .size = TextureSize::ScreenSize
         }
     }
-};
+}
+END_DECL()
 
 // clang-format on
 

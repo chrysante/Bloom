@@ -17,8 +17,7 @@ using Impl = PassImpl<ForwardShadingPass>;
 
 // clang-format off
 
-template <>
-Impl::InterfaceVector const Impl::Sinks = {
+BEGIN_SINK_DECL(ForwardShadingPass) {
     BufferInterface{
         "SceneParameters",
         &ForwardShadingPass::sceneParameters,
@@ -32,11 +31,11 @@ Impl::InterfaceVector const Impl::Sinks = {
         "Lights",
         &ForwardShadingPass::lights
     },
-};
+}
+END_DECL()
 
-template <>
-Impl::InterfaceVector const Impl::Sources = {
-    TextureInterface{ 
+BEGIN_SOURCE_DECL(ForwardShadingPass) {
+    TextureInterface{
         "RawColor",
         &ForwardShadingPass::rawColor,
         {
@@ -47,12 +46,13 @@ Impl::InterfaceVector const Impl::Sources = {
     TextureInterface{
         "Depth",
         &ForwardShadingPass::depth,
-        { 
+        {
             .pixelFormat = PixelFormat::Depth32Float,
             .size = TextureSize::ScreenSize
         }
     }
-};
+}
+END_DECL()
 
 // clang-format on
 

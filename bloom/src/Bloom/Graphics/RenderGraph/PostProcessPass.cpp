@@ -10,27 +10,38 @@ using namespace vml::short_types;
 
 using Impl = PassImpl<PostProcessPass>;
 
-template <>
-Impl::InterfaceVector const Impl::Sinks = {
-    BufferInterface{ "Parameters",
-                     &PostProcessPass::parameterBuffer,
-                     { .size = sizeof(PostProcessParameters) } },
-    TextureInterface{ "RawColor",
-                      &PostProcessPass::rawColor,
-                      {
-                          .pixelFormat = PixelFormat::RGBA32Float,
-                          .size = TextureSize::ScreenSize,
-                      } },
-};
+// clang-format off
 
-template <>
-Impl::InterfaceVector const Impl::Sources = { TextureInterface{
-    "Output",
-    &PostProcessPass::output,
-    {
-        .pixelFormat = PixelFormat::RGBA8Unorm,
-        .size = TextureSize::ScreenSize,
-    } } };
+BEGIN_SINK_DECL(PostProcessPass) {
+    BufferInterface{
+        "Parameters",
+        &PostProcessPass::parameterBuffer,
+        { .size = sizeof(PostProcessParameters) }
+    },
+    TextureInterface{
+        "RawColor",
+        &PostProcessPass::rawColor,
+        {
+            .pixelFormat = PixelFormat::RGBA32Float,
+            .size = TextureSize::ScreenSize,
+        }
+    },
+}
+END_DECL()
+
+BEGIN_SOURCE_DECL(PostProcessPass) {
+    TextureInterface{
+        "Output",
+        &PostProcessPass::output,
+        {
+            .pixelFormat = PixelFormat::RGBA8Unorm,
+            .size = TextureSize::ScreenSize,
+        }
+    }
+}
+END_DECL()
+
+// clang-format on
 
 PostProcessPass::PostProcessPass(std::string name):
     ComputePass(std::move(name)) {}

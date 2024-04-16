@@ -8,7 +8,7 @@
 
 namespace bloom::rg {
 
-class BloomPass: public ComputePass, PassImpl<BloomPass> {
+class BloomPass: public ComputePass, public PassImpl<BloomPass> {
 public:
     static constexpr size_t NumMips = 8;
 

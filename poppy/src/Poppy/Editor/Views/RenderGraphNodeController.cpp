@@ -14,6 +14,12 @@ using namespace nodeEditor;
 using namespace bloom;
 using namespace rg;
 using namespace vml::short_types;
+using namespace ranges::views;
+
+static constexpr float4 InputNodeColor = { 0.4, 0.7, 0.2, 1.0 };
+static constexpr float4 PassNodeColor = { 0.3, 0.0, 0.8, 1.0 };
+static constexpr float4 OutputNodeColor = { 1.0, 0.0, 0.2, 1.0 };
+static constexpr float2 MinSize = { 100, 0 };
 
 using Entry = PassRegistry::Entry;
 
@@ -30,14 +36,44 @@ Entry& poppy::registerPass() {
     return entries.back();
 }
 
+static PinFlags translateFlags(InterfaceFlags flags) {
+    PinFlags result{};
+    if (test(flags & InterfaceFlags::Optional)) {
+        result |= PinFlags::Optional;
+    }
+    return result;
+}
+
+static PinDesc interfaceToPinDesc(auto const& interface) {
+    // clang-format off
+    return std::visit([&](auto& interface) {
+        return PinDesc {
+            .name = interface.name,
+            .flags = translateFlags(interface.flags)
+        };
+    }, interface); // clang-format on
+}
+
+template <typename PassType>
+static void registerConcretePass(std::string name) {
+    auto& desc = registerPass().desc;
+    desc.name = name;
+    desc.inputs = PassType::Sinks() | transform([](auto& interface) {
+        return interfaceToPinDesc(interface);
+    }) | ranges::to<std::vector>;
+    desc.outputs = PassType::Sources() | transform([](auto& interface) {
+        return interfaceToPinDesc(interface);
+    }) | ranges::to<std::vector>;
+    desc.color = PassNodeColor;
+    desc.minSize = MinSize;
+}
+
 #define REGISTER_PASS                                                          \
     static auto const& UTL_UNIQUE_NAME(BL_Pass_) = registerPass().desc =       \
         NodeDesc
 
-static constexpr float4 InputNodeColor = { 0.4, 0.7, 0.2, 1.0 };
-static constexpr float4 PassNodeColor = { 0.3, 0.0, 0.8, 1.0 };
-static constexpr float4 OutputNodeColor = { 1.0, 0.0, 0.2, 1.0 };
-static constexpr float2 MinSize = { 100, 0 };
+#define AUTOREGISTER_PASS(PassType)                                            \
+    UTL_STATIC_INIT { registerConcretePass<PassType>(#PassType); }
 
 namespace {
 
@@ -140,20 +176,7 @@ struct ForwardShadingPassController: PassNodeController {
     }
 };
 
-REGISTER_PASS {
-    .name = "Forward Shading Pass",
-    .inputs = {
-        { .name = "Scene Parameters" },
-        { .name = "Geometry" },
-        { .name = "Lights" },
-    },
-    .outputs = {
-        { .name = "Raw Color" },
-        { .name = "Depth" },
-    },
-    .color = PassNodeColor,
-    .minSize = MinSize
-};
+AUTOREGISTER_PASS(ForwardShadingPass);
 
 struct PostProcessPassController: PassNodeController {
     Pass* createPass(RenderGraph& rg) override {
@@ -161,20 +184,7 @@ struct PostProcessPassController: PassNodeController {
     }
 };
 
-REGISTER_PASS {
-    .name = "Post Process Pass",
-    .inputs = {
-        { .name = "Parameters" },
-        { .name = "Raw Color" },
-        { .name = "Bloom Parameters", .flags = PinFlags::Optional },
-        { .name = "Bloom Color", .flags = PinFlags::Optional },
-    },
-    .outputs = {
-        { .name = "Output" },
-    },
-    .color = PassNodeColor,
-    .minSize = MinSize
-};
+AUTOREGISTER_PASS(PostProcessPass);
 
 struct BloomController: PassNodeController {
     Pass* createPass(RenderGraph& rg) override {
@@ -182,17 +192,6 @@ struct BloomController: PassNodeController {
     }
 };
 
-REGISTER_PASS {
-    .name = "Bloom Pass",
-    .inputs = {
-        { .name = "Parameters" },
-        { .name = "Raw Color" },
-    },
-    .outputs = {
-        { .name = "Output" },
-    },
-    .color = PassNodeColor,
-    .minSize = MinSize
-};
+AUTOREGISTER_PASS(BloomPass);
 
 } // namespace

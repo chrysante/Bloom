@@ -186,13 +186,11 @@ public:
     using InterfaceVariant = std::variant<BufferInterface, TextureInterface,
                                           GeometryInterface, LightsInterface>;
 
-    using InterfaceVector = std::vector<InterfaceVariant>;
+    /// To be defined by the pass author
+    static std::span<InterfaceVariant const> Sinks();
 
     /// To be defined by the pass author
-    static InterfaceVector const Sinks;
-
-    /// To be defined by the pass author
-    static InterfaceVector const Sources;
+    static std::span<InterfaceVariant const> Sources();
 
 protected:
     /// Declares the sinks and sources defined in `Sinks` and `Sources` to the
@@ -202,7 +200,7 @@ protected:
             std::derived_from<PassType, Pass>,
             "The pass must publicly derive from the `Pass` base class");
         auto* pass = static_cast<PassType*>(this);
-        for (auto const& wrapper: PassType::Sinks) {
+        for (auto const& wrapper: PassType::Sinks()) {
             // clang-format off
             std::visit([&]<InterfaceType Type>(
                 Interface<Type, PassType> const& interface) {
@@ -211,7 +209,7 @@ protected:
                                       interface.flags);
                 }, wrapper); // clang-format on
         }
-        for (auto const& wrapper: PassType::Sources) {
+        for (auto const& wrapper: PassType::Sources()) {
             // clang-format off
             std::visit([&]<InterfaceType Type>(
                 Interface<Type, PassType> const& interface) {
@@ -222,6 +220,22 @@ protected:
         }
     }
 };
+
+#define BEGIN_INTERFACE_DECL_IMPL(Name, PassType)                              \
+    template <>                                                                \
+    ::std::span<                                                               \
+        typename ::bloom::rg::PassImpl<PassType>::InterfaceVariant const>      \
+        bloom::rg::PassImpl<PassType>::Name() {                                \
+        static std::vector<InterfaceVariant> list
+
+#define BEGIN_SINK_DECL(PassType) BEGIN_INTERFACE_DECL_IMPL(Sinks, PassType)
+
+#define BEGIN_SOURCE_DECL(PassType) BEGIN_INTERFACE_DECL_IMPL(Sources, PassType)
+
+#define END_DECL()                                                             \
+    ;                                                                          \
+    return list;                                                               \
+    }
 
 } // namespace bloom::rg
 

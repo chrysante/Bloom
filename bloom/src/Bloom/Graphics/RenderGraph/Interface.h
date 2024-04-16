@@ -43,7 +43,7 @@ enum class InterfaceFlags {
 
 UTL_ENUM_OPERATORS(InterfaceFlags)
 
-/// Stub interface descriptor 
+/// Stub interface descriptor
 template <InterfaceType Type>
 struct InterfaceDesc {
     bool operator==(InterfaceDesc const&) const = default;

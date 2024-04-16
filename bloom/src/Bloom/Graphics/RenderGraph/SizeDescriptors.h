@@ -1,5 +1,5 @@
-#ifndef SizeDescriptors_h
-#define SizeDescriptors_h
+#ifndef BLOOM_GRAPHICS_RENDERGRAPH_SIZEDESCRIPTORS_H
+#define BLOOM_GRAPHICS_RENDERGRAPH_SIZEDESCRIPTORS_H
 
 #include <variant>
 
@@ -87,4 +87,4 @@ struct std::hash<bloom::rg::TextureSize> {
     }
 };
 
-#endif /* SizeDescriptors_h */
+#endif // BLOOM_GRAPHICS_RENDERGRAPH_SIZEDESCRIPTORS_H

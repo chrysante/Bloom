@@ -13,19 +13,32 @@ using namespace bloom;
 using namespace rg;
 using namespace vml;
 
+using Impl = PassImpl<ForwardShadingPass>;
+
+template <>
+Impl::InterfaceVector const Impl::Sinks = {
+    InterfaceWrapper{
+        "SceneParameters", &ForwardShadingPass::sceneParameters,
+        BufferInterface{ .size = sizeof(SceneRenderParameters) } },
+    InterfaceWrapper{ "Geometry", &ForwardShadingPass::geometry,
+                      GeometryInterface{} },
+    InterfaceWrapper{ "Lights", &ForwardShadingPass::lights,
+                      LightsInterface{} },
+};
+
+template <>
+Impl::InterfaceVector const Impl::Sources = {
+    InterfaceWrapper{ "RawColor", &ForwardShadingPass::rawColor,
+                      TextureInterface{ .pixelFormat = PixelFormat::RGBA32Float,
+                                        .size = TextureSize::ScreenSize } },
+    InterfaceWrapper{
+        "Depth", &ForwardShadingPass::depth,
+        TextureInterface{ .pixelFormat = PixelFormat::Depth32Float,
+                          .size = TextureSize::ScreenSize } }
+};
+
 ForwardShadingPass::ForwardShadingPass(std::string name):
-    RenderPass(std::move(name)) {
-    declareSink("SceneParameters", &sceneParameters,
-                BufferInterface{ .size = sizeof(SceneRenderParameters) });
-    declareSink("Geometry", &geometry, GeometryInterface{});
-    declareSink("Lights", &lights, LightsInterface{});
-    declareSource("RawColor", &rawColor,
-                  TextureInterface{ .pixelFormat = PixelFormat::RGBA32Float,
-                                    .size = TextureSize::ScreenSize });
-    declareSource("Depth", &depth,
-                  TextureInterface{ .pixelFormat = PixelFormat::Depth32Float,
-                                    .size = TextureSize::ScreenSize });
-}
+    RenderPass(std::move(name)) {}
 
 void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     RenderPassDescription desc{};

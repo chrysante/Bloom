@@ -9,19 +9,21 @@
 namespace bloom::rg {
 
 ///
-class ForwardShadingPass: public RenderPass {
+class ForwardShadingPass: public RenderPass, PassImpl<ForwardShadingPass> {
 public:
     explicit ForwardShadingPass(std::string name);
 
 private:
+    friend class PassImpl;
+
     void doExecute(FrameParameters const& params, RenderContext& ctx) override;
 
-    // Inputs
+    // Sinks
     BufferHandle sceneParameters;
-    GeometryResource* geometry = nullptr;
-    LightsResource* lights = nullptr;
+    GeometryResource* geometry;
+    LightsResource* lights;
 
-    // Outputs
+    // Sources
     TextureHandle rawColor;
     TextureHandle depth;
 };

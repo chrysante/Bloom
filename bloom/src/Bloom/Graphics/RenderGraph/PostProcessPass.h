@@ -6,11 +6,13 @@
 
 namespace bloom::rg {
 
-class PostProcessPass: public ComputePass {
+class PostProcessPass: public ComputePass, PassImpl<PostProcessPass> {
 public:
     PostProcessPass(std::string name);
 
 private:
+    friend class PassImpl;
+
     void doExecute(FrameParameters const& params, ComputeContext& ctx) override;
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;

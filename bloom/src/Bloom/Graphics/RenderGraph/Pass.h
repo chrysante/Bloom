@@ -1,6 +1,7 @@
 #ifndef BLOOM_GRAPHICS_RENDERGRAPH_PASS_H
 #define BLOOM_GRAPHICS_RENDERGRAPH_PASS_H
 
+#include <array>
 #include <concepts>
 #include <string>
 #include <vector>
@@ -15,8 +16,14 @@
 
 namespace bloom::rg {
 
+template <typename>
+class PassImpl;
+
 /// Base class for all render graph pass nodes.
 class Pass {
+    template <typename>
+    friend class PassImpl;
+
 public:
     explicit Pass(std::string name): _name(std::move(name)) {}
 
@@ -162,6 +169,54 @@ private:
                            CommandQueue& queue) final;
     virtual void doExecute(FrameParameters const& params,
                            ComputeContext& ctx) = 0;
+};
+
+/// Mixin base class for special purpose passes.
+/// This class exists to simplify defining pass interfaces in code
+template <typename PassType>
+class PassImpl {
+    using InterfaceVariant =
+        std::variant<InterfaceWrapper<PassType, BufferInterface>,
+                     InterfaceWrapper<PassType, TextureInterface>,
+                     InterfaceWrapper<PassType, GeometryInterface>,
+                     InterfaceWrapper<PassType, LightsInterface>>;
+
+public:
+    using InterfaceVector = std::vector<InterfaceVariant>;
+
+    /// To be defined by the pass author
+    static InterfaceVector const Sinks;
+
+    /// To be defined by the pass author
+    static InterfaceVector const Sources;
+
+protected:
+    /// Declares the sinks and sources defined in `Sinks` and `Sources` to the
+    /// pass base class
+    PassImpl() {
+        static_assert(
+            std::derived_from<PassType, Pass>,
+            "The pass must publicly derive from the `Pass` base class");
+        auto* pass = static_cast<PassType*>(this);
+        for (auto const& wrapper: PassType::Sinks) {
+            std::visit(
+                [&]<typename InterfaceType>(
+                    InterfaceWrapper<PassType, InterfaceType> const& wrapper) {
+                pass->declareSink(std::string(wrapper.name),
+                                  &(pass->*wrapper.impl), wrapper.interface);
+            },
+                wrapper);
+        }
+        for (auto const& wrapper: PassType::Sources) {
+            std::visit(
+                [&]<typename InterfaceType>(
+                    InterfaceWrapper<PassType, InterfaceType> const& wrapper) {
+                pass->declareSource(std::string(wrapper.name),
+                                    &(pass->*wrapper.impl), wrapper.interface);
+            },
+                wrapper);
+        }
+    }
 };
 
 } // namespace bloom::rg

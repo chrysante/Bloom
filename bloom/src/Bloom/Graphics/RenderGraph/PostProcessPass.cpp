@@ -8,30 +8,39 @@ using namespace bloom;
 using namespace rg;
 using namespace vml::short_types;
 
+using Impl = PassImpl<PostProcessPass>;
+
+template <>
+Impl::InterfaceVector const Impl::Sinks = {
+    InterfaceWrapper{
+        "Parameters", &PostProcessPass::parameterBuffer,
+        BufferInterface{ .size = sizeof(PostProcessParameters) } },
+    InterfaceWrapper{ "RawColor", &PostProcessPass::rawColor,
+                      TextureInterface{
+                          .pixelFormat = PixelFormat::RGBA32Float,
+                          .size = TextureSize::ScreenSize,
+                      } },
+    InterfaceWrapper{ "BloomParameters", &PostProcessPass::bloomParameterBuffer,
+                      BufferInterface{ .flags = InterfaceFlags::Optional,
+                                       .size = sizeof(BloomParameters) } },
+    InterfaceWrapper{ "BloomColor", &PostProcessPass::bloomColor,
+                      TextureInterface{
+                          .flags = InterfaceFlags::Optional,
+                          .pixelFormat = PixelFormat::RG11B10Float,
+                          .size = TextureSize::Relative2D({ 0.5, 0.5 }),
+                      } },
+};
+
+template <>
+Impl::InterfaceVector const Impl::Sources = { InterfaceWrapper{
+    "Output", &PostProcessPass::output,
+    TextureInterface{
+        .pixelFormat = PixelFormat::RGBA8Unorm,
+        .size = TextureSize::ScreenSize,
+    } } };
+
 PostProcessPass::PostProcessPass(std::string name):
-    ComputePass(std::move(name)) {
-    declareSink("Parameters", &parameterBuffer,
-                BufferInterface{ .size = sizeof(PostProcessParameters) });
-    declareSink("RawColor", &rawColor,
-                TextureInterface{
-                    .pixelFormat = PixelFormat::RGBA32Float,
-                    .size = TextureSize::ScreenSize,
-                });
-    declareSink("BloomParameters", &bloomParameterBuffer,
-                BufferInterface{ .flags = InterfaceFlags::Optional,
-                                 .size = sizeof(BloomParameters) });
-    declareSink("BloomColor", &bloomColor,
-                TextureInterface{
-                    .flags = InterfaceFlags::Optional,
-                    .pixelFormat = PixelFormat::RG11B10Float,
-                    .size = TextureSize::Relative2D({ 0.5, 0.5 }),
-                });
-    declareSource("Output", &output,
-                  TextureInterface{
-                      .pixelFormat = PixelFormat::RGBA8Unorm,
-                      .size = TextureSize::ScreenSize,
-                  });
-}
+    ComputePass(std::move(name)) {}
 
 void PostProcessPass::doExecute(FrameParameters const& params,
                                 ComputeContext& ctx) {

@@ -8,23 +8,30 @@ using namespace bloom;
 using namespace rg;
 using namespace vml::short_types;
 
+using Impl = PassImpl<BloomPass>;
+
 static constexpr size_t NumMips = BloomPass::NumMips;
 
-BloomPass::BloomPass(std::string name): ComputePass(std::move(name)) {
-    declareSink("Parameters", &parameters,
-                BufferInterface{ .size = sizeof(BloomParameters) });
-    declareSink("RawColor", &rawColor,
-                TextureInterface{
-                    .pixelFormat = PixelFormat::RGBA32Float,
-                    .size = TextureSize::ScreenSize,
-                });
-    declareSource("Output", &upsample,
-                  TextureInterface{ .type = TextureType::Texture2D,
-                                    .pixelFormat = PixelFormat::RG11B10Float,
-                                    .size =
-                                        TextureSize::Relative2D({ 0.5, 0.5 }),
-                                    .mipmapLevelCount = NumMips - 1 });
-}
+template <>
+Impl::InterfaceVector const Impl::Sinks = {
+    InterfaceWrapper{ "Parameters", &BloomPass::parameters,
+                      BufferInterface{ .size = sizeof(BloomParameters) } },
+    InterfaceWrapper{ "RawColor", &BloomPass::rawColor,
+                      TextureInterface{
+                          .pixelFormat = PixelFormat::RGBA32Float,
+                          .size = TextureSize::ScreenSize,
+                      } }
+};
+
+template <>
+Impl::InterfaceVector const Impl::Sources = { InterfaceWrapper{
+    "Output", &BloomPass::upsample,
+    TextureInterface{ .type = TextureType::Texture2D,
+                      .pixelFormat = PixelFormat::RG11B10Float,
+                      .size = TextureSize::Relative2D({ 0.5, 0.5 }),
+                      .mipmapLevelCount = NumMips - 1 } } };
+
+BloomPass::BloomPass(std::string name): ComputePass(std::move(name)) {}
 
 namespace {
 

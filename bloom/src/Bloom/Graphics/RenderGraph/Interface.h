@@ -184,6 +184,23 @@ struct LightsInterface {
     InterfaceFlags flags = InterfaceFlags::None;
 };
 
+///
+template <typename PassType, typename InterfaceType>
+struct InterfaceWrapper {
+    ///
+    std::string name;
+
+    ///
+    typename InterfaceType::ViewType(PassType::*impl);
+
+    ///
+    InterfaceType interface;
+};
+
+template <typename PassType, typename InterfaceType, typename ViewType>
+InterfaceWrapper(auto name, ViewType(PassType::*impl), InterfaceType interface)
+    -> InterfaceWrapper<PassType, InterfaceType>;
+
 /// Base class of `PassSource` and `PassSink`
 class PassInterfaceBase {
     using Variant = std::variant<BufferInterface, TextureInterface,

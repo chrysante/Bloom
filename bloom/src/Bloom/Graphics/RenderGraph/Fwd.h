@@ -30,40 +30,7 @@ enum class ResourceNodeType {
 ///
 std::ostream& operator<<(std::ostream& ostream, ResourceNodeType nodeType);
 
-/// Forward declaration of resource node interfaces
-#define RG_CONCRETE_RESOURCE_DEF(Name, ...) struct Name##Interface;
-#include "Bloom/Graphics/RenderGraph/Resource.def"
-
 using NoParent = void;
-
-template <typename T>
-struct IsInterface: std::false_type {};
-
-#define RG_CONCRETE_RESOURCE_DEF(Name, ...)                                    \
-    template <>                                                                \
-    struct IsInterface<Name##Interface>: std::true_type {};
-#include "Bloom/Graphics/RenderGraph/Resource.def"
-
-template <typename T>
-concept InterfaceType = IsInterface<T>::value;
-
-template <typename T>
-struct ToResourceType;
-
-#define RG_CONCRETE_RESOURCE_DEF(Name, ...)                                    \
-    template <>                                                                \
-    struct ToResourceType<Name##Interface>:                                    \
-        std::type_identity<Name##Resource> {};
-#include "Bloom/Graphics/RenderGraph/Resource.def"
-
-template <typename T>
-struct ToInterfaceType;
-
-#define RG_CONCRETE_RESOURCE_DEF(Name, ...)                                    \
-    template <>                                                                \
-    struct ToInterfaceType<Name##Resource>:                                    \
-        std::type_identity<Name##Interface> {};
-#include "Bloom/Graphics/RenderGraph/Resource.def"
 
 } // namespace bloom::rg
 

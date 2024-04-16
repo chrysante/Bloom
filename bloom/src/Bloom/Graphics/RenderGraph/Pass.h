@@ -109,21 +109,20 @@ public:
 
 protected:
     /// Declares a resource sink (input) to this pass
-    template <std::derived_from<PassSink> S = PassSink, InterfaceType Interface>
-    S* declareSink(std::string name, Interface::ViewType* handle,
-                   Interface interface) {
+    template <std::derived_from<PassSink> S = PassSink, InterfaceType Type>
+    S* declareSink(std::string name, InterfaceViewType<Type>* handle,
+                   InterfaceDesc<Type> desc) {
         _sinks.push_back(std::make_unique<S>(this, std::move(name), handle,
-                                             std::move(interface)));
+                                             std::move(desc)));
         return static_cast<S*>(_sinks.back().get());
     }
 
     /// Declares a resource source (output) to this pass
-    template <std::derived_from<PassSource> S = PassSource,
-              InterfaceType Interface>
-    S* declareSource(std::string name, Interface::ViewType* handle,
-                     Interface const& interface) {
+    template <std::derived_from<PassSource> S = PassSource, InterfaceType Type>
+    S* declareSource(std::string name, InterfaceViewType<Type>* handle,
+                     InterfaceDesc<Type> desc) {
         _sources.push_back(std::make_unique<S>(this, std::move(name), handle,
-                                               std::move(interface)));
+                                               std::move(desc)));
         return static_cast<S*>(_sources.back().get());
     }
 
@@ -175,13 +174,16 @@ private:
 /// This class exists to simplify defining pass interfaces in code
 template <typename PassType>
 class PassImpl {
-    using InterfaceVariant =
-        std::variant<InterfaceWrapper<PassType, BufferInterface>,
-                     InterfaceWrapper<PassType, TextureInterface>,
-                     InterfaceWrapper<PassType, GeometryInterface>,
-                     InterfaceWrapper<PassType, LightsInterface>>;
 
 public:
+    using BufferInterface = Interface<InterfaceType::Buffer, PassType>;
+    using TextureInterface = Interface<InterfaceType::Texture, PassType>;
+    using GeometryInterface = Interface<InterfaceType::Geometry, PassType>;
+    using LightsInterface = Interface<InterfaceType::Lights, PassType>;
+
+    using InterfaceVariant = std::variant<BufferInterface, TextureInterface,
+                                          GeometryInterface, LightsInterface>;
+
     using InterfaceVector = std::vector<InterfaceVariant>;
 
     /// To be defined by the pass author
@@ -199,22 +201,20 @@ protected:
             "The pass must publicly derive from the `Pass` base class");
         auto* pass = static_cast<PassType*>(this);
         for (auto const& wrapper: PassType::Sinks) {
-            std::visit(
-                [&]<typename InterfaceType>(
-                    InterfaceWrapper<PassType, InterfaceType> const& wrapper) {
-                pass->declareSink(std::string(wrapper.name),
-                                  &(pass->*wrapper.impl), wrapper.interface);
-            },
-                wrapper);
+            // clang-format off
+            std::visit([&]<InterfaceType Type>(
+                Interface<Type, PassType> const& interface) {
+                    pass->declareSink(std::string(interface.name),
+                                      &(pass->*interface.impl), interface.desc);
+                }, wrapper); // clang-format on
         }
         for (auto const& wrapper: PassType::Sources) {
-            std::visit(
-                [&]<typename InterfaceType>(
-                    InterfaceWrapper<PassType, InterfaceType> const& wrapper) {
-                pass->declareSource(std::string(wrapper.name),
-                                    &(pass->*wrapper.impl), wrapper.interface);
-            },
-                wrapper);
+            // clang-format off
+            std::visit([&]<InterfaceType Type>(
+                Interface<Type, PassType> const& interface) {
+                    pass->declareSource(std::string(interface.name),
+                                        &(pass->*interface.impl), interface.desc);
+                }, wrapper); // clang-format on
         }
     }
 };

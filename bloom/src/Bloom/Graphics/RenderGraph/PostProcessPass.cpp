@@ -12,20 +12,22 @@ using Impl = PassImpl<PostProcessPass>;
 
 template <>
 Impl::InterfaceVector const Impl::Sinks = {
-    InterfaceWrapper{
-        "Parameters", &PostProcessPass::parameterBuffer,
-        BufferInterface{ .size = sizeof(PostProcessParameters) } },
-    InterfaceWrapper{ "RawColor", &PostProcessPass::rawColor,
-                      TextureInterface{
+    BufferInterface{ "Parameters",
+                     &PostProcessPass::parameterBuffer,
+                     { .size = sizeof(PostProcessParameters) } },
+    TextureInterface{ "RawColor",
+                      &PostProcessPass::rawColor,
+                      {
                           .pixelFormat = PixelFormat::RGBA32Float,
                           .size = TextureSize::ScreenSize,
                       } },
 };
 
 template <>
-Impl::InterfaceVector const Impl::Sources = { InterfaceWrapper{
-    "Output", &PostProcessPass::output,
-    TextureInterface{
+Impl::InterfaceVector const Impl::Sources = { TextureInterface{
+    "Output",
+    &PostProcessPass::output,
+    {
         .pixelFormat = PixelFormat::RGBA8Unorm,
         .size = TextureSize::ScreenSize,
     } } };

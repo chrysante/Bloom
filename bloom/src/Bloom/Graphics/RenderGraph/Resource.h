@@ -52,9 +52,13 @@ private:
 /// Wrapper around a `BufferHandle`
 class BufferResource: public Resource {
 public:
+    static constexpr InterfaceType Type = InterfaceType::Buffer;
+
+    using Desc = InterfaceDesc<Type>;
+
     ///
-    explicit BufferResource(BufferInterface interface):
-        Resource(ResourceNodeType::BufferResource), _interface(interface) {}
+    explicit BufferResource(Desc desc):
+        Resource(ResourceNodeType::BufferResource), _desc(desc) {}
 
     ///
     void assign(BufferHandle buffer);
@@ -63,19 +67,23 @@ public:
     BufferHandle const& handle() { return _handle; }
 
     ///
-    BufferInterface const& interface() const { return _interface; }
+    Desc const& desc() const { return _desc; }
 
 private:
     BufferHandle _handle;
-    BufferInterface _interface;
+    Desc _desc;
 };
 
 /// Wrapper around a `TextureHandle`
 class TextureResource: public Resource {
 public:
+    static constexpr InterfaceType Type = InterfaceType::Texture;
+
+    using Desc = InterfaceDesc<Type>;
+
     ///
-    explicit TextureResource(TextureInterface interface):
-        Resource(ResourceNodeType::TextureResource), _interface(interface) {}
+    explicit TextureResource(Desc desc):
+        Resource(ResourceNodeType::TextureResource), _desc(desc) {}
 
     ///
     void assign(TextureHandle texture);
@@ -84,11 +92,11 @@ public:
     TextureHandle const& handle() { return _handle; }
 
     ///
-    TextureInterface const& interface() const { return _interface; }
+    Desc const& desc() const { return _desc; }
 
 private:
     TextureHandle _handle;
-    TextureInterface _interface;
+    Desc _desc;
 };
 
 ///
@@ -99,7 +107,11 @@ UTL_SOA_TYPE(Geometry, (Reference<StaticMeshRenderer>, mesh),
 /// Set of meshes in a scene. This is rebuild every frame
 class GeometryResource: public Resource {
 public:
-    explicit GeometryResource(GeometryInterface):
+    static constexpr InterfaceType Type = InterfaceType::Geometry;
+
+    using Desc = InterfaceDesc<Type>;
+
+    explicit GeometryResource(Desc):
         Resource(ResourceNodeType::GeometryResource) {}
 
     ///
@@ -132,8 +144,11 @@ private:
 /// Set of lights in a scene. This is rebuild every frame
 class LightsResource: public Resource {
 public:
-    explicit LightsResource(LightsInterface):
-        Resource(ResourceNodeType::LightsResource) {}
+    static constexpr InterfaceType Type = InterfaceType::Lights;
+
+    using Desc = InterfaceDesc<Type>;
+
+    explicit LightsResource(Desc): Resource(ResourceNodeType::LightsResource) {}
 
     ///
     LightsResource* handle() { return this; }

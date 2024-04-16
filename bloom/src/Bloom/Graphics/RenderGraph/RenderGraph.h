@@ -60,18 +60,19 @@ public:
     HardwareDevice& device() const { return *mDevice; }
 
     /// Declares a resource sink (input) to this graph
-    template <InterfaceType Interface>
-    RenderGraphSink* declareSink(std::string name, Interface interface) {
+    template <InterfaceType Type>
+    RenderGraphSink* declareSink(std::string name,
+                                 InterfaceDesc<Type> const& desc) {
         return Pass::declareSink<RenderGraphSink>(std::move(name), nullptr,
-                                                  std::move(interface));
+                                                  desc);
     }
 
     /// Declares a resource source (output) to this graph
-    template <InterfaceType Interface>
+    template <InterfaceType Type>
     RenderGraphSource* declareSource(std::string name,
-                                     Interface const& interface) {
+                                     InterfaceDesc<Type> const& interface) {
         return Pass::declareSource<RenderGraphSource>(std::move(name), nullptr,
-                                                      std::move(interface));
+                                                      interface);
     }
 
 private:

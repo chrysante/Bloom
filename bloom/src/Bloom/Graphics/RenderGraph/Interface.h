@@ -15,8 +15,23 @@
 
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
+#include "Bloom/Graphics/RenderGraph/SizeDescriptors.h"
 
 namespace bloom::rg {
+
+enum class InterfaceType { Buffer, Texture, Geometry, Lights };
+
+template <InterfaceType Type>
+using InterfaceViewType =
+    std::tuple_element_t<(size_t)Type,
+                         std::tuple<BufferHandle, TextureHandle,
+                                    GeometryResource*, LightsResource*>>;
+
+template <InterfaceType Type>
+using ResourceType =
+    std::tuple_element_t<(size_t)Type,
+                         std::tuple<BufferResource, TextureResource,
+                                    GeometryResource, LightsResource>>;
 
 ///
 enum class InterfaceFlags {
@@ -28,9 +43,13 @@ enum class InterfaceFlags {
 
 UTL_ENUM_OPERATORS(InterfaceFlags)
 
+template <InterfaceType Type>
+struct InterfaceDesc;
+
 ///
-struct BufferInterface {
-    using ViewType = BufferHandle;
+template <>
+struct InterfaceDesc<InterfaceType::Buffer> {
+    using ViewType = InterfaceViewType<InterfaceType::Buffer>;
 
     ///
     InterfaceFlags flags = InterfaceFlags::None;
@@ -39,91 +58,23 @@ struct BufferInterface {
     size_t size;
 
     struct Compare {
-        bool operator()(BufferInterface const& lhs,
-                        BufferInterface const& rhs) const {
+        bool operator()(InterfaceDesc const& lhs,
+                        InterfaceDesc const& rhs) const {
             return lhs.size == rhs.size;
         }
     };
 
     struct Hash {
-        size_t operator()(BufferInterface const& interface) const {
+        size_t operator()(InterfaceDesc const& interface) const {
             return std::hash<size_t>{}(interface.size);
         }
     };
 };
 
-/// Size descriptor that supports absolute and relative values
-struct TextureSize {
-    struct Absolute {
-        size_t size;
-        bool operator==(Absolute const&) const = default;
-    };
-    struct RelativeToScreen {
-        double factor = 1.0;
-        bool operator==(RelativeToScreen const&) const = default;
-    };
-
-    using Element = std::variant<Absolute, RelativeToScreen>;
-
-    vml::vector<Element, 3> value;
-
-    /// Size descriptor that describes the screen size
-    static TextureSize const ScreenSize;
-
-    ///
-    static TextureSize Relative2D(vml::double2 factor) {
-        return { { RelativeToScreen{ factor.x }, RelativeToScreen{ factor.y },
-                   Absolute{ 1 } } };
-    }
-
-    bool operator==(TextureSize const&) const = default;
-
-    ///
-    bool isAbsolute() const {
-        return ranges::all_of(value, [](auto& elem) {
-            return std::holds_alternative<Absolute>(elem);
-        });
-    }
-
-    vml::usize3 compute(vml::usize2 screenSize) const {
-        return vml::map(value, vml::usize3(screenSize, 1),
-                        [&](auto elem, size_t screen) {
-            // clang-format off
-            return std::visit(utl::overload{
-                [&](Absolute a) { return a.size; },
-                [&](RelativeToScreen r) -> size_t {
-                    return r.factor * screen;
-                },
-            }, elem); // clang-format on
-        });
-    }
-
-    struct Hash {
-        size_t operator()(TextureSize const& size) const {
-            size_t seed = 0;
-            for (auto& elem: size.value) {
-                // clang-format off
-                utl::hash_combine_seed(seed, std::visit(utl::overload{
-                    [](Absolute a) { return std::hash<size_t>{}(a.size); },
-                    [](RelativeToScreen r) {
-                        return std::hash<double>{}(r.factor);
-                    },
-                }, elem)); // clang-format on
-            }
-            return seed;
-        }
-    };
-};
-
-constexpr TextureSize TextureSize::ScreenSize = { {
-    RelativeToScreen{ 1.0 },
-    RelativeToScreen{ 1.0 },
-    Absolute{ 1 },
-} };
-
 ///
-struct TextureInterface {
-    using ViewType = TextureHandle;
+template <>
+struct InterfaceDesc<InterfaceType::Texture> {
+    using ViewType = InterfaceViewType<InterfaceType::Texture>;
 
     ///
     InterfaceFlags flags = InterfaceFlags::None;
@@ -147,8 +98,8 @@ struct TextureInterface {
     size_t arrayLength = 1;
 
     struct Compare {
-        bool operator()(TextureInterface const& lhs,
-                        TextureInterface const& rhs) const {
+        bool operator()(InterfaceDesc const& lhs,
+                        InterfaceDesc const& rhs) const {
             return lhs.type == rhs.type && lhs.pixelFormat == rhs.pixelFormat &&
                    lhs.size == rhs.size &&
                    lhs.mipmapLevelCount == rhs.mipmapLevelCount &&
@@ -158,7 +109,7 @@ struct TextureInterface {
     };
 
     struct Hash {
-        size_t operator()(TextureInterface const& interface) const {
+        size_t operator()(InterfaceDesc const& interface) const {
             return utl::hash_combine(interface.type, interface.pixelFormat,
                                      TextureSize::Hash{}(interface.size),
                                      interface.mipmapLevelCount,
@@ -169,68 +120,68 @@ struct TextureInterface {
 };
 
 ///
-struct GeometryInterface {
-    using ViewType = GeometryResource*;
+template <>
+struct InterfaceDesc<InterfaceType::Geometry> {
+    using ViewType = InterfaceViewType<InterfaceType::Geometry>;
 
     ///
     InterfaceFlags flags = InterfaceFlags::None;
 };
 
 ///
-struct LightsInterface {
-    using ViewType = LightsResource*;
+template <>
+struct InterfaceDesc<InterfaceType::Lights> {
+    using ViewType = InterfaceViewType<InterfaceType::Lights>;
 
     ///
     InterfaceFlags flags = InterfaceFlags::None;
 };
 
 ///
-template <typename PassType, typename InterfaceType>
-struct InterfaceWrapper {
+template <InterfaceType Type, typename PassType>
+struct Interface {
     ///
     std::string name;
 
     ///
-    typename InterfaceType::ViewType(PassType::*impl);
+    InterfaceViewType<Type>(PassType::*impl);
 
     ///
-    InterfaceType interface;
+    InterfaceDesc<Type> desc = {};
 };
-
-template <typename PassType, typename InterfaceType, typename ViewType>
-InterfaceWrapper(auto name, ViewType(PassType::*impl), InterfaceType interface)
-    -> InterfaceWrapper<PassType, InterfaceType>;
 
 /// Base class of `PassSource` and `PassSink`
 class PassInterfaceBase {
-    using Variant = std::variant<BufferInterface, TextureInterface,
-                                 GeometryInterface, LightsInterface>;
+    using DescVariant = std::variant<InterfaceDesc<InterfaceType::Buffer>,
+                                     InterfaceDesc<InterfaceType::Texture>,
+                                     InterfaceDesc<InterfaceType::Geometry>,
+                                     InterfaceDesc<InterfaceType::Lights>>;
 
 public:
     virtual ~PassInterfaceBase() = default;
 
     /// \Returns the underlying `*Interface` variant
-    Variant& get() { return _interface; }
+    DescVariant& get() { return _desc; }
 
     /// \overload
-    Variant const& get() const { return _interface; }
+    DescVariant const& get() const { return _desc; }
 
     /// \Returns the underlying `Interface` of type \p T
-    template <InterfaceType T>
-    T& get() {
-        return std::get<T>(get());
+    template <InterfaceType Type>
+    auto& get() {
+        return std::get<(size_t)Type>(get());
     }
 
     /// \overload
-    template <InterfaceType T>
-    T const& get() const {
-        return std::get<T>(get());
+    template <InterfaceType Type>
+    auto const& get() const {
+        return std::get<(size_t)Type>(get());
     }
 
     ///
-    template <InterfaceType T>
-    typename T::ViewType* handle() const {
-        return static_cast<typename T::ViewType*>(_handle);
+    template <InterfaceType Type>
+    InterfaceViewType<Type>* handle() const {
+        return static_cast<InterfaceViewType<Type>*>(_handle);
     }
 
     /// \Returns `std::visit(vis, get())`
@@ -252,18 +203,19 @@ public:
     void setResource(Resource* resource) { _resource = resource; }
 
 protected:
-    template <InterfaceType T>
+    template <InterfaceType Type>
     PassInterfaceBase(Pass* pass, std::string name,
-                      typename T::ViewType* handle, T interface):
+                      InterfaceViewType<Type>* handle,
+                      InterfaceDesc<Type> desc):
         _name(std::move(name)),
         _handle(handle),
-        _interface(std::move(interface)),
+        _desc(std::move(desc)),
         _pass(pass) {}
 
 private:
     std::string _name;
     void* _handle;
-    Variant _interface;
+    DescVariant _desc;
     Pass* _pass = nullptr;
     Resource* _resource = nullptr;
 };
@@ -271,11 +223,11 @@ private:
 /// Resource input of a pass
 class PassSink: public PassInterfaceBase {
 public:
-    template <InterfaceType T>
+    template <InterfaceType Type>
     explicit PassSink(Pass* pass, std::string name,
-                      typename T::ViewType* handle, T interface):
-        PassInterfaceBase(pass, std::move(name), handle, std::move(interface)) {
-    }
+                      InterfaceViewType<Type>* handle,
+                      InterfaceDesc<Type> desc):
+        PassInterfaceBase(pass, std::move(name), handle, std::move(desc)) {}
 
     /// \Returns the source that is linked to this sink
     /// \Note `addSink` on \p source must be called manually
@@ -301,11 +253,11 @@ private:
 /// Resource output of a pass
 class PassSource: public PassInterfaceBase {
 public:
-    template <InterfaceType T>
+    template <InterfaceType Type>
     explicit PassSource(Pass* pass, std::string name,
-                        typename T::ViewType* handle, T interface):
-        PassInterfaceBase(pass, std::move(name), handle, std::move(interface)) {
-    }
+                        InterfaceViewType<Type>* handle,
+                        InterfaceDesc<Type> desc):
+        PassInterfaceBase(pass, std::move(name), handle, std::move(desc)) {}
 
     /// \Returns the sinks that are linked to this source
     std::span<PassSink* const> sinks() const { return _sinks; }
@@ -329,11 +281,12 @@ private:
 /// within the graph
 class RenderGraphSink: public PassSink {
 public:
-    template <InterfaceType T>
+    template <InterfaceType Type>
     explicit RenderGraphSink(Pass* pass, std::string name,
-                             typename T::ViewType* handle, T interface):
-        PassSink(pass, std::move(name), handle, std::move(interface)),
-        src(nullptr, name, handle, interface) {
+                             InterfaceViewType<Type>* handle,
+                             InterfaceDesc<Type> desc):
+        PassSink(pass, std::move(name), handle, std::move(desc)),
+        src(nullptr, name, handle, desc) {
         internalSource()->addSink(this);
         setSource(internalSource());
     }
@@ -354,11 +307,11 @@ private:
 /// the graph
 class RenderGraphSource: public PassSource {
 public:
-    template <InterfaceType T>
+    template <InterfaceType Type>
     explicit RenderGraphSource(Pass* pass, std::string name,
-                               typename T::ViewType* handle, T interface):
-        PassSource(pass, name, handle, interface),
-        snk(nullptr, name, handle, interface) {
+                               InterfaceViewType<Type>* handle,
+                               InterfaceDesc<Type> desc):
+        PassSource(pass, name, handle, desc), snk(nullptr, name, handle, desc) {
         addSink(internalSink());
         internalSink()->setSource(this);
     }

@@ -92,8 +92,9 @@ static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
 
 static void allocateBackingResource(ResourcePool& pool,
                                     PassInterfaceBase& interface) {
-    auto* resource = interface.visit([&]<typename I>(I const&) -> Resource* {
-        return pool.allocate(interface.get<I>());
+    auto* resource = interface.visit(
+        [&]<InterfaceType Type>(InterfaceDesc<Type> const& desc) -> Resource* {
+        return pool.allocate(desc);
     });
     resource->addUser(&interface);
     interface.setResource(resource);
@@ -138,7 +139,7 @@ static void reallocateHardwareResource(HardwareDevice& device,
                                        BufferResource& resource,
                                        FrameParameters const&) {
     resource.assign(device.createBuffer({
-        .size = resource.interface().size,
+        .size = resource.desc().size,
         .storageMode = StorageMode::Managed // For now!
     }));
 }
@@ -146,14 +147,14 @@ static void reallocateHardwareResource(HardwareDevice& device,
 static void reallocateHardwareResource(HardwareDevice& device,
                                        TextureResource& resource,
                                        FrameParameters const& params) {
-    auto const& interface = resource.interface();
+    auto const& desc = resource.desc();
     resource.assign(device.createTexture(
-        { .type = interface.type,
-          .pixelFormat = interface.pixelFormat,
-          .size = interface.size.compute(params.screenSize),
-          .mipmapLevelCount = interface.mipmapLevelCount,
-          .sampleCount = interface.sampleCount,
-          .arrayLength = interface.arrayLength,
+        { .type = desc.type,
+          .pixelFormat = desc.pixelFormat,
+          .size = desc.size.compute(params.screenSize),
+          .mipmapLevelCount = desc.mipmapLevelCount,
+          .sampleCount = desc.sampleCount,
+          .arrayLength = desc.arrayLength,
           .usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget }));
 }
 
@@ -220,20 +221,19 @@ void RenderGraph::doExecute(FrameParameters const& params,
 
 static std::unique_ptr<RenderGraph> createDefaultRenderGraph(
     RenderGraphContext& ctx, HardwareDevice& device) {
+    using enum InterfaceType;
     auto rg = std::make_unique<RenderGraph>("DefaultRenderGraph", ctx, device);
-    auto* geometry = rg->declareSink("Geometry", GeometryInterface{});
-    auto* lights = rg->declareSink("Lights", LightsInterface{});
+    auto* geometry = rg->declareSink<Geometry>("Geometry", {});
+    auto* lights = rg->declareSink<Lights>("Lights", {});
     auto* sceneParams =
-        rg->declareSink("SceneParameters",
-                        BufferInterface{ .size =
-                                             sizeof(SceneRenderParameters) });
+        rg->declareSink<Buffer>("SceneParameters",
+                                { .size = sizeof(SceneRenderParameters) });
     auto* bloomParams =
-        rg->declareSink("BloomParameters",
-                        BufferInterface{ .size = sizeof(BloomParameters) });
+        rg->declareSink<Buffer>("BloomParameters",
+                                { .size = sizeof(BloomParameters) });
     auto* postprocessParams =
-        rg->declareSink("PostProcessParameters",
-                        BufferInterface{ .size =
-                                             sizeof(PostProcessParameters) });
+        rg->declareSink<Buffer>("PostProcessParameters",
+                                { .size = sizeof(PostProcessParameters) });
     auto* shadingPass =
         rg->addPass(std::make_unique<ForwardShadingPass>("MainPass"));
     auto* bloomPass = rg->addPass(std::make_unique<BloomPass>("Bloom"));

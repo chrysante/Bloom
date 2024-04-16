@@ -13,11 +13,10 @@ namespace bloom::rg {
 /// Used by the render graph to allocate resources
 class ResourcePool {
 public:
-    template <InterfaceType Interface,
-              typename R = typename ToResourceType<Interface>::type>
-    R* allocate(Interface interface) {
-        _resources.push_back(bloom::allocate<R>(interface));
-        return static_cast<R*>(_resources.back().get());
+    template <InterfaceType Type>
+    ResourceType<Type>* allocate(InterfaceDesc<Type> desc) {
+        _resources.push_back(bloom::allocate<ResourceType<Type>>(desc));
+        return static_cast<ResourceType<Type>*>(_resources.back().get());
     }
 
     /// \Returns a view over the allocated resources

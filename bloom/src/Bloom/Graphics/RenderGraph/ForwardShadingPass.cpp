@@ -15,27 +15,46 @@ using namespace vml;
 
 using Impl = PassImpl<ForwardShadingPass>;
 
+// clang-format off
+
 template <>
 Impl::InterfaceVector const Impl::Sinks = {
-    InterfaceWrapper{
-        "SceneParameters", &ForwardShadingPass::sceneParameters,
-        BufferInterface{ .size = sizeof(SceneRenderParameters) } },
-    InterfaceWrapper{ "Geometry", &ForwardShadingPass::geometry,
-                      GeometryInterface{} },
-    InterfaceWrapper{ "Lights", &ForwardShadingPass::lights,
-                      LightsInterface{} },
+    BufferInterface{
+        "SceneParameters",
+        &ForwardShadingPass::sceneParameters,
+        { .size = sizeof(SceneRenderParameters) }
+    },
+    GeometryInterface{
+        "Geometry",
+        &ForwardShadingPass::geometry
+    },
+    LightsInterface{
+        "Lights",
+        &ForwardShadingPass::lights
+    },
 };
 
 template <>
 Impl::InterfaceVector const Impl::Sources = {
-    InterfaceWrapper{ "RawColor", &ForwardShadingPass::rawColor,
-                      TextureInterface{ .pixelFormat = PixelFormat::RGBA32Float,
-                                        .size = TextureSize::ScreenSize } },
-    InterfaceWrapper{
-        "Depth", &ForwardShadingPass::depth,
-        TextureInterface{ .pixelFormat = PixelFormat::Depth32Float,
-                          .size = TextureSize::ScreenSize } }
+    TextureInterface{ 
+        "RawColor",
+        &ForwardShadingPass::rawColor,
+        {
+            .pixelFormat = PixelFormat::RGBA32Float,
+            .size = TextureSize::ScreenSize
+        }
+    },
+    TextureInterface{
+        "Depth",
+        &ForwardShadingPass::depth,
+        { 
+            .pixelFormat = PixelFormat::Depth32Float,
+            .size = TextureSize::ScreenSize
+        }
+    }
 };
+
+// clang-format on
 
 ForwardShadingPass::ForwardShadingPass(std::string name):
     RenderPass(std::move(name)) {}

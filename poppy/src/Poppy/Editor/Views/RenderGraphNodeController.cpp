@@ -43,14 +43,15 @@ namespace {
 
 struct GlobalInputNodeController: RenderGraphNodeController {
     void create(RenderGraph& rg) override {
-        declare(rg, "Geometry", GeometryInterface{});
-        declare(rg, "Lights", LightsInterface{});
-        declare(rg, "SceneParameters",
-                BufferInterface{ .size = sizeof(SceneRenderParameters) });
-        declare(rg, "BloomParameters",
-                BufferInterface{ .size = sizeof(BloomParameters) });
-        declare(rg, "PostProcessParameters",
-                BufferInterface{ .size = sizeof(PostProcessParameters) });
+        using enum InterfaceType;
+        declare<Geometry>(rg, "Geometry", {});
+        declare<Lights>(rg, "Lights", {});
+        declare<Buffer>(rg, "SceneParameters",
+                        { .size = sizeof(SceneRenderParameters) });
+        declare<Buffer>(rg, "BloomParameters",
+                        { .size = sizeof(BloomParameters) });
+        declare<Buffer>(rg, "PostProcessParameters",
+                        { .size = sizeof(PostProcessParameters) });
     }
 
     PassSource* getSource(size_t index) const override {
@@ -62,9 +63,9 @@ struct GlobalInputNodeController: RenderGraphNodeController {
         BL_UNREACHABLE();
     }
 
-    void declare(RenderGraph& rg, std::string name, auto interface) {
-        RenderGraphSink* sink =
-            rg.declareSink(std::move(name), std::move(interface));
+    template <InterfaceType Type>
+    void declare(RenderGraph& rg, std::string name, InterfaceDesc<Type> desc) {
+        RenderGraphSink* sink = rg.declareSink<Type>(std::move(name), desc);
         sources.push_back(sink->internalSource());
     }
 
@@ -85,11 +86,12 @@ REGISTER_PASS {
 
 struct GlobalOutputNodeController: RenderGraphNodeController {
     void create(RenderGraph& rg) override {
-        declare(rg, "Color",
-                TextureInterface{
-                    .pixelFormat = PixelFormat::RGBA8Unorm,
-                    .size = TextureSize::ScreenSize,
-                });
+        using enum InterfaceType;
+        declare<Texture>(rg, "Color",
+                         {
+                             .pixelFormat = PixelFormat::RGBA8Unorm,
+                             .size = TextureSize::ScreenSize,
+                         });
     }
 
     PassSource* getSource([[maybe_unused]] size_t index) const override {
@@ -101,9 +103,10 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
         return sinks[index];
     }
 
-    void declare(RenderGraph& rg, std::string name, auto interface) {
+    template <InterfaceType Type>
+    void declare(RenderGraph& rg, std::string name, InterfaceDesc<Type> desc) {
         RenderGraphSource* source =
-            rg.declareSource(std::move(name), std::move(interface));
+            rg.declareSource<Type>(std::move(name), desc);
         sinks.push_back(source->internalSink());
     }
 

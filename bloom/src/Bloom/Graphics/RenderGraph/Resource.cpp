@@ -17,10 +17,9 @@ void Resource::addUser(PassInterfaceBase* user) {
 }
 
 void Resource::assignUsers() {
-    visit(*this, [this]<typename R>(R& self) {
+    visit(*this, [this]<typename ResourceType>(ResourceType& self) {
         for (auto* user: users()) {
-            using I = typename ToInterfaceType<R>::type;
-            if (auto* handle = user->handle<I>()) {
+            if (auto* handle = user->handle<ResourceType::Type>()) {
                 *handle = self.handle();
             }
         }

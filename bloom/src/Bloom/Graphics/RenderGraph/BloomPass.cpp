@@ -12,23 +12,39 @@ using Impl = PassImpl<BloomPass>;
 
 static constexpr size_t NumMips = BloomPass::NumMips;
 
+// clang-format off
+
 template <>
 Impl::InterfaceVector const Impl::Sinks = {
-    InterfaceWrapper{ "Parameters", &BloomPass::parameters,
-                      BufferInterface{ .size = sizeof(BloomParameters) } },
-    InterfaceWrapper{ "RawColor", &BloomPass::rawColor,
-                      TextureInterface{
-                          .pixelFormat = PixelFormat::RGBA32Float,
-                          .size = TextureSize::ScreenSize,
-                      } }
+    BufferInterface{ 
+        "Parameters",
+        &BloomPass::parameters,
+        { .size = sizeof(BloomParameters) }
+    },
+    TextureInterface{
+        "RawColor",
+        &BloomPass::rawColor,
+        { 
+            .pixelFormat = PixelFormat::RGBA32Float,
+            .size = TextureSize::ScreenSize,
+        }
+    }
 };
 
 template <>
-Impl::InterfaceVector const Impl::Sources = { InterfaceWrapper{
-    "Output", &BloomPass::output,
-    TextureInterface{ .type = TextureType::Texture2D,
-                      .pixelFormat = PixelFormat::RGBA32Float,
-                      .size = TextureSize::ScreenSize } } };
+Impl::InterfaceVector const Impl::Sources = { 
+    TextureInterface{
+        "Output",
+        &BloomPass::output,
+        {
+            .type = TextureType::Texture2D,
+            .pixelFormat = PixelFormat::RGBA32Float,
+            .size = TextureSize::ScreenSize
+        }
+    }
+};
+
+// clang-format on
 
 BloomPass::BloomPass(std::string name): ComputePass(std::move(name)) {}
 

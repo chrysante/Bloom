@@ -26,7 +26,7 @@ struct TextureSize {
     /// Size descriptor that describes the screen size
     static TextureSize const ScreenSize;
 
-    ///
+    /// Static constructor for 2D sizes relative to screen size
     static TextureSize Relative2D(vml::double2 factor) {
         return { { RelativeToScreen{ factor.x }, RelativeToScreen{ factor.y },
                    Absolute{ 1 } } };
@@ -34,13 +34,30 @@ struct TextureSize {
 
     bool operator==(TextureSize const&) const = default;
 
-    ///
+    /// Hash value used for storing elements in hash tables
+    size_t hashValue() const {
+        size_t seed = 0;
+        for (auto& elem: value) {
+            // clang-format off
+            utl::hash_combine_seed(seed, std::visit(utl::overload{
+                [](Absolute a) { return std::hash<size_t>{}(a.size); },
+                [](RelativeToScreen r) {
+                    return std::hash<double>{}(r.factor);
+                },
+            }, elem)); // clang-format on
+        }
+        return seed;
+    }
+
+    /// \Returns `true` if all components are absolute values
     bool isAbsolute() const {
         return ranges::all_of(value, [](auto& elem) {
             return std::holds_alternative<Absolute>(elem);
         });
     }
 
+    /// \Returns the actual size described by this value depending of \p
+    /// screenSize
     vml::usize3 compute(vml::usize2 screenSize) const {
         return vml::map(value, vml::usize3(screenSize, 1),
                         [&](auto elem, size_t screen) {
@@ -53,22 +70,6 @@ struct TextureSize {
             }, elem); // clang-format on
         });
     }
-
-    struct Hash {
-        size_t operator()(TextureSize const& size) const {
-            size_t seed = 0;
-            for (auto& elem: size.value) {
-                // clang-format off
-                utl::hash_combine_seed(seed, std::visit(utl::overload{
-                    [](Absolute a) { return std::hash<size_t>{}(a.size); },
-                    [](RelativeToScreen r) {
-                        return std::hash<double>{}(r.factor);
-                    },
-                }, elem)); // clang-format on
-            }
-            return seed;
-        }
-    };
 };
 
 constexpr TextureSize TextureSize::ScreenSize = { {
@@ -78,5 +79,12 @@ constexpr TextureSize TextureSize::ScreenSize = { {
 } };
 
 } // namespace bloom::rg
+
+template <>
+struct std::hash<bloom::rg::TextureSize> {
+    size_t operator()(bloom::rg::TextureSize const& size) const {
+        return size.hashValue();
+    }
+};
 
 #endif /* SizeDescriptors_h */

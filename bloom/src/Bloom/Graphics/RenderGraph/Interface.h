@@ -43,42 +43,32 @@ enum class InterfaceFlags {
 
 UTL_ENUM_OPERATORS(InterfaceFlags)
 
+/// Stub interface descriptor 
 template <InterfaceType Type>
-struct InterfaceDesc;
+struct InterfaceDesc {
+    bool operator==(InterfaceDesc const&) const = default;
 
-///
-template <>
-struct InterfaceDesc<InterfaceType::Buffer> {
-    using ViewType = InterfaceViewType<InterfaceType::Buffer>;
-
-    ///
-    InterfaceFlags flags = InterfaceFlags::None;
-
-    ///
-    size_t size;
-
-    struct Compare {
-        bool operator()(InterfaceDesc const& lhs,
-                        InterfaceDesc const& rhs) const {
-            return lhs.size == rhs.size;
-        }
-    };
-
-    struct Hash {
-        size_t operator()(InterfaceDesc const& interface) const {
-            return std::hash<size_t>{}(interface.size);
-        }
-    };
+    size_t hashValue() const { return 0; }
 };
 
-///
+using BufferInterfaceDesc = InterfaceDesc<InterfaceType::Buffer>;
+using TextureInterfaceDesc = InterfaceDesc<InterfaceType::Texture>;
+
+/// Buffer interface descriptor
+template <>
+struct InterfaceDesc<InterfaceType::Buffer> {
+    /// The size of the requested buffer
+    /// TODO: Make this a class that allows for special values
+    size_t size;
+
+    bool operator==(InterfaceDesc const&) const = default;
+
+    size_t hashValue() const { return std::hash<size_t>{}(size); }
+};
+
+/// Texture interface descriptor
 template <>
 struct InterfaceDesc<InterfaceType::Texture> {
-    using ViewType = InterfaceViewType<InterfaceType::Texture>;
-
-    ///
-    InterfaceFlags flags = InterfaceFlags::None;
-
     ///
     TextureType type = TextureType::Texture2D;
 
@@ -97,57 +87,30 @@ struct InterfaceDesc<InterfaceType::Texture> {
     ///
     size_t arrayLength = 1;
 
-    struct Compare {
-        bool operator()(InterfaceDesc const& lhs,
-                        InterfaceDesc const& rhs) const {
-            return lhs.type == rhs.type && lhs.pixelFormat == rhs.pixelFormat &&
-                   lhs.size == rhs.size &&
-                   lhs.mipmapLevelCount == rhs.mipmapLevelCount &&
-                   lhs.sampleCount == rhs.sampleCount &&
-                   lhs.arrayLength == rhs.arrayLength;
-        }
-    };
+    bool operator==(InterfaceDesc const&) const = default;
 
-    struct Hash {
-        size_t operator()(InterfaceDesc const& interface) const {
-            return utl::hash_combine(interface.type, interface.pixelFormat,
-                                     TextureSize::Hash{}(interface.size),
-                                     interface.mipmapLevelCount,
-                                     interface.sampleCount,
-                                     interface.arrayLength);
-        }
-    };
+    size_t hashValue() const {
+        return utl::hash_combine(type, pixelFormat, size, mipmapLevelCount,
+                                 sampleCount, arrayLength);
+    }
 };
 
-///
-template <>
-struct InterfaceDesc<InterfaceType::Geometry> {
-    using ViewType = InterfaceViewType<InterfaceType::Geometry>;
-
-    ///
-    InterfaceFlags flags = InterfaceFlags::None;
-};
-
-///
-template <>
-struct InterfaceDesc<InterfaceType::Lights> {
-    using ViewType = InterfaceViewType<InterfaceType::Lights>;
-
-    ///
-    InterfaceFlags flags = InterfaceFlags::None;
-};
-
-///
+/// Interfaces statically describe the sources and sinks of a pass
 template <InterfaceType Type, typename PassType>
 struct Interface {
-    ///
+    /// The name of this interface
     std::string name;
 
-    ///
+    /// The data member of the pass class that holds the handle of this
+    /// interface
     InterfaceViewType<Type>(PassType::*impl);
 
-    ///
+    /// The interface descriptor. This is used for type checking and resource
+    /// allocation
     InterfaceDesc<Type> desc = {};
+
+    /// Additional interface flags
+    InterfaceFlags flags = InterfaceFlags::None;
 };
 
 /// Base class of `PassSource` and `PassSink`
@@ -202,15 +165,19 @@ public:
     /// Assigns the backing resource
     void setResource(Resource* resource) { _resource = resource; }
 
+    ///
+    InterfaceFlags flags() const { return _flags; }
+
 protected:
     template <InterfaceType Type>
     PassInterfaceBase(Pass* pass, std::string name,
-                      InterfaceViewType<Type>* handle,
-                      InterfaceDesc<Type> desc):
+                      InterfaceViewType<Type>* handle, InterfaceDesc<Type> desc,
+                      InterfaceFlags flags):
         _name(std::move(name)),
         _handle(handle),
         _desc(std::move(desc)),
-        _pass(pass) {}
+        _pass(pass),
+        _flags(flags) {}
 
 private:
     std::string _name;
@@ -218,6 +185,7 @@ private:
     DescVariant _desc;
     Pass* _pass = nullptr;
     Resource* _resource = nullptr;
+    InterfaceFlags _flags;
 };
 
 /// Resource input of a pass
@@ -226,8 +194,8 @@ public:
     template <InterfaceType Type>
     explicit PassSink(Pass* pass, std::string name,
                       InterfaceViewType<Type>* handle,
-                      InterfaceDesc<Type> desc):
-        PassInterfaceBase(pass, std::move(name), handle, std::move(desc)) {}
+                      InterfaceDesc<Type> const& desc, InterfaceFlags flags):
+        PassInterfaceBase(pass, std::move(name), handle, desc, flags) {}
 
     /// \Returns the source that is linked to this sink
     /// \Note `addSink` on \p source must be called manually
@@ -241,10 +209,7 @@ public:
     void setSource(PassSource* source) { _source = source; }
 
     /// \Returns `true` if this sink is not required to be connected
-    bool isOptional() const {
-        return visit(
-            [](auto& i) { return test(i.flags & InterfaceFlags::Optional); });
-    }
+    bool isOptional() const { return test(flags() & InterfaceFlags::Optional); }
 
 private:
     PassSource* _source = nullptr;
@@ -256,8 +221,8 @@ public:
     template <InterfaceType Type>
     explicit PassSource(Pass* pass, std::string name,
                         InterfaceViewType<Type>* handle,
-                        InterfaceDesc<Type> desc):
-        PassInterfaceBase(pass, std::move(name), handle, std::move(desc)) {}
+                        InterfaceDesc<Type> const& desc, InterfaceFlags flags):
+        PassInterfaceBase(pass, std::move(name), handle, desc, flags) {}
 
     /// \Returns the sinks that are linked to this source
     std::span<PassSink* const> sinks() const { return _sinks; }
@@ -284,9 +249,10 @@ public:
     template <InterfaceType Type>
     explicit RenderGraphSink(Pass* pass, std::string name,
                              InterfaceViewType<Type>* handle,
-                             InterfaceDesc<Type> desc):
-        PassSink(pass, std::move(name), handle, std::move(desc)),
-        src(nullptr, name, handle, desc) {
+                             InterfaceDesc<Type> const& desc,
+                             InterfaceFlags flags):
+        PassSink(pass, std::move(name), handle, desc, flags),
+        src(nullptr, name, handle, desc, flags) {
         internalSource()->addSink(this);
         setSource(internalSource());
     }
@@ -310,8 +276,10 @@ public:
     template <InterfaceType Type>
     explicit RenderGraphSource(Pass* pass, std::string name,
                                InterfaceViewType<Type>* handle,
-                               InterfaceDesc<Type> desc):
-        PassSource(pass, name, handle, desc), snk(nullptr, name, handle, desc) {
+                               InterfaceDesc<Type> const& desc,
+                               InterfaceFlags flags):
+        PassSource(pass, name, handle, desc, flags),
+        snk(nullptr, name, handle, desc, flags) {
         addSink(internalSink());
         internalSink()->setSource(this);
     }
@@ -334,5 +302,12 @@ inline Pass* PassSink::getSourcePass() const {
 }
 
 } // namespace bloom::rg
+
+template <bloom::rg::InterfaceType Type>
+struct std::hash<bloom::rg::InterfaceDesc<Type>> {
+    size_t operator()(bloom::rg::InterfaceDesc<Type> const& desc) const {
+        return desc.hashValue();
+    }
+};
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_INTERFACE_H

@@ -111,18 +111,20 @@ protected:
     /// Declares a resource sink (input) to this pass
     template <std::derived_from<PassSink> S = PassSink, InterfaceType Type>
     S* declareSink(std::string name, InterfaceViewType<Type>* handle,
-                   InterfaceDesc<Type> desc) {
-        _sinks.push_back(std::make_unique<S>(this, std::move(name), handle,
-                                             std::move(desc)));
+                   InterfaceDesc<Type> const& desc,
+                   InterfaceFlags flags = InterfaceFlags::None) {
+        _sinks.push_back(
+            std::make_unique<S>(this, std::move(name), handle, desc, flags));
         return static_cast<S*>(_sinks.back().get());
     }
 
     /// Declares a resource source (output) to this pass
     template <std::derived_from<PassSource> S = PassSource, InterfaceType Type>
     S* declareSource(std::string name, InterfaceViewType<Type>* handle,
-                     InterfaceDesc<Type> desc) {
-        _sources.push_back(std::make_unique<S>(this, std::move(name), handle,
-                                               std::move(desc)));
+                     InterfaceDesc<Type> const& desc,
+                     InterfaceFlags flags = InterfaceFlags::None) {
+        _sources.push_back(
+            std::make_unique<S>(this, std::move(name), handle, desc, flags));
         return static_cast<S*>(_sources.back().get());
     }
 
@@ -205,7 +207,8 @@ protected:
             std::visit([&]<InterfaceType Type>(
                 Interface<Type, PassType> const& interface) {
                     pass->declareSink(std::string(interface.name),
-                                      &(pass->*interface.impl), interface.desc);
+                                      &(pass->*interface.impl), interface.desc,
+                                      interface.flags);
                 }, wrapper); // clang-format on
         }
         for (auto const& wrapper: PassType::Sources) {
@@ -213,7 +216,8 @@ protected:
             std::visit([&]<InterfaceType Type>(
                 Interface<Type, PassType> const& interface) {
                     pass->declareSource(std::string(interface.name),
-                                        &(pass->*interface.impl), interface.desc);
+                                        &(pass->*interface.impl),
+                                        interface.desc, interface.flags);
                 }, wrapper); // clang-format on
         }
     }

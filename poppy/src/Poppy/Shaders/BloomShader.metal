@@ -11,16 +11,19 @@ using namespace bloom;
 constexpr sampler bilinSampler(coord::normalized, address::clamp_to_zero,
                                filter::linear);
 
-[[maybe_unused]] static half3 safeHDR(half3 color) {
+[[maybe_unused]] static half3 safeHDR(half3 color)
+{
     return min(color, HALF_MAX);
 }
 
-[[maybe_unused]] static half4 safeHDR(half4 color) {
+[[maybe_unused]] static half4 safeHDR(half4 color)
+{
     return min(color, HALF_MAX);
 }
 
 static half4 downsampleBox13Tap(texture2d<half, access::sample> tex, float2 uv,
-                                float2 texelSize) {
+                                float2 texelSize)
+{
     half4 A = tex.sample(bilinSampler, uv + texelSize * float2(-1.0, -1.0));
     half4 B = tex.sample(bilinSampler, uv + texelSize * float2(0.0, -1.0));
     half4 C = tex.sample(bilinSampler, uv + texelSize * float2(1.0, -1.0));
@@ -45,7 +48,8 @@ static half4 downsampleBox13Tap(texture2d<half, access::sample> tex, float2 uv,
 
 // 9-tap bilinear upsampler (tent filter)
 half4 bloom::upsampleTent(texture2d<half, access::sample> tex, float2 uv,
-                          float2 texelSize, float4 sampleScale) {
+                          float2 texelSize, float4 sampleScale)
+{
     float4 d = texelSize.xyxy * float4(1.0, 1.0, -1.0, 0.0) * sampleScale;
     half4 s = {};
     s += tex.sample(bilinSampler, uv - d.xy);
@@ -64,7 +68,8 @@ half4 bloom::upsampleTent(texture2d<half, access::sample> tex, float2 uv,
 // curve = (threshold - knee, knee * 2, 0.25 / knee)
 template <typename T>
 static vec<T, 3> quadraticThreshold(vec<T, 3> color, T threshold,
-                                    vec<T, 3> curve) {
+                                    vec<T, 3> curve)
+{
     // Pixel brightness
     T const br = max(max(color.r, color.g), color.b);
 
@@ -83,7 +88,8 @@ kernel void bloomPrefilter(texture2d<half, access::sample> source
                            texture2d<half, access::write> dest [[texture(1)]],
                            BloomParameters_Depr device const& params
                            [[buffer(0)]],
-                           uint2 position [[thread_position_in_grid]]) {
+                           uint2 position [[thread_position_in_grid]])
+{
     float2 const destSize = float2(dest.get_width(), dest.get_height());
     float2 const uv = float2(position) / (destSize - 1);
     float2 const texelSize = 1 / (destSize - 1);
@@ -101,7 +107,8 @@ kernel void bloomPrefilter(texture2d<half, access::sample> source
 kernel void bloomDownsample(texture2d<half, access::sample> source
                             [[texture(0)]],
                             texture2d<half, access::write> dest [[texture(1)]],
-                            uint2 position [[thread_position_in_grid]]) {
+                            uint2 position [[thread_position_in_grid]])
+{
     float2 destSize = float2(dest.get_width(), dest.get_height());
     float2 uv = float2(position) / (destSize - 1);
     float2 texelSize = 1 / (destSize - 1);
@@ -116,7 +123,8 @@ kernel void bloomUpsample(texture2d<half, access::sample> sourceSmall
                           texture2d<half, access::write> dest [[texture(2)]],
                           BloomParameters_Depr device const& params
                           [[buffer(0)]],
-                          uint2 position [[thread_position_in_grid]]) {
+                          uint2 position [[thread_position_in_grid]])
+{
     float2 destSize = float2(dest.get_width(), dest.get_height());
     float2 sourceSmallSize =
         float2(sourceSmall.get_width(), sourceSmall.get_height());
@@ -137,7 +145,8 @@ kernel void rgBloomPrefilter(texture2d<half, access::sample> source
                              [[texture(0)]],
                              texture2d<half, access::write> dest [[texture(1)]],
                              BloomParameters device const& params [[buffer(0)]],
-                             uint2 position [[thread_position_in_grid]]) {
+                             uint2 position [[thread_position_in_grid]])
+{
     float2 destSize = float2(dest.get_width(), dest.get_height());
     float2 uv = float2(position) / (destSize - 1);
     float2 texelSize = 1 / (destSize - 1);
@@ -156,7 +165,8 @@ kernel void rgBloomDownsample(texture2d<half, access::sample> source
                               [[texture(0)]],
                               texture2d<half, access::write> dest
                               [[texture(1)]],
-                              uint2 position [[thread_position_in_grid]]) {
+                              uint2 position [[thread_position_in_grid]])
+{
     float2 destSize = float2(dest.get_width(), dest.get_height());
     float2 uv = float2(position) / (destSize - 1);
     float2 texelSize = 1 / (destSize - 1);
@@ -170,7 +180,8 @@ kernel void rgBloomUpsample(texture2d<half, access::sample> sourceSmall
                             [[texture(1)]],
                             texture2d<half, access::write> dest [[texture(2)]],
                             BloomParameters device const& params [[buffer(0)]],
-                            uint2 position [[thread_position_in_grid]]) {
+                            uint2 position [[thread_position_in_grid]])
+{
     float2 destSize = float2(dest.get_width(), dest.get_height());
     float2 sourceSmallSize =
         float2(sourceSmall.get_width(), sourceSmall.get_height());
@@ -188,14 +199,16 @@ kernel void rgBloomUpsample(texture2d<half, access::sample> sourceSmall
 }
 
 static float3 readBloomTexture(texture2d<half, access::sample> tex, float2 uv,
-                               float scale) {
+                               float scale)
+{
     float2 texSize = float2(tex.get_width(), tex.get_height());
     float2 texelSize = 1 / (texSize - 1);
     return float3(upsampleTent(tex, uv, texelSize, scale).rgb);
 }
 
 static float3 addBloomColor(float3 colorIn, float3 bloomColor,
-                            BloomParameters bloomParams) {
+                            BloomParameters bloomParams)
+{
     if (bloomParams.physicallyCorrect) {
         return mix(colorIn, bloomColor, bloomParams.contribution);
     }
@@ -209,11 +222,14 @@ kernel void rgBloomComposite(
     texture2d<float, access::write> dest [[texture(0)]],
     texture2d<float, access::sample> rawColorTex [[texture(1)]],
     texture2d<half, access::sample> bloomColorTex [[texture(2)]],
-    uint2 position [[thread_position_in_grid]]) {
+    uint2 position [[thread_position_in_grid]])
+{
     float2 destSize = float2(dest.get_width(), dest.get_height());
     float2 uv = float2(position) / (destSize - 1);
     float3 rawColor = rawColorTex.read(position).rgb;
     float3 bloomColor = readBloomTexture(bloomColorTex, uv, bloomParams.scale);
     float3 bloomAdded = addBloomColor(rawColor, bloomColor, bloomParams);
-    dest.write(float4(bloomAdded, 1), position);
+    // FIXME: I disable the bloom effect for now because I can't get it do look
+    // right
+    dest.write(float4(rawColor, 1), position);
 }

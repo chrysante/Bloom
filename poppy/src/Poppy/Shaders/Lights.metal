@@ -7,7 +7,8 @@ namespace bloom {
 /// **Lights**
 
 float3 calculatePointLight(PBRData pbrData, PointLight light, float3 V,
-                           float3 N, float3 worldPosition) {
+                           float3 N, float3 worldPosition)
+{
     float3 const L = normalize(light.position - worldPosition);
     float3 const H = normalize(V + L);
 
@@ -22,7 +23,8 @@ float3 calculatePointLight(PBRData pbrData, PointLight light, float3 V,
 }
 
 float3 calculateSpotlight(PBRData pbrData, SpotLight light, float3 V, float3 N,
-                          float3 worldPosition) {
+                          float3 worldPosition)
+{
     float3 const L = normalize(light.position - worldPosition);
 
     float const theta = dot(L, -light.direction);
@@ -47,7 +49,8 @@ float3 calculateSpotlight(PBRData pbrData, SpotLight light, float3 V, float3 N,
 }
 
 float3 calculateDirectionalLight(PBRData pbrData, DirectionalLight light,
-                                 float3 V, float3 N) {
+                                 float3 V, float3 N)
+{
     float3 const L = light.direction;
     float3 const H = normalize(V + L);
     float3 const radiance = light.common.color * light.common.intensity;
@@ -57,12 +60,14 @@ float3 calculateDirectionalLight(PBRData pbrData, DirectionalLight light,
 
 /// ** Shadows **
 
-static bool isInLightFrustum(float3 const projCoords) {
+static bool isInLightFrustum(float3 const projCoords)
+{
     bool3 const result = projCoords >= 0 && projCoords <= 1;
     return result.x && result.y && result.z;
 }
 
-static float3 calculateLightProjection(float4 const positionLightSpace) {
+static float3 calculateLightProjection(float4 const positionLightSpace)
+{
     /// Perform perspective divide
     float3 projCoords = positionLightSpace.xyz / positionLightSpace.w;
     projCoords.y *= -1;
@@ -72,7 +77,8 @@ static float3 calculateLightProjection(float4 const positionLightSpace) {
 
 float calculateDirLightShadow(texture2d_array<float> shadowMap,
                               sampler shadowMapSampler, int shadowMapIndex,
-                              float3 const projCoords, float NdotL) {
+                              float3 const projCoords, float NdotL)
+{
     if (!isInLightFrustum(projCoords)) {
         return 1.0;
     }
@@ -88,7 +94,8 @@ float calculateDirLightCascadedShadow(
     texture2d_array<float> shadowMaps, sampler shadowMapSampler,
     int shadowMapOffset, int numCascades,
     float4x4 device const* lightSpaceTransforms, float4 worldPosition,
-    float NdotL) {
+    float NdotL)
+{
     float shadow = 1;
     for (int j = numCascades - 1; j >= 0; --j) {
         int const shadowMapIndex = shadowMapOffset + j;
@@ -115,7 +122,8 @@ constant float3 shadowVizColors[10] = {
 
 float3 visualizeShadowCascade(int shadowMapOffset, int numCascades,
                               float4x4 device const* lightSpaceTransforms,
-                              float4 worldPosition) {
+                              float4 worldPosition)
+{
     float3 shadowViz = 0.5;
     for (int j = numCascades - 1; j >= 0; --j) {
         int const lightMapIndex = shadowMapOffset + j;

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PROJ_DIR="$SCRIPT_DIR/../.."
+
 # Variable that will hold the name of the clang-format command
 FMT=""
 
@@ -31,6 +34,11 @@ function format() {
             continue
         fi
         if [[ $entry != *.h ]] && [[ $entry != *.cc ]] && [[ $entry != *.hpp ]] && [[ $entry != *.cpp ]] && [[ $entry != *.m ]] && [[ $entry != *.mm ]] && [[ $entry != *.metal ]]; then
+            continue
+        fi
+        if [[ $entry == *.metal ]]; then
+            # We set the column limit to 120 for metal files because otherwise the shader declaration look horrible
+            ${FMT} -i --style=file:$PROJ_DIR/metal.clang-format ${entry} &
             continue
         fi
         ${FMT} -i ${entry} &

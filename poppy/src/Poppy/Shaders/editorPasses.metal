@@ -15,7 +15,8 @@ vertex float4 selectionPassVS(SceneRenderParameters device const& scene
                               Vertex3D device const* vertices [[buffer(1)]],
                               float4x4 device const& transform [[buffer(2)]],
 
-                              uint const vertexID [[vertex_id]]) {
+                              uint const vertexID [[vertex_id]])
+{
     Vertex3D v = vertices[vertexID];
     float4 vertexPositionMS = float4(v.position, 1);
     float4 vertexPositionWS = transform * vertexPositionMS;
@@ -33,7 +34,8 @@ struct EdgeDetectResult {
 
 static EdgeDetectResult edgeDetecSampleOffset(
     texture2d<float> selectionMap, texture2d<float> depthMap,
-    texture2d<float> selectionDepthMap, sampler sampler2D, float2 uv) {
+    texture2d<float> selectionDepthMap, sampler sampler2D, float2 uv)
+{
     EdgeDetectResult result;
     result.edge = selectionMap.sample(sampler2D, uv).r;
     float depth = depthMap.sample(sampler2D, uv).r;
@@ -46,7 +48,8 @@ static EdgeDetectResult edgeDetect(texture2d<float> selectionMap,
                                    texture2d<float> depthMap,
                                    texture2d<float> selectionDepthMap,
                                    sampler sampler2D, float2 uv,
-                                   float lineWidth, float2 screenRes) {
+                                   float lineWidth, float2 screenRes)
+{
     float2 uvOffset = lineWidth / screenRes;
     bool occluded = true;
     float edgeX = 0;
@@ -121,7 +124,8 @@ fragment float4 editorCompositionFS(
     texture2d<float> depthMap [[texture(1)]],
     texture2d<float> selectionMap [[texture(2)]],
     texture2d<float> selectionDepthMap [[texture(3)]],
-    sampler sampler2D [[sampler(0)]]) {
+    sampler sampler2D [[sampler(0)]])
+{
     float3 result = postProcessed.sample(sampler2D, in.screenCoords).rgb;
     float depth = depthMap.sample(sampler2D, in.screenCoords).r;
     (void)depth;
@@ -151,7 +155,8 @@ vertex EditorPassData editorPassVS(SceneRenderParameters device const& scene
                                    [[buffer(1)]],
                                    float4x4 device const& transform
                                    [[buffer(2)]],
-                                   uint const vertexID [[vertex_id]]) {
+                                   uint const vertexID [[vertex_id]])
+{
     Vertex3D const v = vertices[vertexID];
     float4 const vertexPositionMS = float4(v.position, 1);
     float4 const vertexNormalMS = float4(v.normal, 0);
@@ -175,7 +180,8 @@ fragment EditorPassFragmentData
                  ShadowRenderData device const& shadowData [[buffer(2)]],
                  float4x4 device const* lightSpaceTransforms [[buffer(3)]],
                  texture2d_array<float> shadowMaps [[texture(0)]],
-                 sampler shadowMapSampler [[sampler(0)]]) {
+                 sampler shadowMapSampler [[sampler(0)]])
+{
     EditorPassFragmentData result;
     // Editor Properties
     if (debugData.visualizeShadowCascades) {

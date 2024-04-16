@@ -10,7 +10,8 @@ vertex float4 outlinePassVS(bloom::Vertex3D device const* vertices
                             uint const vertexID [[vertex_id]],
                             bloom::SceneRenderParameters device const& scene
                             [[buffer(0)]],
-                            float4x4 device const& transform [[buffer(2)]]) {
+                            float4x4 device const& transform [[buffer(2)]])
+{
     bloom::Vertex3D const v = vertices[vertexID];
     float4 const vertexPositionMS = float4(v.position, 1);
     return scene.camera * transform * vertexPositionMS;

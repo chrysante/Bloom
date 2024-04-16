@@ -221,9 +221,15 @@ void Viewport2::receiveSceneDragDrop() {
 
 void Viewport2::onInput(bloom::InputEvent&) {}
 
-YAML::Node Viewport2::serialize() const { return YAML::Node{}; }
+YAML::Node Viewport2::serialize() const {
+    YAML::Node root;
+    root["CameraController"] = cameraController;
+    return root;
+}
 
-void Viewport2::deserialize(YAML::Node) {}
+void Viewport2::deserialize(YAML::Node node) {
+    cameraController = node["CameraController"].as<ViewportCameraController>();
+}
 
 Toolbar Viewport2::makeToolbar() {
     // clang-format off

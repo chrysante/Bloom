@@ -20,7 +20,8 @@ vertex MainPassData mainPassVS(SceneRenderParameters device const& scene
                                [[buffer(0)]],
                                Vertex3D device const* vertices [[buffer(1)]],
                                float4x4 device const& transform [[buffer(2)]],
-                               uint const vertexID [[vertex_id]]) {
+                               uint const vertexID [[vertex_id]])
+{
     Vertex3D const v = vertices[vertexID];
 
     float4 const vertexPositionMS = float4(v.position, 1);
@@ -43,7 +44,8 @@ struct MainPassFragmentData {
 
 static float3 computePointLights(PBRData pbr, float3 N, float3 V,
                                  float3 worldPosition, uint numLights,
-                                 PointLight device const* lights) {
+                                 PointLight device const* lights)
+{
     float3 lightAcc{};
     for (uint i = 0; i < numLights; ++i) {
         lightAcc += calculatePointLight(pbr, lights[i], V, N, worldPosition);
@@ -53,7 +55,8 @@ static float3 computePointLights(PBRData pbr, float3 N, float3 V,
 
 static float3 computeSpotLights(PBRData pbr, float3 N, float3 V,
                                 float3 worldPosition, uint numLights,
-                                SpotLight device const* lights) {
+                                SpotLight device const* lights)
+{
     float3 lightAcc{};
     for (uint i = 0; i < numLights; ++i) {
         lightAcc += calculateSpotlight(pbr, lights[i], V, N, worldPosition);
@@ -68,7 +71,8 @@ static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
                                DirectionalLight device const* lights,
                                bloom::ShadowRenderData const device& shadowData,
                                sampler shadowMapSampler,
-                               texture2d_array<float> shadowMaps) {
+                               texture2d_array<float> shadowMaps)
+{
     float3 lightAcc{};
     for (uint i = 0, shadowCasterIndex = 0, shadowMapOffset = 0; i < numLights;
          ++i)
@@ -94,7 +98,8 @@ static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
 }
 
 static float3 computeSkyLights(PBRData pbr, uint numLights,
-                               SkyLight device const* lights) {
+                               SkyLight device const* lights)
+{
     float3 lightAcc{};
     for (uint i = 0; i < numLights; ++i) {
         SkyLight light = lights[i];
@@ -104,7 +109,8 @@ static float3 computeSkyLights(PBRData pbr, uint numLights,
     return lightAcc;
 }
 
-static float3 computeEmissive(MaterialParameters materialParams) {
+static float3 computeEmissive(MaterialParameters materialParams)
+{
     return materialParams.emissive * materialParams.emissiveIntensity;
 }
 
@@ -114,7 +120,8 @@ fragment MainPassFragmentData
                float4x4 device const* lightSpaceTransforms [[buffer(1)]],
                MaterialParameters device const& materialParams [[buffer(2)]],
                texture2d_array<float> shadowMaps [[texture(0)]],
-               sampler shadowMapSampler [[sampler(0)]]) {
+               sampler shadowMapSampler [[sampler(0)]])
+{
     SceneRenderParameters device const& scene = params.scene;
     ShadowRenderData device const& shadowData = params.shadowData;
     PBRData pbr{ .albedo = materialParams.baseColor,
@@ -147,7 +154,8 @@ vertex MainPassData rgMainPassVS(SceneRenderParameters device const& scene
                                  [[buffer(0)]],
                                  Vertex3D device const* vertices [[buffer(1)]],
                                  float4x4 device const& transform [[buffer(2)]],
-                                 unsigned vertexID [[vertex_id]]) {
+                                 unsigned vertexID [[vertex_id]])
+{
     Vertex3D v = vertices[vertexID];
     float4 vertexPositionMS = float4(v.position, 1);
     float4 vertexNormalMS = float4(v.normal, 0);
@@ -167,7 +175,8 @@ fragment MainPassFragmentData
                  float4x4 device const* lightSpaceTransforms [[buffer(2)]],
                  MaterialParameters device const& materialParams [[buffer(3)]],
                  texture2d_array<float> shadowMaps [[texture(0)]],
-                 sampler shadowMapSampler [[sampler(0)]]) {
+                 sampler shadowMapSampler [[sampler(0)]])
+{
     PBRData pbr{ .albedo = materialParams.baseColor,
                  .metallic = materialParams.metallic,
                  .roughness = materialParams.roughness,

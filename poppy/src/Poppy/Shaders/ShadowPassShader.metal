@@ -15,7 +15,8 @@ vertex ShadowPassInOut shadowVertexShader(
     uint const shadowMapIndex [[instance_id]],
     bloom::SceneRenderParameters device const& scene [[buffer(0)]],
     float4x4 device const* lightSpaceTransforms [[buffer(3)]],
-    float4x4 device const& objectTransform [[buffer(2)]]) {
+    float4x4 device const& objectTransform [[buffer(2)]])
+{
     bloom::Vertex3D const v = vertices[vertexID];
     float4 const vertexPositionMS = float4(v.position, 1);
     float4 const positionLS = lightSpaceTransforms[shadowMapIndex] *

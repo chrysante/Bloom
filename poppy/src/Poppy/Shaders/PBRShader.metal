@@ -5,11 +5,13 @@ using namespace metal;
 
 namespace bloom {
 
-static float3 fresnelSchlick(float cosTheta, float3 F0) {
+static float3 fresnelSchlick(float cosTheta, float3 F0)
+{
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-static float distributionGGX(float3 N, float3 H, float roughness) {
+static float distributionGGX(float3 N, float3 H, float roughness)
+{
     float const a = roughness * roughness;
     float const a2 = a * a;
     float const NdotH = max(dot(N, H), 0.0);
@@ -25,7 +27,8 @@ static float distributionGGX(float3 N, float3 H, float roughness) {
     return num / denom;
 }
 
-static float geometrySchlickGGX(float NdotV, float roughness) {
+static float geometrySchlickGGX(float NdotV, float roughness)
+{
     float r = roughness + 1.0;
     float k = r * r / 8.0;
 
@@ -35,7 +38,8 @@ static float geometrySchlickGGX(float NdotV, float roughness) {
     return num / denom;
 }
 
-static float geometrySmith(float3 N, float3 V, float3 L, float roughness) {
+static float geometrySmith(float3 N, float3 V, float3 L, float roughness)
+{
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
     float ggx2 = geometrySchlickGGX(NdotV, roughness);
@@ -45,7 +49,8 @@ static float geometrySmith(float3 N, float3 V, float3 L, float roughness) {
 }
 
 float3 PBRLighting(PBRData data, float3 const radiance, float3 const N,
-                   float3 const V, float3 const L, float3 const H) {
+                   float3 const V, float3 const L, float3 const H)
+{
     float3 const F0_dielectric = float3(0.04);
     float3 const F0 = mix(F0_dielectric, data.albedo, data.metallic);
 

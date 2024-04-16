@@ -124,10 +124,7 @@ void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
     device.fillManagedBuffer(sceneParamBuffer->handle(), &sceneParams,
                              sizeof sceneParams);
     BloomParameters bloomParams = makeBloomParams({
-        .physicallyCorrect = false,
-        .intensity = .5,
-        .threshold = 5,
-        .knee = 0.1,
+        .physicallyCorrect = true,
         .clamp = 100,
         .diffusion = 1,
         .contribution = 0.1,

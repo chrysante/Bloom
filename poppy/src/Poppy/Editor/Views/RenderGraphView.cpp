@@ -50,8 +50,8 @@ POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
 RenderGraphView::RenderGraphView(): toolbar(makeToolbar()) {
     nodeEditor.setDelegate({ .backgroundPopupMenu = [&](float2 position) {
         for (auto& entry: PassRegistry::get()) {
-            if (ImGui::MenuItem(entry.name.c_str())) {
-                auto desc = entry.create();
+            if (ImGui::MenuItem(entry.desc.name.c_str())) {
+                auto desc = entry.desc;
                 desc.position = position;
                 nodeEditor.addNode(desc);
             }

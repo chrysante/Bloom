@@ -1,5 +1,6 @@
 #include "Poppy/Editor/Views/RenderGraphNodeController.h"
 
+#include <utl/common.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Graphics/RenderGraph/BloomPass.h"
@@ -23,16 +24,20 @@ static PassRegistry& gRegistry() {
 
 PassRegistry const& PassRegistry::get() { return gRegistry(); }
 
-void poppy::registerPass(Entry entry) {
-    gRegistry().entries.push_back(std::move(entry));
+Entry& poppy::registerPass() {
+    auto& entries = gRegistry().entries;
+    entries.emplace_back();
+    return entries.back();
 }
 
-#define REGISTER_PASS(...)                                                     \
-    UTL_STATIC_INIT { registerPass(Entry __VA_ARGS__); };
+#define REGISTER_PASS                                                          \
+    static auto const& UTL_UNIQUE_NAME(BL_Pass_) = registerPass().desc =       \
+        NodeDesc
 
-static constexpr float4 InputNodeColor = { .2, 1, .1, 1 };
-static constexpr float4 OutputNodeColor = { 1, .2, .1, 1 };
-static constexpr float4 PassNodeColor = { .1, .2, 1, 1 };
+static constexpr float4 InputNodeColor = { 0.4, 0.7, 0.2, 1.0 };
+static constexpr float4 PassNodeColor = { 0.3, 0.0, 0.8, 1.0 };
+static constexpr float4 OutputNodeColor = { 1.0, 0.0, 0.2, 1.0 };
+static constexpr float2 MinSize = { 100, 0 };
 
 namespace {
 
@@ -66,18 +71,17 @@ struct GlobalInputNodeController: RenderGraphNodeController {
     std::vector<PassSource*> sources;
 };
 
-REGISTER_PASS({ .name = "Input", .create = [] {
-                   return NodeDesc {
-            .name = "Input",
-            .outputs = {
-                { .name = "Geometry" },
-                { .name = "Lights" },
-                { .name = "Bloom Parameters" },
-                { .name = "Post Process Parameters" },
-            },
-                .color = InputNodeColor
-        };
-               } })
+REGISTER_PASS {
+    .name = "Input",
+    .outputs = {
+        { .name = "Geometry" },
+        { .name = "Lights" },
+        { .name = "Bloom Parameters" },
+        { .name = "Post Process Parameters" },
+    },
+    .color = InputNodeColor,
+    .minSize = MinSize
+};
 
 struct GlobalOutputNodeController: RenderGraphNodeController {
     void create(RenderGraph& rg) override {
@@ -106,15 +110,12 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
     std::vector<PassSink*> sinks;
 };
 
-REGISTER_PASS({ .name = "Output", .create = [] {
-                   return NodeDesc {
-            .name = "Output",
-            .inputs = {
-                { .name = "Color" },
-            },
-            .color = OutputNodeColor
-        };
-               } })
+REGISTER_PASS {
+    .name = "Output",
+    .inputs = { { .name = "Color" }, },
+    .color = OutputNodeColor,
+    .minSize = MinSize
+};
 
 struct PassNodeController: RenderGraphNodeController {
     virtual Pass* createPass(RenderGraph& renderGraph) = 0;
@@ -130,26 +131,65 @@ struct PassNodeController: RenderGraphNodeController {
     Pass* pass;
 };
 
-struct ForwardShadingPassNodeController: PassNodeController {
+struct ForwardShadingPassController: PassNodeController {
     Pass* createPass(RenderGraph& rg) override {
         return rg.addPass(std::make_unique<ForwardShadingPass>("MainPass"));
     }
 };
 
-REGISTER_PASS({ .name = "Forward Shading Pass", .create = [] {
-                   return NodeDesc {
-            .name = "Forward Shading Pass",
-            .inputs = {
-                { .name = "Scene Parameters" },
-                { .name = "Geometry" },
-                { .name = "Lights" },
-            },
-            .outputs = {
-                { .name = "Raw Color" },
-                { .name = "Depth" },
-            },
-            .color = PassNodeColor
-        };
-               } })
+REGISTER_PASS {
+    .name = "Forward Shading Pass",
+    .inputs = {
+        { .name = "Scene Parameters" },
+        { .name = "Geometry" },
+        { .name = "Lights" },
+    },
+    .outputs = {
+        { .name = "Raw Color" },
+        { .name = "Depth" },
+    },
+    .color = PassNodeColor,
+    .minSize = MinSize
+};
+
+struct PostProcessPassController: PassNodeController {
+    Pass* createPass(RenderGraph& rg) override {
+        return rg.addPass(std::make_unique<PostProcessPass>("PostProcessPass"));
+    }
+};
+
+REGISTER_PASS {
+    .name = "Post Process Pass",
+    .inputs = {
+        { .name = "Parameters" },
+        { .name = "Raw Color" },
+        { .name = "Bloom Parameters", .flags = PinFlags::Optional },
+        { .name = "Bloom Color", .flags = PinFlags::Optional },
+    },
+    .outputs = {
+        { .name = "Output" },
+    },
+    .color = PassNodeColor,
+    .minSize = MinSize
+};
+
+struct BloomController: PassNodeController {
+    Pass* createPass(RenderGraph& rg) override {
+        return rg.addPass(std::make_unique<BloomPass>("BloomPass"));
+    }
+};
+
+REGISTER_PASS {
+    .name = "Bloom Pass",
+    .inputs = {
+        { .name = "Parameters" },
+        { .name = "Raw Color" },
+    },
+    .outputs = {
+        { .name = "Output" },
+    },
+    .color = PassNodeColor,
+    .minSize = MinSize
+};
 
 } // namespace

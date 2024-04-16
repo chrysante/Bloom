@@ -34,8 +34,7 @@ public:
 class PassRegistry {
 public:
     struct Entry {
-        std::string name;
-        std::function<nodeEditor::NodeDesc()> create;
+        nodeEditor::NodeDesc desc;
     };
 
     auto begin() const { return entries.begin(); }
@@ -44,7 +43,7 @@ public:
     static PassRegistry const& get();
 
 private:
-    friend void registerPass(Entry entry);
+    friend Entry& registerPass();
 
     std::vector<Entry> entries;
 };

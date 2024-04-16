@@ -89,30 +89,14 @@ static float3 tonemap(float3 colorIn, ToneMappingFunction function) {
 
 static float3 gammaCorrect(float3 colorIn) { return pow(colorIn, 1.0 / 2.2); }
 
-static float3 addBloomColor(float3 colorIn, float3 bloomColor,
-                            BloomParameters bloomParams) {
-    if (bloomParams.physicallyCorrect) {
-        return mix(colorIn, bloomColor, bloomParams.contribution);
-    }
-    else {
-        return colorIn + bloomParams.intensity * bloomColor;
-    }
-}
-
-kernel void rgPostprocess(
-    PostProcessParameters device const& params [[buffer(0)]],
-    BloomParameters device const& bloomParams [[buffer(1)]],
-    texture2d<float, access::write> dest [[texture(0)]],
-    texture2d<float, access::read> rawColorTex [[texture(1)]],
-    texture2d<half, access::sample> bloomColorTex [[texture(2)]],
-    uint2 position [[thread_position_in_grid]]) {
-    float2 destSize = float2(dest.get_width(), dest.get_height());
-    float2 uv = float2(position) / (destSize - 1);
+kernel void rgPostprocess(PostProcessParameters device const& params
+                          [[buffer(0)]],
+                          texture2d<float, access::write> dest [[texture(0)]],
+                          texture2d<float, access::read> rawColorTex
+                          [[texture(1)]],
+                          uint2 position [[thread_position_in_grid]]) {
     float3 rawColor = rawColorTex.read(position).rgb;
-    float3 bloomColor = readBloomTexture(bloomColorTex, uv, bloomParams.scale);
-    float3 bloomAdded = addBloomColor(rawColor, bloomColor, bloomParams);
-    //    float3 bloomAdded = rawColor;
-    float3 toneMapped = tonemap(bloomAdded, params.toneMappingFunction);
+    float3 toneMapped = tonemap(rawColor, params.toneMappingFunction);
     float3 gammaCorrected = gammaCorrect(toneMapped);
     dest.write(float4(gammaCorrected, 1), position);
 }

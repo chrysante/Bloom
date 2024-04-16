@@ -25,10 +25,15 @@ private:
     ComputePipelineHandle prefilterPipeline;
     ComputePipelineHandle downsamplePipeline;
     ComputePipelineHandle upsamplePipeline;
+    ComputePipelineHandle compositePipeline;
 
+    // Sinks
+    BufferHandle parameters;
     TextureHandle rawColor;
 
-    BufferHandle parameters;
+    // Sources
+    TextureHandle output;
+
     TextureHandle downsample;
     std::array<TextureHandle, NumMips> downsampleMips;
     TextureHandle upsample;

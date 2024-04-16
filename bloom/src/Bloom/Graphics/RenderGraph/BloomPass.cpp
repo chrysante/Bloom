@@ -25,11 +25,10 @@ Impl::InterfaceVector const Impl::Sinks = {
 
 template <>
 Impl::InterfaceVector const Impl::Sources = { InterfaceWrapper{
-    "Output", &BloomPass::upsample,
+    "Output", &BloomPass::output,
     TextureInterface{ .type = TextureType::Texture2D,
-                      .pixelFormat = PixelFormat::RG11B10Float,
-                      .size = TextureSize::Relative2D({ 0.5, 0.5 }),
-                      .mipmapLevelCount = NumMips - 1 } } };
+                      .pixelFormat = PixelFormat::RGBA32Float,
+                      .size = TextureSize::ScreenSize } } };
 
 BloomPass::BloomPass(std::string name): ComputePass(std::move(name)) {}
 
@@ -55,14 +54,20 @@ struct GridSizes {
 
 } // namespace
 
-void BloomPass::doExecute(FrameParameters const& params, ComputeContext& ctx) {
-    ctx.begin();
+static vml::uint2 computeThreadGroupSize(
+    ComputePipelineView downsamplePipeline) {
     size_t threadGroupWidth = downsamplePipeline.threadExecutionWidth;
     size_t threadGroupHeight =
         downsamplePipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth;
     vml::uint2 threadGroupSize = { utl::narrow_cast<uint32_t>(threadGroupWidth),
                                    utl::narrow_cast<uint32_t>(
                                        threadGroupHeight) };
+    return threadGroupSize;
+}
+
+void BloomPass::doExecute(FrameParameters const& params, ComputeContext& ctx) {
+    ctx.begin();
+    uint2 dsThreadGroupSize = computeThreadGroupSize(downsamplePipeline);
     auto gridSizes = GridSizes::create(params.screenSize);
     // All bloom shaders want this
     ctx.setBuffer(parameters, 0);
@@ -70,28 +75,37 @@ void BloomPass::doExecute(FrameParameters const& params, ComputeContext& ctx) {
     ctx.setPipeline(prefilterPipeline);
     ctx.setTexture(rawColor, 0);          // Source
     ctx.setTexture(downsampleMips[0], 1); // dest
-    ctx.dispatchThreads(gridSizes.downsample[0], threadGroupSize);
+    ctx.dispatchThreads(gridSizes.downsample[0], dsThreadGroupSize);
     // Rest of downsample passes
     ctx.setPipeline(downsamplePipeline);
     for (int i = 0; i < (int)NumMips - 2; ++i) {
         ctx.setTexture(downsampleMips[i], 0);     // Source
         ctx.setTexture(downsampleMips[i + 1], 1); // Dest
-        ctx.dispatchThreads(gridSizes.downsample[i + 1], threadGroupSize);
+        ctx.dispatchThreads(gridSizes.downsample[i + 1], dsThreadGroupSize);
     }
+    uint2 usThreadGroupSize = computeThreadGroupSize(upsamplePipeline);
     // First upsample pass
     ctx.setPipeline(upsamplePipeline);
     ctx.setTexture(downsampleMips[NumMips - 1],
                    0);                              // Upsample source
     ctx.setTexture(downsampleMips[NumMips - 2], 1); // Copy source
     ctx.setTexture(upsampleMips[NumMips - 2], 2);   // Dest
-    ctx.dispatchThreads(gridSizes.upsample[NumMips - 2], threadGroupSize);
+    ctx.dispatchThreads(gridSizes.upsample[NumMips - 2], usThreadGroupSize);
     // Rest of upsample passes
     for (int i = NumMips - 2; i > 0; --i) {
         ctx.setTexture(upsampleMips[i], 0);
         ctx.setTexture(downsampleMips[i - 1], 1);
         ctx.setTexture(upsampleMips[i - 1], 2);
-        ctx.dispatchThreads(gridSizes.upsample[i - 1], threadGroupSize);
+        ctx.dispatchThreads(gridSizes.upsample[i - 1], usThreadGroupSize);
     }
+    // Composite and write to dest
+    ctx.setPipeline(compositePipeline);
+    ctx.setBuffer(parameters, 0);
+    ctx.setTexture(output, 0);
+    ctx.setTexture(rawColor, 1);
+    ctx.setTexture(upsampleMips.front(), 2);
+    ctx.dispatchThreads(/* gridSize: */ params.screenSize,
+                        computeThreadGroupSize(compositePipeline));
     ctx.end();
     ctx.commit();
 }
@@ -107,6 +121,8 @@ void BloomPass::doAllocateResources(FrameParameters const& params,
     desc.usage = TextureUsage::ShaderRead | TextureUsage::ShaderWrite;
     desc.pixelFormat = PixelFormat::RG11B10Float;
     downsample = device.createTexture(desc);
+    desc.mipmapLevelCount = NumMips - 1;
+    upsample = device.createTexture(desc);
     /// Upsample texture is created by the render graph framework
     for (int i = 0; i < (int)NumMips; ++i) {
         downsampleMips[i] =
@@ -127,4 +143,6 @@ void BloomPass::doAllocateResources(FrameParameters const& params,
         { .computeFunction = device.createFunction("rgBloomUpsample") });
     prefilterPipeline = device.createComputePipeline(
         { .computeFunction = device.createFunction("rgBloomPrefilter") });
+    compositePipeline = device.createComputePipeline(
+        { .computeFunction = device.createFunction("rgBloomComposite") });
 }

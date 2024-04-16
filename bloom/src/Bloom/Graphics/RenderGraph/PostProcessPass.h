@@ -19,9 +19,7 @@ private:
 
     ComputePipelineHandle pipeline;
     BufferHandle parameterBuffer;
-    BufferHandle bloomParameterBuffer;
     TextureHandle rawColor;
-    TextureHandle bloomColor;
     TextureHandle output;
 };
 

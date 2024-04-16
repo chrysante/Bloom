@@ -254,10 +254,7 @@ static std::unique_ptr<RenderGraph> createDefaultRenderGraph(
     /// Post process pass
     rg->addLink(postprocessParams->internalSource(),
                 postProcessPass->findSink("Parameters"));
-    //    rg->addLink(bloomParams->internalSource(),
-    //                postProcessPass->findSink("BloomParameters"));
-    rg->addLink(rawColor, postProcessPass->findSink("RawColor"));
-    //    rg->addLink(bloomColor, postProcessPass->findSink("BloomColor"));
+    rg->addLink(bloomColor, postProcessPass->findSink("RawColor"));
     rg->compile();
     return rg;
 }

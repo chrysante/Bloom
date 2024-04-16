@@ -186,3 +186,34 @@ kernel void rgBloomUpsample(texture2d<half, access::sample> sourceSmall
         dest.write(upsampledValue + big, position);
     }
 }
+
+static float3 readBloomTexture(texture2d<half, access::sample> tex, float2 uv,
+                               float scale) {
+    float2 texSize = float2(tex.get_width(), tex.get_height());
+    float2 texelSize = 1 / (texSize - 1);
+    return float3(upsampleTent(tex, uv, texelSize, scale).rgb);
+}
+
+static float3 addBloomColor(float3 colorIn, float3 bloomColor,
+                            BloomParameters bloomParams) {
+    if (bloomParams.physicallyCorrect) {
+        return mix(colorIn, bloomColor, bloomParams.contribution);
+    }
+    else {
+        return colorIn + bloomParams.intensity * bloomColor;
+    }
+}
+
+kernel void rgBloomComposite(
+    BloomParameters device const& bloomParams [[buffer(0)]],
+    texture2d<float, access::write> dest [[texture(0)]],
+    texture2d<float, access::sample> rawColorTex [[texture(1)]],
+    texture2d<half, access::sample> bloomColorTex [[texture(2)]],
+    uint2 position [[thread_position_in_grid]]) {
+    float2 destSize = float2(dest.get_width(), dest.get_height());
+    float2 uv = float2(position) / (destSize - 1);
+    float3 rawColor = rawColorTex.read(position).rgb;
+    float3 bloomColor = readBloomTexture(bloomColorTex, uv, bloomParams.scale);
+    float3 bloomAdded = addBloomColor(rawColor, bloomColor, bloomParams);
+    dest.write(float4(bloomAdded, 1), position);
+}

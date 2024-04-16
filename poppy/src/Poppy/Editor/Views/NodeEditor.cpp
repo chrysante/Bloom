@@ -775,11 +775,8 @@ void Impl::onInput(InputEvent& event) {
     using enum InputEventMask;
     event.dispatch<MouseDragged>([&](MouseDragEvent event) {
         if (viewData.beginMoveDragging) {
-            float2 delta = event.offset;
-            if (vml::max_norm(delta) >= 1) {
-                viewData.isMoveDragging = true;
-            }
-            viewData.position += delta;
+            viewData.isMoveDragging = true;
+            viewData.position += event.offset;
         }
         if (viewData.isSelectionDragging) {
             viewData.selectionEnd = event.locationInWindow;

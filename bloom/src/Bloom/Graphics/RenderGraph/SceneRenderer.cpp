@@ -26,8 +26,12 @@ void rg::SceneRenderer::begin(FrameParameters const& frameParams,
                               Camera const& camera) {
     this->frameParams = frameParams;
     this->camera = camera;
-    geometry->clear();
-    lights->clear();
+    if (geometry) {
+        geometry->clear();
+    }
+    if (lights) {
+        lights->clear();
+    }
 }
 
 template <typename LightComponent>
@@ -63,23 +67,28 @@ static void submitScene(Scene const& scene, rg::GeometryResource& geometry) {
 }
 
 void rg::SceneRenderer::submit(Scene const& scene) {
-    submitScene(scene, *geometry);
-    submitLights<PointLightComponent>(*lights, scene,
-                                      [](auto& transform, auto& light) {
-        light.light.position = transform.matrix.column(3).xyz;
-    });
-    submitLights<SpotLightComponent>(*lights, scene,
-                                     [](auto& transform, auto& light) {
-        light.light.position = transform.matrix.column(3).xyz;
-        light.light.direction =
-            vml::normalize((transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
-    });
-    submitLights<DirectionalLightComponent>(*lights, scene,
-                                            [](auto& transform, auto& light) {
-        light.light.direction =
-            vml::normalize((transform.matrix * vml::float4{ 0, 0, 1, 0 }).xyz);
-    });
-    submitLights<SkyLightComponent>(*lights, scene);
+    if (geometry) {
+        submitScene(scene, *geometry);
+    }
+    if (lights) {
+        submitLights<PointLightComponent>(*lights, scene,
+                                          [](auto& transform, auto& light) {
+            light.light.position = transform.matrix.column(3).xyz;
+        });
+        submitLights<SpotLightComponent>(*lights, scene,
+                                         [](auto& transform, auto& light) {
+            light.light.position = transform.matrix.column(3).xyz;
+            light.light.direction = vml::normalize(
+                (transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
+        });
+        submitLights<DirectionalLightComponent>(*lights, scene,
+                                                [](auto& transform,
+                                                   auto& light) {
+            light.light.direction = vml::normalize(
+                (transform.matrix * vml::float4{ 0, 0, 1, 0 }).xyz);
+        });
+        submitLights<SkyLightComponent>(*lights, scene);
+    }
 }
 
 namespace {
@@ -109,8 +118,12 @@ static BloomParameters makeBloomParams(BloomSettings settings) {
 
 void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
     auto& device = mRenderGraph->device();
-    lights->prepare(device);
-    geometry->prepare(mRenderGraph->device());
+    if (geometry) {
+        geometry->prepare(mRenderGraph->device());
+    }
+    if (lights) {
+        lights->prepare(device);
+    }
     mRenderGraph->allocateResources(frameParams);
     auto* sceneParamBuffer = dyncast<rg::BufferResource*>(
         mRenderGraph->findInputSource("SceneParameters")->resource());

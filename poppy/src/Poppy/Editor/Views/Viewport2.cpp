@@ -152,11 +152,12 @@ void Viewport2::displayScenes() {
     }
     auto* output =
         dyncast<rg::TextureResource*>(renderGraph->source(0)->resource());
-    if (output) {
+    if (!output) {
         displayEmptyWithReason("Render Graph Output Is Null");
-        ImGui::Image(output->handle().nativeHandle(),
-                     ImGui::GetContentRegionAvail());
+        return;
     }
+    ImGui::Image(output->handle().nativeHandle(),
+                 ImGui::GetContentRegionAvail());
 }
 
 void Viewport2::displayToolbar() {

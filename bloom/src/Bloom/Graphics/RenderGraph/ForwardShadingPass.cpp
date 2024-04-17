@@ -18,11 +18,6 @@ using Impl = PassImpl<ForwardShadingPass>;
 // clang-format off
 
 BEGIN_SINK_DECL(ForwardShadingPass) {
-    BufferInterface{
-        "SceneParameters",
-        &ForwardShadingPass::sceneParameters,
-        { .size = sizeof(SceneRenderParameters) }
-    },
     GeometryInterface{
         "Geometry",
         &ForwardShadingPass::geometry
@@ -30,6 +25,11 @@ BEGIN_SINK_DECL(ForwardShadingPass) {
     LightsInterface{
         "Lights",
         &ForwardShadingPass::lights
+    },
+    BufferInterface{
+        "SceneParameters",
+        &ForwardShadingPass::sceneParameters,
+        { .size = sizeof(SceneRenderParameters) }
     },
 }
 END_DECL()

@@ -15,11 +15,6 @@ static constexpr size_t NumMips = BloomPass::NumMips;
 // clang-format off
 
 BEGIN_SINK_DECL(BloomPass) {
-    BufferInterface{
-        "Parameters",
-        &BloomPass::parameters,
-        { .size = sizeof(BloomParameters) }
-    },
     TextureInterface{
         "RawColor",
         &BloomPass::rawColor,
@@ -27,7 +22,12 @@ BEGIN_SINK_DECL(BloomPass) {
             .pixelFormat = PixelFormat::RGBA32Float,
             .size = TextureSize::ScreenSize,
         }
-    }
+    },
+    BufferInterface{
+        "Parameters",
+        &BloomPass::parameters,
+        { .size = sizeof(BloomParameters) }
+    },
 }
 END_DECL()
 

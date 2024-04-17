@@ -13,11 +13,6 @@ using Impl = PassImpl<PostProcessPass>;
 // clang-format off
 
 BEGIN_SINK_DECL(PostProcessPass) {
-    BufferInterface{
-        "Parameters",
-        &PostProcessPass::parameterBuffer,
-        { .size = sizeof(PostProcessParameters) }
-    },
     TextureInterface{
         "RawColor",
         &PostProcessPass::rawColor,
@@ -25,6 +20,11 @@ BEGIN_SINK_DECL(PostProcessPass) {
             .pixelFormat = PixelFormat::RGBA32Float,
             .size = TextureSize::ScreenSize,
         }
+    },
+    BufferInterface{
+        "Parameters",
+        &PostProcessPass::parameterBuffer,
+        { .size = sizeof(PostProcessParameters) }
     },
 }
 END_DECL()

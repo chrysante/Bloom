@@ -26,7 +26,7 @@ class Pass {
 
 public:
     explicit Pass(std::string name, HardwareDevice* device = nullptr):
-        _name(std::move(name)), _device(device) {}
+        _device(device), _name(std::move(name)) {}
 
     Pass(Pass const&) = delete;
 
@@ -38,8 +38,8 @@ public:
     /// \Returns the parent render graph if this pass is part of a render graph
     RenderGraph* parent() const { return _parent; }
 
-    /// \Returns the associated device. The device is set by the parent render
-    /// graph
+    /// \Returns the associated device.
+    /// \Pre This pass must be part of a render graph
     HardwareDevice& device() { return *_device; }
 
     /// \Returns the resource sink (input) with name \p name

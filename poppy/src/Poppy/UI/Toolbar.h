@@ -214,6 +214,42 @@ private:
     float calcWidth(float height) const override;
 };
 
+/// Non-interactive text item
+class ToolbarTextItem: public ToolbarItem {
+public:
+    /// Sets the displayed text
+    ToolbarTextItem& text(std::string text) {
+        return this->text([=] { return text.c_str(); });
+    }
+
+    /// \overload
+    ToolbarTextItem& text(std::function<char const*()> textFn) {
+        _text = std::move(textFn);
+        return *this;
+    }
+
+    /// Sets the font used to render the text
+    ToolbarTextItem& font(FontDesc fontDesc) {
+        return font([=] { return fontDesc; });
+    }
+
+    /// \overload
+    ToolbarTextItem& font(std::function<FontDesc()> fontDescFn) {
+        _fontDesc = std::move(fontDescFn);
+        return *this;
+    }
+
+private:
+    void display(ToolbarStyle const& style) override;
+    float calcWidth(float height) const override;
+
+    char const* getText() const;
+    FontDesc getFontDesc() const;
+
+    std::function<char const*()> _text;
+    std::function<FontDesc()> _fontDesc;
+};
+
 /// Empty item with fixed size
 class ToolbarEmptyItem: public ToolbarItem {
 public:

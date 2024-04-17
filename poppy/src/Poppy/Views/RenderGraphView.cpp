@@ -40,10 +40,12 @@ struct RenderGraphView: View {
 
     Toolbar makeToolbar();
 
+    void compile();
+
     RenderGraph* renderGraph;
     NodeEditor nodeEditor;
     Toolbar toolbar;
-    CompilationStatus compilationStatus;
+    CompilationStatus compilationStatus = CompilationStatus::None;
 };
 
 } // namespace
@@ -71,12 +73,16 @@ void RenderGraphView::frame() {
     nodeEditor.display();
 }
 
-static void createRenderGraph(HardwareDevice& device,
-                              NodeEditorGraph const& model) {
-    auto& ctx = RenderGraphManager::context();
-    ctx.resourcePool.clear();
-    auto rg = constructRenderGraph(ctx, device, model);
-    RenderGraphManager::set(std::move(rg));
+char const* compStatusMessage(CompilationStatus status) {
+    using enum CompilationStatus;
+    switch (status) {
+    case None:
+        return "";
+    case Success:
+        return "Compile succeeded";
+    case Error:
+        return "Compile failed";
+    }
 }
 
 Toolbar RenderGraphView::makeToolbar() {
@@ -84,11 +90,13 @@ Toolbar RenderGraphView::makeToolbar() {
     return {
         ToolbarIconButton("flash")
             .onClick([this] {
-                dispatch(DispatchToken::NextFrame,  [&] {
-                    createRenderGraph(editor().device(), nodeEditor.model());
-                });
+                dispatch(DispatchToken::NextFrame,  [this] { compile(); });
             })
-            .tooltip("Compile")
+            .tooltip("Compile"),
+        ToolbarSpacer(),
+        ToolbarTextItem()
+            .text([this] { return compStatusMessage(compilationStatus); })
+            .font(FontDesc::UIDefault().setSize(FontSize{ 16 }))
     }; // clang-format on
 }
 
@@ -106,4 +114,17 @@ void RenderGraphView::deserialize(YAML::Node root) {
     NodeEditorGraph graph;
     graph.deserialize(root, RenderGraphNodeController::deserialize);
     nodeEditor.setGraph(std::move(graph));
+}
+
+void RenderGraphView::compile() {
+    auto& ctx = RenderGraphManager::context();
+    ctx.resourcePool.clear();
+    auto rg = constructRenderGraph(ctx, editor().device(), nodeEditor.model());
+    if (rg) {
+        compilationStatus = CompilationStatus::Success;
+    }
+    else {
+        compilationStatus = CompilationStatus::Error;
+    }
+    RenderGraphManager::set(std::move(rg));
 }

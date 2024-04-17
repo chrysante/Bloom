@@ -167,6 +167,29 @@ float ToolbarSpacer::calcWidth([[maybe_unused]] float height) const {
     return 0.0f;
 }
 
+void ToolbarTextItem::display(ToolbarStyle const&) {
+    withFont(getFontDesc(), [&] {
+        float textHeight = ImGui::CalcTextSize(getText()).y;
+        float defaultHeight = (float)FontDesc::UIDefault().size;
+        // This offset calculation seems to be correct but I don't understand
+        // why. I would expect we need to divide by 2, but this look better
+        float yOffset = defaultHeight - textHeight;
+        ImGui::SetCursorPos((float2)ImGui::GetCursorPos() + float2(0, yOffset));
+        ImGui::Text("%s", getText());
+    });
+}
+
+float ToolbarTextItem::calcWidth([[maybe_unused]] float height) const {
+    return withFont(getFontDesc(),
+                    [&] { return ImGui::CalcTextSize(getText()).x; });
+}
+
+char const* ToolbarTextItem::getText() const { return _text ? _text() : ""; }
+
+FontDesc ToolbarTextItem::getFontDesc() const {
+    return _fontDesc ? _fontDesc() : FontDesc::UIDefault();
+}
+
 void ToolbarEmptyItem::display(ToolbarStyle const& style) {
     ImGui::Dummy(float2(getWidth(), style.actualHeight));
 }

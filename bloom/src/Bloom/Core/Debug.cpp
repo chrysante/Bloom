@@ -16,12 +16,16 @@ void internal::debugErrorMessage(DebugErrorKind kind, int line,
         switch (kind) {
         case Assert:
             str << "Assertion failed: " << expression;
+            break;
         case Expect:
             str << "Precondition failed: " << expression;
+            break;
         case Unreachable:
             str << "Hit unreachable code path";
+            break;
         case Unimplemented:
             str << "Hit unimplemented code path";
+            break;
         }
         if (message) {
             str << " with message: " << message;

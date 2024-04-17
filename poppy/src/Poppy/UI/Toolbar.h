@@ -1,131 +1,204 @@
 #ifndef POPPY_UI_TOOLBAR_H
 #define POPPY_UI_TOOLBAR_H
 
-#include <variant>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <string>
 
-#include <utl/functional.hpp>
-#include <utl/vector.hpp>
 #include <vml/vml.hpp>
+
+#include "Poppy/UI/Font.h"
 
 namespace poppy {
 
-template <typename Derived>
-class ToolbarItemBase {
-protected:
-    ToolbarItemBase() = default;
+///
+struct ToolbarStyle {
+    float height = 40;
+    float buttonAlpha = 0;
+    float buttonAlphaHovered = 0.5;
+    float buttonAlphaActive = 0.5;
 
+    /// Computed by `Toolbar`
+    float actualHeight;
+};
+
+/// Base class of all toolbar items
+class ToolbarItem {
 public:
-    Derived& tooltip(char const* text) {
-        this->_tooltip = [text] { return text; };
+    ToolbarItem() = default;
+    ToolbarItem(ToolbarItem const&) = default;
+    ToolbarItem(ToolbarItem&&) = default;
+    virtual ~ToolbarItem() = default;
+
+    /// \Returns a unique ID.
+    /// This is simply the index of the item in the toolbar
+    int ID() const { return _id; }
+
+    ///
+    float getWidth() const { return _width; }
+
+private:
+    friend class Toolbar;
+
+    virtual void display(ToolbarStyle const& style) = 0;
+    virtual float calcWidth(float height) const = 0;
+
+    int _id;
+    float _width;
+};
+
+/// Mixin class that provides common functionality of toolbar items
+template <typename Derived>
+class ToolbarItemMixin: public ToolbarItem {
+public:
+    /// Specifies a tooltip that will be displayed when this item is hovered
+    Derived& tooltip(std::string text) {
+        this->_tooltip = [text] { return text.c_str(); };
         return asDerived();
     }
 
-    Derived& tooltip(utl::function<char const*()> text) {
+    /// \overload
+    Derived& tooltip(std::function<char const*()> text) {
         this->_tooltip = text;
         return asDerived();
     }
 
+    /// Specifies whether this item is disabled
     Derived& enabled(bool value) {
         this->_enabled = [value] { return value; };
         return asDerived();
     }
 
-    Derived& enabled(utl::function<bool()> value) {
+    /// \overload
+    Derived& enabled(std::function<bool()> value) {
         this->_enabled = value;
         return asDerived();
     }
 
+protected:
+    char const* getTooltip() const { return _tooltip ? _tooltip() : nullptr; }
+    bool getIsEnabled() const { return !_enabled || _enabled(); }
+
 private:
     Derived& asDerived() { return *static_cast<Derived*>(this); }
 
-private:
     friend class Toolbar;
-    utl::function<char const*()> _tooltip;
-    utl::function<bool()> _enabled; // treated as true if null
+
+    std::function<char const*()> _tooltip;
+    std::function<bool()> _enabled; // treated as true if null
 };
 
-struct ToolbarButton: ToolbarItemBase<ToolbarButton> {
+/// Toolbar text button
+class ToolbarButton: public ToolbarItemMixin<ToolbarButton> {
+public:
     ToolbarButton(std::string label): _label(std::move(label)) {}
 
-    ToolbarButton& onClick(utl::function<void()> block) {
-        this->_block = block;
+    /// Specify the action to perform when this button is clicked
+    ToolbarButton& onClick(std::function<void()> action) {
+        this->_action = std::move(action);
         return *this;
     }
 
 private:
-    friend class Toolbar;
-    friend class ToolbarItemUnion;
+    void display(ToolbarStyle const& style) override;
+    float calcWidth(float height) const override;
 
     std::string _label;
-    utl::function<void()> _block;
+    std::function<void()> _action;
 };
 
-class ToolbarIconButton: public ToolbarItemBase<ToolbarIconButton> {
+///
+class ToolbarIconButton: public ToolbarItemMixin<ToolbarIconButton> {
 public:
-    ToolbarIconButton(char const* icon): _icon([icon] { return icon; }) {}
+    /// Construct from an icon name
+    ToolbarIconButton(std::string iconName):
+        _icon([=] { return iconName.c_str(); }) {}
 
-    ToolbarIconButton(utl::function<char const*()> icon): _icon(icon) {}
+    /// Construct from a function that returns an icon name
+    ToolbarIconButton(std::function<char const*()> iconNameFn):
+        _icon(iconNameFn) {}
 
-    ToolbarIconButton& onClick(utl::function<void()> block) {
-        this->_block = block;
+    /// Specify the action to perform when this button is clicked
+    ToolbarIconButton& onClick(std::function<void()> action) {
+        this->_action = std::move(action);
         return *this;
     }
 
 private:
-    friend class Toolbar;
-    utl::function<void()> _block;
-    utl::function<char const*()> _icon;
+    void display(ToolbarStyle const& style) override;
+    float calcWidth(float height) const override;
+
+    std::function<void()> _action;
+    std::function<char const*()> _icon;
 };
 
-class ToolbarDropdownMenu: public ToolbarItemBase<ToolbarDropdownMenu> {
+/// A toolbar button that opens a dropdown menu
+class ToolbarDropdownMenu: public ToolbarItemMixin<ToolbarDropdownMenu> {
 public:
     ToolbarDropdownMenu();
 
-    ToolbarDropdownMenu& content(utl::function<void()> block) {
-        this->_content = block;
+    ///
+    ToolbarDropdownMenu& content(std::function<void()> action) {
+        this->_content = std::move(action);
         return *this;
     }
 
-    ToolbarDropdownMenu& previewValue(utl::function<std::string()> value) {
+    ///
+    ToolbarDropdownMenu& previewValue(std::function<std::string()> value) {
         _preview = value;
         return *this;
     }
 
-    ToolbarDropdownMenu& icon(utl::function<char const*()> icon) {
-        _icon = icon;
+    ///
+    ToolbarDropdownMenu& icon(std::function<char const*()> iconNameFn) {
+        _icon = iconNameFn;
         return *this;
     }
 
-    ToolbarDropdownMenu& icon(char const* icon) {
-        _icon = [=] { return icon; };
-        return *this;
+    ///
+    ToolbarDropdownMenu& icon(char const* iconName) {
+        return icon([=] { return iconName; });
     }
 
+    ///
     ToolbarDropdownMenu& minSize(vml::float2 size) {
         _minSize = size;
         return *this;
     }
 
+    ///
     ToolbarDropdownMenu& minWidth(float width) {
         _minSize.x = width;
         return *this;
     }
 
-private:
-    friend class Toolbar;
-    friend class ToolbarItemUnion;
-    utl::function<void()> _content;
-    utl::function<std::string()> _preview;
-    utl::function<char const*()> _icon;
+protected:
+    bool beginCombo(ToolbarStyle const& style);
+
+    void display(ToolbarStyle const& style) override;
+    float calcWidth(float height) const override;
+
+    std::function<void()> _content;
+    std::function<std::string()> _preview;
+    std::function<char const*()> _icon;
     std::string _id;
     vml::float2 _minSize = 0;
 };
 
-struct ToolbarSeparator {};
+class ToolbarSeparator: public ToolbarItem {
+private:
+    void display(ToolbarStyle const& style) override;
+    float calcWidth(float height) const override;
+};
 
-struct ToolbarSpacer {};
+class ToolbarSpacer: public ToolbarItem {
+private:
+    void display(ToolbarStyle const& style) override;
+    float calcWidth(float height) const override;
+};
 
-class ToolbarEmptyItem {
+class ToolbarEmptyItem: public ToolbarItem {
 public:
     ToolbarEmptyItem& width(float width) {
         _width = width;
@@ -133,116 +206,67 @@ public:
     }
 
 private:
-    friend class ToolbarItemUnion;
+    void display(ToolbarStyle const& style) override;
+    float calcWidth(float height) const override;
+
     float _width = 0;
 };
 
-class ToolbarItemUnion {
-    friend class Toolbar;
-
-public:
-    enum struct Type {
-        button,
-        iconButton,
-        dropdownMenu,
-        separator,
-        spacer,
-        emptyItem
-    };
-
-    ToolbarItemUnion(ToolbarButton button): item(std::move(button)) {}
-
-    ToolbarItemUnion(ToolbarIconButton button): item(std::move(button)) {}
-
-    ToolbarItemUnion(ToolbarDropdownMenu menu): item(std::move(menu)) {}
-
-    ToolbarItemUnion(ToolbarSeparator separator): item(std::move(separator)) {}
-
-    ToolbarItemUnion(ToolbarSpacer spacer): item(std::move(spacer)) {}
-
-    ToolbarItemUnion(ToolbarEmptyItem emptyItem): item(emptyItem) {}
-
-    Type type() const { return (Type)item.index(); }
-
-private:
-    void calcWidth(float height);
-
-    template <Type t>
-    auto& get() {
-        return utl::as_mutable(utl::as_const(*this).get<t>());
-    }
-    template <Type t>
-    auto const& get() const {
-        return std::get<(std::size_t)t>(item);
-    }
-
-private:
-    std::variant<ToolbarButton, ToolbarIconButton, ToolbarDropdownMenu,
-                 ToolbarSeparator, ToolbarSpacer, ToolbarEmptyItem>
-        item;
-    float width = 0;
-};
-
-struct ToolbarStyle {
-    float height = 40;
-    float buttonAlpha = 0;
-    float buttonAlphaHovered = 0.5;
-    float buttonAlphaActive = 0.5;
-};
-
-struct IconData;
-
+///
 class Toolbar {
 public:
-    Toolbar();
-    Toolbar(std::initializer_list<ToolbarItemUnion>);
-    void addItem(ToolbarItemUnion);
+    template <std::derived_from<ToolbarItem>... ItemType>
+    Toolbar(ItemType... items) {
+        (addItem(std::move(items)), ...);
+    }
 
+    /// Adds \p item to the back of this toolbar
+    template <std::derived_from<ToolbarItem> ItemType>
+    void addItem(ItemType item) {
+        items.push_back(std::make_unique<ItemType>(std::move(item)));
+        cooked = false;
+    }
+
+    ///  \Returns the acccumulated width of all items including padding but
+    /// ignoring all spacers
     float getWidthWithoutSpacers() const;
 
-    void display(float width = 0.0f);
+    /// Displays the toolbar. Will fill available width unless parameter \p
+    /// width is provided
+    void display(std::optional<float> width = std::nullopt);
 
+    /// \Returns the height of the toolbar
     float getHeight() const { return style.height; }
+
     void setHeight(float value) { style.height = value; }
 
-    ToolbarStyle getStyle() const { return style; }
+    ///
+    ToolbarStyle const& getStyle() const { return style; }
+
+    ///
     void setStyle(ToolbarStyle const& value) { style = value; }
 
 private:
+    /// A block is a list of items without spacers
     struct Block {
         float width = 0;
         float offset = 0;
-        std::size_t itemBeginIndex = 0;
-        std::size_t itemEndIndex = 0;
+        size_t itemBeginIndex = 0;
+        size_t itemEndIndex = 0;
         bool visible;
     };
 
     void displayBlock(Block const&);
-    void displayItem(ToolbarItemUnion const&, std::size_t index);
 
-    /// \Param open Use this flag to make the button look pressed. Used if popup
-    /// is open
-    bool button(char const* label, std::size_t id, vml::float2 size,
-                bool enabled = true, bool open = false) const;
-    bool buttonEx(char const* label, std::size_t id, vml::float2 size,
-                  bool enabled, bool open) const;
-    bool iconButton(IconData icon, std::size_t id, vml::float2 size,
-                    char const* tooltip = nullptr, bool enabled = true,
-                    bool open = false) const;
-    bool beginCombo(ToolbarDropdownMenu const&, std::size_t id,
-                    vml::float2 size) const;
+    /// Must be called after adding items
+    void cook();
 
-    // called once after adding items
-    void cook(bool full);
-    // called every frame
+    /// Called every frame
     void calcOffsets(float totalWidth);
 
-private:
-    utl::vector<ToolbarItemUnion> items;
-    utl::vector<Block> blocks;
+    std::vector<std::unique_ptr<ToolbarItem>> items;
+    std::vector<Block> blocks;
     ToolbarStyle style{};
-    float actualHeight = 0;
-    vml::float2 position;
     bool cooked = false;
 };
 

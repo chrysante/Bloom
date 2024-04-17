@@ -623,6 +623,7 @@ struct NodeEditor::Impl {
     void backgroundPopup(bool show);
     void backgroundBehaviour();
     void drawOverlays();
+    void nodeBodyPopup(Node& node, bool show);
     void displayNodeBody(Node& node);
     void displayNode(Node& node);
 
@@ -1014,7 +1015,7 @@ static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
     auto ID = ImGui::GetID("Pin_Handle");
     ImGui::ItemAdd(bb, ID);
     bool hovered = ImGui::ItemHoverable(bb, ID, ImGuiItemFlags_AllowOverlap);
-    if (ImGui::IsItemClicked()) {
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Left | ImGuiMouseButton_Right)) {
         viewData.activePin = &pin;
         if (ImGui::GetMouseClickedCount(ImGuiMouseButton_Left) == 2) {
             pin.clearLinks();
@@ -1129,6 +1130,8 @@ static ImRect drawNodeBody(Node const& node, bool selected) {
     return ImRect(contentRectMin, contentRectMax);
 }
 
+/// \Returns true if the background has been clicked with the left or right
+/// mouse button
 static bool displayNodeContent(ImRect contentRect, Node const& node) {
     if (!node.desc().content) {
         return false;
@@ -1140,9 +1143,12 @@ static bool displayNodeContent(ImRect contentRect, Node const& node) {
         return false;
     }
     ImGui::SetNextItemAllowOverlap();
-    bool bgPressed = ImGui::InvisibleButton("Content_View_Background_Button",
-                                            ImGui::GetContentRegionAvail(),
-                                            ImGuiButtonFlags_PressedOnClick);
+    bool bgPressed =
+        ImGui::InvisibleButton("Content_View_Background_Button",
+                               ImGui::GetContentRegionAvail(),
+                               ImGuiButtonFlags_PressedOnClick |
+                                   ImGuiButtonFlags_MouseButtonLeft |
+                                   ImGuiButtonFlags_MouseButtonRight);
     ImGui::SetCursorPos({});
     node.desc().content();
     ImGui::EndChild();
@@ -1175,7 +1181,7 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node) {
     }
 }
 
-bool anyNeighboursVisible(ViewData const& viewData, Node const& node) {
+static bool anyNeighboursVisible(ViewData const& viewData, Node const& node) {
     auto preds = node.predecessors();
     auto succs = node.successors();
     return ranges::any_of(concat(preds, succs), [&](Node const* node) {
@@ -1188,6 +1194,17 @@ static void clearOffscreenNodeQueue(ViewData& viewData) {
         drawLinksForOffscreenNode(viewData, *node);
     }
     viewData.offscreenNodeQueue.clear();
+}
+
+void Impl::nodeBodyPopup(Node&, bool show) {
+    static constexpr auto name = "Node_Popup";
+    if (show) {
+        ImGui::OpenPopup(name);
+    }
+    if (ImGui::BeginPopup(name)) {
+        ImGui::MenuItem("Delete");
+        ImGui::EndPopup();
+    }
 }
 
 void Impl::displayNodeBody(Node& node) {
@@ -1211,11 +1228,15 @@ void Impl::displayNodeBody(Node& node) {
     ImRect bb(pos, pos + node.size());
     ImGui::ItemSize(node.size());
     ImGui::ItemAdd(bb, id);
-    bool bgClicked = ImGui::IsItemClicked();
+    bool bgClickedLeft = ImGui::IsItemClicked(ImGuiMouseButton_Left);
+    bool bgClickedRight = ImGui::IsItemClicked(ImGuiMouseButton_Right);
     displayInputsOutputs(viewData, node);
-    bgClicked |= displayNodeContent(contentRect, node);
+    if (displayNodeContent(contentRect, node)) {
+        bgClickedLeft |= ImGui::IsMouseDown(ImGuiMouseButton_Left);
+        bgClickedRight |= ImGui::IsMouseDown(ImGuiMouseButton_Right);
+    }
     displayNodeResizeGrip(viewData, node);
-    if (bgClicked) {
+    if (bgClickedLeft || bgClickedRight) {
         orderFront(&node);
         viewData.activeNode = &node;
     }
@@ -1227,18 +1248,22 @@ void Impl::displayNodeBody(Node& node) {
         selection.amend(&node);
     }
     /// Not selected nodes change selection state when mouse is pressed
-    if (!isSelected && bgClicked) {
+    if (!isSelected && bgClickedLeft) {
         /// We use this flag so we don't select and immediately unselect when
         /// the mouse is released
         viewData.handledSelectionSinceMousePresed = true;
         selection.amend(&node);
     }
+    /// True if ...
+    bool haveSecondaryInteraction = viewData.activeNode != &node ||
+                                    viewData.activeResize || viewData.activePin;
+    nodeBodyPopup(node,
+                  /* show: */ bgClickedRight && !haveSecondaryInteraction);
     bool dragging = [&] {
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             return false;
         }
-        return viewData.activeNode == &node && !viewData.activeResize &&
-               !viewData.activePin;
+        return !haveSecondaryInteraction;
     }();
     if (dragging) {
         float2 delta = ImGui::GetIO().MouseDelta;

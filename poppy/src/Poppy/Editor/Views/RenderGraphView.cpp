@@ -59,14 +59,14 @@ RenderGraphView::RenderGraphView(): toolbar(makeToolbar()) {
     } });
 }
 
-void RenderGraphView::init() {}
+void RenderGraphView::init() {
+    setPadding({});
+}
 
 void RenderGraphView::onInput(InputEvent& event) { nodeEditor.onInput(event); }
 
 void RenderGraphView::frame() {
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 6, 6 });
     toolbar.display();
-    ImGui::PopStyleVar();
     nodeEditor.display();
 }
 

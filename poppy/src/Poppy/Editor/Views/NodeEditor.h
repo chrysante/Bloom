@@ -1,7 +1,6 @@
 #ifndef POPPY_EDITOR_VIEWS_NODEEDITOR_H
 #define POPPY_EDITOR_VIEWS_NODEEDITOR_H
 
-#include <any>
 #include <functional>
 #include <memory>
 #include <span>
@@ -51,17 +50,50 @@ struct PinDesc {
     PinFlags flags;
 };
 
+/// Node controller interface. Objects of derived classes can be attached to any
+/// node to customize its behaviour
+class NodeController {
+public:
+    virtual ~NodeController() = default;
+
+    /// Called when serializing the containing graph. Deserialization is done
+    /// through a callback to `NodeEditorGraph::deserialize`, because it must
+    /// determine the static type of the node controller
+    virtual YAML::Node serialize() const { return YAML::Node{}; }
+};
+
+/// Descriptor structure used to create nodes
 struct NodeDesc {
+    /// Unique identifier of this node. This will be set by the model if not set
+    /// by the user
     utl::uuid ID;
+
+    /// The label of the node in the editor
     std::string name;
+
+    /// The position at which the node will be created
     vml::float2 position;
+
+    /// Minimum size below which the node cannot be resized
     vml::float2 minSize;
+
+    /// The size with which the node will be created.
     vml::float2 size;
+
+    ///
     std::vector<PinDesc> inputs;
+
+    ///
     std::vector<PinDesc> outputs;
+
+    ///
     std::function<void()> content;
+
+    /// The color of the node body
     vml::float4 color = { 1, 0, 0.5, 1 };
-    std::any userData;
+
+    ///
+    std::unique_ptr<NodeController> controller;
 };
 
 class Node;
@@ -168,6 +200,9 @@ public:
     ~Node();
 
     NodeDesc const& desc() const { return _desc; };
+
+    /// \Returns the attached controller. This may be null
+    NodeController* controller() const { return desc().controller.get(); }
 
     /// \Returns a view over all inputs
     auto inputs() const {
@@ -279,13 +314,14 @@ public:
     void add(std::unique_ptr<Node> node) { _nodes.push_back(std::move(node)); }
 
     /// \Returns a YAML node representing this document
-    YAML::Node serialize(utl::function_view<YAML::Node(std::any const&)>
-                             serializeUserData = {}) const;
+    YAML::Node serialize() const;
 
     /// Deserializes the document stored in \p node
-    bool deserialize(YAML::Node const& node,
-                     utl::function_view<std::any(YAML::Node const&)>
-                         deserializeUserData = {});
+    bool deserialize(
+        YAML::Node const& node,
+        utl::function_view<
+            std::unique_ptr<nodeEditor::NodeController>(YAML::Node const&)>
+            deserializeController = {});
 
     /// Deletes all nodes for which \p predicate returns true
     void removeIf(utl::function_view<bool(Node const&)> predicate);

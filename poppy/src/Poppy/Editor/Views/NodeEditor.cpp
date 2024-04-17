@@ -313,9 +313,7 @@ static YAML::Node serializeOutput(OutputPin const& pin) {
     return root;
 }
 
-static YAML::Node serializeNode(
-    Node const& node,
-    utl::function_view<YAML::Node(std::any const&)> serializeUserData) {
+static YAML::Node serializeNode(Node const& node) {
     auto& desc = node.desc();
     YAML::Node root;
     root["ID"] = desc.ID;
@@ -324,8 +322,8 @@ static YAML::Node serializeNode(
     root["MinSize"] = desc.minSize;
     root["Size"] = desc.size;
     root["Color"] = desc.color;
-    if (serializeUserData) {
-        root["UserData"] = serializeUserData(desc.userData);
+    if (desc.controller) {
+        root["Controller"] = desc.controller->serialize();
     }
     for (auto inputs = root["Inputs"]; auto* input: node.inputs()) {
         inputs.push_back(serializeInput(*input));
@@ -353,7 +351,8 @@ static PinDesc deserializeOutput(YAML::Node const& node) {
 
 static std::unique_ptr<Node> deserializeNode(
     YAML::Node const& source,
-    utl::function_view<std::any(YAML::Node const&)> deserializeUserData) {
+    utl::function_view<std::unique_ptr<NodeController>(YAML::Node const&)>
+        deserializeController) {
     NodeDesc desc{};
     desc.ID = source["ID"].as<utl::uuid>();
     desc.name = source["Name"].as<std::string>();
@@ -361,8 +360,8 @@ static std::unique_ptr<Node> deserializeNode(
     desc.minSize = source["MinSize"].as<vml::float2>();
     desc.size = source["Size"].as<vml::float2>();
     desc.color = source["Color"].as<vml::float4>();
-    if (deserializeUserData) {
-        desc.userData = deserializeUserData(source["UserData"]);
+    if (deserializeController) {
+        desc.controller = deserializeController(source["Controller"]);
     }
     for (auto& input: source["Inputs"]) {
         desc.inputs.push_back(deserializeInput(input));
@@ -370,26 +369,26 @@ static std::unique_ptr<Node> deserializeNode(
     for (auto& output: source["Outputs"]) {
         desc.outputs.push_back(deserializeOutput(output));
     }
-    return std::make_unique<Node>(desc);
+    return std::make_unique<Node>(std::move(desc));
 }
 
-YAML::Node NodeEditorGraph::serialize(
-    utl::function_view<YAML::Node(std::any const&)> serializeUserData) const {
+YAML::Node NodeEditorGraph::serialize() const {
     YAML::Node root;
     for (auto* node: nodes()) {
-        root.push_back(serializeNode(*node, serializeUserData));
+        root.push_back(serializeNode(*node));
     }
     return root;
 }
 
 bool NodeEditorGraph::deserialize(
     YAML::Node const& source,
-    utl::function_view<std::any(YAML::Node const&)> deserializeUserData) {
+    utl::function_view<std::unique_ptr<NodeController>(YAML::Node const&)>
+        deserializeController) {
     try {
         _nodes.clear();
         utl::hashmap<utl::uuid, Node*> map;
         for (auto& nodeSource: source) {
-            auto node = deserializeNode(nodeSource, deserializeUserData);
+            auto node = deserializeNode(nodeSource, deserializeController);
             if (!utl::is_null(node->ID())) {
                 map[node->ID()] = node.get();
             }

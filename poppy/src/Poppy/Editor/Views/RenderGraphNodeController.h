@@ -5,15 +5,14 @@
 #include <string>
 #include <vector>
 
+#include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 #include "Poppy/Editor/Views/NodeEditor.h"
 
 namespace poppy {
 
-class RenderGraphNodeController {
+class RenderGraphNodeController: public nodeEditor::NodeController {
 public:
-    virtual ~RenderGraphNodeController() = default;
-
     /// Creates this node in \p renderGraph
     virtual void create(bloom::rg::RenderGraph& renderGraph) = 0;
 
@@ -34,7 +33,8 @@ public:
 class PassRegistry {
 public:
     struct Entry {
-        nodeEditor::NodeDesc desc;
+        std::string name;
+        std::function<nodeEditor::NodeDesc()> factory;
     };
 
     auto begin() const { return entries.begin(); }
@@ -47,6 +47,11 @@ private:
 
     std::vector<Entry> entries;
 };
+
+/// Constructs a render graph from the node editor model \p model
+std::unique_ptr<bloom::rg::RenderGraph> constructRenderGraph(
+    bloom::rg::RenderGraphContext& ctx, bloom::HardwareDevice& device,
+    NodeEditorGraph const& model);
 
 } // namespace poppy
 

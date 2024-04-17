@@ -50,18 +50,16 @@ POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
 RenderGraphView::RenderGraphView(): toolbar(makeToolbar()) {
     nodeEditor.setDelegate({ .backgroundPopupMenu = [&](float2 position) {
         for (auto& entry: PassRegistry::get()) {
-            if (ImGui::MenuItem(entry.desc.name.c_str())) {
-                auto desc = entry.desc;
+            if (ImGui::MenuItem(entry.name.c_str())) {
+                auto desc = entry.factory();
                 desc.position = position;
-                nodeEditor.addNode(desc);
+                nodeEditor.addNode(std::move(desc));
             }
         }
     } });
 }
 
-void RenderGraphView::init() {
-    setPadding({});
-}
+void RenderGraphView::init() { setPadding({}); }
 
 void RenderGraphView::onInput(InputEvent& event) { nodeEditor.onInput(event); }
 

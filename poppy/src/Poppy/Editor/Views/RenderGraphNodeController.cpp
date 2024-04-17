@@ -1,6 +1,7 @@
 #include "Poppy/Editor/Views/RenderGraphNodeController.h"
 
 #include <utl/common.hpp>
+#include <utl/strcat.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Graphics/RenderGraph/BloomPass.h"
@@ -54,26 +55,37 @@ static PinDesc interfaceToPinDesc(auto const& interface) {
     }, interface); // clang-format on
 }
 
-template <typename PassType>
+template <typename PassType, typename ControllerType>
 static void registerConcretePass(std::string name) {
-    auto& desc = registerPass().desc;
-    desc.name = name;
-    desc.inputs = PassType::Sinks() | transform([](auto& interface) {
-        return interfaceToPinDesc(interface);
-    }) | ranges::to<std::vector>;
-    desc.outputs = PassType::Sources() | transform([](auto& interface) {
-        return interfaceToPinDesc(interface);
-    }) | ranges::to<std::vector>;
-    desc.color = PassNodeColor;
-    desc.minSize = MinSize;
+    auto& entry = registerPass();
+    entry.name = name;
+    entry.factory = [=] {
+        return NodeDesc{
+            .name = name,
+            .minSize = MinSize,
+            .inputs = PassType::Sinks() | transform([](auto& interface) {
+            return interfaceToPinDesc(interface);
+        }) | ranges::to<std::vector>,
+            .outputs = PassType::Sources() | transform([](auto& interface) {
+            return interfaceToPinDesc(interface);
+        }) | ranges::to<std::vector>,
+            .color = PassNodeColor,
+            .controller = std::make_unique<ControllerType>(),
+        };
+    };
 }
 
-#define REGISTER_PASS                                                          \
-    static auto const& UTL_UNIQUE_NAME(BL_Pass_) = registerPass().desc =       \
-        NodeDesc
+#define REGISTER_PASS(Name, ...)                                               \
+    UTL_STATIC_INIT {                                                          \
+        auto& entry = registerPass();                                          \
+        entry.name = Name;                                                     \
+        entry.factory = [=] { return NodeDesc __VA_ARGS__; };                  \
+    }
 
-#define AUTOREGISTER_PASS(PassType)                                            \
-    UTL_STATIC_INIT { registerConcretePass<PassType>(#PassType); }
+#define AUTOREGISTER_PASS(PassType, ControllerType)                            \
+    UTL_STATIC_INIT {                                                          \
+        registerConcretePass<PassType, ControllerType>(#PassType);             \
+    }
 
 namespace {
 
@@ -108,7 +120,7 @@ struct GlobalInputNodeController: RenderGraphNodeController {
     std::vector<PassSource*> sources;
 };
 
-REGISTER_PASS {
+REGISTER_PASS("Input", {
     .name = "Input",
     .outputs = {
         { .name = "Geometry" },
@@ -118,7 +130,7 @@ REGISTER_PASS {
     },
     .color = InputNodeColor,
     .minSize = MinSize
-};
+});
 
 struct GlobalOutputNodeController: RenderGraphNodeController {
     void create(RenderGraph& rg) override {
@@ -149,12 +161,12 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
     std::vector<PassSink*> sinks;
 };
 
-REGISTER_PASS {
+REGISTER_PASS("Output", {
     .name = "Output",
     .inputs = { { .name = "Color" }, },
     .color = OutputNodeColor,
     .minSize = MinSize
-};
+});
 
 struct PassNodeController: RenderGraphNodeController {
     virtual Pass* createPass(RenderGraph& renderGraph) = 0;
@@ -176,7 +188,7 @@ struct ForwardShadingPassController: PassNodeController {
     }
 };
 
-AUTOREGISTER_PASS(ForwardShadingPass);
+AUTOREGISTER_PASS(ForwardShadingPass, ForwardShadingPassController);
 
 struct PostProcessPassController: PassNodeController {
     Pass* createPass(RenderGraph& rg) override {
@@ -184,7 +196,7 @@ struct PostProcessPassController: PassNodeController {
     }
 };
 
-AUTOREGISTER_PASS(PostProcessPass);
+AUTOREGISTER_PASS(PostProcessPass, PostProcessPassController);
 
 struct BloomController: PassNodeController {
     Pass* createPass(RenderGraph& rg) override {
@@ -192,6 +204,42 @@ struct BloomController: PassNodeController {
     }
 };
 
-AUTOREGISTER_PASS(BloomPass);
+AUTOREGISTER_PASS(BloomPass, BloomController);
 
 } // namespace
+
+RenderGraphNodeController* getController(Node const* node) {
+    return dynamic_cast<RenderGraphNodeController*>(node->controller());
+}
+
+static std::string uniqueName(std::string_view name) {
+    static int counter = 0;
+    return utl::strcat(name, ++counter);
+}
+
+std::unique_ptr<RenderGraph> poppy::constructRenderGraph(
+    RenderGraphContext& ctx, HardwareDevice& device,
+    NodeEditorGraph const& model) {
+    auto rg =
+        std::make_unique<RenderGraph>(uniqueName("RenderGraph"), ctx, device);
+    for (auto* controller: model.nodes() | transform(getController)) {
+        controller->create(*rg);
+    }
+    for (auto* node: model.nodes()) {
+        auto* sourceController = getController(node);
+        BL_ASSERT(sourceController);
+        for (auto [sourceIndex, output]: node->outputs() | enumerate) {
+            auto* source = sourceController->getSource(sourceIndex);
+            for (auto [sinkIndex, target]: output->targets() | enumerate) {
+                auto* sinkController = getController(&target->parent());
+                BL_ASSERT(sinkController);
+                auto* sink = sinkController->getSink(sinkIndex);
+                rg->addLink(source, sink);
+            }
+        }
+    }
+    if (!rg->compile()) {
+        return nullptr;
+    }
+    return rg;
+}

@@ -18,7 +18,8 @@
 namespace bloom::rg {
 
 /// Data that is shared between nested render graphs
-struct RenderGraphContext {
+class RenderGraphContext {
+public:
     ResourcePool resourcePool;
 };
 

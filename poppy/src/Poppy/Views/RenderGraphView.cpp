@@ -88,7 +88,7 @@ char const* compStatusMessage(CompilationStatus status) {
 Toolbar RenderGraphView::makeToolbar() {
     // clang-format off
     return {
-        ToolbarIconButton("flash")
+        ToolbarIconButton("play")
             .onClick([this] {
                 dispatch(DispatchToken::NextFrame,  [this] { compile(); });
             })

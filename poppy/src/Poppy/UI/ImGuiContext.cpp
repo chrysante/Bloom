@@ -287,6 +287,7 @@ void poppy::ImGuiContext::newFrame(Window& window) {
 void poppy::ImGuiContext::drawFrame(HardwareDevice& device, Window& window) {
     ImGui::SetCurrentContext(context);
     doDrawFramePlatform(device, window);
+    //    ImGui::UpdatePlatformWindows();
 }
 
 void poppy::ImGuiContext::onInput(InputEvent e) {

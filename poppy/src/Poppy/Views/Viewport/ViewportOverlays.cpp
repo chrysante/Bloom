@@ -1,4 +1,4 @@
-#include "Poppy/Editor/Views/Viewport/ViewportOverlays.h"
+#include "Poppy/Views/Viewport/ViewportOverlays.h"
 
 #include <imgui.h>
 
@@ -8,7 +8,7 @@
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/SelectionContext.h"
-#include "Poppy/Editor/Views/Viewport/Viewport.h"
+#include "Poppy/Views/Viewport/Viewport.h"
 
 using namespace bloom;
 using namespace vml::short_types;

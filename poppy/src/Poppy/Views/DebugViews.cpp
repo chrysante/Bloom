@@ -1,4 +1,4 @@
-#include "Poppy/Editor/Views/DebugViews.h"
+#include "Poppy/Views/DebugViews.h"
 
 #include <imgui.h>
 

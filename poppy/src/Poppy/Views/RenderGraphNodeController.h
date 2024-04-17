@@ -7,7 +7,7 @@
 
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
-#include "Poppy/Editor/Views/NodeEditor.h"
+#include "Poppy/Views/NodeEditor.h"
 
 namespace poppy {
 

@@ -15,10 +15,10 @@
 #include "Bloom/Scene/Components/Script.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Editor/Views/AssetBrowser.h"
-#include "Poppy/Editor/Views/MaterialInstanceViewer.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/Views/AssetBrowser.h"
+#include "Poppy/Views/MaterialInstanceViewer.h"
 
 using namespace bloom;
 using namespace vml::short_types;

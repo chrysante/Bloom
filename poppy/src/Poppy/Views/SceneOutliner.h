@@ -8,9 +8,9 @@
 #include <utl/vector.hpp>
 
 #include "Bloom/Scene/Entity.h"
-#include "Poppy/Editor/Views/BasicSceneInspector.h"
-#include "Poppy/Editor/Views/EntityInspector.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/Views/BasicSceneInspector.h"
+#include "Poppy/Views/EntityInspector.h"
 
 namespace bloom {
 

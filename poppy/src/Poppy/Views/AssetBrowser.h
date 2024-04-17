@@ -7,9 +7,9 @@
 
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Core/Yaml.h"
-#include "Poppy/Editor/Views/DirectoryView.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/Views/DirectoryView.h"
 
 namespace bloom {
 

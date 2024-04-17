@@ -1,4 +1,4 @@
-#include "Poppy/Editor/Views/BasicSceneInspector.h"
+#include "Poppy/Views/BasicSceneInspector.h"
 
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Components/AllComponents.h"

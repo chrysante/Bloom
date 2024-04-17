@@ -4,14 +4,14 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Serialize.h"
-#include "Poppy/Editor/Views/BasicSceneInspector.h"
-#include "Poppy/Editor/Views/Viewport/Gizmo.h"
-#include "Poppy/Editor/Views/Viewport/ViewportCameraController.h"
-#include "Poppy/Editor/Views/Viewport/ViewportOverlays.h"
 #include "Poppy/Renderer/EditorSceneRenderer.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/Views/BasicSceneInspector.h"
+#include "Poppy/Views/Viewport/Gizmo.h"
+#include "Poppy/Views/Viewport/ViewportCameraController.h"
+#include "Poppy/Views/Viewport/ViewportOverlays.h"
 
 namespace poppy {
 

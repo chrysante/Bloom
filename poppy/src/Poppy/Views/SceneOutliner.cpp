@@ -1,7 +1,7 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #define UTL_DEFER_MACROS
 
-#include "Poppy/Editor/Views/SceneOutliner.h"
+#include "Poppy/Views/SceneOutliner.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

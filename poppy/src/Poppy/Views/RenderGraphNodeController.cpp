@@ -1,4 +1,4 @@
-#include "Poppy/Editor/Views/RenderGraphNodeController.h"
+#include "Poppy/Views/RenderGraphNodeController.h"
 
 #include <utl/common.hpp>
 #include <utl/strcat.hpp>

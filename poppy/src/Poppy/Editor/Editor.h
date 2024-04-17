@@ -12,11 +12,11 @@
 
 #include "Bloom/Application/Application.h"
 #include "Bloom/Application/Window.h"
-#include "Poppy/Editor/Views/BasicSceneInspector.h"
-#include "Poppy/Editor/Views/DebugViews.h"
 #include "Poppy/UI/Dockspace.h"
 #include "Poppy/UI/ImGuiContext.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/Views/BasicSceneInspector.h"
+#include "Poppy/Views/DebugViews.h"
 
 namespace poppy {
 

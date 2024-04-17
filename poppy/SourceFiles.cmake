@@ -9,38 +9,6 @@ set(poppy_sources
   src/Poppy/Editor/Editor.h
   src/Poppy/Editor/SelectionContext.cpp
   src/Poppy/Editor/SelectionContext.h
-  src/Poppy/Editor/Views/AssetBrowser.cpp
-  src/Poppy/Editor/Views/AssetBrowser.h
-  src/Poppy/Editor/Views/BasicSceneInspector.cpp
-  src/Poppy/Editor/Views/BasicSceneInspector.h
-  src/Poppy/Editor/Views/DebugViews.cpp
-  src/Poppy/Editor/Views/DebugViews.h
-  src/Poppy/Editor/Views/DirectoryView.cpp
-  src/Poppy/Editor/Views/DirectoryView.h
-  src/Poppy/Editor/Views/EntityInspector.cpp
-  src/Poppy/Editor/Views/EntityInspector.h
-  src/Poppy/Editor/Views/NodeEditor.cpp
-  src/Poppy/Editor/Views/NodeEditor.h
-  src/Poppy/Editor/Views/MaterialInstanceViewer.cpp
-  src/Poppy/Editor/Views/MaterialInstanceViewer.h
-  src/Poppy/Editor/Views/RendererDebuggerView.cpp
-  src/Poppy/Editor/Views/RendererDebuggerView.h
-  src/Poppy/Editor/Views/RenderGraphNodeController.h
-  src/Poppy/Editor/Views/RenderGraphNodeController.cpp
-  src/Poppy/Editor/Views/RenderGraphView.cpp
-  src/Poppy/Editor/Views/RendererSettingsView.cpp
-  src/Poppy/Editor/Views/RendererSettingsView.h
-  src/Poppy/Editor/Views/SceneOutliner.cpp
-  src/Poppy/Editor/Views/SceneOutliner.h
-  src/Poppy/Editor/Views/Viewport2.cpp
-  src/Poppy/Editor/Views/Viewport/Gizmo.cpp
-  src/Poppy/Editor/Views/Viewport/Gizmo.h
-  src/Poppy/Editor/Views/Viewport/Viewport.cpp
-  src/Poppy/Editor/Views/Viewport/Viewport.h
-  src/Poppy/Editor/Views/Viewport/ViewportCameraController.cpp
-  src/Poppy/Editor/Views/Viewport/ViewportCameraController.h
-  src/Poppy/Editor/Views/Viewport/ViewportOverlays.cpp
-  src/Poppy/Editor/Views/Viewport/ViewportOverlays.h
 
   src/Poppy/Platform/MacOS/ImGuiContext.mm
   src/Poppy/Platform/MacOS/SystemAppearance.mm
@@ -68,6 +36,39 @@ set(poppy_sources
   src/Poppy/UI/Toolbar.h
   src/Poppy/UI/View.cpp
   src/Poppy/UI/View.h
+
+  src/Poppy/Views/AssetBrowser.cpp
+  src/Poppy/Views/AssetBrowser.h
+  src/Poppy/Views/BasicSceneInspector.cpp
+  src/Poppy/Views/BasicSceneInspector.h
+  src/Poppy/Views/DebugViews.cpp
+  src/Poppy/Views/DebugViews.h
+  src/Poppy/Views/DirectoryView.cpp
+  src/Poppy/Views/DirectoryView.h
+  src/Poppy/Views/EntityInspector.cpp
+  src/Poppy/Views/EntityInspector.h
+  src/Poppy/Views/NodeEditor.cpp
+  src/Poppy/Views/NodeEditor.h
+  src/Poppy/Views/MaterialInstanceViewer.cpp
+  src/Poppy/Views/MaterialInstanceViewer.h
+  src/Poppy/Views/RendererDebuggerView.cpp
+  src/Poppy/Views/RendererDebuggerView.h
+  src/Poppy/Views/RenderGraphNodeController.h
+  src/Poppy/Views/RenderGraphNodeController.cpp
+  src/Poppy/Views/RenderGraphView.cpp
+  src/Poppy/Views/RendererSettingsView.cpp
+  src/Poppy/Views/RendererSettingsView.h
+  src/Poppy/Views/SceneOutliner.cpp
+  src/Poppy/Views/SceneOutliner.h
+  src/Poppy/Views/Viewport2.cpp
+  src/Poppy/Views/Viewport/Gizmo.cpp
+  src/Poppy/Views/Viewport/Gizmo.h
+  src/Poppy/Views/Viewport/Viewport.cpp
+  src/Poppy/Views/Viewport/Viewport.h
+  src/Poppy/Views/Viewport/ViewportCameraController.cpp
+  src/Poppy/Views/Viewport/ViewportCameraController.h
+  src/Poppy/Views/Viewport/ViewportOverlays.cpp
+  src/Poppy/Views/Viewport/ViewportOverlays.h
 )
 
 set(poppy_shader_sources

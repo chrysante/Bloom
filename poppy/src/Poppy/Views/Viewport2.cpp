@@ -14,14 +14,14 @@
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Shader/PostProcessing.h"
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Editor/Views/AssetBrowser.h"
-#include "Poppy/Editor/Views/BasicSceneInspector.h"
-#include "Poppy/Editor/Views/Viewport/Gizmo.h"
-#include "Poppy/Editor/Views/Viewport/ViewportCameraController.h"
-#include "Poppy/Editor/Views/Viewport/ViewportOverlays.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/Views/AssetBrowser.h"
+#include "Poppy/Views/BasicSceneInspector.h"
+#include "Poppy/Views/Viewport/Gizmo.h"
+#include "Poppy/Views/Viewport/ViewportCameraController.h"
+#include "Poppy/Views/Viewport/ViewportOverlays.h"
 
 using namespace poppy;
 using namespace bloom;

@@ -1,4 +1,4 @@
-#include "Poppy/Editor/Views/DirectoryView.h"
+#include "Poppy/Views/DirectoryView.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -9,9 +9,9 @@
 
 #include "Bloom/Asset/AssetManager.h"
 #include "Poppy/Core/Debug.h"
-#include "Poppy/Editor/Views/AssetBrowser.h"
 #include "Poppy/UI/ImGuiContext.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/Views/AssetBrowser.h"
 
 using namespace bloom;
 using namespace vml::short_types;

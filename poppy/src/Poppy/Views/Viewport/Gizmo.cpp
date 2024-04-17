@@ -1,4 +1,4 @@
-#include "Poppy/Editor/Views/Viewport/Gizmo.h"
+#include "Poppy/Views/Viewport/Gizmo.h"
 
 #include <array>
 

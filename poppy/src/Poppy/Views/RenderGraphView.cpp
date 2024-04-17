@@ -10,11 +10,11 @@
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Editor/Views/BasicSceneInspector.h"
-#include "Poppy/Editor/Views/NodeEditor.h"
-#include "Poppy/Editor/Views/RenderGraphNodeController.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/Views/BasicSceneInspector.h"
+#include "Poppy/Views/NodeEditor.h"
+#include "Poppy/Views/RenderGraphNodeController.h"
 
 using namespace poppy;
 using namespace bloom;

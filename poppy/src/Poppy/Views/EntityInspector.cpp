@@ -1,6 +1,6 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "Poppy/Editor/Views/EntityInspector.h"
+#include "Poppy/Views/EntityInspector.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -17,9 +17,9 @@
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/SelectionContext.h"
-#include "Poppy/Editor/Views/AssetBrowser.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/Views/AssetBrowser.h"
 
 using namespace vml::short_types;
 using namespace ranges::views;

@@ -1,14 +1,14 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "Poppy/Editor/Views/RendererDebuggerView.h"
+#include "Poppy/Views/RendererDebuggerView.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Editor/Views/Viewport/Viewport.h"
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/PropertiesView.h"
+#include "Poppy/Views/Viewport/Viewport.h"
 
 using namespace bloom;
 using namespace vml::short_types;

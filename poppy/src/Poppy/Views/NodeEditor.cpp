@@ -1,4 +1,4 @@
-#include "Poppy/Editor/Views/NodeEditor.h"
+#include "Poppy/Views/NodeEditor.h"
 
 #include <optional>
 #include <vector>

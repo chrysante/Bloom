@@ -87,56 +87,42 @@ void View::doShutdown() { this->shutdown(); }
 
 void View::doFrame() {
     ImGuiWindowFlags flags = 0;
-
     flags |= ImGuiWindowFlags_NoCollapse;
-
-    bool const maximized = desc.maximized;
-
     // Begin block
-    if (maximized) {
+    if (desc.maximized) {
         auto* const viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowSize(viewport->Size);
         ImGui::SetNextWindowPos({ 0, 0 });
-
         flags |= ImGuiWindowFlags_NoTitleBar;
         flags |= ImGuiWindowFlags_NoMove;
         flags |= ImGuiWindowFlags_NoResize;
-
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
     }
-
     auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,
                         desc.maximized ? 0 : style.WindowRounding);
-    vml::float2 const padding = {
+    vml::float2 padding = {
         desc.hasPaddingX ? desc.pub.padding.x : style.WindowPadding.x,
         desc.hasPaddingY ? desc.pub.padding.y : style.WindowPadding.y
     };
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
-
     std::string displayTitle = utl::strcat(title(), "###", name(), "-", id());
-    if (maximized) {
+    if (desc.maximized) {
         displayTitle += "-FS";
     }
     bool const open = ImGui::Begin(displayTitle.data(), &desc.open, flags);
     ImGui::PopStyleVar(2);
-
-    if (maximized) {
+    if (desc.maximized) {
         ImGui::PopStyleVar();
     }
-
     if (open) {
-        // gather view info
-        auto* const window = ImGui::GetCurrentWindow();
-
+        auto* window = ImGui::GetCurrentWindow();
         desc.imguiWindow = window;
         desc.pub.size = window->Size;
         desc.position = window->Pos;
         desc.windowSize = ImGui::GetMainViewport()->Size;
-
-        this->frame();
+        frame();
     }
-
     ImGui::End();
 }
 
@@ -145,7 +131,7 @@ void View::doOnInput(bloom::InputEvent&) {}
 YAML::Node View::doSerialize() const {
     YAML::Node node;
     node["View Base"] = desc.pub;
-    node["Derived View"] = this->serialize(); /// Call to derived
+    node["Derived View"] = serialize();
     return node;
 }
 

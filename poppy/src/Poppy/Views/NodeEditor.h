@@ -324,7 +324,11 @@ public:
             deserializeController = {});
 
     /// Deletes all nodes for which \p predicate returns true
-    void removeIf(utl::function_view<bool(Node const&)> predicate);
+    void deleteIf(utl::function_view<bool(Node const&)> predicate);
+
+    /// Moves the node \p node to the front. This changes the display order of
+    /// the nodes
+    void orderFront(Node* node);
 
 private:
     std::vector<std::unique_ptr<Node>> _nodes;

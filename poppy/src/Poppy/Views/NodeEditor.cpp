@@ -416,10 +416,19 @@ bool NodeEditorGraph::deserialize(
     }
 }
 
-void NodeEditorGraph::removeIf(utl::function_view<bool(Node const&)> pred) {
+void NodeEditorGraph::deleteIf(utl::function_view<bool(Node const&)> pred) {
     auto itr =
         ranges::remove_if(_nodes, [&](auto& node) { return pred(*node); });
     _nodes.erase(itr, _nodes.end());
+}
+
+void NodeEditorGraph::orderFront(Node* node) {
+    auto itr =
+        ranges::find_if(_nodes, [&](auto& n) { return n.get() == node; });
+    BL_ASSERT(itr != _nodes.end(), "Node not found");
+    auto n = std::move(*itr);
+    _nodes.erase(itr);
+    _nodes.push_back(std::move(n));
 }
 
 namespace {
@@ -436,7 +445,7 @@ struct ActiveViewData {
     /// True if a node is currently being dragged
     bool isDraggingNode = false;
     /// True if we already changed selection state since the mouse was pressed
-    bool handledSelectionSinceMousePresed = false;
+    bool handledSelectionSinceMousePressed = false;
     /// True if we are selecting be dragged the background
     bool isSelectionDragging = false;
     bool beginMoveDragging = false;
@@ -540,10 +549,7 @@ public:
     }
 
     /// Clears the selection and selects \p node
-    void set(Node* node) {
-        clear();
-        add(node);
-    }
+    void set(Node* node) { set(&node, &node + 1); }
 
     /// \overload for ranges
     template <typename Itr, typename Sentinel>
@@ -552,11 +558,19 @@ public:
         add(first, last);
     }
 
+    /// \overload for ranges
+    void set(ranges::range auto&& rng) {
+        set(ranges::begin(rng), ranges::end(rng));
+    }
+
     /// Unselectes all nodes
     void clear() { _nodes.clear(); }
 
     /// \Returns a view over all selected nodes
     std::span<Node* const> nodes() const { return _nodes.values(); }
+
+    /// \Returns the number of selected nodes
+    size_t size() const { return _nodes.size(); }
 
     /// Begin rectangle selection
     void beginCandidates() { this->mode = getSelectionMode(); }
@@ -623,6 +637,9 @@ struct NodeEditor::Impl {
     void backgroundPopup(bool show);
     void backgroundBehaviour();
     void drawOverlays();
+    void pinPopup(Pin& pin, bool show);
+    void displayPin(Pin& pin, float2 position);
+    void displayPins(Node& node);
     void nodeBodyPopup(Node& node, bool show);
     void displayNodeBody(Node& node);
     void displayNode(Node& node);
@@ -631,7 +648,6 @@ struct NodeEditor::Impl {
 
     void deleteSelected();
 
-    std::vector<Node*> currentNodeOrder;
     NodeEditorGraph model;
     Selection selection;
     ViewData viewData;
@@ -652,8 +668,6 @@ void NodeEditor::setDelegate(NodeEditorDelegate delegate) {
 
 void NodeEditor::setGraph(NodeEditorGraph model) {
     impl->model = std::move(model);
-    impl->currentNodeOrder = impl->model.nodes() | ToAddress<> |
-                             ranges::to<std::vector>;
 }
 
 static bool beginInvisibleWindow(
@@ -810,7 +824,7 @@ void Impl::onInput(InputEvent& event) {
             return true;
         }
         if (isSelectAll(event)) {
-            selection.set(currentNodeOrder.begin(), currentNodeOrder.end());
+            selection.set(model.nodes());
             return true;
         }
         return false;
@@ -819,7 +833,6 @@ void Impl::onInput(InputEvent& event) {
 
 void NodeEditor::addNode(NodeDesc desc) {
     auto p = std::make_unique<Node>(std::move(desc));
-    impl->currentNodeOrder.push_back(p.get());
     impl->model.add(std::move(p));
 }
 
@@ -1008,19 +1021,36 @@ static void drawPinLinks(ViewData const& viewData, Pin const& pin,
     }); // clang-format on
 }
 
-static void displayPin(ViewData& viewData, Pin& pin, float2 position) {
+void Impl::pinPopup(Pin& pin, bool show) {
+    static constexpr auto name = "Pin_Popup";
+    if (show) {
+        ImGui::OpenPopup(name);
+    }
+    if (!ImGui::BeginPopup(name)) {
+        return;
+    }
+    if (ImGui::MenuItem("Clear Links")) {
+        pin.clearLinks();
+    }
+    ImGui::EndPopup();
+}
+
+void Impl::displayPin(Pin& pin, float2 position) {
     ImGui::PushID(&pin);
     ImRect bb(position, position + float2(PinAreaSize));
     ImGui::ItemSize(float2(PinAreaSize));
     auto ID = ImGui::GetID("Pin_Handle");
     ImGui::ItemAdd(bb, ID);
     bool hovered = ImGui::ItemHoverable(bb, ID, ImGuiItemFlags_AllowOverlap);
-    if (ImGui::IsItemClicked(ImGuiMouseButton_Left | ImGuiMouseButton_Right)) {
+    bool clickedLeft = ImGui::IsItemClicked(ImGuiMouseButton_Left);
+    bool clickedRight = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+    if (clickedLeft || clickedRight) {
         viewData.activePin = &pin;
         if (ImGui::GetMouseClickedCount(ImGuiMouseButton_Left) == 2) {
             pin.clearLinks();
         }
     }
+    pinPopup(pin, /* show: */ clickedRight);
     bool dragging = viewData.activePin == &pin &&
                     ImGui::IsMouseDown(ImGuiMouseButton_Left);
     if (dragging) {
@@ -1070,16 +1100,16 @@ static void drawLinksForOffscreenNode(ViewData const& viewData,
     ImGui::PopID();
 }
 
-static void displayInputsOutputs(ViewData& viewData, Node& node) {
+void Impl::displayPins(Node& node) {
     float2 nodepos = (float2)ImGui::GetWindowPos() + NodeOuterPadding();
     ImGui::PushID("Inputs");
     for (auto [index, pin]: node.inputs() | enumerate) {
-        displayPin(viewData, *pin, nodepos + computePinPosition(*pin, index));
+        displayPin(*pin, nodepos + computePinPosition(*pin, index));
     }
     ImGui::PopID();
     ImGui::PushID("Outputs");
     for (auto [index, pin]: node.outputs() | enumerate) {
-        displayPin(viewData, *pin, nodepos + computePinPosition(*pin, index));
+        displayPin(*pin, nodepos + computePinPosition(*pin, index));
     }
     ImGui::PopID();
 }
@@ -1196,15 +1226,20 @@ static void clearOffscreenNodeQueue(ViewData& viewData) {
     viewData.offscreenNodeQueue.clear();
 }
 
-void Impl::nodeBodyPopup(Node&, bool show) {
+void Impl::nodeBodyPopup(Node& node, bool show) {
     static constexpr auto name = "Node_Popup";
     if (show) {
         ImGui::OpenPopup(name);
     }
-    if (ImGui::BeginPopup(name)) {
-        ImGui::MenuItem("Delete");
-        ImGui::EndPopup();
+    if (!ImGui::BeginPopup(name)) {
+        return;
     }
+    BL_ASSERT(selection.contains(&node),
+              "Popup should not open on unselected node");
+    if (ImGui::MenuItem("Delete")) {
+        deleteSelected();
+    }
+    ImGui::EndPopup();
 }
 
 void Impl::displayNodeBody(Node& node) {
@@ -1230,7 +1265,7 @@ void Impl::displayNodeBody(Node& node) {
     ImGui::ItemAdd(bb, id);
     bool bgClickedLeft = ImGui::IsItemClicked(ImGuiMouseButton_Left);
     bool bgClickedRight = ImGui::IsItemClicked(ImGuiMouseButton_Right);
-    displayInputsOutputs(viewData, node);
+    displayPins(node);
     if (displayNodeContent(contentRect, node)) {
         bgClickedLeft |= ImGui::IsMouseDown(ImGuiMouseButton_Left);
         bgClickedRight |= ImGui::IsMouseDown(ImGuiMouseButton_Right);
@@ -1241,22 +1276,25 @@ void Impl::displayNodeBody(Node& node) {
         viewData.activeNode = &node;
     }
     /// Selected nodes change selection state when mouse is released
-    if (isSelected && viewData.activeNode == &node &&
-        ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
-        !viewData.isDraggingNode && !viewData.handledSelectionSinceMousePresed)
+    bool anyButtonReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
+                             ImGui::IsMouseReleased(ImGuiMouseButton_Right);
+    if (isSelected && viewData.activeNode == &node && anyButtonReleased &&
+        !viewData.isDraggingNode && !viewData.handledSelectionSinceMousePressed)
     {
-        selection.amend(&node);
-    }
-    /// Not selected nodes change selection state when mouse is pressed
-    if (!isSelected && bgClickedLeft) {
-        /// We use this flag so we don't select and immediately unselect when
-        /// the mouse is released
-        viewData.handledSelectionSinceMousePresed = true;
         selection.amend(&node);
     }
     /// True if ...
     bool haveSecondaryInteraction = viewData.activeNode != &node ||
                                     viewData.activeResize || viewData.activePin;
+    /// Not selected nodes change selection state when mouse is pressed
+    if (!isSelected && (bgClickedLeft || bgClickedRight) &&
+        !haveSecondaryInteraction)
+    {
+        /// We use this flag so we don't select and immediately unselect when
+        /// the mouse is released
+        viewData.handledSelectionSinceMousePressed = true;
+        selection.amend(&node);
+    }
     nodeBodyPopup(node,
                   /* show: */ bgClickedRight && !haveSecondaryInteraction);
     bool dragging = [&] {
@@ -1299,7 +1337,7 @@ void Impl::display() {
     drawBackground(viewData.position);
     /// We make a copy here because we may reorder the nodes during traversal.
     /// This may seem wasteful but I'm sure it's fine
-    for (auto* node: std::vector{ currentNodeOrder }) {
+    for (auto* node: model.nodes() | ranges::to<std::vector>) {
         displayNode(*node);
     }
     backgroundBehaviour();
@@ -1333,17 +1371,9 @@ void Impl::drawOverlays() {
     ImGui::EndChild();
 }
 
-void Impl::orderFront(Node* node) {
-    auto itr = ranges::find(currentNodeOrder, node);
-    BL_ASSERT(itr != currentNodeOrder.end());
-    currentNodeOrder.erase(itr);
-    currentNodeOrder.push_back(node);
-}
+void Impl::orderFront(Node* node) { model.orderFront(node); }
 
 void Impl::deleteSelected() {
     auto pred = [&](Node const& node) { return selection.contains(&node); };
-    model.removeIf(pred);
-    auto itr = ranges::remove_if(currentNodeOrder,
-                                 [&](auto* node) { return pred(*node); });
-    currentNodeOrder.erase(itr, currentNodeOrder.end());
+    model.deleteIf(pred);
 }

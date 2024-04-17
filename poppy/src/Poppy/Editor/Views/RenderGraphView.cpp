@@ -85,6 +85,7 @@ Toolbar RenderGraphView::makeToolbar() {
                     createRenderGraph(editor().device(), nodeEditor.model());
                 });
             })
+            .tooltip("Compile")
     }; // clang-format on
 }
 

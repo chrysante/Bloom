@@ -180,7 +180,7 @@ void AssetBrowser::frame() {
                             ImVec2(0, GImGui->Style.WindowPadding.y + 1));
     });
     if (!assetManager) {
-        displayEmptyWithReason("Asset Manager not loaded");
+        displayEmptyWithReason("Asset Manager Not Loaded");
         return;
     }
     if (assetManager->projectRootDir().empty()) {

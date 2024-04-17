@@ -24,9 +24,31 @@ static constexpr float2 MinSize = { 100, 0 };
 
 using Entry = PassRegistry::Entry;
 
+template <typename ControllerType>
+static std::unique_ptr<RenderGraphNodeController> createController() {
+    return std::make_unique<ControllerType>();
+}
+
 static PassRegistry& gRegistry() {
     static PassRegistry instance;
     return instance;
+}
+
+using ControllerFactory =
+    std::function<std::unique_ptr<RenderGraphNodeController>()>;
+
+static std::map<std::string, ControllerFactory>& factoryMap() {
+    static std::map<std::string, ControllerFactory> map;
+    return map;
+}
+
+std::unique_ptr<RenderGraphNodeController> RenderGraphNodeController::
+    deserialize(YAML::Node node) {
+    auto name = node["Name"].as<std::string>();
+    if (auto factory = factoryMap()[name]) {
+        return factory();
+    }
+    return nullptr;
 }
 
 PassRegistry const& PassRegistry::get() { return gRegistry(); }
@@ -70,28 +92,40 @@ static void registerConcretePass(std::string name) {
             return interfaceToPinDesc(interface);
         }) | ranges::to<std::vector>,
             .color = PassNodeColor,
-            .controller = std::make_unique<ControllerType>(),
+            .controller = createController<ControllerType>(),
         };
     };
 }
 
-#define REGISTER_PASS(Name, ...)                                               \
+#define REGISTER_NODE(ControllerType, ...)                                     \
     UTL_STATIC_INIT {                                                          \
         auto& entry = registerPass();                                          \
-        entry.name = Name;                                                     \
+        entry.name = ControllerType::StaticName();                             \
         entry.factory = [=] { return NodeDesc __VA_ARGS__; };                  \
+        factoryMap()[ControllerType::StaticName()] =                           \
+            createController<ControllerType>;                                  \
     }
 
-#define AUTOREGISTER_PASS(PassType, ControllerType)                            \
+#define REGISTER_PASS(PassType, ControllerType)                                \
     UTL_STATIC_INIT {                                                          \
         registerConcretePass<PassType, ControllerType>(#PassType);             \
+        factoryMap()[#PassType] = createController<ControllerType>;            \
     }
 
 namespace {
 
 struct GlobalInputNodeController: RenderGraphNodeController {
+    static std::string StaticName() { return "Input"; }
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["Name"] = StaticName();
+        return root;
+    }
+
     void create(RenderGraph& rg) override {
         using enum InterfaceType;
+        sources.clear();
         declare<Geometry>(rg, "Geometry", {});
         declare<Lights>(rg, "Lights", {});
         declare<Buffer>(rg, "SceneParameters",
@@ -120,21 +154,32 @@ struct GlobalInputNodeController: RenderGraphNodeController {
     std::vector<PassSource*> sources;
 };
 
-REGISTER_PASS("Input", {
-    .name = "Input",
+REGISTER_NODE(GlobalInputNodeController, {
+    .name = GlobalInputNodeController::StaticName(),
     .outputs = {
         { .name = "Geometry" },
         { .name = "Lights" },
+        { .name = "Scene Parameters" },
         { .name = "Bloom Parameters" },
         { .name = "Post Process Parameters" },
     },
     .color = InputNodeColor,
-    .minSize = MinSize
+    .minSize = MinSize,
+    .controller = createController<GlobalInputNodeController>()
 });
 
 struct GlobalOutputNodeController: RenderGraphNodeController {
+    static std::string StaticName() { return "Output"; }
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["Name"] = StaticName();
+        return root;
+    }
+
     void create(RenderGraph& rg) override {
         using enum InterfaceType;
+        sinks.clear();
         declare<Texture>(rg, "Color",
                          {
                              .pixelFormat = PixelFormat::RGBA8Unorm,
@@ -161,14 +206,23 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
     std::vector<PassSink*> sinks;
 };
 
-REGISTER_PASS("Output", {
-    .name = "Output",
+REGISTER_NODE(GlobalOutputNodeController, {
+    .name = GlobalOutputNodeController::StaticName(),
     .inputs = { { .name = "Color" }, },
     .color = OutputNodeColor,
-    .minSize = MinSize
+    .minSize = MinSize,
+    .controller = createController<GlobalOutputNodeController>()
 });
 
 struct PassNodeController: RenderGraphNodeController {
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["Name"] = name;
+        return root;
+    }
+
+    PassNodeController(std::string name): name(name) {}
+
     virtual Pass* createPass(RenderGraph& renderGraph) = 0;
 
     void create(RenderGraph& rg) final { pass = createPass(rg); }
@@ -180,36 +234,43 @@ struct PassNodeController: RenderGraphNodeController {
     PassSink* getSink(size_t index) const final { return pass->sink(index); }
 
     Pass* pass;
+    std::string name;
 };
 
 struct ForwardShadingPassController: PassNodeController {
+    ForwardShadingPassController(): PassNodeController("ForwardShadingPass") {}
+
     Pass* createPass(RenderGraph& rg) override {
-        return rg.addPass(std::make_unique<ForwardShadingPass>("MainPass"));
+        return rg.addPass(std::make_unique<ForwardShadingPass>(name));
     }
 };
 
-AUTOREGISTER_PASS(ForwardShadingPass, ForwardShadingPassController);
+REGISTER_PASS(ForwardShadingPass, ForwardShadingPassController);
 
 struct PostProcessPassController: PassNodeController {
+    PostProcessPassController(): PassNodeController("PostProcessPass") {}
+
     Pass* createPass(RenderGraph& rg) override {
-        return rg.addPass(std::make_unique<PostProcessPass>("PostProcessPass"));
+        return rg.addPass(std::make_unique<PostProcessPass>(name));
     }
 };
 
-AUTOREGISTER_PASS(PostProcessPass, PostProcessPassController);
+REGISTER_PASS(PostProcessPass, PostProcessPassController);
 
 struct BloomController: PassNodeController {
+    BloomController(): PassNodeController("BloomPass") {}
+
     Pass* createPass(RenderGraph& rg) override {
-        return rg.addPass(std::make_unique<BloomPass>("BloomPass"));
+        return rg.addPass(std::make_unique<BloomPass>(name));
     }
 };
 
-AUTOREGISTER_PASS(BloomPass, BloomController);
+REGISTER_PASS(BloomPass, BloomController);
 
 } // namespace
 
-RenderGraphNodeController* getController(Node const* node) {
-    return dynamic_cast<RenderGraphNodeController*>(node->controller());
+RenderGraphNodeController* getController(Node const& node) {
+    return dynamic_cast<RenderGraphNodeController*>(node.controller());
 }
 
 static std::string uniqueName(std::string_view name) {
@@ -222,18 +283,29 @@ std::unique_ptr<RenderGraph> poppy::constructRenderGraph(
     NodeEditorGraph const& model) {
     auto rg =
         std::make_unique<RenderGraph>(uniqueName("RenderGraph"), ctx, device);
-    for (auto* controller: model.nodes() | transform(getController)) {
+    for (auto* node: model.nodes()) {
+        auto* controller = getController(*node);
+        if (!controller) {
+            Logger::Warn("Ignoring node (no controller attached): ",
+                         node->name());
+            continue;
+        }
         controller->create(*rg);
     }
     for (auto* node: model.nodes()) {
-        auto* sourceController = getController(node);
-        BL_ASSERT(sourceController);
-        for (auto [sourceIndex, output]: node->outputs() | enumerate) {
-            auto* source = sourceController->getSource(sourceIndex);
-            for (auto [sinkIndex, target]: output->targets() | enumerate) {
-                auto* sinkController = getController(&target->parent());
-                BL_ASSERT(sinkController);
-                auto* sink = sinkController->getSink(sinkIndex);
+        auto* sourceController = getController(*node);
+        if (!sourceController) {
+            continue;
+        }
+        for (auto* output: node->outputs()) {
+            auto* source = sourceController->getSource(output->indexInParent());
+            for (auto* target: output->targets()) {
+                auto* sinkController = getController(target->parent());
+                if (!sinkController) {
+                    continue;
+                }
+                auto* sink = sinkController->getSink(target->indexInParent());
+                Logger::Trace("Linking ", source->name(), " to ", sink->name());
                 rg->addLink(source, sink);
             }
         }

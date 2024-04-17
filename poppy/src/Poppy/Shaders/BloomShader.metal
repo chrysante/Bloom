@@ -229,7 +229,5 @@ kernel void rgBloomComposite(
     float3 rawColor = rawColorTex.read(position).rgb;
     float3 bloomColor = readBloomTexture(bloomColorTex, uv, bloomParams.scale);
     float3 bloomAdded = addBloomColor(rawColor, bloomColor, bloomParams);
-    // FIXME: I disable the bloom effect for now because I can't get it do look
-    // right
-    dest.write(float4(rawColor, 1), position);
+    dest.write(float4(bloomAdded, 1), position);
 }

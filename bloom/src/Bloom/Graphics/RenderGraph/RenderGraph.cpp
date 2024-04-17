@@ -68,8 +68,7 @@ static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
     order.reserve(passes.size());
     utl::hashset<Pass*> temporary, permanent;
     auto dfs = [&](auto& dfs, Pass* pass) -> void {
-        BL_EXPECT(pass);
-        if (permanent.contains(pass)) {
+        if (!pass || permanent.contains(pass)) {
             return;
         }
         BL_ASSERT(!temporary.contains(pass), "Graph has a cycle");
@@ -100,8 +99,9 @@ static void allocateBackingResource(ResourcePool& pool,
     interface.setResource(resource);
 }
 
-static void allocateBackingResources(ResourcePool& pool,
-                                     std::span<Pass* const> executionOrder) {
+static void allocateBackingResources(
+    ResourcePool& pool, std::span<Pass* const> executionOrder,
+    std::span<RenderGraphSource* const> outputs) {
     for (auto* pass: executionOrder) {
         for (auto* sink: pass->activeSinks()) {
             auto* source = sink->source();
@@ -117,9 +117,23 @@ static void allocateBackingResources(ResourcePool& pool,
             allocateBackingResource(pool, *source);
         }
     }
+    for (auto* output: outputs) {
+        if (auto* source = output->internalSink()->source()) {
+            output->setResource(source->resource());
+        }
+    }
     for (auto* resource: pool.resources()) {
         resource->assignUsers();
     }
+}
+
+static bool isSinkPass(Pass const* pass) {
+    auto targets = pass->sources() |
+                   transform([](auto* source) { return source->sinks(); }) |
+                   join;
+    return ranges::any_of(targets, [](auto* sink) {
+        return dynamic_cast<RenderGraphInternalSink const*>(sink);
+    });
 }
 
 bool RenderGraph::compile() {
@@ -127,11 +141,14 @@ bool RenderGraph::compile() {
     if (!validate(allPasses)) {
         return false;
     }
-    auto sinks = allPasses | filter(&Pass::isSink) |
-                 ranges::to<utl::small_vector<Pass*>>;
-    auto livePasses = findLivePasses(sinks);
+    auto sinkPasses = allPasses | filter(isSinkPass) |
+                      ranges::to<utl::small_vector<Pass*>>;
+    auto livePasses = findLivePasses(sinkPasses);
     executionOrder = topsort(livePasses);
-    allocateBackingResources(context().resourcePool, executionOrder);
+    auto outputs = sources() | transform([](PassSource* source) {
+        return dynamic_cast<RenderGraphSource*>(source);
+    }) | ranges::to<utl::small_vector<RenderGraphSource*>>;
+    allocateBackingResources(context().resourcePool, executionOrder, outputs);
     return true;
 }
 
@@ -204,7 +221,7 @@ PassSource* RenderGraph::findInputSource(std::string_view name) {
     }
     auto* sink = dynamic_cast<RenderGraphSink*>(*itr);
     BL_ASSERT(sink);
-    return sink->source();
+    return sink->internalSource();
 }
 
 void RenderGraph::doExecute(FrameParameters const& params,
@@ -213,6 +230,19 @@ void RenderGraph::doExecute(FrameParameters const& params,
         pass->execute(params, cmdQueue);
     }
 }
+
+static std::unique_ptr<RenderGraph> gRenderGraph;
+static RenderGraphContext gRenderGraphCtx;
+
+RenderGraph* RenderGraphManager::get() { return gRenderGraph.get(); }
+
+void RenderGraphManager::set(std::unique_ptr<RenderGraph> rg) {
+    gRenderGraph = std::move(rg);
+}
+
+RenderGraphContext& RenderGraphManager::context() { return gRenderGraphCtx; }
+
+#if 0
 
 #include "Bloom/Graphics/RenderGraph/BloomPass.h"
 #include "Bloom/Graphics/RenderGraph/ForwardShadingPass.h"
@@ -264,3 +294,5 @@ RenderGraph* rg::getGlobalRenderGraph(HardwareDevice* device) {
     static auto instance = createDefaultRenderGraph(ctx, *device);
     return instance.get();
 }
+
+#endif

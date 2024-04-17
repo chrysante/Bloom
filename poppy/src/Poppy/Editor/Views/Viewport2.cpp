@@ -114,8 +114,13 @@ void Viewport2::frame() {
 }
 
 static rg::SceneRenderer& getSceneRenderer(rg::RenderGraph& renderGraph) {
-    static rg::SceneRenderer instance(&renderGraph);
-    return instance;
+    static rg::RenderGraph const* graph = nullptr;
+    static std::unique_ptr<rg::SceneRenderer> instance;
+    if (graph != &renderGraph) {
+        graph = &renderGraph;
+        instance = std::make_unique<rg::SceneRenderer>(&renderGraph);
+    }
+    return *instance;
 }
 
 void Viewport2::displayScenes() {
@@ -125,8 +130,12 @@ void Viewport2::displayScenes() {
     }
     float2 viewportSize = ImGui::GetContentRegionAvail();
     rg::FrameParameters frameParams = { .screenSize = viewportSize };
-    auto& renderGraph = *rg::getGlobalRenderGraph(&editor().device());
-    auto& renderer = getSceneRenderer(renderGraph);
+    auto* renderGraph = rg::RenderGraphManager::get();
+    if (!renderGraph) {
+        displayEmptyWithReason("No Render Graph Found");
+        return;
+    }
+    auto& renderer = getSceneRenderer(*renderGraph);
     cameraController.applyProjection(viewportSize);
     renderer.begin(frameParams, cameraController.camera());
     auto& sceneSystem = editor().coreSystems().sceneSystem();
@@ -137,11 +146,17 @@ void Viewport2::displayScenes() {
     }
     lock.unlock();
     renderer.draw(windows.front()->commandQueue());
-    auto* postProcessPass = renderGraph.findPass("PostProcess");
-    auto* output = cast<rg::TextureResource*>(
-        postProcessPass->findSource("Output")->resource());
-    ImGui::Image(output->handle().nativeHandle(),
-                 ImGui::GetContentRegionAvail());
+    if (renderGraph->sources().empty()) {
+        displayEmptyWithReason("Render Graph Has No Outputs");
+        return;
+    }
+    auto* output =
+        dyncast<rg::TextureResource*>(renderGraph->source(0)->resource());
+    if (output) {
+        displayEmptyWithReason("Render Graph Output Is Null");
+        ImGui::Image(output->handle().nativeHandle(),
+                     ImGui::GetContentRegionAvail());
+    }
 }
 
 void Viewport2::displayToolbar() {

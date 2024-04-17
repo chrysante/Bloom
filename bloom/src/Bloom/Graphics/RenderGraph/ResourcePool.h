@@ -25,6 +25,9 @@ public:
     /// \overload
     auto resources() const { return _resources | ToAddress<Resource const>; }
 
+    ///
+    void clear() { _resources.clear(); }
+
 private:
     std::vector<DynUniquePtr<Resource>> _resources;
 };

@@ -163,7 +163,7 @@ public:
     Resource* resource() const { return _resource; }
 
     /// Assigns the backing resource
-    void setResource(Resource* resource) { _resource = resource; }
+    void setResource(Resource* resource) { doSetResource(resource); }
 
     ///
     InterfaceFlags flags() const { return _flags; }
@@ -178,6 +178,9 @@ protected:
         _desc(std::move(desc)),
         _pass(pass),
         _flags(flags) {}
+
+    /// Allow derived classes to customize this behaviour
+    virtual void doSetResource(Resource* resource) { _resource = resource; }
 
 private:
     std::string _name;
@@ -241,6 +244,32 @@ private:
     utl::small_vector<PassSink*, 3> _sinks;
 };
 
+// The following classes model sinks and sources of render graphs:
+//
+//                  ┌─ Render Graph ────────────────────────┐
+// RenderGraphSink >>> RenderGraphInternalSource            │
+//   An input into  │    Within the graph the               │
+//   the graph      │    sink is represented by             │
+//                  │    a source                           │
+//                  │                                       │
+//                  │             RenderGraphInternalSink  >>> RenderGraphSource
+//                  │               Within the graph the    │    An output of
+//                  │               output is represented   │    the graph
+//                  │               by a sink               │
+//                  └───────────────────────────────────────┘
+
+/// Models a sink within a render graph that is a source of the render graph
+class RenderGraphInternalSink: public PassSink {
+public:
+    using PassSink::PassSink;
+};
+
+/// Models a source within a render graph that is a sink of the render graph
+class RenderGraphInternalSource: public PassSource {
+public:
+    using PassSource::PassSource;
+};
+
 /// Resource input of a render graph.
 /// Models the sink into the graph and the corresponding source for passes
 /// within the graph
@@ -251,11 +280,8 @@ public:
                              InterfaceViewType<Type>* handle,
                              InterfaceDesc<Type> const& desc,
                              InterfaceFlags flags):
-        PassSink(pass, std::move(name), handle, desc, flags),
-        src(nullptr, name, handle, desc, flags) {
-        internalSource()->addSink(this);
-        setSource(internalSource());
-    }
+        PassSink(pass, name, handle, desc, flags),
+        src(nullptr, name, handle, desc, flags) {}
 
     /// \Returns the source that makes this sink readable to passes within the
     /// render graph
@@ -265,7 +291,12 @@ public:
     PassSource const* internalSource() const { return &src; }
 
 private:
-    PassSource src;
+    void doSetResource(Resource* resource) override {
+        PassSink::doSetResource(resource);
+        src.setResource(resource);
+    }
+
+    RenderGraphInternalSource src;
 };
 
 /// Resource output of a render graph.
@@ -279,10 +310,7 @@ public:
                                InterfaceDesc<Type> const& desc,
                                InterfaceFlags flags):
         PassSource(pass, name, handle, desc, flags),
-        snk(nullptr, name, handle, desc, flags) {
-        addSink(internalSink());
-        internalSink()->setSource(this);
-    }
+        snk(nullptr, name, handle, desc, flags) {}
 
     /// \Returns the sink that makes this source definable by passes within the
     /// render graph
@@ -292,7 +320,12 @@ public:
     PassSink const* internalSink() const { return &snk; }
 
 private:
-    PassSink snk;
+    void doSetResource(Resource* resource) override {
+        PassSource::doSetResource(resource);
+        snk.setResource(resource);
+    }
+
+    RenderGraphInternalSink snk;
 };
 
 /// # Inline implementation

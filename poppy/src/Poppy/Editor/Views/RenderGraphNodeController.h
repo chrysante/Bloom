@@ -27,6 +27,10 @@ public:
     /// \Pre \p index must be valid and `create(RenderGraph)` must have been
     /// called before
     virtual bloom::rg::PassSink* getSink(size_t index) const = 0;
+
+    /// Counterpart to the non-static `NodeController::serialize`
+    static std::unique_ptr<RenderGraphNodeController> deserialize(
+        YAML::Node node);
 };
 
 ///

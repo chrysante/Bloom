@@ -631,7 +631,7 @@ struct NodeEditor::Impl {
     void deleteSelected();
 
     std::vector<Node*> currentNodeOrder;
-    NodeEditorGraph graph;
+    NodeEditorGraph model;
     Selection selection;
     ViewData viewData;
     NodeEditorDelegate delegate;
@@ -649,9 +649,9 @@ void NodeEditor::setDelegate(NodeEditorDelegate delegate) {
     impl->delegate = std::move(delegate);
 }
 
-void NodeEditor::setGraph(NodeEditorGraph graph) {
-    impl->graph = std::move(graph);
-    impl->currentNodeOrder = impl->graph.nodes() | ToAddress<> |
+void NodeEditor::setGraph(NodeEditorGraph model) {
+    impl->model = std::move(model);
+    impl->currentNodeOrder = impl->model.nodes() | ToAddress<> |
                              ranges::to<std::vector>;
 }
 
@@ -780,7 +780,7 @@ void Impl::onInput(InputEvent& event) {
         if (viewData.isSelectionDragging) {
             viewData.selectionEnd = event.locationInWindow;
             ImRect selectionRect = viewData.getSelectionRect();
-            auto candidates = graph.nodes() |
+            auto candidates = model.nodes() |
                               ranges::views::filter([&](Node const* node) {
                 return nodeOverlapsRect(viewData, *node, selectionRect);
             });
@@ -819,10 +819,10 @@ void Impl::onInput(InputEvent& event) {
 void NodeEditor::addNode(NodeDesc desc) {
     auto p = std::make_unique<Node>(std::move(desc));
     impl->currentNodeOrder.push_back(p.get());
-    impl->graph.add(std::move(p));
+    impl->model.add(std::move(p));
 }
 
-NodeEditorGraph const& NodeEditor::graph() const { return impl->graph; }
+NodeEditorGraph const& NodeEditor::model() const { return impl->model; }
 
 /// Computes the position of \p pin relative to its parent node
 static float2 computePinPosition(Pin const& pin, size_t index) {
@@ -1317,7 +1317,7 @@ void Impl::orderFront(Node* node) {
 
 void Impl::deleteSelected() {
     auto pred = [&](Node const& node) { return selection.contains(&node); };
-    graph.removeIf(pred);
+    model.removeIf(pred);
     auto itr = ranges::remove_if(currentNodeOrder,
                                  [&](auto* node) { return pred(*node); });
     currentNodeOrder.erase(itr, currentNodeOrder.end());

@@ -357,7 +357,7 @@ public:
     void addNode(nodeEditor::NodeDesc desc);
 
     /// \Returns the underlying graph
-    NodeEditorGraph const& graph() const;
+    NodeEditorGraph const& model() const;
 
     struct Impl;
 

@@ -91,13 +91,6 @@ public:
     /// \overload
     auto sources() const { return _sources | ToAddress<PassSource const>; }
 
-    /// Sink passes are passes that are executed regardless of other passes
-    /// depending on them \Returns `true` if this pass is a sink pass
-    bool isSink() const { return _isSink; }
-
-    /// Mark this pass as a sink pass
-    void markSink() { _isSink = true; }
-
     /// Called by the render graph on resource reallocation
     void allocateResources(FrameParameters const& frameParams,
                            HardwareDevice& device) {
@@ -135,7 +128,6 @@ private:
                            CommandQueue& queue) = 0;
     virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
 
-    bool _isSink = false;
     RenderGraph* _parent = nullptr;
     std::string _name;
     std::vector<std::unique_ptr<PassSink>> _sinks;
@@ -195,28 +187,34 @@ public:
 protected:
     /// Declares the sinks and sources defined in `Sinks` and `Sources` to the
     /// pass base class
+#if defined(__GNUC__)
+    // UBSan flags an issue with the static_cast<PassType*>(this). This seems to
+    // be a false positive of UBSan because casting to a derived class under
+    // construction should be well defined behaviour
+    __attribute__((no_sanitize("vptr")))
+#endif
     PassImpl() {
         static_assert(
             std::derived_from<PassType, Pass>,
             "The pass must publicly derive from the `Pass` base class");
         auto* pass = static_cast<PassType*>(this);
-        for (auto const& wrapper: PassType::Sinks()) {
+        for (auto const& interface: PassType::Sinks()) {
             // clang-format off
             std::visit([&]<InterfaceType Type>(
                 Interface<Type, PassType> const& interface) {
                     pass->declareSink(std::string(interface.name),
                                       &(pass->*interface.impl), interface.desc,
                                       interface.flags);
-                }, wrapper); // clang-format on
+                }, interface); // clang-format on
         }
-        for (auto const& wrapper: PassType::Sources()) {
+        for (auto const& interface: PassType::Sources()) {
             // clang-format off
             std::visit([&]<InterfaceType Type>(
                 Interface<Type, PassType> const& interface) {
                     pass->declareSource(std::string(interface.name),
                                         &(pass->*interface.impl),
                                         interface.desc, interface.flags);
-                }, wrapper); // clang-format on
+                }, interface); // clang-format on
         }
     }
 };

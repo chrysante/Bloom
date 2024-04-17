@@ -68,13 +68,21 @@ void RenderGraphView::frame() {
     nodeEditor.display();
 }
 
+static void createRenderGraph(HardwareDevice& device,
+                              NodeEditorGraph const& model) {
+    auto& ctx = RenderGraphManager::context();
+    ctx.resourcePool.clear();
+    auto rg = constructRenderGraph(ctx, device, model);
+    RenderGraphManager::set(std::move(rg));
+}
+
 Toolbar RenderGraphView::makeToolbar() {
     // clang-format off
     return {
         ToolbarIconButton("flash")
             .onClick([this] {
-                dispatch(DispatchToken::NextFrame,  [] {
-                    Logger::Warn("Unimplemented");
+                dispatch(DispatchToken::NextFrame,  [&] {
+                    createRenderGraph(editor().device(), nodeEditor.model());
                 });
             })
     }; // clang-format on
@@ -84,16 +92,14 @@ YAML::Node RenderGraphView::serialize() const {
     /// We use these functions to serialize our graph for now. This is not
     /// really correct, these functions should only serialize view related data,
     /// we will change this in the future
-    return nodeEditor.graph().serialize();
+    return nodeEditor.model().serialize();
 }
 
-void RenderGraphView::deserialize(YAML::Node) {
-#if 0
-    if (!node) {
+void RenderGraphView::deserialize(YAML::Node root) {
+    if (!root) {
         return;
     }
     NodeEditorGraph graph;
-    graph.deserialize(node);
+    graph.deserialize(root, RenderGraphNodeController::deserialize);
     nodeEditor.setGraph(std::move(graph));
-#endif
 }

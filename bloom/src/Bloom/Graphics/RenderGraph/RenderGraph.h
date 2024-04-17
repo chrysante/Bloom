@@ -87,9 +87,17 @@ private:
     FrameParameters lastFrameParams;
 };
 
-/// Global render graph instance. This is a temporary function and will be
-/// removed soon
-RenderGraph* getGlobalRenderGraph(HardwareDevice* device);
+/// Temporary render graph manager until we figure out where to store them
+struct RenderGraphManager {
+    /// \Returns the global render graph instance. This takes a device to
+    static RenderGraph* get();
+
+    /// Sets the global render graph
+    static void set(std::unique_ptr<RenderGraph> rg);
+
+    ///
+    static RenderGraphContext& context();
+};
 
 } // namespace bloom::rg
 

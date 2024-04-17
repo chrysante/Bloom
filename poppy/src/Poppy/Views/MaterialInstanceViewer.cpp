@@ -16,7 +16,7 @@ POPPY_REGISTER_VIEW(MaterialInstanceViewer, "Material Instance Viewer",
 
 void MaterialInstanceViewer::frame() {
     if (!inst) {
-        displayEmptyWithReason("No Material Instance opened");
+        displayEmptyWithReason("No Material Instance Open");
         return;
     }
     auto materialName = inst->material() ? inst->material()->name() :

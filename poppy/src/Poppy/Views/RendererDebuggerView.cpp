@@ -26,7 +26,7 @@ void RendererDebuggerView::frame() {
     currentFramebuffer = mFramebuffer.lock();
 
     if (!mRenderer && !(mRenderer = findRenderer())) {
-        displayEmptyWithReason("No Renderer found");
+        displayEmptyWithReason("No Renderer Found");
         return;
     }
 
@@ -34,7 +34,7 @@ void RendererDebuggerView::frame() {
         mFramebuffer = findFramebuffer();
         currentFramebuffer = mFramebuffer.lock();
         if (!currentFramebuffer) {
-            displayEmptyWithReason("No Compatible Framebuffer found");
+            displayEmptyWithReason("No Compatible Framebuffer Found");
             return;
         }
     }
@@ -43,7 +43,7 @@ void RendererDebuggerView::frame() {
     if (beginSection("Postprocessing")) {
         beginProperty("Tone Mapping");
         fullWidth();
-        char const* const items[] = { "ACES", "reinhard" };
+        char const* const items[] = { "ACES", "Reinhard" };
         ImGui::Combo("##tone-mapping", (int*)&mRenderer->mToneMapping, items,
                      2);
         endSection();

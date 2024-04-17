@@ -132,7 +132,7 @@ void Viewport2::displayScenes() {
     rg::FrameParameters frameParams = { .screenSize = viewportSize };
     auto* renderGraph = rg::RenderGraphManager::get();
     if (!renderGraph) {
-        displayEmptyWithReason("No Render Graph Found");
+        displayEmptyWithError("No Render Graph Found");
         return;
     }
     auto& renderer = getSceneRenderer(*renderGraph);
@@ -147,13 +147,13 @@ void Viewport2::displayScenes() {
     lock.unlock();
     renderer.draw(windows.front()->commandQueue());
     if (renderGraph->sources().empty()) {
-        displayEmptyWithReason("Render Graph Has No Outputs");
+        displayEmptyWithError("Render Graph Has No Outputs");
         return;
     }
     auto* output =
         dyncast<rg::TextureResource*>(renderGraph->source(0)->resource());
     if (!output) {
-        displayEmptyWithReason("Render Graph Output Is Null");
+        displayEmptyWithError("Render Graph Output Is Null");
         return;
     }
     ImGui::Image(output->handle().nativeHandle(),

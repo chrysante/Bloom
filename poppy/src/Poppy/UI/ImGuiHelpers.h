@@ -85,9 +85,11 @@ bool enumCombo(E e, std::invocable<E> auto set,
     return false;
 }
 
-void displayEmptyWithReason(
-    std::string_view reason,
-    FontDesc const& = FontDesc::UIDefault().setWeight(FontWeight::Semibold));
+/// Placeholder for views that don't display content for good reason
+void displayEmptyWithReason(std::string_view reason);
+
+/// Placeholder for views that don't display content because an error occurred
+void displayEmptyWithError(std::string_view reason);
 
 } // namespace poppy
 

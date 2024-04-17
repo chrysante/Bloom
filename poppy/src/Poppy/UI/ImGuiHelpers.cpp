@@ -10,6 +10,7 @@
 #include "Poppy/Core/Debug.h"
 
 using namespace poppy;
+using namespace vml::short_types;
 
 ViewportInput poppy::detectViewportInput(ImGuiButtonFlags buttonFlags) {
     using namespace ImGui;
@@ -23,7 +24,7 @@ ViewportInput poppy::detectViewportInput(ImGuiButtonFlags buttonFlags) {
     ImGuiID id = window->GetID("__Invisible_Button__");
     ImVec2 size = CalcItemSize(window->Size, 0.0f, 0.0f);
     ImRect bb(window->DC.CursorPos,
-              vml::float2(window->DC.CursorPos) + vml::float2(size));
+              float2(window->DC.CursorPos) + float2(size));
     ItemSize(size);
     if (!ItemAdd(bb, id)) return {};
     ViewportInput result{};
@@ -240,4 +241,32 @@ std::array<char, 64> poppy::generateUniqueID(std::string_view name, int id,
     assert(availSize < 56 && "Overflow has occured");
     std::strncpy(bufferPtr, utl::strcat("-", id).data(), 8);
     return buffer;
+}
+
+static void displayEmptyImpl(std::string_view reason, FontDesc font,
+                             float4 color) {
+    float2 stashedCursorPos = ImGui::GetCursorPos();
+    withFont(font, [&] {
+        float2 textSize = ImGui::CalcTextSize(reason.data());
+        ImGui::SetCursorPos({});
+        ImGui::SetCursorPos(
+            ((float2)ImGui::GetContentRegionAvail() - textSize) / 2);
+        ImGui::PushStyleColor(ImGuiCol_Text, color);
+        ImGui::Text("%s", reason.data());
+        ImGui::PopStyleColor();
+    });
+    ImGui::SetCursorPos(stashedCursorPos);
+}
+
+static FontDesc emptyPlaceholderFont() {
+    return FontDesc::UIDefault().setWeight(FontWeight::Semibold);
+}
+
+void poppy::displayEmptyWithReason(std::string_view reason) {
+    displayEmptyImpl(reason, emptyPlaceholderFont(),
+                     ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+}
+
+void poppy::displayEmptyWithError(std::string_view reason) {
+    displayEmptyImpl(reason, emptyPlaceholderFont(), { 1, 0, .2, 1 });
 }

@@ -47,7 +47,6 @@ class View: protected bloom::Emitter, protected bloom::Receiver {
 public:
     virtual ~View() = default;
 
-    /// MARK: Queries
     bool focused() const;
     bool maximized() const { return desc.maximized; }
     bool shouldClose() const { return !desc.open; }
@@ -73,7 +72,6 @@ public:
         return mRegisterDescription;
     }
 
-    /// MARK: Modifiers
     void setFocused();
     void maximize();
     void restore();
@@ -84,7 +82,6 @@ public:
     void setTitle(std::string);
 
 private:
-    /// MARK: Virtual Interface
     virtual void init() {};
     virtual void shutdown() {};
     virtual void frame() {};
@@ -92,12 +89,6 @@ private:
     virtual YAML::Node serialize() const { return YAML::Node{}; }
     virtual void deserialize(YAML::Node) {}
 
-protected:
-    /// MARK: Convinience Helpers
-    void displayEmptyWithReason(std::string_view reason) const;
-
-private:
-    /// MARK: Private
     void doInit();
     void doShutdown();
     void doFrame();
@@ -106,7 +97,6 @@ private:
     YAML::Node doSerialize() const;
     static std::unique_ptr<View> doDeserialize(YAML::Node const&);
 
-private:
     struct ViewDescPrivate {
         ViewDescription pub;
 

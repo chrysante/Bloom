@@ -27,7 +27,7 @@ SceneOutliner::SceneOutliner(): BasicSceneInspector(this) {}
 
 void SceneOutliner::frame() {
     if (scenes().empty()) {
-        displayEmptyWithReason("No active Scene");
+        displayEmptyWithReason("No Active Scene");
         return;
     }
     for (auto scene: scenes()) {

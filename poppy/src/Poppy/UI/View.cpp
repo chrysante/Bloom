@@ -71,23 +71,6 @@ void View::setTitle(std::string newTitle) {
     desc.pub.title = std::move(newTitle);
 }
 
-/// MARK: Convenience Helpers
-void View::displayEmptyWithReason(std::string_view reason) const {
-    auto const oldCursorPos = ImGui::GetCursorPos();
-    utl::scope_guard reset = [&] { ImGui::SetCursorPos(oldCursorPos); };
-
-    FontDesc font = FontDesc::UIDefault();
-    font.weight = FontWeight::Semibold;
-
-    withFont(font, [&] {
-        float2 const textSize = ImGui::CalcTextSize(reason.data());
-        ImGui::SetCursorPos((size() - textSize) / 2);
-        ImGui::TextDisabled("%s", reason.data());
-    });
-}
-
-/// MARK: Private
-
 void View::doInit() {
     if (desc.pub.id < 0) {
         desc.pub.id = getFreshID();

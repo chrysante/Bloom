@@ -32,13 +32,13 @@ EntityInspector::EntityInspector(): BasicSceneInspector(this) {}
 
 void EntityInspector::frame() {
     if (scenes().empty()) {
-        displayEmptyWithReason("No active Scene");
+        displayEmptyWithReason("No Active Scene");
         return;
     }
     auto entity = selection().empty() ? EntityHandle{} :
                                         selection().entities().front();
     if (!entity) {
-        displayEmptyWithReason("No Entity selected");
+        displayEmptyWithReason("No Entity Selected");
         return;
     }
     if (entity.has<TagComponent>()) {

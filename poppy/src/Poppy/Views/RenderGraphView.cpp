@@ -23,6 +23,8 @@ using namespace vml::short_types;
 
 namespace {
 
+enum CompilationStatus { None, Success, Error };
+
 struct RenderGraphView: View {
     RenderGraphView();
 
@@ -41,6 +43,7 @@ struct RenderGraphView: View {
     RenderGraph* renderGraph;
     NodeEditor nodeEditor;
     Toolbar toolbar;
+    CompilationStatus compilationStatus;
 };
 
 } // namespace

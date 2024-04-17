@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 
+#include <utl/common.hpp>
 #include <vml/vml.hpp>
 
 #include "Poppy/UI/Font.h"
@@ -13,11 +14,22 @@
 namespace poppy {
 
 ///
+enum class ToolbarFlags { None = 0, NoDecoration = 1 << 0 };
+
+UTL_ENUM_OPERATORS(ToolbarFlags)
+
+///
 struct ToolbarStyle {
-    float height = 40;
-    float buttonAlpha = 0;
-    float buttonAlphaHovered = 0.5;
-    float buttonAlphaActive = 0.5;
+    float height = 30.0f;
+    float buttonAlpha = 0.0f;
+    float buttonAlphaHovered = 0.5f;
+    float buttonAlphaActive = 0.5f;
+
+    /// Padding. Defaults to `ImGui::GetStyle().WindowPadding`
+    std::optional<vml::float2> padding;
+
+    ///
+    ToolbarFlags flags = ToolbarFlags::None;
 
     /// Computed by `Toolbar`
     float actualHeight;
@@ -138,13 +150,14 @@ class ToolbarDropdownMenu: public ToolbarItemMixin<ToolbarDropdownMenu> {
 public:
     ToolbarDropdownMenu();
 
-    ///
-    ToolbarDropdownMenu& content(std::function<void()> action) {
-        this->_content = std::move(action);
+    /// Specifies the content callback
+    ToolbarDropdownMenu& content(std::function<void()> content) {
+        this->_content = std::move(content);
         return *this;
     }
 
-    ///
+    /// The preview value should be the active option of the dropdown menu. If
+    /// this is not set a down arrow will be used instead
     ToolbarDropdownMenu& previewValue(std::function<std::string()> value) {
         _preview = value;
         return *this;
@@ -186,18 +199,22 @@ protected:
     vml::float2 _minSize = 0;
 };
 
+///
 class ToolbarSeparator: public ToolbarItem {
 private:
     void display(ToolbarStyle const& style) override;
     float calcWidth(float height) const override;
 };
 
+/// Spacers are empty items that take up as much space as possible. They can be
+/// used to split a toolbar into multiple sections
 class ToolbarSpacer: public ToolbarItem {
 private:
     void display(ToolbarStyle const& style) override;
     float calcWidth(float height) const override;
 };
 
+/// Empty item with fixed size
 class ToolbarEmptyItem: public ToolbarItem {
 public:
     ToolbarEmptyItem& width(float width) {
@@ -227,16 +244,17 @@ public:
         cooked = false;
     }
 
-    ///  \Returns the acccumulated width of all items including padding but
-    /// ignoring all spacers
+    /// \Returns the acccumulated width of all items including padding but
+    /// ignoring all spacers. This is used by the dockspace for the triple
+    /// toolbar layout
     float getWidthWithoutSpacers() const;
 
     /// Displays the toolbar. Will fill available width unless parameter \p
     /// width is provided
-    void display(std::optional<float> width = std::nullopt);
+    void display(std::optional<float> width = std::nullopt) noexcept;
 
-    /// \Returns the height of the toolbar
-    float getHeight() const { return style.height; }
+    /// \Returns the actual height of the toolbar including padding
+    float getHeight() const;
 
     void setHeight(float value) { style.height = value; }
 
@@ -263,6 +281,8 @@ private:
 
     /// Called every frame
     void calcOffsets(float totalWidth);
+
+    vml::float2 getPadding() const;
 
     std::vector<std::unique_ptr<ToolbarItem>> items;
     std::vector<Block> blocks;

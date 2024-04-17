@@ -176,35 +176,46 @@ float ToolbarEmptyItem::calcWidth([[maybe_unused]] float height) const {
 }
 
 float Toolbar::getWidthWithoutSpacers() const {
-    if (blocks.empty()) {
-        return 0;
-    }
     return std::accumulate(blocks.begin(), blocks.end(), 0.0f,
                            [](float acc, Block const& block) {
         return acc + block.width;
-    }) + (blocks.size() - 1) * GImGui->Style.ItemSpacing.x;
+    }) + std::max(0.0f, (float)blocks.size() - 1.0f) *
+               GImGui->Style.ItemSpacing.x;
 }
 
-void Toolbar::display(std::optional<float> width) {
+void Toolbar::display(std::optional<float> width) noexcept {
+    float2 padding = getPadding();
     float newHeight = std::min(ImGui::GetContentRegionAvail().y, style.height);
-    cooked &= style.actualHeight == newHeight;
     style.actualHeight = newHeight;
     /// We actually cook every frame because performance is really not an issue
     /// and it solves some caching issues
     cook();
-    float2 position = ImGui::GetCursorPos();
-    /// Display blocks
     if (!width) {
         width = ImGui::GetContentRegionAvail().x;
     }
+    *width -= 2 * padding.x;
+    float2 position = ImGui::GetCursorPos();
+    /// Display blocks
     calcOffsets(*width);
     for (auto const& block: blocks) {
         if (block.visible) {
-            ImGui::SetCursorPos(position + float2(block.offset, 0));
+            ImGui::SetCursorPos(position + padding + float2(block.offset, 0));
             displayBlock(block);
         }
     }
-    ImGui::SetCursorPos(position + float2(0, style.actualHeight));
+    float heightWithPadding = style.actualHeight + 2 * padding.y;
+    ImGui::SetCursorPos(position + float2(0, heightWithPadding));
+    /// Draw separator
+    if (!(style.flags & ToolbarFlags::NoDecoration)) {
+        auto* window = ImGui::GetCurrentWindowRead();
+        float2 pos =
+            (float2)ImGui::GetWindowPos() + float2(0, window->TitleBarHeight());
+        float2 from = pos + float2(0, heightWithPadding - 1);
+        float2 to =
+            pos + float2(ImGui::GetWindowWidth(), heightWithPadding - 1);
+        auto* DL = ImGui::GetWindowDrawList();
+        DL->AddLine(from, to, ImGui::GetColorU32(ImGuiCol_Separator), 1);
+    }
 }
 
 void Toolbar::displayBlock(Block const& block) {
@@ -280,4 +291,10 @@ void Toolbar::calcOffsets(float totalWidth) {
     }
     blocks[1].visible = true;
     blocks[1].offset = cursor + (widthAvail - blocks[1].width) / 2;
+}
+
+float Toolbar::getHeight() const { return style.height + 2 * getPadding().y; }
+
+float2 Toolbar::getPadding() const {
+    return style.padding.value_or(ImGui::GetStyle().WindowPadding);
 }

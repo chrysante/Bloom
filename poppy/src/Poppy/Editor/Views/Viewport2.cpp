@@ -161,18 +161,15 @@ void Viewport2::displayScenes() {
 }
 
 void Viewport2::displayToolbar() {
-    float2 padding = ImGui::GetStyle().WindowPadding;
-    ImGui::SetCursorPos(padding);
     float4 color = float4(ImGui::GetStyleColorVec4(ImGuiCol_WindowBg)) *
                    float4(1, 1, 1, 0.5);
     auto* DL = ImGui::GetWindowDrawList();
     float2 winpos = ImGui::GetWindowPos();
     float2 winsize = ImGui::GetWindowSize();
-    DL->AddRectFilled(winpos,
-                      winpos + float2(winsize.x,
-                                      toolbar.getHeight() + 2 * padding.y),
+    DL->AddRectFilled(winpos, winpos + float2(winsize.x, toolbar.getHeight()),
                       ImGui::ColorConvertFloat4ToU32(color));
-    toolbar.display(size().x - 2 * padding.x);
+    ImGui::SetCursorPos({});
+    toolbar.display();
 }
 
 static MouseState detectViewportInput(ImGuiButtonFlags buttonFlags) {

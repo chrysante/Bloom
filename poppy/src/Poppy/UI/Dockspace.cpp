@@ -44,18 +44,21 @@ void Dockspace::display(Window& window) {
     displayToolbar(window);
 }
 
+ToolbarStyle const tbStyle{ .padding = float2(0, 0),
+                            .flags = ToolbarFlags::NoDecoration };
+
 void Dockspace::setLeftToolbar(Toolbar tb) {
-    tb.setHeight(45);
+    tb.setStyle(tbStyle);
     toolbars[0] = std::move(tb);
 }
 
 void Dockspace::setCenterToolbar(Toolbar tb) {
-    tb.setHeight(45);
+    tb.setStyle(tbStyle);
     toolbars[1] = std::move(tb);
 }
 
 void Dockspace::setRightToolbar(Toolbar tb) {
-    tb.setHeight(45);
+    tb.setStyle(tbStyle);
     toolbars[2] = std::move(tb);
 }
 

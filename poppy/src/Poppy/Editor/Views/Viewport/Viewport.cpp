@@ -122,18 +122,16 @@ void Viewport::frame() {
         displayScene();
     }
     /* Display toolbar with padding */ {
-        float2 const padding = GImGui->Style.WindowPadding;
-        ImGui::SetCursorPos(padding);
-        auto* const window = ImGui::GetCurrentWindow();
+        auto* window = ImGui::GetCurrentWindow();
         auto color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
         color.w = 0.5;
         window->DrawList->AddRectFilled(window->Pos,
                                         (float2)window->Pos +
                                             float2{ window->Size.x,
-                                                    toolbar.getHeight() +
-                                                        2 * padding.y },
+                                                    toolbar.getHeight() },
                                         ImGui::ColorConvertFloat4ToU32(color));
-        toolbar.display(size().x - 2 * padding.x);
+        ImGui::SetCursorPos({});
+        toolbar.display();
     }
     if (!scenes().empty()) {
         auto const wantsInput =

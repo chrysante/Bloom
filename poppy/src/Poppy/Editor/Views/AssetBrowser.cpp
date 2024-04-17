@@ -162,23 +162,14 @@ AssetBrowser::AssetBrowser() {
                 assetManager->compileScripts();
             })
     };  // clang-format on
-    toolbar.setHeight(30);
-    setPadding({ -1, 0 });
+    setPadding({ 0, 0 });
 }
 
 void AssetBrowser::frame() {
     bool active = assetManager && !assetManager->projectRootDir().empty();
-    poppy::disabledIf(!active, [&] {
-        /// Add x window padding in y direction because y padding has been
-        /// pushed to  0
-        ImGui::SetCursorPos(ImGui::GetCursorPos() +
-                            ImVec2(0, GImGui->Style.WindowPadding.y));
-        toolbar.display();
-        /// Add x window padding in y direction because y padding has been
-        /// pushed to 0
-        ImGui::SetCursorPos(ImGui::GetCursorPos() +
-                            ImVec2(0, GImGui->Style.WindowPadding.y + 1));
-    });
+    ImGui::BeginDisabled(!active);
+    toolbar.display();
+    ImGui::EndDisabled();
     if (!assetManager) {
         displayEmptyWithReason("Asset Manager Not Loaded");
         return;
@@ -188,15 +179,6 @@ void AssetBrowser::frame() {
         return;
     }
     newAssetPopup();
-    // Draw separator
-    auto* window = ImGui::GetCurrentWindow();
-    auto yPadding = GImGui->Style.WindowPadding.y;
-    auto from =
-        ImGui::GetWindowPos() + ImGui::GetCursorPos() + ImVec2(-yPadding, -1);
-    auto to = ImGui::GetWindowPos() + ImGui::GetCursorPos() +
-              ImVec2(ImGui::GetWindowWidth() + 2 * yPadding, -1);
-    auto* drawList = window->DrawList;
-    drawList->AddLine(from, to, ImGui::GetColorU32(ImGuiCol_Separator), 2);
     dirView.display();
 }
 

@@ -26,6 +26,7 @@ DirectoryView::DirectoryView(DirectoryViewDelegate delegate):
 
 void DirectoryView::display() {
     if (!ImGui::BeginChild("Asset Browser DirView")) {
+        ImGui::EndChild();
         return;
     }
     Cursor cursor{};

@@ -195,18 +195,7 @@ void ForwardRenderer::submit(Reference<StaticMeshRenderer> mesh,
     RendererSanitizer::submit();
     assert((bool)matInst);
     assert(matInst->material());
-
-    if (matInst->mDirty) {
-        matInst->mDirty = false;
-        if (matInst->mParameterBuffer.size() < sizeof(MaterialParameters)) {
-            matInst->mParameterBuffer =
-                device().createBuffer({ .size = sizeof(MaterialParameters),
-                                        .storageMode = StorageMode::Managed });
-        }
-        device().fillManagedBuffer(matInst->mParameterBuffer,
-                                   &matInst->mParameters,
-                                   sizeof(MaterialParameters));
-    }
+    matInst->uploadData(device());
     scene.objects.push_back(
         { vml::transpose(transform), std::move(matInst), std::move(mesh) });
 }

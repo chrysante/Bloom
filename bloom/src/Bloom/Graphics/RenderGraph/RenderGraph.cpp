@@ -12,11 +12,12 @@ using namespace ranges::views;
 
 RenderGraph::RenderGraph(std::string name, RenderGraphContext& ctx,
                          HardwareDevice& device):
-    Pass(std::move(name)), ctx(&ctx), mDevice(&device) {}
+    Pass(std::move(name), &device), ctx(&ctx) {}
 
 Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
     auto* result = pass.get();
     result->_parent = this;
+    result->_device = &device();
     passes.push_back(std::move(pass));
     return result;
 }

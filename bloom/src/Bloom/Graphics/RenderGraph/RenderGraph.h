@@ -57,9 +57,6 @@ public:
     /// \Returns the shared render graph context
     RenderGraphContext& context() const { return *ctx; }
 
-    /// \Returns the associated device
-    HardwareDevice& device() const { return *mDevice; }
-
     /// Declares a resource sink (input) to this graph
     template <InterfaceType Type>
     RenderGraphSink* declareSink(std::string name,
@@ -81,7 +78,6 @@ private:
                            CommandQueue& queue) final;
 
     RenderGraphContext* ctx;
-    HardwareDevice* mDevice;
     std::vector<std::unique_ptr<Pass>> passes;
     std::vector<Pass*> executionOrder;
     FrameParameters lastFrameParams;

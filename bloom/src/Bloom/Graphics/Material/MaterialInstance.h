@@ -30,6 +30,10 @@ public:
     YAML::Node serialize() const;
     void deserialize(YAML::Node const&, AssetManager&);
 
+    /// Uploads parameters to the GPU if they have changed since the last call
+    /// to this function
+    void uploadData(HardwareDevice& device);
+
 private:
     Reference<Material> mMaterial;
     BufferHandle mParameterBuffer;

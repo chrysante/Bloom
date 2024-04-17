@@ -25,7 +25,8 @@ class Pass {
     friend class PassImpl;
 
 public:
-    explicit Pass(std::string name): _name(std::move(name)) {}
+    explicit Pass(std::string name, HardwareDevice* device = nullptr):
+        _name(std::move(name)), _device(device) {}
 
     Pass(Pass const&) = delete;
 
@@ -36,6 +37,10 @@ public:
 
     /// \Returns the parent render graph if this pass is part of a render graph
     RenderGraph* parent() const { return _parent; }
+
+    /// \Returns the associated device. The device is set by the parent render
+    /// graph
+    HardwareDevice& device() { return *_device; }
 
     /// \Returns the resource sink (input) with name \p name
     PassSink* findSink(std::string_view name);
@@ -122,13 +127,14 @@ protected:
     }
 
 private:
-    friend class RenderGraph; // To set parent pointer
+    friend class RenderGraph; // To set parent and device
 
     virtual void doExecute(FrameParameters const& params,
                            CommandQueue& queue) = 0;
     virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
 
     RenderGraph* _parent = nullptr;
+    HardwareDevice* _device = nullptr;
     std::string _name;
     std::vector<std::unique_ptr<PassSink>> _sinks;
     std::vector<std::unique_ptr<PassSource>> _sources;

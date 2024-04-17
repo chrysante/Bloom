@@ -15,30 +15,28 @@ protected:
     ToolbarItemBase() = default;
 
 public:
-    Derived tooltip(char const* text) {
+    Derived& tooltip(char const* text) {
         this->_tooltip = [text] { return text; };
         return asDerived();
     }
 
-    Derived tooltip(utl::function<char const*()> text) {
+    Derived& tooltip(utl::function<char const*()> text) {
         this->_tooltip = text;
         return asDerived();
     }
 
-    Derived enabled(bool value) {
+    Derived& enabled(bool value) {
         this->_enabled = [value] { return value; };
         return asDerived();
     }
 
-    Derived enabled(utl::function<bool()> value) {
+    Derived& enabled(utl::function<bool()> value) {
         this->_enabled = value;
         return asDerived();
     }
 
 private:
-    Derived const& asDerived() const {
-        return *static_cast<Derived const*>(this);
-    }
+    Derived& asDerived() { return *static_cast<Derived*>(this); }
 
 private:
     friend class Toolbar;
@@ -49,7 +47,7 @@ private:
 struct ToolbarButton: ToolbarItemBase<ToolbarButton> {
     ToolbarButton(std::string label): _label(std::move(label)) {}
 
-    ToolbarButton onClick(utl::function<void()> block) {
+    ToolbarButton& onClick(utl::function<void()> block) {
         this->_block = block;
         return *this;
     }
@@ -68,7 +66,7 @@ public:
 
     ToolbarIconButton(utl::function<char const*()> icon): _icon(icon) {}
 
-    ToolbarIconButton onClick(utl::function<void()> block) {
+    ToolbarIconButton& onClick(utl::function<void()> block) {
         this->_block = block;
         return *this;
     }
@@ -83,32 +81,32 @@ class ToolbarDropdownMenu: public ToolbarItemBase<ToolbarDropdownMenu> {
 public:
     ToolbarDropdownMenu();
 
-    ToolbarDropdownMenu content(utl::function<void()> block) {
+    ToolbarDropdownMenu& content(utl::function<void()> block) {
         this->_content = block;
         return *this;
     }
 
-    ToolbarDropdownMenu previewValue(utl::function<std::string()> value) {
+    ToolbarDropdownMenu& previewValue(utl::function<std::string()> value) {
         _preview = value;
         return *this;
     }
 
-    ToolbarDropdownMenu icon(utl::function<char const*()> icon) {
+    ToolbarDropdownMenu& icon(utl::function<char const*()> icon) {
         _icon = icon;
         return *this;
     }
 
-    ToolbarDropdownMenu icon(char const* icon) {
+    ToolbarDropdownMenu& icon(char const* icon) {
         _icon = [=] { return icon; };
         return *this;
     }
 
-    ToolbarDropdownMenu minSize(vml::float2 size) {
+    ToolbarDropdownMenu& minSize(vml::float2 size) {
         _minSize = size;
         return *this;
     }
 
-    ToolbarDropdownMenu minWidth(float width) {
+    ToolbarDropdownMenu& minWidth(float width) {
         _minSize.x = width;
         return *this;
     }
@@ -129,7 +127,7 @@ struct ToolbarSpacer {};
 
 class ToolbarEmptyItem {
 public:
-    ToolbarEmptyItem width(float width) {
+    ToolbarEmptyItem& width(float width) {
         _width = width;
         return *this;
     }

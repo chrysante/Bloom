@@ -60,6 +60,9 @@ public:
     /// through a callback to `NodeEditorGraph::deserialize`, because it must
     /// determine the static type of the node controller
     virtual YAML::Node serialize() const { return YAML::Node{}; }
+
+    /// Callback to display the content of the nodes context menu
+    virtual void contextMenuContent() {}
 };
 
 /// Descriptor structure used to create nodes

@@ -1239,6 +1239,9 @@ void Impl::nodeBodyPopup(Node& node, bool show) {
     if (ImGui::MenuItem("Delete")) {
         deleteSelected();
     }
+    if (auto* controller = node.controller()) {
+        controller->contextMenuContent();
+    }
     ImGui::EndPopup();
 }
 

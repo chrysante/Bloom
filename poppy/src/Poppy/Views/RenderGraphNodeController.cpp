@@ -1,5 +1,6 @@
 #include "Poppy/Views/RenderGraphNodeController.h"
 
+#include <imgui.h>
 #include <utl/common.hpp>
 #include <utl/strcat.hpp>
 #include <vml/vml.hpp>
@@ -220,6 +221,8 @@ struct PassNodeController: RenderGraphNodeController {
         root["Name"] = name;
         return root;
     }
+
+    void contextMenuContent() override { ImGui::MenuItem("Preview"); }
 
     PassNodeController(std::string name): name(name) {}
 

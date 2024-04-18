@@ -1,5 +1,5 @@
-#ifndef POPPY_EDITOR_VIEWS_NODEEDITOR_H
-#define POPPY_EDITOR_VIEWS_NODEEDITOR_H
+#ifndef POPPY_VIEWS_NODEEDITOR_H
+#define POPPY_VIEWS_NODEEDITOR_H
 
 #include <functional>
 #include <memory>
@@ -19,6 +19,7 @@
 
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Core/Dyncast.h"
+#include "Poppy/UI/Fwd.h"
 
 namespace poppy::nodeEditor {
 
@@ -346,9 +347,8 @@ struct NodeEditorDelegate {
 /// Generic customizable node editor
 class NodeEditor {
 public:
-    NodeEditor();
-
-    NodeEditor(NodeEditorDelegate delegate);
+    /// Registers commands with \p commandPalette
+    explicit NodeEditor(CommandPalette& commandPalette);
 
     ~NodeEditor();
 
@@ -374,4 +374,4 @@ private:
 
 } // namespace poppy
 
-#endif // POPPY_EDITOR_VIEWS_NODEEDITOR_H
+#endif // POPPY_VIEWS_NODEEDITOR_H

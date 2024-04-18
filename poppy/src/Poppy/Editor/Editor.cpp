@@ -245,11 +245,11 @@ void Editor::onInput(InputEvent e) {
     if (e.handled()) {
         return;
     }
-    auto const focusedView =
+    auto focusedViewItr =
         std::find_if(views.begin(), views.end(),
                      [](auto const& v) { return v->focused(); });
-    if (focusedView != views.end()) {
-        (**focusedView).onInput(e);
+    if (focusedViewItr != views.end()) {
+        (*focusedViewItr)->doOnInput(e);
         if (e.handled()) {
             return;
         }
@@ -259,7 +259,7 @@ void Editor::onInput(InputEvent e) {
         if (view->focused()) {
             continue;
         }
-        view->onInput(e);
+        view->doOnInput(e);
         if (e.handled()) {
             break;
         }

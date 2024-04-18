@@ -23,11 +23,16 @@ static int getFreshID() {
     return gID;
 }
 
-/// MARK: Initialization
-
-/// MARK: Queries
-
-bool View::focused() const { return GImGui->NavWindow == desc.imguiWindow; }
+bool View::focused() const {
+    auto* w = GImGui->NavWindow;
+    while (w) {
+        if (w == desc.imguiWindow) {
+            return true;
+        }
+        w = w->ParentWindow;
+    }
+    return false;
+}
 
 vml::float2 View::windowSpaceToViewSpace(vml::float2 position) const {
     return position - desc.position;
@@ -36,8 +41,6 @@ vml::float2 View::windowSpaceToViewSpace(vml::float2 position) const {
 vml::float2 View::viewSpaceToWindowSpace(vml::float2 position) const {
     return position + desc.position;
 }
-
-/// MARK: Modifiers
 
 void View::setFocused() { ImGui::FocusWindow((ImGuiWindow*)desc.imguiWindow); }
 
@@ -126,7 +129,15 @@ void View::doFrame() {
     ImGui::End();
 }
 
-void View::doOnInput(bloom::InputEvent&) {}
+void View::doOnInput(bloom::InputEvent& event) {
+    if (focused()) {
+        cmdPalette.onInput(event);
+        if (event.handled()) {
+            return;
+        }
+    }
+    onInput(event);
+}
 
 YAML::Node View::doSerialize() const {
     YAML::Node node;

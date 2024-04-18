@@ -12,6 +12,7 @@
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Application/MessageSystem.h"
 #include "Poppy/Core/Debug.h"
+#include "Poppy/UI/CommandPalette.h"
 
 namespace bloom {
 
@@ -87,6 +88,13 @@ public:
 
     void setTitle(std::string);
 
+    /// \Returns the attached command palette
+    CommandPalette const& commandPalette() const { return cmdPalette; }
+
+protected:
+    /// \Returns a mutable reference to the attached command palette
+    CommandPalette& commandPaletteWrite() { return cmdPalette; }
+
 private:
     virtual void init() {};
     virtual void shutdown() {};
@@ -120,6 +128,7 @@ private:
     };
     ViewDescPrivate desc;
     ViewRegisterDescription mRegisterDescription;
+    CommandPalette cmdPalette;
 };
 
 class ViewRegistry {

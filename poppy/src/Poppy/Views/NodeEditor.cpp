@@ -12,6 +12,7 @@
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Core/Yaml.h"
+#include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Font.h"
 
 using namespace poppy;
@@ -630,6 +631,8 @@ Node::Node(NodeDesc desc): _desc(std::move(desc)) {
 }
 
 struct NodeEditor::Impl {
+    explicit Impl(CommandPalette& commandPalette);
+
     void onInput(bloom::InputEvent& event);
 
     void display();
@@ -654,11 +657,8 @@ struct NodeEditor::Impl {
     NodeEditorDelegate delegate;
 };
 
-NodeEditor::NodeEditor(): impl(std::make_unique<Impl>()) {}
-
-NodeEditor::NodeEditor(NodeEditorDelegate delegate): NodeEditor() {
-    setDelegate(std::move(delegate));
-}
+NodeEditor::NodeEditor(CommandPalette& commandPalette):
+    impl(std::make_unique<Impl>(commandPalette)) {}
 
 NodeEditor::~NodeEditor() = default;
 
@@ -774,16 +774,14 @@ void Impl::backgroundBehaviour() {
     backgroundPopup(showPopup);
 }
 
+Impl::Impl(CommandPalette& cmd) {
+    cmd.add("Delete Selected Nodes", { Key::Backspace, ModFlags::Control },
+            [this] { deleteSelected(); });
+    cmd.add("Select All", { Key::A, ModFlags::Control },
+            [this] { selection.set(model.nodes()); });
+}
+
 void NodeEditor::onInput(InputEvent& event) { impl->onInput(event); }
-
-static bool isDelete(KeyEvent const& event) {
-    return event.key == Key::Backspace &&
-           test(event.modifierFlags & ModFlags::Super);
-}
-
-static bool isSelectAll(KeyEvent const& event) {
-    return event.key == Key::A && test(event.modifierFlags & ModFlags::Super);
-}
 
 void Impl::onInput(InputEvent& event) {
     using enum InputEventMask;
@@ -817,17 +815,6 @@ void Impl::onInput(InputEvent& event) {
         viewData.zoom =
             std::clamp(viewData.zoom + (float)event.offset, 0.5f, 4.0f);
         return true;
-    });
-    event.dispatch<Key>([&](KeyEvent event) {
-        if (isDelete(event)) {
-            deleteSelected();
-            return true;
-        }
-        if (isSelectAll(event)) {
-            selection.set(model.nodes());
-            return true;
-        }
-        return false;
     });
 }
 

@@ -21,8 +21,12 @@ set(poppy_sources
 
   src/Poppy/UI/Appearance.cpp
   src/Poppy/UI/Appearance.h
+  src/Poppy/UI/CommandPalette.cpp
+  src/Poppy/UI/CommandPalette.h
   src/Poppy/UI/Dockspace.cpp
   src/Poppy/UI/Dockspace.h
+  src/Poppy/UI/Fwd.cpp
+  src/Poppy/UI/Fwd.h
   src/Poppy/UI/Font.cpp
   src/Poppy/UI/Font.h
   src/Poppy/UI/ImGuiContext.cpp

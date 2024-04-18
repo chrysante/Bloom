@@ -42,6 +42,8 @@ struct RenderGraphView: View {
 
     void compile();
 
+    void backgroundContextMenu(float2 position);
+
     RenderGraph* renderGraph;
     NodeEditor nodeEditor;
     Toolbar toolbar;
@@ -52,16 +54,13 @@ struct RenderGraphView: View {
 
 POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
 
-RenderGraphView::RenderGraphView(): toolbar(makeToolbar()) {
-    nodeEditor.setDelegate({ .backgroundPopupMenu = [&](float2 position) {
-        for (auto& entry: PassRegistry::get()) {
-            if (ImGui::MenuItem(entry.name.c_str())) {
-                auto desc = entry.factory();
-                desc.position = position;
-                nodeEditor.addNode(std::move(desc));
-            }
-        }
+RenderGraphView::RenderGraphView():
+    nodeEditor(commandPaletteWrite()), toolbar(makeToolbar()) {
+    nodeEditor.setDelegate({ .backgroundPopupMenu = [this](float2 pos) {
+        backgroundContextMenu(pos);
     } });
+    auto& cmd = commandPaletteWrite();
+    cmd.add("Compile", { Key::B, ModFlags::Control }, [this] { compile(); });
 }
 
 void RenderGraphView::init() { setPadding({}); }
@@ -127,4 +126,14 @@ void RenderGraphView::compile() {
         compilationStatus = CompilationStatus::Error;
     }
     RenderGraphManager::set(std::move(rg));
+}
+
+void RenderGraphView::backgroundContextMenu(float2 position) {
+    for (auto& entry: PassRegistry::get()) {
+        if (ImGui::MenuItem(entry.name.c_str())) {
+            auto desc = entry.factory();
+            desc.position = position;
+            nodeEditor.addNode(std::move(desc));
+        }
+    }
 }

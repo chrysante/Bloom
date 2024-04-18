@@ -12,8 +12,8 @@
 #include <range/v3/view.hpp>
 #endif
 
+#include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Font.h"
-#include "Poppy/UI/Fwd.h"
 
 namespace poppy {
 
@@ -115,7 +115,6 @@ private:
 
     CommandPalette const* cmd = nullptr;
     std::function<void()> _action;
-    std::string _command;
 };
 
 ///
@@ -125,13 +124,6 @@ public:
     /// Specify the action to perform when this button is clicked
     Derived& onClick(std::function<void()> action) {
         asDerived()._action = std::move(action);
-        return asDerived();
-    }
-
-    /// Specify a command of the associated command palette to perform when the
-    /// button is clicked
-    Derived& onClick(std::string command) {
-        asDerived()._command = std::move(command);
         return asDerived();
     }
 
@@ -167,6 +159,10 @@ public:
     /// Construct from a function that returns an icon name
     ToolbarIconButton(std::function<char const*()> iconNameFn):
         _icon(iconNameFn) {}
+
+    /// Construct from an action and an icon name
+    ToolbarIconButton(CommandPalette::Action const* action,
+                      std::string iconName);
 
 private:
     void display(ToolbarStyle const& style) override;

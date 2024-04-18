@@ -38,13 +38,15 @@ struct EditorWindowDelegate: public WindowDelegate {
     utl::function<void()> onFrame;
 };
 
-static char const* playButton(Editor const* editor) {
-    return editor->isSimulating() ? "stop" : "play";
-}
-
 Editor::Editor(): mSelection(makeReceiver()) {
     setRunLoopMode(RunLoopMode::EventDriven);
     cmd.add("Save", { Key::S, ModFlags::Control }, [this] { saveAll(); });
+    cmd.add("Simulate", { Key::R, ModFlags::Control },
+            [this] { startSimulation(); }, [this] {
+        return !coreSystems().sceneSystem().scenes().empty() && !isSimulating();
+    });
+    cmd.add("Stop Simulation", { Key::Period, ModFlags::Control },
+            [this] { stopSimulation(); }, [this] { return isSimulating(); });
     // clang-format off
     dockspace.setLeftToolbar(Toolbar(&cmd, {
         /// Very annoying hack to prevent the toolbar from rendering under the
@@ -56,14 +58,8 @@ Editor::Editor(): mSelection(makeReceiver()) {
                 menuBar();
             }),
         ToolbarSpacer{},
-        ToolbarIconButton(std::bind_front(playButton, this))
-            .onClick([&] {
-                isSimulating() ? stopSimulation() :
-                                 startSimulation();
-            })
-            .enabled([&] {
-                return !coreSystems().sceneSystem().scenes().empty();
-            })
+        ToolbarIconButton(cmd.find("Stop Simulation"), "stop"),
+        ToolbarIconButton(cmd.find("Simulate"), "play")
     }));
     dockspace.setCenterToolbar(Toolbar(&cmd, {
         ToolbarIconButton("bank")

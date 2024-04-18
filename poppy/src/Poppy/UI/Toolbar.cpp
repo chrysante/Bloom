@@ -73,9 +73,6 @@ void ToolbarButtonBase::doAction() {
     if (_action) {
         _action();
     }
-    if (cmd && !_command.empty()) {
-        cmd->doCommand(_command);
-    }
 }
 
 void ToolbarButton::display(ToolbarStyle const& style) {
@@ -91,6 +88,15 @@ float ToolbarButton::calcWidth(float /* height */) const {
         return ImGui::CalcTextSize(_label.data());
     });
     return textSize.x + 6 * GImGui->Style.FramePadding.y;
+}
+
+ToolbarIconButton::ToolbarIconButton(CommandPalette::Action const* action,
+                                     std::string iconName):
+    ToolbarIconButton(std::move(iconName)) {
+    onClick([action] {
+        if (action) action->execute();
+    });
+    enabled([action] { return action && action->enabled(); });
 }
 
 void ToolbarIconButton::display(ToolbarStyle const& style) {

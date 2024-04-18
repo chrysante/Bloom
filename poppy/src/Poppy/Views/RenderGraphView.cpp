@@ -38,8 +38,6 @@ struct RenderGraphView: View {
 
     void deserialize(YAML::Node node) override;
 
-    Toolbar makeToolbar();
-
     void compile();
     void doCompile();
 
@@ -55,25 +53,7 @@ struct RenderGraphView: View {
 
 POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
 
-RenderGraphView::RenderGraphView():
-    nodeEditor(commandPaletteWrite()), toolbar(makeToolbar()) {
-    nodeEditor.setDelegate({ .backgroundPopupMenu = [this](float2 pos) {
-        backgroundContextMenu(pos);
-    } });
-    auto& cmd = commandPaletteWrite();
-    cmd.add("Compile", { Key::B, ModFlags::Control }, [this] { compile(); });
-}
-
-void RenderGraphView::init() { setPadding({}); }
-
-void RenderGraphView::onInput(InputEvent& event) { nodeEditor.onInput(event); }
-
-void RenderGraphView::frame() {
-    toolbar.display();
-    nodeEditor.display();
-}
-
-char const* compStatusMessage(CompilationStatus status) {
+static char const* compStatusMessage(CompilationStatus status) {
     using enum CompilationStatus;
     switch (status) {
     case None:
@@ -85,17 +65,30 @@ char const* compStatusMessage(CompilationStatus status) {
     }
 }
 
-Toolbar RenderGraphView::makeToolbar() {
+RenderGraphView::RenderGraphView(): nodeEditor(commandPaletteWrite()) {
+    nodeEditor.setDelegate({ .backgroundPopupMenu = [this](float2 pos) {
+        backgroundContextMenu(pos);
+    } });
+    auto& cmd = commandPaletteWrite();
+    cmd.add("Compile", { Key::B, ModFlags::Control }, [this] { compile(); });
     // clang-format off
-    return Toolbar(&commandPalette(), {
-        ToolbarIconButton("play")
-            .onClick("Compile")
+    toolbar = Toolbar(&commandPalette(), {
+        ToolbarIconButton(commandPalette().find("Compile"), "play")
             .tooltip("Compile"),
         ToolbarSpacer(),
         ToolbarTextItem()
             .text([this] { return compStatusMessage(compilationStatus); })
             .font(FontDesc::UIDefault().setSize(FontSize{ 16 }))
     }); // clang-format on
+}
+
+void RenderGraphView::init() { setPadding({}); }
+
+void RenderGraphView::onInput(InputEvent& event) { nodeEditor.onInput(event); }
+
+void RenderGraphView::frame() {
+    toolbar.display();
+    nodeEditor.display();
 }
 
 YAML::Node RenderGraphView::serialize() const {

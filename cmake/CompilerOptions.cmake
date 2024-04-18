@@ -22,6 +22,8 @@ function(BLSetCompilerOptions target)
     target_compile_options(${target} PRIVATE "-Woverloaded-virtual")
     target_compile_options(${target} PRIVATE "-Wunused")
   endif()
+
+  target_compile_definitions(${target} PRIVATE BUILD_CONFIG=$<CONFIG>)
 endfunction()
 
 if(BLOOM_DEV_MODE)

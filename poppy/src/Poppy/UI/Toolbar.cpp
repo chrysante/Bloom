@@ -260,9 +260,11 @@ void Toolbar::display(std::optional<float> width) noexcept {
 }
 
 void Toolbar::displayBlock(Block const& block) {
+    float y = ImGui::GetCursorPos().y;
     for (size_t i = block.itemBeginIndex; i < block.itemEndIndex; ++i) {
         activeItems[i]->display(style);
         ImGui::SameLine();
+        ImGui::SetCursorPosY(y);
     }
 }
 

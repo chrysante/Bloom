@@ -21,6 +21,24 @@ namespace poppy {
 
 enum class FontSize { Medium = 17, Large = 34 };
 
+template <typename T>
+    requires std::is_arithmetic_v<T>
+FontSize operator+(FontSize s, T t) {
+    return FontSize{ (T)s + t };
+}
+
+template <typename T>
+    requires std::is_arithmetic_v<T>
+FontSize operator+(T t, FontSize s) {
+    return FontSize{ t + (T)s };
+}
+
+template <typename T>
+    requires std::is_arithmetic_v<T>
+FontSize operator-(FontSize s, T t) {
+    return FontSize{ (T)s - t };
+}
+
 enum class FontWeight {
     Ultralight,
     Thin,

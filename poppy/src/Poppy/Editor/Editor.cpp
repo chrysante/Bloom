@@ -14,6 +14,7 @@
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/Appearance.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace poppy;
 using namespace bloom;
@@ -38,6 +39,41 @@ struct EditorWindowDelegate: public WindowDelegate {
     utl::function<void()> onFrame;
 };
 
+namespace {
+
+#define STRINGIFY_IMPL(x) #x
+#define STRINGIFY(x)      STRINGIFY_IMPL(x)
+
+struct ToolbarBuildTimeStamp: ToolbarItem {
+    static constexpr auto BuildConfig = STRINGIFY(BUILD_CONFIG);
+    static constexpr auto Timestamp = __DATE__ " " __TIME__;
+
+    virtual void display(ToolbarStyle const&) override {
+        float2 pos = ImGui::GetCursorPos();
+        width = 0;
+        ImGui::PushStyleColor(ImGuiCol_Text,
+                              ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+        auto defFontDesc = FontDesc::UIDefault();
+        withFont(defFontDesc.setWeight(FontWeight::Semibold), [&] {
+            width = std::max(width, ImGui::CalcTextSize(BuildConfig).x);
+            ImGui::SetCursorPosX(pos.x + getWidth() - width);
+            ImGui::Text("%s", BuildConfig);
+        });
+        ImGui::SetCursorPos(pos + float2(0, (float)defFontDesc.size + 2));
+        withFont(defFontDesc.setSize(defFontDesc.size - 4), [&] {
+            width = std::max(width, ImGui::CalcTextSize(Timestamp).x);
+            ImGui::Text("%s", Timestamp);
+        });
+        ImGui::PopStyleColor();
+    }
+
+    virtual float calcWidth(float /* height */) const override { return width; }
+
+    float width = 0;
+};
+
+} // namespace
+
 Editor::Editor(): mSelection(makeReceiver()) {
     setRunLoopMode(RunLoopMode::EventDriven);
     cmd.add("Save", { Key::S, ModFlags::Control }, [this] { saveAll(); });
@@ -57,7 +93,7 @@ Editor::Editor(): mSelection(makeReceiver()) {
             .content([this] {
                 menuBar();
             }),
-        ToolbarSpacer{},
+        ToolbarSpacer(),
         ToolbarIconButton(cmd.find("Stop Simulation"), "stop"),
         ToolbarIconButton(cmd.find("Simulate"), "play")
     });
@@ -66,7 +102,7 @@ Editor::Editor(): mSelection(makeReceiver()) {
             .onClick([] {
                 Logger::Trace("Some Button Pressed");
             }),
-        ToolbarSpacer{},
+        ToolbarSpacer(),
         ToolbarIconButton("cw")
             .onClick([&] {
                 dispatch(DispatchToken::NextFrame, ReloadShadersCommand{});
@@ -82,6 +118,7 @@ Editor::Editor(): mSelection(makeReceiver()) {
             .content([] {
                 ImGui::Text("Placeholder Menu");
             }),
+        ToolbarBuildTimeStamp(),
     });
     // clang-format on
 }

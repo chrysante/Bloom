@@ -23,20 +23,38 @@ struct KeyCombination {
 /// Set of commands
 class CommandPalette {
 public:
+    ///
+    class Action {
+    public:
+        Action(std::function<void()> fn, std::function<bool()> enabled):
+            fn(std::move(fn)), _enabled(std::move(enabled)) {}
+
+        /// Performs the command
+        /// \Pre `enabled()` must return `true`
+        void execute() const;
+
+        /// \Returns `true` if this command can be executed
+        bool enabled() const { return !_enabled || _enabled(); }
+
+    private:
+        std::function<void()> fn;
+        std::function<bool()> _enabled;
+    };
+
     /// Inserts a command.
     ///
     /// \p keyComb is canonicalized depending on the OS. This means that on
     /// Apple systems the control modifier is mapped to cmd
     void add(std::string name, KeyCombination keyComb,
-             std::function<void()> action);
+             std::function<void()> action, std::function<bool()> enabled = {});
 
     /// Executes the command \p name if a matching command exists
-    /// \Returns `true` if the command exists and was executed
-    bool doCommand(std::string_view name) const;
+    void doCommand(std::string_view name) const;
+
+    ///
+    Action const* find(std::string_view name) const;
 
 private:
-    using Action = std::function<void()>;
-
     struct ModActionPair {
         bloom::ModFlags modFlags;
         Action action;

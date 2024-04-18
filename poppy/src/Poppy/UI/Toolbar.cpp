@@ -73,8 +73,8 @@ void ToolbarButtonBase::doAction() {
     if (_action) {
         _action();
     }
-    if (cmd && !_command.empty() && !cmd->doCommand(_command)) {
-        Logger::Warn("Failed to execute command: \"", _command, "\"");
+    if (cmd && !_command.empty()) {
+        cmd->doCommand(_command);
     }
 }
 

@@ -4,8 +4,17 @@
 
 #include <range/v3/algorithm.hpp>
 
+#include "Bloom/Core/Debug.h"
+
 using namespace poppy;
 using namespace bloom;
+
+using Action = CommandPalette::Action;
+
+void Action::execute() const {
+    BL_EXPECT(enabled());
+    fn();
+}
 
 static constexpr auto ModFlagOrder = [](ModFlags a, ModFlags b) {
     return std::popcount((size_t)a) > std::popcount((size_t)b);
@@ -23,7 +32,9 @@ static ModFlags canonicalize(ModFlags mods) {
 }
 
 void CommandPalette::add(std::string name, KeyCombination keyComb,
-                         std::function<void()> action) {
+                         std::function<void()> fn,
+                         std::function<bool()> enabled) {
+    Action action = { std::move(fn), std::move(enabled) };
     nameMap.insert({ std::move(name), action });
     auto& list = keyMap[keyComb.key];
     if (keyComb.key != Key::None) {
@@ -32,13 +43,21 @@ void CommandPalette::add(std::string name, KeyCombination keyComb,
     }
 }
 
-bool CommandPalette::doCommand(std::string_view name) const {
-    auto itr = nameMap.find(name);
-    if (itr != nameMap.end()) {
-        itr->second();
-        return true;
+void CommandPalette::doCommand(std::string_view name) const {
+    auto* cmd = find(name);
+    if (!cmd) {
+        Logger::Warn("Command not found: \"", name, "\"");
+        return;
     }
-    return false;
+    cmd->execute();
+}
+
+Action const* CommandPalette::find(std::string_view name) const {
+    auto itr = nameMap.find(name);
+    if (itr == nameMap.end()) {
+        return nullptr;
+    }
+    return &itr->second;
 }
 
 void CommandPalette::onInput(InputEvent& event) const {
@@ -54,7 +73,7 @@ void CommandPalette::onInput(InputEvent& event) const {
         if (itr == list.end()) {
             return false;
         }
-        itr->action();
+        itr->action.execute();
         return true;
     });
 }

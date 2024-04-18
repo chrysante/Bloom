@@ -25,8 +25,8 @@ namespace {
 
 enum CompilationStatus { None, Success, Error };
 
-struct RenderGraphView: View {
-    RenderGraphView();
+struct RenderGraphEditorView: View {
+    RenderGraphEditorView();
 
     void init() override;
 
@@ -51,7 +51,7 @@ struct RenderGraphView: View {
 
 } // namespace
 
-POPPY_REGISTER_VIEW(RenderGraphView, "Render Graph View", {})
+POPPY_REGISTER_VIEW(RenderGraphEditorView, "Render Graph Editor", {})
 
 static char const* compStatusMessage(CompilationStatus status) {
     using enum CompilationStatus;
@@ -65,7 +65,8 @@ static char const* compStatusMessage(CompilationStatus status) {
     }
 }
 
-RenderGraphView::RenderGraphView(): nodeEditor(commandPaletteWrite()) {
+RenderGraphEditorView::RenderGraphEditorView():
+    nodeEditor(commandPaletteWrite()) {
     nodeEditor.setDelegate({ .backgroundPopupMenu = [this](float2 pos) {
         backgroundContextMenu(pos);
     } });
@@ -81,23 +82,25 @@ RenderGraphView::RenderGraphView(): nodeEditor(commandPaletteWrite()) {
     }); // clang-format on
 }
 
-void RenderGraphView::init() { setPadding({}); }
+void RenderGraphEditorView::init() { setPadding({}); }
 
-void RenderGraphView::onInput(InputEvent& event) { nodeEditor.onInput(event); }
+void RenderGraphEditorView::onInput(InputEvent& event) {
+    nodeEditor.onInput(event);
+}
 
-void RenderGraphView::frame() {
+void RenderGraphEditorView::frame() {
     toolbar.display();
     nodeEditor.display();
 }
 
-YAML::Node RenderGraphView::serialize() const {
+YAML::Node RenderGraphEditorView::serialize() const {
     /// We use these functions to serialize our graph for now. This is not
     /// really correct, these functions should only serialize view related data,
     /// we will change this in the future
     return nodeEditor.model().serialize();
 }
 
-void RenderGraphView::deserialize(YAML::Node root) {
+void RenderGraphEditorView::deserialize(YAML::Node root) {
     if (!root) {
         return;
     }
@@ -106,11 +109,11 @@ void RenderGraphView::deserialize(YAML::Node root) {
     nodeEditor.setGraph(std::move(graph));
 }
 
-void RenderGraphView::compile() {
+void RenderGraphEditorView::compile() {
     dispatch(DispatchToken::NextFrame, [this] { doCompile(); });
 }
 
-void RenderGraphView::doCompile() {
+void RenderGraphEditorView::doCompile() {
     auto& ctx = RenderGraphManager::context();
     ctx.resourcePool.clear();
     auto rg = constructRenderGraph(ctx, editor().device(), nodeEditor.model());
@@ -123,7 +126,7 @@ void RenderGraphView::doCompile() {
     RenderGraphManager::set(std::move(rg));
 }
 
-void RenderGraphView::backgroundContextMenu(float2 position) {
+void RenderGraphEditorView::backgroundContextMenu(float2 position) {
     for (auto& entry: PassRegistry::get()) {
         if (ImGui::MenuItem(entry.name.c_str())) {
             auto desc = entry.factory();

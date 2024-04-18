@@ -59,7 +59,7 @@ set(poppy_sources
   src/Poppy/Views/RendererDebuggerView.h
   src/Poppy/Views/RenderGraphNodeController.h
   src/Poppy/Views/RenderGraphNodeController.cpp
-  src/Poppy/Views/RenderGraphView.cpp
+  src/Poppy/Views/RenderGraphEditorView.cpp
   src/Poppy/Views/RendererSettingsView.cpp
   src/Poppy/Views/RendererSettingsView.h
   src/Poppy/Views/SceneOutliner.cpp

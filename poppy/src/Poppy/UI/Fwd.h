@@ -4,6 +4,7 @@
 namespace poppy {
 
 class View;
+class Command;
 class CommandPalette;
 
 } // namespace poppy

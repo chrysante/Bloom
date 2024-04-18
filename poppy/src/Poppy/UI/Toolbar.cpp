@@ -92,13 +92,16 @@ float ToolbarButton::calcWidth(float /* height */) const {
     return textSize.x + 6 * GImGui->Style.FramePadding.y;
 }
 
-ToolbarIconButton::ToolbarIconButton(CommandPalette::Action const* action,
+ToolbarIconButton::ToolbarIconButton(Command const* command,
                                      std::string iconName):
     ToolbarIconButton(std::move(iconName)) {
-    onClick([action] {
-        if (action) action->execute();
-    });
-    enabled([action] { return action && action->enabled(); });
+    if (!command) {
+        enabled(false);
+        return;
+    }
+    onClick([=] { command->execute(); });
+    enabled([=] { return command->enabled(); });
+    tooltip(command->name());
 }
 
 void ToolbarIconButton::display(ToolbarStyle const& style) {

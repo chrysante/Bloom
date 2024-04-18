@@ -9,9 +9,7 @@
 using namespace poppy;
 using namespace bloom;
 
-using Action = CommandPalette::Action;
-
-void Action::execute() const {
+void Command::execute() const {
     BL_EXPECT(enabled());
     fn();
 }
@@ -34,12 +32,12 @@ static ModFlags canonicalize(ModFlags mods) {
 void CommandPalette::add(std::string name, KeyCombination keyComb,
                          std::function<void()> fn,
                          std::function<bool()> enabled) {
-    Action action = { std::move(fn), std::move(enabled) };
-    nameMap.insert({ std::move(name), action });
+    Command command = { name, std::move(fn), std::move(enabled) };
+    nameMap.insert({ name, command });
     auto& list = keyMap[keyComb.key];
     if (keyComb.key != Key::None) {
-        list.push_back({ canonicalize(keyComb.modFlags), action });
-        ranges::sort(list, ModFlagOrder, &ModActionPair::modFlags);
+        list.push_back({ canonicalize(keyComb.modFlags), command });
+        ranges::sort(list, ModFlagOrder, &ModCommandPair::modFlags);
     }
 }
 
@@ -52,7 +50,7 @@ void CommandPalette::doCommand(std::string_view name) const {
     cmd->execute();
 }
 
-Action const* CommandPalette::find(std::string_view name) const {
+Command const* CommandPalette::find(std::string_view name) const {
     auto itr = nameMap.find(name);
     if (itr == nameMap.end()) {
         return nullptr;
@@ -73,7 +71,7 @@ void CommandPalette::onInput(InputEvent& event) const {
         if (itr == list.end()) {
             return false;
         }
-        itr->action.execute();
+        itr->command.execute();
         return true;
     });
 }

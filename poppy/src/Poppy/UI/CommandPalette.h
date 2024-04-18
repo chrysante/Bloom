@@ -20,27 +20,34 @@ struct KeyCombination {
     bloom::ModFlags modFlags;
 };
 
+/// Element type of the command palette. A command is a named action
+class Command {
+public:
+    Command(std::string name, std::function<void()> fn,
+            std::function<bool()> enabled):
+        _name(std::move(name)),
+        fn(std::move(fn)),
+        _enabled(std::move(enabled)) {}
+
+    /// \Returns the name of this command
+    std::string const& name() const { return _name; }
+
+    /// Performs the command
+    /// \Pre `enabled()` must return `true`
+    void execute() const;
+
+    /// \Returns `true` if this command can be executed
+    bool enabled() const { return !_enabled || _enabled(); }
+
+private:
+    std::string _name;
+    std::function<void()> fn;
+    std::function<bool()> _enabled;
+};
+
 /// Set of commands
 class CommandPalette {
 public:
-    ///
-    class Action {
-    public:
-        Action(std::function<void()> fn, std::function<bool()> enabled):
-            fn(std::move(fn)), _enabled(std::move(enabled)) {}
-
-        /// Performs the command
-        /// \Pre `enabled()` must return `true`
-        void execute() const;
-
-        /// \Returns `true` if this command can be executed
-        bool enabled() const { return !_enabled || _enabled(); }
-
-    private:
-        std::function<void()> fn;
-        std::function<bool()> _enabled;
-    };
-
     /// Inserts a command.
     ///
     /// \p keyComb is canonicalized depending on the OS. This means that on
@@ -52,12 +59,12 @@ public:
     void doCommand(std::string_view name) const;
 
     ///
-    Action const* find(std::string_view name) const;
+    Command const* find(std::string_view name) const;
 
 private:
-    struct ModActionPair {
+    struct ModCommandPair {
         bloom::ModFlags modFlags;
-        Action action;
+        Command command;
     };
 
     friend class Editor; // To call onInput()
@@ -65,8 +72,8 @@ private:
 
     void onInput(bloom::InputEvent& event) const;
 
-    utl::hashmap<std::string, Action> nameMap;
-    utl::hashmap<bloom::Key, std::vector<ModActionPair>> keyMap;
+    utl::hashmap<std::string, Command> nameMap;
+    utl::hashmap<bloom::Key, std::vector<ModCommandPair>> keyMap;
 };
 
 } // namespace poppy

@@ -73,8 +73,7 @@ RenderGraphView::RenderGraphView(): nodeEditor(commandPaletteWrite()) {
     cmd.add("Compile", { Key::B, ModFlags::Control }, [this] { compile(); });
     // clang-format off
     toolbar = Toolbar({
-        ToolbarIconButton(commandPalette().find("Compile"), "play")
-            .tooltip("Compile"),
+        ToolbarIconButton(commandPalette().find("Compile"), "play"),
         ToolbarSpacer(),
         ToolbarTextItem()
             .text([this] { return compStatusMessage(compilationStatus); })

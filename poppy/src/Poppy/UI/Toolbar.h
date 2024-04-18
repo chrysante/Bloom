@@ -151,9 +151,8 @@ public:
     ToolbarIconButton(std::function<char const*()> iconNameFn):
         _icon(iconNameFn) {}
 
-    /// Construct from an action and an icon name
-    ToolbarIconButton(CommandPalette::Action const* action,
-                      std::string iconName);
+    /// Construct from an command and an icon name
+    ToolbarIconButton(Command const* command, std::string iconName);
 
 private:
     void display(ToolbarStyle const& style) override;

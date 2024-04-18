@@ -61,6 +61,8 @@ struct ConsoleView: View {
 
     void backgroundContextMenu();
 
+    void showDebugMenuItems();
+
     ActiveData active;
     PersistentData persistent;
 };
@@ -199,32 +201,26 @@ static void displayTimestamp(float& tsWidthAcc, TimePoint tp, int ID) {
 
 static void displayMessageText(Message const& msg) {
     ImGui::PushFont(selectMsgFont(msg.level));
-    float2 size =
-        ImGui::CalcTextSize(msg.text.data(), msg.text.data() + msg.text.size());
-    auto* window = GImGui->CurrentWindow;
-    ImRect bb(window->DC.CursorPos, (float2)window->DC.CursorPos + size);
-    ImGui::ItemAdd(bb, window->GetID(msg.ID));
-    ImGui::ItemSize(bb);
-    auto* DL = window->DrawList;
-    DL->AddText(bb.Min,
-                ImGui::ColorConvertFloat4ToU32(selectMsgColor(msg.level)),
-                msg.text.c_str());
+    ImGui::PushStyleColor(ImGuiCol_Text, selectMsgColor(msg.level));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextEx(msg.text.data(), msg.text.data() + msg.text.size());
+    ImGui::PopTextWrapPos();
+    ImGui::PopStyleColor();
     ImGui::PopFont();
 }
 
 void ConsoleView::displayMessage(float& tsWidthAcc, Message const& msg) {
-    std::string timestamp = formatTime(msg.timestamp);
-    float2 tsSize = ImGui::CalcTextSize(timestamp.data(),
-                                        timestamp.data() + timestamp.size());
-    tsWidthAcc = std::max(tsWidthAcc, tsSize.x);
     auto* window = GImGui->CurrentWindow;
     float2 cursorBegin = window->DC.CursorPos;
-    displayTimestamp(tsWidthAcc, msg.timestamp, msg.ID);
+    if (persistent.showTimeStamps) {
+        displayTimestamp(tsWidthAcc, msg.timestamp, msg.ID);
+    }
     float2 cursorEnd = window->DC.CursorPos;
     window->DC.CursorPos =
         cursorBegin + float2(active.timestampWidth + style.InnerSpacingX, 0);
     displayMessageText(msg);
-    window->DC.CursorPos = cursorEnd;
+    window->DC.CursorPos =
+        float2(cursorEnd.x, std::max(cursorEnd.y, window->DC.CursorPos.y));
     window->DC.IsSetPos = true;
 }
 
@@ -244,14 +240,25 @@ void ConsoleView::frame() {
         displayMessage(tsWidth, msg);
     }
     ImGui::PopStyleVar();
-    if (tsWidth > 0) {
-        active.timestampWidth = tsWidth;
-    }
+    active.timestampWidth = tsWidth;
     scrollBehaviour(active.isMaxScroll);
     backgroundContextMenu();
     if (persistent.showStyleEditor) {
         displayStyleEditor(&persistent.showStyleEditor);
     }
+}
+
+void ConsoleView::backgroundContextMenu() {
+    auto name = "BGContextMenu";
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        ImGui::OpenPopup(name);
+    }
+    if (!ImGui::BeginPopup(name)) {
+        return;
+    }
+    showDebugMenuItems();
+    ImGui::Checkbox("Show Timestamps", &persistent.showTimeStamps);
+    ImGui::EndPopup();
 }
 
 static void logTestMessages() {
@@ -263,22 +270,17 @@ static void logTestMessages() {
     Logger::Fatal("Fatal test message");
 }
 
-void ConsoleView::backgroundContextMenu() {
-    auto name = "BGContextMenu";
-    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-        ImGui::OpenPopup(name);
-    }
-    if (!ImGui::BeginPopup(name)) {
-        return;
-    }
+void ConsoleView::showDebugMenuItems() {
     if (ImGui::MenuItem("Log Test Messages")) {
         logTestMessages();
+    }
+    if (ImGui::MenuItem("Log Verbose Message")) {
+        Logger::Trace(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.");
     }
     if (ImGui::MenuItem("Show Style Editor")) {
         persistent.showStyleEditor = true;
     }
-    ImGui::Checkbox("Show Timestamps", &persistent.showTimeStamps);
-    ImGui::EndPopup();
 }
 
 std::unique_ptr<Logger::Impl> bloom::makeGlobalLoggerImpl() {

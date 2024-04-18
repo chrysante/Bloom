@@ -12,6 +12,7 @@
 
 #include "Bloom/Application/Application.h"
 #include "Bloom/Application/Window.h"
+#include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Dockspace.h"
 #include "Poppy/UI/ImGuiContext.h"
 #include "Poppy/UI/View.h"
@@ -86,6 +87,7 @@ private:
     ImGuiContext imguiCtx;
     Dockspace dockspace;
     std::vector<std::unique_ptr<View>> views;
+    CommandPalette cmd;
     DebugViews debugViews;
     SelectionContext mSelection;
     float autoConfigSaveTimer = 0;

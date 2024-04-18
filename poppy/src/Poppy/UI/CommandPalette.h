@@ -41,7 +41,8 @@ private:
         Action action;
     };
 
-    friend class View; // To call onInput()
+    friend class Editor; // To call onInput()
+    friend class View;   // To call onInput()
 
     void onInput(bloom::InputEvent& event) const;
 

@@ -9,6 +9,7 @@
 
 #include "Bloom/Asset/AssetManager.h"
 #include "Poppy/Core/Debug.h"
+#include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/ImGuiContext.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/Views/AssetBrowser.h"
@@ -19,9 +20,15 @@ using namespace poppy;
 
 using InteractionData = DirectoryView::InteractionData;
 
-DirectoryView::DirectoryView(DirectoryViewDelegate delegate):
+DirectoryView::DirectoryView(CommandPalette& cmd,
+                             DirectoryViewDelegate delegate):
     delegate(delegate) {
     style = { .itemSpacing = 10, .itemSize = 100, .labelHeight = 20 };
+    cmd.add("Delete Selected", { Key::Backspace, ModFlags::Control }, [this] {
+        if (interaction.selectedIndex >= 0) {
+            deleteEntry(entries[interaction.selectedIndex]);
+        }
+    });
 }
 
 void DirectoryView::display() {
@@ -71,26 +78,7 @@ void DirectoryView::openDirectory(std::filesystem::path const& dir) {
 
 void DirectoryView::rescan() { openDirectory(currentDirectory); }
 
-/// \Returns
-static bool isDeleteEntryKey(KeyEvent event) {
-#if __APPLE__
-    return event.key == Key::Backspace &&
-           test(event.modifierFlags & ModFlags::Super);
-#endif
-    return false;
-}
-
-void DirectoryView::onInput(InputEvent& event) {
-    event.dispatch<InputEventMask::KeyDown>([this](KeyEvent event) {
-        if (isDeleteEntryKey(event)) {
-            if (interaction.selectedIndex >= 0) {
-                deleteEntry(entries[interaction.selectedIndex]);
-                return true;
-            }
-        }
-        return false;
-    });
-}
+void DirectoryView::onInput(InputEvent& event) {}
 
 namespace {
 

@@ -44,6 +44,7 @@ static char const* playButton(Editor const* editor) {
 
 Editor::Editor(): mSelection(makeReceiver()) {
     setRunLoopMode(RunLoopMode::EventDriven);
+    cmd.add("Save", { Key::S, ModFlags::Control }, [this] { saveAll(); });
     // clang-format off
     dockspace.setLeftToolbar({
         /// Very annoying hack to prevent the toolbar from rendering under the 
@@ -234,17 +235,7 @@ void Editor::displayViews() {
 void Editor::onInput(InputEvent e) {
     invalidateView();
     imguiCtx.onInput(e);
-    e.dispatch<InputEventMask::KeyUp>([&](KeyEvent event) {
-        if (event.key == Key::S && test(event.modifierFlags & ModFlags::Super))
-        {
-            saveAll();
-            return true;
-        }
-        return false;
-    });
-    if (e.handled()) {
-        return;
-    }
+    /// Give to focused view
     auto focusedViewItr =
         std::find_if(views.begin(), views.end(),
                      [](auto const& v) { return v->focused(); });
@@ -254,16 +245,18 @@ void Editor::onInput(InputEvent e) {
             return;
         }
     }
-    /// Give to all unfocused panels
+    /// Give to all unfocused views
     for (auto& view: views) {
         if (view->focused()) {
             continue;
         }
         view->doOnInput(e);
         if (e.handled()) {
-            break;
+            return true;
         }
     }
+    /// Give to ourself
+    cmd.onInput(e);
 }
 
 std::filesystem::path Editor::configFile() const {

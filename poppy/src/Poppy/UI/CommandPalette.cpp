@@ -26,8 +26,10 @@ void CommandPalette::add(std::string name, KeyCombination keyComb,
                          std::function<void()> action) {
     nameMap.insert({ std::move(name), action });
     auto& list = keyMap[keyComb.key];
-    list.push_back({ canonicalize(keyComb.modFlags), action });
-    ranges::sort(list, ModFlagOrder, &ModActionPair::modFlags);
+    if (keyComb.key != Key::None) {
+        list.push_back({ canonicalize(keyComb.modFlags), action });
+        ranges::sort(list, ModFlagOrder, &ModActionPair::modFlags);
+    }
 }
 
 void CommandPalette::doCommand(std::string_view name) const {

@@ -11,6 +11,7 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Application/InputEvent.h"
+#include "Poppy/UI/Fwd.h"
 
 namespace poppy {
 
@@ -60,7 +61,8 @@ struct DirectoryViewDelegate {
 /// `View`-derived class
 class DirectoryView {
 public:
-    explicit DirectoryView(DirectoryViewDelegate delegate = {});
+    explicit DirectoryView(CommandPalette& cmd,
+                           DirectoryViewDelegate delegate = {});
 
     /// To be called every frame for rendering and interaction
     void display();

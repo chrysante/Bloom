@@ -45,6 +45,7 @@ set(poppy_sources
   src/Poppy/Views/AssetBrowser.h
   src/Poppy/Views/BasicSceneInspector.cpp
   src/Poppy/Views/BasicSceneInspector.h
+  src/Poppy/Views/ConsoleView.cpp
   src/Poppy/Views/DebugViews.cpp
   src/Poppy/Views/DebugViews.h
   src/Poppy/Views/DirectoryView.cpp

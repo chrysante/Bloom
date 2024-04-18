@@ -1,5 +1,6 @@
 #include "Bloom/Core/Debug.h"
 
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 
@@ -61,12 +62,12 @@ static void announceMessage(std::ostream& str, Logger::Level level) {
 static tfmt::Modifier const& mod(Logger::Level level) {
     using namespace tfmt::modifiers;
     static tfmt::Modifier const mods[] = {
-        /* Trace   = */ None,
-        /* Info    = */ BrightGreen,
-        /* Debug   = */ BrightBlue,
-        /* Warning = */ Yellow | Bold,
-        /* Error   = */ Red | Bold,
-        /* Fatal   = */ BGRed | BrightWhite | Bold,
+        /* Trace:   */ None,
+        /* Info:    */ BrightGreen,
+        /* Debug:   */ BrightBlue,
+        /* Warning: */ Yellow | Bold,
+        /* Error:   */ Red | Bold,
+        /* Fatal:   */ BGRed | BrightWhite | Bold,
     };
     return mods[(size_t)level];
 };
@@ -106,33 +107,73 @@ static void formatTime(std::ostream& str) {
         << "s:" << std::setfill(' ') << std::setw(3) << mil.count() << "ms] ";
 }
 
+namespace {
+
+struct TerminalLogger: Logger::Impl {
+    void beginLog(Logger::Level level) final {
+        tfmt::pushModifier(mod(level), std::cout);
+        if (options.timestamps) {
+            formatTime(std::cout);
+        }
+        if (!tfmt::isTermFormattable(std::cout)) {
+            announceMessage(std::cout, level);
+        }
+    }
+
+    void endLog() final {
+        tfmt::popModifier(std::cout);
+        std::cout << "\n";
+    }
+
+    std::ostream& getOstream() final { return std::cout; }
+};
+
+struct NullLogger: Logger::Impl {
+    void beginLog(Logger::Level) final {}
+    void endLog() final {}
+    std::ostream& getOstream() final { return f; }
+    std::fstream f;
+};
+
+} // namespace
+
 static std::mutex gLoggerMutex;
+
+TerminalLogger& termLogger() {
+    static TerminalLogger l;
+    return l;
+}
+
+static Logger::Impl& userLogger() {
+    static auto const l = makeGlobalLoggerImpl();
+    return *l;
+}
 
 void Logger::beginLog(Level level) {
     /// We use RAII to invoke `endLog()` which unlocks the mutex so no need to
     /// use `lock_guard` or `unique_lock` here.
     /// We need the lock because
     ///  - this way messages from different threads won't be interleaved
-    ///  - Otherwise pushing and popping `tfmt` modifiers from different threads
-    ///  does not work correctly
+    ///  - otherwise pushing and popping `tfmt` modifiers from different threads
+    ///    does not work correctly
     gLoggerMutex.lock();
-    auto& str = ostream();
-    tfmt::pushModifier(mod(level), str);
-    if (options.timestamps) {
-        formatTime(str);
-    }
-    if (!tfmt::isTermFormattable(str)) {
-        announceMessage(str, level);
-    }
+    termLogger().beginLog(level);
+    userLogger().beginLog(level);
 }
 
 void Logger::endLog() {
-    tfmt::popModifier(ostream());
-    ostream() << "\n";
+    termLogger().endLog();
+    userLogger().endLog();
     gLoggerMutex.unlock();
 }
 
-std::ostream& Logger::ostream() { return std::cout; }
+std::ostream& Logger::defOstream() { return termLogger().getOstream(); }
+
+std::ostream& Logger::userOstream() { return userLogger().getOstream(); }
+
+std::unique_ptr<Logger::Impl> bloom::makeGlobalLoggerImpl() {
+    return std::make_unique<NullLogger>();
+}
 
 FunctionProfiler::FunctionProfiler(char const* function, char const* file):
     function(function),

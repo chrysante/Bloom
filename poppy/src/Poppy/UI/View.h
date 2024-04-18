@@ -179,7 +179,7 @@ private:
         entry.description = __VA_ARGS__;                                       \
         entry.name = Name;                                                     \
         ViewRegistry::add(Name, entry);                                        \
-    };
+    }
 
 } // namespace poppy
 

@@ -98,6 +98,7 @@ class BLOOM_API Logger {
 public:
     enum class Level { Trace, Info, Debug, Warning, Error, Fatal };
 
+    /// Functions for different severity levels @{
     static void Trace(auto const&... args) noexcept {
         doLog(Level::Trace, args...);
     }
@@ -116,6 +117,15 @@ public:
     static void Fatal(auto const&... args) noexcept {
         doLog(Level::Fatal, args...);
     }
+    /// @}
+
+    /// Customization point
+    struct Impl {
+        virtual ~Impl() = default;
+        virtual void beginLog(Level level) = 0;
+        virtual void endLog() = 0;
+        virtual std::ostream& getOstream() = 0;
+    };
 
 private:
     struct LogGuard {
@@ -125,15 +135,20 @@ private:
     static void doLog(Level level, auto const&... args) noexcept {
         beginLog(level);
         LogGuard guard;
-        (..., (ostream() << args));
+        (..., (defOstream() << args));
+        (..., (userOstream() << args));
     }
 
     static void beginLog(Level level);
 
     static void endLog();
 
-    static std::ostream& ostream();
+    static std::ostream& defOstream();
+    static std::ostream& userOstream();
 };
+
+/// Users can replace this function to return their own logger implementation
+__attribute__((weak)) std::unique_ptr<Logger::Impl> makeGlobalLoggerImpl();
 
 #define BL_PROFILE_FUNCTION()                                                  \
     FunctionProfiler UTL_UNIQUE_NAME(BL_Profiler_)(__func__, __FILE__)

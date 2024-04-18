@@ -109,6 +109,10 @@ static InputEventMask translateType(NSEventType type) {
         return InputEventMask::OtherMouseDown;
     case NSEventTypeOtherMouseUp:
         return InputEventMask::OtherMouseUp;
+    case NSEventTypeKeyDown:
+        return InputEventMask::KeyDown;
+    case NSEventTypeKeyUp:
+        return InputEventMask::KeyUp;
     default:
         return InputEventMask::None;
     }
@@ -148,6 +152,17 @@ static InputEvent makeMagnificationEvent(NSEvent* event) {
     result.locationInWindow = event.locationInWindow;
     result.offset = event.magnification;
     return InputEvent(InputEventMask::Magnify, result);
+}
+
+static InputEvent makePeriodKeyEvent(NSEvent* event) {
+    /// If we ever need to create other events we need to write a key code
+    /// translation function
+    BL_ASSERT(event.keyCode == 47,
+              "This function exists only to make period key events");
+    KeyEvent keyEvent{ { .modifierFlags =
+                             translateModFlags(event.modifierFlags) },
+                       .key = Key::Period };
+    return InputEvent(translateType(event.type), keyEvent);
 }
 
 /// \Returns `true` if the location of \p event is over the frame of \p button
@@ -268,6 +283,7 @@ void Window::platformInit() {
                            NSEventMaskOtherMouseDown | NSEventMaskOtherMouseUp;
     [NSEvent addLocalMonitorForEventsMatchingMask:mouseButtonMask
                                           handler:mouseButtonHandler];
+
     auto scrollHandler = ^NSEvent*(NSEvent* event) {
         if (event.window != window) {
             return event;
@@ -281,6 +297,7 @@ void Window::platformInit() {
     };
     [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskScrollWheel
                                           handler:scrollHandler];
+
     auto magnifyHandler = ^NSEvent*(NSEvent* event) {
         if (event.window != window) {
             return event;
@@ -292,13 +309,34 @@ void Window::platformInit() {
     };
     [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskMagnify
                                           handler:magnifyHandler];
+
+    auto keyHandler = ^NSEvent*(NSEvent* event) {
+        if (event.window != window) {
+            return event;
+        }
+        /// Weirdly enough this event is not sent to GLFW, so we catch it here.
+        /// Key code 47 is period
+        if (event.keyCode == 47 &&
+            (event.modifierFlags &
+             NSEventModifierFlagDeviceIndependentFlagsMask) ==
+                NSEventModifierFlagCommand)
+        {
+            if (callbacks.onInputFn) {
+                callbacks.onInputFn(makePeriodKeyEvent(event));
+            }
+        }
+        return event;
+    };
+    [NSEvent
+        addLocalMonitorForEventsMatchingMask:NSEventMaskKeyUp | NSEventMaskKeyUp
+                                     handler:keyHandler];
+
     auto appDefinedReceiver = ^NSEvent*(NSEvent* event) {
         if ((CocoaEventType)event.subtype == CocoaEventType::WindowShallZoom) {
             [event.window zoom:nil];
         }
         return event;
     };
-
     [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskApplicationDefined
                                           handler:appDefinedReceiver];
 }

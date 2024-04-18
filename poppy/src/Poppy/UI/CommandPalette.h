@@ -72,7 +72,8 @@ private:
 
     void onInput(bloom::InputEvent& event) const;
 
-    utl::hashmap<std::string, Command> nameMap;
+    /// This is a node hashmap because we give out pointers to elements
+    utl::node_hashmap<std::string, Command> nameMap;
     utl::hashmap<bloom::Key, std::vector<ModCommandPair>> keyMap;
 };
 

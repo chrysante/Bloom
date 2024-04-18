@@ -14,10 +14,6 @@ void Command::execute() const {
     fn();
 }
 
-static constexpr auto ModFlagOrder = [](ModFlags a, ModFlags b) {
-    return std::popcount((size_t)a) > std::popcount((size_t)b);
-};
-
 static ModFlags canonicalize(ModFlags mods) {
     using enum ModFlags;
 #if defined(__APPLE__)
@@ -37,7 +33,6 @@ void CommandPalette::add(std::string name, KeyCombination keyComb,
     auto& list = keyMap[keyComb.key];
     if (keyComb.key != Key::None) {
         list.push_back({ canonicalize(keyComb.modFlags), command });
-        ranges::sort(list, ModFlagOrder, &ModCommandPair::modFlags);
     }
 }
 
@@ -66,12 +61,14 @@ void CommandPalette::onInput(InputEvent& event) const {
         }
         auto& list = listItr->second;
         auto itr = ranges::find_if(list, [&](auto& p) {
-            return test(p.modFlags & event.modifierFlags);
+            return p.modFlags == event.modifierFlags;
         });
         if (itr == list.end()) {
             return false;
         }
-        itr->command.execute();
+        if (itr->command.enabled()) {
+            itr->command.execute();
+        }
         return true;
     });
 }

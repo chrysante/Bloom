@@ -112,9 +112,9 @@ AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
                                           &handle, sizeof handle);
             }
         },
-    }); // clang-format on
+    });   // clang-format on
     // clang-format off
-    toolbar = {
+    toolbar = Toolbar(&commandPalette(), {
         ToolbarIconButton("up-open")
             .onClick([] {
                 Logger::Trace("Going Up");
@@ -161,7 +161,7 @@ AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
             .onClick([this] {
                 assetManager->compileScripts();
             })
-    };  // clang-format on
+    }); // clang-format on
     setPadding({ 0, 0 });
 }
 

@@ -9,6 +9,7 @@
 #include <utl/uuid.hpp>
 
 #include "Poppy/Core/Debug.h"
+#include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace vml::short_types;
@@ -68,12 +69,20 @@ bool tbIconButton(ToolbarStyle const& style, IconData icon, int ID, float2 size,
     return result;
 }
 
+void ToolbarButtonBase::doAction() {
+    if (_action) {
+        _action();
+    }
+    if (cmd && !_command.empty() && !cmd->doCommand(_command)) {
+        Logger::Warn("Failed to execute command: \"", _command, "\"");
+    }
+}
+
 void ToolbarButton::display(ToolbarStyle const& style) {
     if (tbButton(style, _label.c_str(), ID(),
-                 float2(getWidth(), style.actualHeight)) &&
-        _action)
+                 float2(getWidth(), style.actualHeight)))
     {
-        _action();
+        doAction();
     }
 }
 
@@ -87,10 +96,9 @@ float ToolbarButton::calcWidth(float /* height */) const {
 void ToolbarIconButton::display(ToolbarStyle const& style) {
     if (tbIconButton(style, FontManager::get({ IconSize::_16 }, _icon()), ID(),
                      float2(getWidth(), style.actualHeight), getTooltip(),
-                     getIsEnabled()) &&
-        _action)
+                     getIsEnabled()))
     {
-        _action();
+        doAction();
     }
 }
 
@@ -198,6 +206,15 @@ float ToolbarEmptyItem::calcWidth([[maybe_unused]] float height) const {
     return _width;
 }
 
+Toolbar::Toolbar(CommandPalette const* cmd, ToolbarItemList items):
+    items(std::move(items)) {
+    for (auto& item: this->items) {
+        if (auto* button = dynamic_cast<ToolbarButtonBase*>(&item)) {
+            button->cmd = cmd;
+        }
+    }
+}
+
 float Toolbar::getWidthWithoutSpacers() const {
     return std::accumulate(blocks.begin(), blocks.end(), 0.0f,
                            [](float acc, Block const& block) {
@@ -243,39 +260,39 @@ void Toolbar::display(std::optional<float> width) noexcept {
 
 void Toolbar::displayBlock(Block const& block) {
     for (size_t i = block.itemBeginIndex; i < block.itemEndIndex; ++i) {
-        items[i]->display(style);
+        items[i].display(style);
         ImGui::SameLine();
     }
 }
 
 void Toolbar::cook() {
     blocks.clear();
-    cooked = true;
     if (items.empty()) {
         return;
     }
     /// Partition into blocks
     blocks.emplace_back();
     blocks.back().itemBeginIndex = 0;
-    for (auto [index, item]: items | enumerate) {
-        if (dynamic_cast<ToolbarSpacer const*>(item.get())) {
+    for (size_t index = 0; auto& item: items) {
+        if (dynamic_cast<ToolbarSpacer const*>(&item)) {
             blocks.back().itemEndIndex = index + 1;
             blocks.emplace_back();
             blocks.back().itemBeginIndex = index + 1;
             continue;
         }
+        ++index;
     }
     blocks.back().itemEndIndex = items.size();
     /// Calculate item widths
     for (auto& item: items) {
-        item->_width = item->calcWidth(style.actualHeight);
+        item._width = item.calcWidth(style.actualHeight);
     }
     /// Calculate block widths
     for (auto& block: blocks) {
         block.width = std::accumulate(items.begin() + block.itemBeginIndex,
                                       items.begin() + block.itemEndIndex, 0.0f,
                                       [](float acc, auto& item) {
-            return acc + item->getWidth();
+            return acc + item.getWidth();
         });
         block.width += (block.itemEndIndex - block.itemBeginIndex - 1) *
                        GImGui->Style.ItemSpacing.x;
@@ -283,7 +300,6 @@ void Toolbar::cook() {
 }
 
 void Toolbar::calcOffsets(float totalWidth) {
-    assert(cooked);
     for (auto& block: blocks) {
         block.visible = false;
     }

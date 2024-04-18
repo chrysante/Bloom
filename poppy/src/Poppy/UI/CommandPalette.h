@@ -31,7 +31,8 @@ public:
              std::function<void()> action);
 
     /// Executes the command \p name if a matching command exists
-    void doCommand(std::string_view name) const;
+    /// \Returns `true` if the command exists and was executed
+    bool doCommand(std::string_view name) const;
 
 private:
     using Action = std::function<void()>;

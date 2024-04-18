@@ -246,7 +246,7 @@ void Viewport2::deserialize(YAML::Node node) {
 
 Toolbar Viewport2::makeToolbar() {
     // clang-format off
-    return {
+    return Toolbar(&commandPalette(), {
         ToolbarDropdownMenu()
             .content([this] { dropdownMenu(); })
             .minWidth(400),
@@ -309,7 +309,7 @@ Toolbar Viewport2::makeToolbar() {
                     }
                 });
             })
-    }; // clang-format on
+    }); // clang-format on
 }
 
 void Viewport2::dropdownMenu() {}

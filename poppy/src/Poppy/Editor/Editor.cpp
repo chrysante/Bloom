@@ -46,8 +46,8 @@ Editor::Editor(): mSelection(makeReceiver()) {
     setRunLoopMode(RunLoopMode::EventDriven);
     cmd.add("Save", { Key::S, ModFlags::Control }, [this] { saveAll(); });
     // clang-format off
-    dockspace.setLeftToolbar({
-        /// Very annoying hack to prevent the toolbar from rendering under the 
+    dockspace.setLeftToolbar(Toolbar(&cmd, {
+        /// Very annoying hack to prevent the toolbar from rendering under the
         /// window buttons on MacOS
         ToolbarEmptyItem().width(75),
         ToolbarDropdownMenu()
@@ -64,8 +64,8 @@ Editor::Editor(): mSelection(makeReceiver()) {
             .enabled([&] {
                 return !coreSystems().sceneSystem().scenes().empty();
             })
-    });
-    dockspace.setCenterToolbar({
+    }));
+    dockspace.setCenterToolbar(Toolbar(&cmd, {
         ToolbarIconButton("bank")
             .onClick([] {
                 Logger::Trace("Some Button Pressed");
@@ -76,8 +76,8 @@ Editor::Editor(): mSelection(makeReceiver()) {
                 dispatch(DispatchToken::NextFrame, ReloadShadersCommand{});
             })
             .tooltip("Reload Shaders")
-    });
-    dockspace.setRightToolbar({
+    }));
+    dockspace.setRightToolbar(Toolbar(&cmd, {
         ToolbarIconButton("attention-circled")
             .onClick([]{ Logger::Trace("Some Button Clicked"); }),
         ToolbarSpacer{},
@@ -86,7 +86,7 @@ Editor::Editor(): mSelection(makeReceiver()) {
             .content([] {
                 ImGui::Text("Placeholder Menu");
             }),
-    });
+    }));
     // clang-format on
 }
 
@@ -252,7 +252,7 @@ void Editor::onInput(InputEvent e) {
         }
         view->doOnInput(e);
         if (e.handled()) {
-            return true;
+            return;
         }
     }
     /// Give to ourself

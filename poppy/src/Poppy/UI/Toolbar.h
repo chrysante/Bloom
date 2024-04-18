@@ -8,8 +8,12 @@
 
 #include <utl/common.hpp>
 #include <vml/vml.hpp>
+#ifndef __OBJC__
+#include <range/v3/view.hpp>
+#endif
 
 #include "Poppy/UI/Font.h"
+#include "Poppy/UI/Fwd.h"
 
 namespace poppy {
 
@@ -62,7 +66,7 @@ private:
 
 /// Mixin class that provides common functionality of toolbar items
 template <typename Derived>
-class ToolbarItemMixin: public ToolbarItem {
+class ToolbarItemCommon {
 public:
     /// Specifies a tooltip that will be displayed when this item is hovered
     Derived& tooltip(std::string text) {
@@ -95,33 +99,66 @@ protected:
 private:
     Derived& asDerived() { return *static_cast<Derived*>(this); }
 
-    friend class Toolbar;
-
     std::function<char const*()> _tooltip;
     std::function<bool()> _enabled; // treated as true if null
 };
 
+/// Common base class of toolbar buttons
+class ToolbarButtonBase: public ToolbarItem {
+protected:
+    void doAction();
+
+private:
+    template <typename Derived>
+    friend class ToolbarButtonMixin;
+    friend class Toolbar;
+
+    CommandPalette const* cmd = nullptr;
+    std::function<void()> _action;
+    std::string _command;
+};
+
+///
+template <typename Derived>
+class ToolbarButtonMixin {
+public:
+    /// Specify the action to perform when this button is clicked
+    Derived& onClick(std::function<void()> action) {
+        asDerived()._action = std::move(action);
+        return asDerived();
+    }
+
+    /// Specify a command of the associated command palette to perform when the
+    /// button is clicked
+    Derived& onClick(std::string command) {
+        asDerived()._command = std::move(command);
+        return asDerived();
+    }
+
+private:
+    Derived& asDerived() { return *static_cast<Derived*>(this); }
+};
+
 /// Toolbar text button
-class ToolbarButton: public ToolbarItemMixin<ToolbarButton> {
+class ToolbarButton:
+    public ToolbarButtonBase,
+    public ToolbarItemCommon<ToolbarButton>,
+    public ToolbarButtonMixin<ToolbarButton> {
 public:
     ToolbarButton(std::string label): _label(std::move(label)) {}
-
-    /// Specify the action to perform when this button is clicked
-    ToolbarButton& onClick(std::function<void()> action) {
-        this->_action = std::move(action);
-        return *this;
-    }
 
 private:
     void display(ToolbarStyle const& style) override;
     float calcWidth(float height) const override;
 
     std::string _label;
-    std::function<void()> _action;
 };
 
 ///
-class ToolbarIconButton: public ToolbarItemMixin<ToolbarIconButton> {
+class ToolbarIconButton:
+    public ToolbarButtonBase,
+    public ToolbarItemCommon<ToolbarIconButton>,
+    public ToolbarButtonMixin<ToolbarIconButton> {
 public:
     /// Construct from an icon name
     ToolbarIconButton(std::string iconName):
@@ -131,22 +168,17 @@ public:
     ToolbarIconButton(std::function<char const*()> iconNameFn):
         _icon(iconNameFn) {}
 
-    /// Specify the action to perform when this button is clicked
-    ToolbarIconButton& onClick(std::function<void()> action) {
-        this->_action = std::move(action);
-        return *this;
-    }
-
 private:
     void display(ToolbarStyle const& style) override;
     float calcWidth(float height) const override;
 
-    std::function<void()> _action;
     std::function<char const*()> _icon;
 };
 
 /// A toolbar button that opens a dropdown menu
-class ToolbarDropdownMenu: public ToolbarItemMixin<ToolbarDropdownMenu> {
+class ToolbarDropdownMenu:
+    public ToolbarItem,
+    public ToolbarItemCommon<ToolbarDropdownMenu> {
 public:
     ToolbarDropdownMenu();
 
@@ -266,19 +298,52 @@ private:
 };
 
 ///
-class Toolbar {
-public:
-    template <std::derived_from<ToolbarItem>... ItemType>
-    Toolbar(ItemType... items) {
-        (addItem(std::move(items)), ...);
+class ToolbarItemList {
+#ifndef __OBJC__
+    static auto getImpl(auto* This) {
+        return This->_items |
+               ranges::views::transform([](auto& p) -> auto& { return *p; });
     }
 
-    /// Adds \p item to the back of this toolbar
-    template <std::derived_from<ToolbarItem> ItemType>
-    void addItem(ItemType item) {
-        items.push_back(std::make_unique<ItemType>(std::move(item)));
-        cooked = false;
+    static auto getCommon(auto* This) {
+        return getImpl(This) | ranges::views::common;
     }
+#endif
+
+public:
+    template <std::derived_from<ToolbarItem>... ItemType>
+    ToolbarItemList(ItemType... items) {
+        _items.reserve(sizeof...(items));
+        (add(std::move(items)), ...);
+    }
+
+    ///
+    template <std::derived_from<ToolbarItem> ItemType>
+    void add(ItemType item) {
+        _items.push_back(std::make_unique<ItemType>(std::move(item)));
+    }
+
+    /// Range interface @{
+#ifndef __OBJC__
+    auto begin() { return getCommon(this).begin(); }
+    auto begin() const { return getCommon(this).begin(); }
+    auto end() { return getCommon(this).end(); }
+    auto end() const { return getCommon(this).end(); }
+#endif
+    size_t size() const { return _items.size(); }
+    size_t empty() const { return _items.empty(); }
+    auto& operator[](size_t index) { return *_items[index]; }
+    auto& operator[](size_t index) const { return *_items[index]; }
+    /// @}
+
+private:
+    std::vector<std::unique_ptr<ToolbarItem>> _items;
+};
+
+///
+class Toolbar {
+public:
+    Toolbar(CommandPalette const* cmd = nullptr, ToolbarItemList items = {});
 
     /// \Returns the acccumulated width of all items including padding but
     /// ignoring all spacers. This is used by the dockspace for the triple
@@ -320,10 +385,9 @@ private:
 
     vml::float2 getPadding() const;
 
-    std::vector<std::unique_ptr<ToolbarItem>> items;
+    ToolbarItemList items;
     std::vector<Block> blocks;
     ToolbarStyle style{};
-    bool cooked = false;
 };
 
 } // namespace poppy

@@ -30,7 +30,7 @@ static bool ShowDebugPanel = false;
 
 Viewport::Viewport(): BasicSceneInspector(this) {
     // clang-format off
-    toolbar = {
+    toolbar = Toolbar(&commandPalette(), {
         ToolbarDropdownMenu()
             .content([this] {
                 dropdownMenu();
@@ -92,7 +92,7 @@ Viewport::Viewport(): BasicSceneInspector(this) {
                 }
             });
         })
-    }; // clang-format on
+    }); // clang-format on
 }
 
 void Viewport::init() {

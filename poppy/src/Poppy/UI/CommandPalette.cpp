@@ -32,11 +32,13 @@ void CommandPalette::add(std::string name, KeyCombination keyComb,
     }
 }
 
-void CommandPalette::doCommand(std::string_view name) const {
+bool CommandPalette::doCommand(std::string_view name) const {
     auto itr = nameMap.find(name);
     if (itr != nameMap.end()) {
         itr->second();
+        return true;
     }
+    return false;
 }
 
 void CommandPalette::onInput(InputEvent& event) const {

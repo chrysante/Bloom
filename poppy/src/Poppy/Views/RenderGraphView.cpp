@@ -41,6 +41,7 @@ struct RenderGraphView: View {
     Toolbar makeToolbar();
 
     void compile();
+    void doCompile();
 
     void backgroundContextMenu(float2 position);
 
@@ -86,17 +87,15 @@ char const* compStatusMessage(CompilationStatus status) {
 
 Toolbar RenderGraphView::makeToolbar() {
     // clang-format off
-    return {
+    return Toolbar(&commandPalette(), {
         ToolbarIconButton("play")
-            .onClick([this] {
-                dispatch(DispatchToken::NextFrame,  [this] { compile(); });
-            })
+            .onClick("Compile")
             .tooltip("Compile"),
         ToolbarSpacer(),
         ToolbarTextItem()
             .text([this] { return compStatusMessage(compilationStatus); })
             .font(FontDesc::UIDefault().setSize(FontSize{ 16 }))
-    }; // clang-format on
+    }); // clang-format on
 }
 
 YAML::Node RenderGraphView::serialize() const {
@@ -116,6 +115,10 @@ void RenderGraphView::deserialize(YAML::Node root) {
 }
 
 void RenderGraphView::compile() {
+    dispatch(DispatchToken::NextFrame, [this] { doCompile(); });
+}
+
+void RenderGraphView::doCompile() {
     auto& ctx = RenderGraphManager::context();
     ctx.resourcePool.clear();
     auto rg = constructRenderGraph(ctx, editor().device(), nodeEditor.model());

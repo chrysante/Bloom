@@ -367,7 +367,7 @@ void Viewport::dropdownMenu() {
         }
         if (drawOptions.visualizeShadowCascades) {
             auto lightEntity = drawOptions.lightVizEntity;
-            auto* scene = &lightEntity.scene();
+            auto* scene = lightEntity ? &lightEntity.scene() : nullptr;
             char const* preview = nullptr;
             if (!lightEntity || getLightType(lightEntity) == LightType::none ||
                 !scene->getComponent<DirectionalLightComponent>(lightEntity)

@@ -228,6 +228,8 @@ static ImGuiKey toImGuiKeyCode(Key key) {
 
 poppy::ImGuiContext::~ImGuiContext() = default;
 
+#define USE_VIEWORTS 0
+
 void poppy::ImGuiContext::init(Application& application,
                                ImGuiContextDescription const& ds) {
     mApplication = &application;
@@ -252,7 +254,7 @@ void poppy::ImGuiContext::init(Application& application,
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
-#if 0
+#if USE_VIEWORTS
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 #endif
     io.IniFilename = desc.iniFilePath.c_str();
@@ -287,7 +289,10 @@ void poppy::ImGuiContext::newFrame(Window& window) {
 void poppy::ImGuiContext::drawFrame(HardwareDevice& device, Window& window) {
     ImGui::SetCurrentContext(context);
     doDrawFramePlatform(device, window);
-    //    ImGui::UpdatePlatformWindows();
+#if USE_VIEWORTS
+    ImGui::UpdatePlatformWindows();
+    ImGui::RenderPlatformWindowsDefault();
+#endif
 }
 
 void poppy::ImGuiContext::onInput(InputEvent e) {
@@ -307,11 +312,25 @@ void poppy::ImGuiContext::onInput(InputEvent e) {
         return true;
     });
     e.dispatch<InputEventMask::MouseMoved>([&](MouseMoveEvent const& event) {
-        io.AddMousePosEvent(event.locationInWindow.x, event.locationInWindow.y);
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            io.AddMousePosEvent(event.locationOnScreen.x,
+                                event.locationOnScreen.y);
+        }
+        else {
+            io.AddMousePosEvent(event.locationInWindow.x,
+                                event.locationInWindow.y);
+        }
         return true;
     });
     e.dispatch<InputEventMask::MouseDragged>([&](MouseDragEvent const& event) {
-        io.AddMousePosEvent(event.locationInWindow.x, event.locationInWindow.y);
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            io.AddMousePosEvent(event.locationOnScreen.x,
+                                event.locationOnScreen.y);
+        }
+        else {
+            io.AddMousePosEvent(event.locationInWindow.x,
+                                event.locationInWindow.y);
+        }
         return true;
     });
     e.dispatch<InputEventMask::ScrollWheel>([&](ScrollEvent const& event) {

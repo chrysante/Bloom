@@ -345,7 +345,7 @@ View& Editor::createView(ViewRegistry::Entry const& entry, Window& window) {
     assert((bool)entry.factory);
     auto view = entry.factory();
     view->mRegisterDescription = entry.description;
-    view->desc.pub._name_DONT_CHANGE_ME = entry.name;
+    view->desc.pub.name = entry.name;
     populateView(*view, window);
     view->doInit();
     views.push_back(std::move(view));

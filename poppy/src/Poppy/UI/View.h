@@ -21,15 +21,23 @@ class Window;
 
 namespace poppy {
 
-struct ViewDescription {
-    std::string const& name() const { return _name_DONT_CHANGE_ME; }
-    std::string _name_DONT_CHANGE_ME;
+class Editor;
 
+///
+struct ViewDescription {
+    ///
+    std::string name;
+
+    ///
     std::string title;
 
+    ///
     vml::int2 size = { 300, 300 };
+
+    ///
     vml::float2 padding = -1;
 
+    ///
     int id = -1; // Used to restore serialized Views. -1 means the View will use
                  // a new ID.
 };
@@ -38,8 +46,6 @@ struct ViewRegisterDescription {
     bool unique = true;
     bool persistent = true;
 };
-
-class Editor;
 
 class View: protected bloom::Emitter, protected bloom::Receiver {
     friend class Editor;
@@ -58,7 +64,7 @@ public:
     vml::int2 position() const { return desc.position; }
     vml::float2 padding() const { return desc.pub.padding; }
 
-    std::string_view name() const { return desc.pub.name(); }
+    std::string_view name() const { return desc.pub.name; }
     std::string_view title() const { return desc.pub.title; }
     ViewDescription const& description() const { return desc.pub; }
 
@@ -170,7 +176,6 @@ private:
 
 #include "Bloom/Core/Serialize.h"
 
-BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewDescription, _name_DONT_CHANGE_ME, size,
-                           padding, id);
+BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewDescription, name, size, padding, id);
 
 #endif // POPPY_UI_VIEW_H

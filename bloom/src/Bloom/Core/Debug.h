@@ -12,6 +12,7 @@
 #include <string_view>
 
 #include <utl/common.hpp>
+#include <utl/function_view.hpp>
 
 #ifndef BLOOM_DEBUGLEVEL
 #define BLOOM_DEBUGLEVEL 1
@@ -134,6 +135,9 @@ public:
         virtual void endLog() = 0;
         virtual std::ostream& getOstream() = 0;
     };
+
+    /// Executes \p callback under the global logger lock
+    static void doLocked(utl::function_view<void()> callback);
 
 private:
     struct LogGuard {

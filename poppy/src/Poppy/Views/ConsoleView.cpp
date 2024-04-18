@@ -1,9 +1,11 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <utl/format_time.hpp>
+#include <utl/uuid.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Serialize.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/View.h"
 
@@ -23,17 +25,29 @@ struct Message {
     std::string text = {};
 };
 
-struct UILogger: Logger::Impl {
-    void beginLog(Logger::Level level) final {
-        messages.push_back({ IDCounter++, level, Clock::now() });
+class UILogger: public Logger::Impl {
+public:
+    std::vector<Message> messages() const {
+        std::vector<Message> result;
+        Logger::doLocked([&] { result = _messages; });
+        return result;
     }
 
-    void endLog() final { messages.back().text = std::move(sstr).str(); }
+    void clear() {
+        Logger::doLocked([&] { _messages.clear(); });
+    }
+
+private:
+    void beginLog(Logger::Level level) final {
+        _messages.push_back({ IDCounter++, level, Clock::now() });
+    }
+
+    void endLog() final { _messages.back().text = std::move(sstr).str(); }
 
     std::ostream& getOstream() final { return sstr; }
 
     std::stringstream sstr;
-    std::vector<Message> messages;
+    std::vector<Message> _messages;
     int IDCounter = 0;
 };
 
@@ -63,6 +77,10 @@ struct ConsoleView: View {
 
     void showDebugMenuItems();
 
+    YAML::Node serialize() const override;
+
+    void deserialize(YAML::Node node) override;
+
     ActiveData active;
     PersistentData persistent;
 };
@@ -89,7 +107,7 @@ struct ConsoleStyle {
 };
 
 static ConsoleStyle style{
-    .color = { .background = { 0, 0, 0, 1 },
+    .color = { .background = vml::hsva_to_rgba(0.0, 0.0, 0.05, 1.0),
                .timestamp = { 1, 1, 1, 0.5 },
                .level = { /* Trace:   */ { 1, 1, 1, 0.75 },
                           /* Info:    */ { 0.6, 0.9, 0.1, 1 },
@@ -129,9 +147,9 @@ static ImFont* selectMsgFont(Logger::Level level) {
     using enum Logger::Level;
     switch (level) {
     case Trace:
-        [[fallthrough]];
-    case Info:
         return FontManager::get(style.baseFont);
+    case Info:
+        [[fallthrough]];
     case Debug:
         [[fallthrough]];
     case Warning:
@@ -139,7 +157,7 @@ static ImFont* selectMsgFont(Logger::Level level) {
     case Error:
         [[fallthrough]];
     case Fatal:
-        return FontManager::get(style.baseFont.setWeight(FontWeight::Bold));
+        return FontManager::get(style.baseFont.setWeight(FontWeight::Semibold));
     }
 }
 
@@ -228,6 +246,7 @@ void ConsoleView::frame() {
     if (!gLogger) {
         return;
     }
+    setBGColor(style.color.background);
     auto* DL = ImGui::GetWindowDrawList();
     DL->AddRect(ImGui::GetWindowPos(),
                 (float2)ImGui::GetWindowPos() + (float2)ImGui::GetWindowSize(),
@@ -236,7 +255,7 @@ void ConsoleView::frame() {
     float tsWidth = 0;
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                         { ImGui::GetStyle().ItemSpacing.x, style.YSpacing });
-    for (auto& msg: gLogger->messages) {
+    for (auto& msg: gLogger->messages()) {
         displayMessage(tsWidth, msg);
     }
     ImGui::PopStyleVar();
@@ -250,14 +269,19 @@ void ConsoleView::frame() {
 
 void ConsoleView::backgroundContextMenu() {
     auto name = "BGContextMenu";
-    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+    if (ImGui::IsWindowHovered() &&
+        ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+    {
         ImGui::OpenPopup(name);
     }
     if (!ImGui::BeginPopup(name)) {
         return;
     }
-    showDebugMenuItems();
     ImGui::Checkbox("Show Timestamps", &persistent.showTimeStamps);
+    if (ImGui::MenuItem("Clear")) {
+        gLogger->clear();
+    }
+    showDebugMenuItems();
     ImGui::EndPopup();
 }
 
@@ -271,6 +295,7 @@ static void logTestMessages() {
 }
 
 void ConsoleView::showDebugMenuItems() {
+    ImGui::Separator();
     if (ImGui::MenuItem("Log Test Messages")) {
         logTestMessages();
     }
@@ -278,9 +303,26 @@ void ConsoleView::showDebugMenuItems() {
         Logger::Trace(
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.");
     }
+    if (ImGui::MenuItem("Spam")) {
+        for (int i = 0; i < 10000; ++i) {
+            Logger::Debug(utl::uuid::generate());
+        }
+    }
     if (ImGui::MenuItem("Show Style Editor")) {
         persistent.showStyleEditor = true;
     }
+}
+
+BLOOM_MAKE_TEXT_SERIALIZER(PersistentData, showTimeStamps, showStyleEditor);
+
+YAML::Node ConsoleView::serialize() const {
+    YAML::Node root;
+    root["Persisent"] = persistent;
+    return root;
+}
+
+void ConsoleView::deserialize(YAML::Node node) {
+    persistent = node["Persisent"].as<PersistentData>();
 }
 
 std::unique_ptr<Logger::Impl> bloom::makeGlobalLoggerImpl() {

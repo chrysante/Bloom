@@ -149,6 +149,11 @@ static Logger::Impl& userLogger() {
     return *l;
 }
 
+void Logger::doLocked(utl::function_view<void()> callback) {
+    std::lock_guard lock(gLoggerMutex);
+    callback();
+}
+
 void Logger::beginLog(Level level) {
     /// We use RAII to invoke `endLog()` which unlocks the mutex so no need to
     /// use `lock_guard` or `unique_lock` here.

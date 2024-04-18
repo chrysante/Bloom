@@ -95,6 +95,9 @@ protected:
     /// \Returns a mutable reference to the attached command palette
     CommandPalette& commandPaletteWrite() { return cmdPalette; }
 
+    ///
+    void setBGColor(std::optional<vml::float4> color) { desc.bgColor = color; }
+
 private:
     virtual void init() {};
     virtual void shutdown() {};
@@ -114,6 +117,7 @@ private:
     struct ViewDescPrivate {
         ViewDescription pub;
 
+        std::optional<vml::float4> bgColor = {};
         vml::int2 position = 0;
         vml::int2 windowSize = 0;
 

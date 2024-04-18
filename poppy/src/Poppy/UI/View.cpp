@@ -109,11 +109,17 @@ void View::doFrame() {
         desc.hasPaddingY ? desc.pub.padding.y : style.WindowPadding.y
     };
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
+    if (desc.bgColor) {
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, *desc.bgColor);
+    }
     std::string displayTitle = utl::strcat(title(), "###", name(), "-", id());
     if (desc.maximized) {
         displayTitle += "-FS";
     }
-    bool const open = ImGui::Begin(displayTitle.data(), &desc.open, flags);
+    bool open = ImGui::Begin(displayTitle.data(), &desc.open, flags);
+    if (desc.bgColor) {
+        ImGui::PopStyleColor();
+    }
     ImGui::PopStyleVar(2);
     if (desc.maximized) {
         ImGui::PopStyleVar();

@@ -765,10 +765,11 @@ void Impl::backgroundBehaviour() {
             viewData.selectionEnd = ImGui::GetMousePos();
             selection.beginCandidates();
         }
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
             viewData.beginMoveDragging = true;
         }
         showPopup = ImGui::IsMouseReleased(ImGuiMouseButton_Right) &&
+                    !ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Right) &&
                     !viewData.isMoveDragging;
     }
     backgroundPopup(showPopup);
@@ -1294,10 +1295,8 @@ void Impl::displayNodeBody(Node& node) {
         return !haveSecondaryInteraction;
     }();
     if (dragging) {
+        viewData.isDraggingNode = true;
         float2 delta = ImGui::GetIO().MouseDelta;
-        if (vml::max_norm(delta) >= 1) {
-            viewData.isDraggingNode = true;
-        }
         for (auto* node: selection.nodes()) {
             node->setPosition(node->position() + delta);
         }

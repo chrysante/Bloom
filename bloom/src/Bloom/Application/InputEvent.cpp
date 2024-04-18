@@ -9,6 +9,7 @@
 using namespace bloom;
 
 InputEvent bloom::makeInputEventFromGLFWMouseButton(Input const& input,
+                                                    Window const& window,
                                                     int buttonCode, int action,
                                                     [[maybe_unused]] int mods) {
     auto const [type, button] = [&] {
@@ -36,7 +37,8 @@ InputEvent bloom::makeInputEventFromGLFWMouseButton(Input const& input,
 
     MouseEvent event;
     event.modifierFlags = input.modFlags();
-    event.locationInWindow = input.mousePosition();
+    event.locationOnScreen = input.mousePosition();
+    event.locationInWindow = input.mousePositionInWindow(window);
 
     switch (action) {
     case GLFW_PRESS: {
@@ -57,11 +59,12 @@ InputEvent bloom::makeInputEventFromGLFWMouseButton(Input const& input,
     }
 }
 
-InputEvent bloom::makeInputEventFromGLFWCursorPos(Input const& input, double,
-                                                  double) {
+InputEvent bloom::makeInputEventFromGLFWCursorPos(Input const& input,
+                                                  Window const& window) {
     MouseMoveEvent event;
     event.modifierFlags = input.modFlags();
-    event.locationInWindow = input.mousePosition();
+    event.locationOnScreen = input.mousePosition();
+    event.locationInWindow = input.mousePositionInWindow(window);
     event.offset = input.mouseOffset();
     MouseDragEvent dragEvent{ event, .button = MouseButton::None };
     if (input.mouseDown(MouseButton::Left)) {
@@ -82,10 +85,12 @@ InputEvent bloom::makeInputEventFromGLFWCursorPos(Input const& input, double,
 }
 
 InputEvent bloom::makeInputEventFromGLFWScroll(Input const& input,
+                                               Window const& window,
                                                double xoffset, double yoffset) {
     ScrollEvent event{};
     event.modifierFlags = input.modFlags();
-    event.locationInWindow = input.mousePosition();
+    event.locationOnScreen = input.mousePosition();
+    event.locationInWindow = input.mousePositionInWindow(window);
     event.offset = { xoffset, yoffset };
     return InputEvent(InputEventMask::ScrollWheel, event);
 }

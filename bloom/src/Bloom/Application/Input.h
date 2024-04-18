@@ -11,6 +11,7 @@
 
 namespace bloom {
 
+class Window;
 class InputEvent;
 
 /// Flags type to indicate if modifier keys are pressed
@@ -155,8 +156,11 @@ enum struct MouseButton {
 /// useful if listening to input events is too tedious
 class BLOOM_API Input {
 public:
-    /// \Returns the current mouse position
+    /// \Returns the current mouse position in screen coordinates
     vml::float2 mousePosition() const { return _mousePosition; }
+
+    /// \Returns the current mouse position in the coordinates of \p window
+    vml::float2 mousePositionInWindow(Window const& window) const;
 
     /// \Returns the offset between the mouse position this frame and last frame
     vml::float2 mouseOffset() const { return _mouseOffset; }

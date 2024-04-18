@@ -233,10 +233,11 @@ void Window::setCallbacks() {
     glfwSetCursorPosCallback(GLFW_WND,
                              [](GLFWwindow* w, double xpos, double ypos) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.userInput.setMousePosition({ xpos, ypos });
+        window.userInput.setMousePosition(double2(xpos, ypos) +
+                                          window.position());
         if (window.callbacks.onInputFn) {
             window.callbacks.onInputFn(
-                makeInputEventFromGLFWCursorPos(window.userInput, xpos, ypos));
+                makeInputEventFromGLFWCursorPos(window.userInput, window));
         }
     });
     glfwSetCursorEnterCallback(GLFW_WND,

@@ -243,7 +243,7 @@ void Viewport::onInput(InputEvent& event) {
         if (!viewportHovered || gizmo.isHovered() || gameView) {
             return false;
         }
-        auto const locationInView = windowSpaceToViewSpace(e.locationInWindow);
+        auto locationInView = windowSpaceToViewSpace(e.locationInWindow);
         if (auto const entity = overlays.hitTest(locationInView)) {
             selection().select(entity);
             return true;

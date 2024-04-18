@@ -4,6 +4,7 @@
 
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Application/InputInternal.h"
+#include "Bloom/Application/Window.h"
 
 using namespace bloom;
 
@@ -166,6 +167,10 @@ static std::array<MouseButton, 3> glfwMouseButtonTranslationTable = [] {
 
 MouseButton bloom::mouseButtonFromGLFW(int glfwCode) {
     return glfwMouseButtonTranslationTable[glfwCode];
+}
+
+vml::float2 Input::mousePositionInWindow(Window const& window) const {
+    return mousePosition() - window.position();
 }
 
 void Input::endFrame() {

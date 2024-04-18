@@ -116,8 +116,11 @@ static InputEventMask translateType(NSEventType type) {
 
 static InputEvent makeMouseButtonEvent(InputEventMask type, MouseButton button,
                                        bool isDown, int clickCount,
-                                       Input const& input) {
-    MouseEvent base{ { input.modFlags() }, input.mousePosition() };
+                                       Input const& input,
+                                       Window const& window) {
+    MouseEvent base{ { input.modFlags() },
+                     .locationInWindow = input.mousePositionInWindow(window),
+                     .locationOnScreen = input.mousePosition() };
     if (isDown) {
         MouseDownEvent downEvent{ base, .button = button,
                                   .clickCount = clickCount };
@@ -247,7 +250,7 @@ void Window::platformInit() {
         if (callbacks.onInputFn) {
             auto inputEvent =
                 makeMouseButtonEvent(translateType(event.type), button, isDown,
-                                     (int)event.clickCount, userInput);
+                                     (int)event.clickCount, userInput, *this);
             callbacks.onInputFn(inputEvent);
         }
         bool isInToolbar =

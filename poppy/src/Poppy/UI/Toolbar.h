@@ -54,11 +54,20 @@ public:
     ///
     float getWidth() const { return _width; }
 
+    /// \Returns `true` is this item is enabled. Disabled items are not
+    /// displayed
+    bool isEnabled() const { return doIsEnabled(); }
+
+    ///  \Returns an optional tooltip string for this item
+    char const* getTooltip() const { return doGetTooltip(); }
+
 private:
     friend class Toolbar;
 
     virtual void display(ToolbarStyle const& style) = 0;
     virtual float calcWidth(float height) const = 0;
+    virtual bool doIsEnabled() const { return true; }
+    virtual char const* doGetTooltip() const { return nullptr; }
 
     int _id;
     float _width;
@@ -66,7 +75,7 @@ private:
 
 /// Mixin class that provides common functionality of toolbar items
 template <typename Derived>
-class ToolbarItemCommon {
+class ToolbarItemMixin: public ToolbarItem {
 public:
     /// Specifies a tooltip that will be displayed when this item is hovered
     Derived& tooltip(std::string text) {
@@ -93,49 +102,37 @@ public:
     }
 
 protected:
-    char const* getTooltip() const { return _tooltip ? _tooltip() : nullptr; }
-    bool getIsEnabled() const { return !_enabled || _enabled(); }
-
-private:
     Derived& asDerived() { return *static_cast<Derived*>(this); }
 
+private:
+    bool doIsEnabled() const override { return !_enabled || _enabled(); }
+    char const* doGetTooltip() const override {
+        return _tooltip ? _tooltip() : nullptr;
+    }
+
     std::function<char const*()> _tooltip;
-    std::function<bool()> _enabled; // treated as true if null
+    std::function<bool()> _enabled;
 };
 
 /// Common base class of toolbar buttons
-class ToolbarButtonBase: public ToolbarItem {
-protected:
-    void doAction();
-
-private:
-    template <typename Derived>
-    friend class ToolbarButtonMixin;
-    friend class Toolbar;
-
-    CommandPalette const* cmd = nullptr;
-    std::function<void()> _action;
-};
-
-///
 template <typename Derived>
-class ToolbarButtonMixin {
+class ToolbarButtonMixin: public ToolbarItemMixin<Derived> {
 public:
     /// Specify the action to perform when this button is clicked
     Derived& onClick(std::function<void()> action) {
-        asDerived()._action = std::move(action);
-        return asDerived();
+        _action = std::move(action);
+        return this->asDerived();
     }
 
+protected:
+    void doAction() const;
+
 private:
-    Derived& asDerived() { return *static_cast<Derived*>(this); }
+    std::function<void()> _action;
 };
 
 /// Toolbar text button
-class ToolbarButton:
-    public ToolbarButtonBase,
-    public ToolbarItemCommon<ToolbarButton>,
-    public ToolbarButtonMixin<ToolbarButton> {
+class ToolbarButton: public ToolbarButtonMixin<ToolbarButton> {
 public:
     ToolbarButton(std::string label): _label(std::move(label)) {}
 
@@ -147,10 +144,7 @@ private:
 };
 
 ///
-class ToolbarIconButton:
-    public ToolbarButtonBase,
-    public ToolbarItemCommon<ToolbarIconButton>,
-    public ToolbarButtonMixin<ToolbarIconButton> {
+class ToolbarIconButton: public ToolbarButtonMixin<ToolbarIconButton> {
 public:
     /// Construct from an icon name
     ToolbarIconButton(std::string iconName):
@@ -172,9 +166,7 @@ private:
 };
 
 /// A toolbar button that opens a dropdown menu
-class ToolbarDropdownMenu:
-    public ToolbarItem,
-    public ToolbarItemCommon<ToolbarDropdownMenu> {
+class ToolbarDropdownMenu: public ToolbarItemMixin<ToolbarDropdownMenu> {
 public:
     ToolbarDropdownMenu();
 
@@ -382,6 +374,7 @@ private:
     vml::float2 getPadding() const;
 
     ToolbarItemList items;
+    std::vector<ToolbarItem*> activeItems;
     std::vector<Block> blocks;
     ToolbarStyle style{};
 };

@@ -1,13 +1,14 @@
 #include "Poppy/UI/Toolbar.h"
 
 #include <algorithm>
-#include <numeric>
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <range/v3/numeric.hpp>
 #include <range/v3/view.hpp>
 #include <utl/uuid.hpp>
 
+#include "Bloom/Core/Ranges.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/ImGuiHelpers.h"
@@ -69,7 +70,8 @@ bool tbIconButton(ToolbarStyle const& style, IconData icon, int ID, float2 size,
     return result;
 }
 
-void ToolbarButtonBase::doAction() {
+template <typename Derived>
+void ToolbarButtonMixin<Derived>::doAction() const {
     if (_action) {
         _action();
     }
@@ -101,8 +103,7 @@ ToolbarIconButton::ToolbarIconButton(CommandPalette::Action const* action,
 
 void ToolbarIconButton::display(ToolbarStyle const& style) {
     if (tbIconButton(style, FontManager::get({ IconSize::_16 }, _icon()), ID(),
-                     float2(getWidth(), style.actualHeight), getTooltip(),
-                     getIsEnabled()))
+                     float2(getWidth(), style.actualHeight), getTooltip()))
     {
         doAction();
     }
@@ -126,13 +127,13 @@ bool ToolbarDropdownMenu::beginCombo(ToolbarStyle const& style) {
     bool popup_open = IsPopupOpen(popup_id, ImGuiPopupFlags_None);
     bool pressed = false;
     if (_preview) {
-        pressed = tbButton(style, _preview().c_str(), ID(), size,
-                           getIsEnabled(), popup_open);
+        pressed = tbButton(style, _preview().c_str(), ID(), size, isEnabled(),
+                           popup_open);
     }
     else {
         char const* icon = _icon ? _icon() : "down-open";
         pressed = tbIconButton(style, FontManager::get({ IconSize::_16 }, icon),
-                               ID(), size, getTooltip(), getIsEnabled(),
+                               ID(), size, getTooltip(), isEnabled(),
                                popup_open);
     }
     if (pressed && !popup_open) {
@@ -213,13 +214,7 @@ float ToolbarEmptyItem::calcWidth([[maybe_unused]] float height) const {
 }
 
 Toolbar::Toolbar(CommandPalette const* cmd, ToolbarItemList items):
-    items(std::move(items)) {
-    for (auto& item: this->items) {
-        if (auto* button = dynamic_cast<ToolbarButtonBase*>(&item)) {
-            button->cmd = cmd;
-        }
-    }
-}
+    items(std::move(items)) {}
 
 float Toolbar::getWidthWithoutSpacers() const {
     return std::accumulate(blocks.begin(), blocks.end(), 0.0f,
@@ -266,39 +261,42 @@ void Toolbar::display(std::optional<float> width) noexcept {
 
 void Toolbar::displayBlock(Block const& block) {
     for (size_t i = block.itemBeginIndex; i < block.itemEndIndex; ++i) {
-        items[i].display(style);
+        activeItems[i]->display(style);
         ImGui::SameLine();
     }
 }
 
 void Toolbar::cook() {
+    activeItems = items | filter(&ToolbarItem::isEnabled) |
+                  transform([](auto& item) { return &item; }) |
+                  ranges::to<std::vector>;
     blocks.clear();
-    if (items.empty()) {
+    if (activeItems.empty()) {
         return;
     }
     /// Partition into blocks
     blocks.emplace_back();
     blocks.back().itemBeginIndex = 0;
-    for (size_t index = 0; auto& item: items) {
-        if (dynamic_cast<ToolbarSpacer const*>(&item)) {
+    for (auto [index, item]: activeItems | enumerate) {
+        if (dynamic_cast<ToolbarSpacer const*>(item)) {
             blocks.back().itemEndIndex = index + 1;
             blocks.emplace_back();
             blocks.back().itemBeginIndex = index + 1;
             continue;
         }
-        ++index;
     }
-    blocks.back().itemEndIndex = items.size();
+    blocks.back().itemEndIndex = activeItems.size();
     /// Calculate item widths
-    for (auto& item: items) {
-        item._width = item.calcWidth(style.actualHeight);
+    for (auto* item: activeItems) {
+        item->_width = item->calcWidth(style.actualHeight);
     }
     /// Calculate block widths
     for (auto& block: blocks) {
-        block.width = std::accumulate(items.begin() + block.itemBeginIndex,
-                                      items.begin() + block.itemEndIndex, 0.0f,
-                                      [](float acc, auto& item) {
-            return acc + item.getWidth();
+        block.width =
+            ranges::accumulate(activeItems.begin() + block.itemBeginIndex,
+                               activeItems.begin() + block.itemEndIndex, 0.0f,
+                               [](float acc, auto* item) {
+            return acc + item->getWidth();
         });
         block.width += (block.itemEndIndex - block.itemBeginIndex - 1) *
                        GImGui->Style.ItemSpacing.x;

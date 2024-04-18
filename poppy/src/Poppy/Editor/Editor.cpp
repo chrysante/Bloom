@@ -48,7 +48,7 @@ Editor::Editor(): mSelection(makeReceiver()) {
     cmd.add("Stop Simulation", { Key::Period, ModFlags::Control },
             [this] { stopSimulation(); }, [this] { return isSimulating(); });
     // clang-format off
-    dockspace.setLeftToolbar(Toolbar(&cmd, {
+    dockspace.setLeftToolbar({
         /// Very annoying hack to prevent the toolbar from rendering under the
         /// window buttons on MacOS
         ToolbarEmptyItem().width(75),
@@ -60,8 +60,8 @@ Editor::Editor(): mSelection(makeReceiver()) {
         ToolbarSpacer{},
         ToolbarIconButton(cmd.find("Stop Simulation"), "stop"),
         ToolbarIconButton(cmd.find("Simulate"), "play")
-    }));
-    dockspace.setCenterToolbar(Toolbar(&cmd, {
+    });
+    dockspace.setCenterToolbar({
         ToolbarIconButton("bank")
             .onClick([] {
                 Logger::Trace("Some Button Pressed");
@@ -72,8 +72,8 @@ Editor::Editor(): mSelection(makeReceiver()) {
                 dispatch(DispatchToken::NextFrame, ReloadShadersCommand{});
             })
             .tooltip("Reload Shaders")
-    }));
-    dockspace.setRightToolbar(Toolbar(&cmd, {
+    });
+    dockspace.setRightToolbar({
         ToolbarIconButton("attention-circled")
             .onClick([]{ Logger::Trace("Some Button Clicked"); }),
         ToolbarSpacer{},
@@ -82,7 +82,7 @@ Editor::Editor(): mSelection(makeReceiver()) {
             .content([] {
                 ImGui::Text("Placeholder Menu");
             }),
-    }));
+    });
     // clang-format on
 }
 

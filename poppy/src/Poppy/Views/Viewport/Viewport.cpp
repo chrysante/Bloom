@@ -30,7 +30,7 @@ static bool ShowDebugPanel = false;
 
 Viewport::Viewport(): BasicSceneInspector(this) {
     // clang-format off
-    toolbar = Toolbar(&commandPalette(), {
+    toolbar = Toolbar({
         ToolbarDropdownMenu()
             .content([this] {
                 dropdownMenu();

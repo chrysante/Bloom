@@ -114,7 +114,7 @@ AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
         },
     });   // clang-format on
     // clang-format off
-    toolbar = Toolbar(&commandPalette(), {
+    toolbar = Toolbar({
         ToolbarIconButton("up-open")
             .onClick([] {
                 Logger::Trace("Going Up");

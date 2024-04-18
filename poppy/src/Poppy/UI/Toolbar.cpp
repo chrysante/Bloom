@@ -213,9 +213,6 @@ float ToolbarEmptyItem::calcWidth([[maybe_unused]] float height) const {
     return _width;
 }
 
-Toolbar::Toolbar(CommandPalette const* cmd, ToolbarItemList items):
-    items(std::move(items)) {}
-
 float Toolbar::getWidthWithoutSpacers() const {
     return std::accumulate(blocks.begin(), blocks.end(), 0.0f,
                            [](float acc, Block const& block) {
@@ -267,8 +264,8 @@ void Toolbar::displayBlock(Block const& block) {
 }
 
 void Toolbar::cook() {
-    activeItems = items | filter(&ToolbarItem::isEnabled) |
-                  transform([](auto& item) { return &item; }) |
+    activeItems = allItems | filter(&ToolbarItem::isEnabled) |
+                  transform([](auto& item) { return item.get(); }) |
                   ranges::to<std::vector>;
     blocks.clear();
     if (activeItems.empty()) {

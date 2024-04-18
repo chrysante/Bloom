@@ -246,7 +246,7 @@ void Viewport2::deserialize(YAML::Node node) {
 
 Toolbar Viewport2::makeToolbar() {
     // clang-format off
-    return Toolbar(&commandPalette(), {
+    return Toolbar({
         ToolbarDropdownMenu()
             .content([this] { dropdownMenu(); })
             .minWidth(400),

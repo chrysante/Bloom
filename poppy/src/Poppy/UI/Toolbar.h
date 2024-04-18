@@ -8,12 +8,9 @@
 
 #include <utl/common.hpp>
 #include <vml/vml.hpp>
-#ifndef __OBJC__
-#include <range/v3/view.hpp>
-#endif
 
-#include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Font.h"
+#include "Poppy/UI/Fwd.h"
 
 namespace poppy {
 
@@ -286,52 +283,12 @@ private:
 };
 
 ///
-class ToolbarItemList {
-#ifndef __OBJC__
-    static auto getImpl(auto* This) {
-        return This->_items |
-               ranges::views::transform([](auto& p) -> auto& { return *p; });
-    }
-
-    static auto getCommon(auto* This) {
-        return getImpl(This) | ranges::views::common;
-    }
-#endif
-
-public:
-    template <std::derived_from<ToolbarItem>... ItemType>
-    ToolbarItemList(ItemType... items) {
-        _items.reserve(sizeof...(items));
-        (add(std::move(items)), ...);
-    }
-
-    ///
-    template <std::derived_from<ToolbarItem> ItemType>
-    void add(ItemType item) {
-        _items.push_back(std::make_unique<ItemType>(std::move(item)));
-    }
-
-    /// Range interface @{
-#ifndef __OBJC__
-    auto begin() { return getCommon(this).begin(); }
-    auto begin() const { return getCommon(this).begin(); }
-    auto end() { return getCommon(this).end(); }
-    auto end() const { return getCommon(this).end(); }
-#endif
-    size_t size() const { return _items.size(); }
-    size_t empty() const { return _items.empty(); }
-    auto& operator[](size_t index) { return *_items[index]; }
-    auto& operator[](size_t index) const { return *_items[index]; }
-    /// @}
-
-private:
-    std::vector<std::unique_ptr<ToolbarItem>> _items;
-};
-
-///
 class Toolbar {
 public:
-    Toolbar(CommandPalette const* cmd = nullptr, ToolbarItemList items = {});
+    template <std::derived_from<ToolbarItem>... ItemTypes>
+    Toolbar(ItemTypes... items) {
+        (addItem(std::move(items)), ...);
+    }
 
     /// \Returns the acccumulated width of all items including padding but
     /// ignoring all spacers. This is used by the dockspace for the triple
@@ -363,6 +320,12 @@ private:
         bool visible;
     };
 
+    template <typename Item>
+    void addItem(Item&& item) {
+        allItems.push_back(std::make_unique<std::remove_cvref_t<Item>>(
+            std::forward<Item>(item)));
+    }
+
     void displayBlock(Block const&);
 
     /// Must be called after adding items
@@ -373,7 +336,7 @@ private:
 
     vml::float2 getPadding() const;
 
-    ToolbarItemList items;
+    std::vector<std::unique_ptr<ToolbarItem>> allItems;
     std::vector<ToolbarItem*> activeItems;
     std::vector<Block> blocks;
     ToolbarStyle style{};

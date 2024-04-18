@@ -4,6 +4,7 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Debug.h"
+#include "Poppy/UI/Font.h"
 #include "Poppy/UI/View.h"
 
 using namespace poppy;
@@ -38,18 +39,111 @@ struct UILogger: Logger::Impl {
 
 static UILogger* gLogger = nullptr;
 
+/// Data to communicate between frames
+struct ActiveData {
+    bool isMaxScroll = true;
+    float timestampWidth = 0;
+};
+
+/// Data that persists between program runs
+struct PersistentData {
+    bool showTimeStamps = true;
+    bool showStyleEditor = false;
+};
+
+/// Console that displays logger messages
 struct ConsoleView: View {
+    void init() override;
+
     void frame() override;
 
     void displayMessage(float& tsWidthAcc, Message const& msg);
 
-    bool isMaxScroll = true;
-    float timestampWidth = 0;
+    void backgroundContextMenu();
+
+    ActiveData active;
+    PersistentData persistent;
 };
 
 } // namespace
 
 POPPY_REGISTER_VIEW(ConsoleView, "Console", {});
+
+void ConsoleView::init() {}
+
+/// # Style
+
+struct ConsoleStyleColors {
+    float4 background;
+    float4 timestamp;
+    float4 level[EnumCount<Logger::Level>];
+};
+
+struct ConsoleStyle {
+    ConsoleStyleColors color;
+    FontDesc baseFont;
+    float YSpacing;
+    float InnerSpacingX;
+};
+
+static ConsoleStyle style{
+    .color = { .background = { 0, 0, 0, 1 },
+               .timestamp = { 1, 1, 1, 0.5 },
+               .level = { /* Trace:   */ { 1, 1, 1, 0.75 },
+                          /* Info:    */ { 0.6, 0.9, 0.1, 1 },
+                          /* Debug:   */ { 1, 0.2, 0.7, 1 },
+                          /* Warning: */ { 0.95, 0.8, 0.15, 1 },
+                          /* Error:   */ { 1, 0.08, 0.08, 1 },
+                          /* Fatal:   */ { 1, 0.08, 0.08, 1 } } },
+    .baseFont = { FontSize{ 14 }, FontWeight::Regular, FontStyle::Monospaced }
+};
+
+static void colorEdit(char const* label, float4& color) {
+    ImGui::ColorEdit4(label, color.data(),
+                      ImGuiColorEditFlags_Float |
+                          ImGuiColorEditFlags_PickerHueWheel);
+}
+
+void displayStyleEditor(bool* open = nullptr) {
+    using enum Logger::Level;
+    ImGui::Begin("Console Style Editor", open);
+    colorEdit("Background", style.color.background);
+    colorEdit("Timestamps", style.color.timestamp);
+    colorEdit("Trace", style.color.level[(size_t)Trace]);
+    colorEdit("Info", style.color.level[(size_t)Info]);
+    colorEdit("Debug", style.color.level[(size_t)Debug]);
+    colorEdit("Warning", style.color.level[(size_t)Warning]);
+    colorEdit("Error", style.color.level[(size_t)Error]);
+    colorEdit("Fatal", style.color.level[(size_t)Fatal]);
+    ImGui::SliderInt("Text Size", (int*)&style.baseFont.size, 5, 20);
+    ImGui::SliderFloat("Y Spacing", &style.YSpacing, -10, 20);
+    ImGui::SliderFloat("Inner X Spacing", &style.InnerSpacingX, 0, 50);
+    ImGui::End();
+}
+
+static ImFont* getTimestampFont() { return FontManager::get(style.baseFont); }
+
+static ImFont* selectMsgFont(Logger::Level level) {
+    using enum Logger::Level;
+    switch (level) {
+    case Trace:
+        [[fallthrough]];
+    case Info:
+        return FontManager::get(style.baseFont);
+    case Debug:
+        [[fallthrough]];
+    case Warning:
+        [[fallthrough]];
+    case Error:
+        [[fallthrough]];
+    case Fatal:
+        return FontManager::get(style.baseFont.setWeight(FontWeight::Bold));
+    }
+}
+
+float4 selectMsgColor(Logger::Level level) {
+    return style.color.level[(size_t)level];
+}
 
 // Copied from Bloom/Core/Debug.cpp
 static std::string formatTime(TimePoint tp) {
@@ -88,6 +182,7 @@ static void scrollBehaviour(bool& isMaxScroll) {
 }
 
 static void displayTimestamp(float& tsWidthAcc, TimePoint tp, int ID) {
+    ImGui::PushFont(getTimestampFont());
     std::string timestamp = formatTime(tp);
     float2 size = ImGui::CalcTextSize(timestamp.data(),
                                       timestamp.data() + timestamp.size());
@@ -97,10 +192,13 @@ static void displayTimestamp(float& tsWidthAcc, TimePoint tp, int ID) {
     ImGui::ItemAdd(bb, window->GetID(ID));
     ImGui::ItemSize(bb);
     auto* DL = window->DrawList;
-    DL->AddText(bb.Min, IM_COL32(255, 255, 255, 255), timestamp.c_str());
+    DL->AddText(bb.Min, ImGui::ColorConvertFloat4ToU32(style.color.timestamp),
+                timestamp.c_str());
+    ImGui::PopFont();
 }
 
 static void displayMessageText(Message const& msg) {
+    ImGui::PushFont(selectMsgFont(msg.level));
     float2 size =
         ImGui::CalcTextSize(msg.text.data(), msg.text.data() + msg.text.size());
     auto* window = GImGui->CurrentWindow;
@@ -108,7 +206,10 @@ static void displayMessageText(Message const& msg) {
     ImGui::ItemAdd(bb, window->GetID(msg.ID));
     ImGui::ItemSize(bb);
     auto* DL = window->DrawList;
-    DL->AddText(bb.Min, IM_COL32(255, 255, 255, 255), msg.text.c_str());
+    DL->AddText(bb.Min,
+                ImGui::ColorConvertFloat4ToU32(selectMsgColor(msg.level)),
+                msg.text.c_str());
+    ImGui::PopFont();
 }
 
 void ConsoleView::displayMessage(float& tsWidthAcc, Message const& msg) {
@@ -120,9 +221,8 @@ void ConsoleView::displayMessage(float& tsWidthAcc, Message const& msg) {
     float2 cursorBegin = window->DC.CursorPos;
     displayTimestamp(tsWidthAcc, msg.timestamp, msg.ID);
     float2 cursorEnd = window->DC.CursorPos;
-    float const InnerSpacing = 10;
     window->DC.CursorPos =
-        cursorBegin + float2(timestampWidth + InnerSpacing, 0);
+        cursorBegin + float2(active.timestampWidth + style.InnerSpacingX, 0);
     displayMessageText(msg);
     window->DC.CursorPos = cursorEnd;
     window->DC.IsSetPos = true;
@@ -132,14 +232,53 @@ void ConsoleView::frame() {
     if (!gLogger) {
         return;
     }
+    auto* DL = ImGui::GetWindowDrawList();
+    DL->AddRect(ImGui::GetWindowPos(),
+                (float2)ImGui::GetWindowPos() + (float2)ImGui::GetWindowSize(),
+                ImGui::ColorConvertFloat4ToU32(style.color.background));
+
     float tsWidth = 0;
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
+                        { ImGui::GetStyle().ItemSpacing.x, style.YSpacing });
     for (auto& msg: gLogger->messages) {
         displayMessage(tsWidth, msg);
     }
+    ImGui::PopStyleVar();
     if (tsWidth > 0) {
-        timestampWidth = tsWidth;
+        active.timestampWidth = tsWidth;
     }
-    scrollBehaviour(isMaxScroll);
+    scrollBehaviour(active.isMaxScroll);
+    backgroundContextMenu();
+    if (persistent.showStyleEditor) {
+        displayStyleEditor(&persistent.showStyleEditor);
+    }
+}
+
+static void logTestMessages() {
+    Logger::Trace("Trace test message");
+    Logger::Info("Info test message");
+    Logger::Debug("Debug test message");
+    Logger::Warn("Warning test message");
+    Logger::Error("Error test message");
+    Logger::Fatal("Fatal test message");
+}
+
+void ConsoleView::backgroundContextMenu() {
+    auto name = "BGContextMenu";
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        ImGui::OpenPopup(name);
+    }
+    if (!ImGui::BeginPopup(name)) {
+        return;
+    }
+    if (ImGui::MenuItem("Log Test Messages")) {
+        logTestMessages();
+    }
+    if (ImGui::MenuItem("Show Style Editor")) {
+        persistent.showStyleEditor = true;
+    }
+    ImGui::Checkbox("Show Timestamps", &persistent.showTimeStamps);
+    ImGui::EndPopup();
 }
 
 std::unique_ptr<Logger::Impl> bloom::makeGlobalLoggerImpl() {

@@ -96,7 +96,15 @@ namespace bloom {
 /// Static logger that provides several "severity" modes
 class BLOOM_API Logger {
 public:
-    enum class Level { Trace, Info, Debug, Warning, Error, Fatal };
+    enum class Level {
+        Trace,
+        Info,
+        Debug,
+        Warning,
+        Error,
+        Fatal,
+        LAST = Fatal
+    };
 
     /// Functions for different severity levels @{
     static void Trace(auto const&... args) noexcept {

@@ -1,5 +1,5 @@
-#ifndef POPPY_EDITOR_VIEWS_ENTITYINSPECTOR_H
-#define POPPY_EDITOR_VIEWS_ENTITYINSPECTOR_H
+#ifndef POPPY_VIEWS_ENTITYINSPECTOR_H
+#define POPPY_VIEWS_ENTITYINSPECTOR_H
 
 #include "Bloom/Graphics/Lights.h"
 #include "Bloom/Scene/Components/AllComponents.h"
@@ -59,4 +59,4 @@ private:
 
 } // namespace poppy
 
-#endif // POPPY_EDITOR_VIEWS_ENTITYINSPECTOR_H
+#endif // POPPY_VIEWS_ENTITYINSPECTOR_H

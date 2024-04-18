@@ -1,5 +1,5 @@
-#ifndef POPPY_EDITOR_VIEWS_DEBUGVIEWS_H
-#define POPPY_EDITOR_VIEWS_DEBUGVIEWS_H
+#ifndef POPPY_VIEWS_DEBUGVIEWS_H
+#define POPPY_VIEWS_DEBUGVIEWS_H
 
 namespace poppy {
 
@@ -15,4 +15,4 @@ public:
 
 } // namespace poppy
 
-#endif // POPPY_EDITOR_VIEWS_DEBUGVIEWS_H
+#endif // POPPY_VIEWS_DEBUGVIEWS_H

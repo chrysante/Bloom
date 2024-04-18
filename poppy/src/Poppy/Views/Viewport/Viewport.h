@@ -1,5 +1,5 @@
-#ifndef POPPY_EDITOR_VIEWS_VIEWPORT_VIEWPORT_H
-#define POPPY_EDITOR_VIEWS_VIEWPORT_VIEWPORT_H
+#ifndef POPPY_VIEWS_VIEWPORT_VIEWPORT_H
+#define POPPY_VIEWS_VIEWPORT_VIEWPORT_H
 
 #include <vml/vml.hpp>
 
@@ -95,4 +95,4 @@ inline std::string toString(Viewport::DebugDrawOptions::Mode mode) {
 
 BLOOM_MAKE_TEXT_SERIALIZER(poppy::Viewport::Parameters, framebufferSlot);
 
-#endif // POPPY_EDITOR_VIEWS_VIEWPORT_VIEWPORT_H
+#endif // POPPY_VIEWS_VIEWPORT_VIEWPORT_H

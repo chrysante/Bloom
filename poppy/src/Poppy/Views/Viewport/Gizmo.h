@@ -1,5 +1,5 @@
-#ifndef POPPY_EDITOR_VIEWS_VIEWPORT_GIZMO_H
-#define POPPY_EDITOR_VIEWS_VIEWPORT_GIZMO_H
+#ifndef POPPY_VIEWS_VIEWPORT_GIZMO_H
+#define POPPY_VIEWS_VIEWPORT_GIZMO_H
 
 #include <string>
 
@@ -54,4 +54,4 @@ std::string toString(Gizmo::Space);
 
 } // namespace poppy
 
-#endif // POPPY_EDITOR_VIEWS_VIEWPORT_GIZMO_H
+#endif // POPPY_VIEWS_VIEWPORT_GIZMO_H

@@ -1,5 +1,5 @@
-#ifndef POPPY_EDITOR_VIEWS_DIRECTORYVIEW_H
-#define POPPY_EDITOR_VIEWS_DIRECTORYVIEW_H
+#ifndef POPPY_VIEWS_DIRECTORYVIEW_H
+#define POPPY_VIEWS_DIRECTORYVIEW_H
 
 #include <any>
 #include <filesystem>
@@ -145,4 +145,4 @@ private:
 
 } // namespace poppy
 
-#endif // POPPY_EDITOR_VIEWS_DIRECTORYVIEW_H
+#endif // POPPY_VIEWS_DIRECTORYVIEW_H

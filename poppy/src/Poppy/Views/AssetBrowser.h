@@ -1,5 +1,5 @@
-#ifndef POPPY_EDITOR_VIEWS_ASSETBROWSER_H
-#define POPPY_EDITOR_VIEWS_ASSETBROWSER_H
+#ifndef POPPY_VIEWS_ASSETBROWSER_H
+#define POPPY_VIEWS_ASSETBROWSER_H
 
 #include <filesystem>
 
@@ -76,4 +76,4 @@ private:
 
 BLOOM_MAKE_TEXT_SERIALIZER(poppy::AssetBrowserData, projectDir, currentDir);
 
-#endif // POPPY_EDITOR_VIEWS_ASSETBROWSER_H
+#endif // POPPY_VIEWS_ASSETBROWSER_H

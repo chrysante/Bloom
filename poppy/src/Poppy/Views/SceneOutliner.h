@@ -1,5 +1,5 @@
-#ifndef POPPY_EDITOR_VIEWS_SCENEOUTLINER_H
-#define POPPY_EDITOR_VIEWS_SCENEOUTLINER_H
+#ifndef POPPY_VIEWS_SCENEOUTLINER_H
+#define POPPY_VIEWS_SCENEOUTLINER_H
 
 #include <optional>
 #include <span>
@@ -53,4 +53,4 @@ private:
 
 } // namespace poppy
 
-#endif // POPPY_EDITOR_VIEWS_SCENEOUTLINER_H
+#endif // POPPY_VIEWS_SCENEOUTLINER_H

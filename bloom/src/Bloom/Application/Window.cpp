@@ -255,7 +255,6 @@ void Window::setCallbacks() {
                                              yoffset));
         }
     });
-#endif
     glfwSetKeyCallback(GLFW_WND, [](GLFWwindow* w, int key, int scancode,
                                     int action, int mods) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -282,6 +281,7 @@ void Window::setCallbacks() {
                                           action, mods));
         }
     });
+#endif
     glfwSetCharCallback(GLFW_WND, [](GLFWwindow* w, unsigned int codepoint) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         if (window.callbacks.onCharInputFn) {

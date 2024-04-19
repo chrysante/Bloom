@@ -31,7 +31,7 @@ UTL_ENUM_OPERATORS(ModFlags);
 ModFlags modFlagsFromGLFW(int glfwModFlags);
 
 /// All known keyboard keys
-enum class BLOOM_API Key {
+enum class Key {
     None = 0,
     A,
     S,
@@ -71,6 +71,7 @@ enum class BLOOM_API Key {
     Num0,
     Equal,
     Minus,
+    Plus,
     RightBracket,
     LeftBracket,
     Apostrophe,
@@ -79,7 +80,11 @@ enum class BLOOM_API Key {
     Comma,
     Slash,
     Period,
+    Circumflex,
+    Accent,
     GraveAccent,
+    Hash,
+    AngleBracketOpen,
     KeypadDecimal,
     KeypadMultiply,
     KeypadAdd,

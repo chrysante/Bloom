@@ -154,14 +154,146 @@ static InputEvent makeMagnificationEvent(NSEvent* event) {
     return InputEvent(InputEventMask::Magnify, result);
 }
 
-static InputEvent makePeriodKeyEvent(NSEvent* event) {
-    /// If we ever need to create other events we need to write a key code
-    /// translation function
-    BL_ASSERT(event.keyCode == 47,
-              "This function exists only to make period key events");
+static Key translateKeyCodeGerman(unsigned code) {
+    using enum Key;
+    switch (code) {
+    case 53:
+        return Key::Escape;
+    case 122:
+        return Key::F1;
+    case 120:
+        return Key::F2;
+    case 99:
+        return Key::F3;
+    case 118:
+        return Key::F4;
+    case 96:
+        return Key::F5;
+    case 98:
+        return Key::F7;
+    case 100:
+        return Key::F8;
+    case 101:
+        return Key::F9;
+    case 109:
+        return Key::F10;
+    case 103:
+        return Key::F11;
+    case 111:
+        return Key::F12;
+    case 10:
+        return Key::Circumflex;
+    case 18:
+        return Key::Num1;
+    case 19:
+        return Key::Num2;
+    case 20:
+        return Key::Num3;
+    case 21:
+        return Key::Num4;
+    case 23:
+        return Key::Num5;
+    case 22:
+        return Key::Num6;
+    case 26:
+        return Key::Num7;
+    case 28:
+        return Key::Num8;
+    case 25:
+        return Key::Num9;
+    case 29:
+        return Key::Num0;
+    case 24:
+        return Key::Accent;
+    case 51:
+        return Key::Backspace;
+    case 48:
+        return Key::Tab;
+    case 12:
+        return Key::Q;
+    case 13:
+        return Key::W;
+    case 14:
+        return Key::E;
+    case 15:
+        return Key::R;
+    case 17:
+        return Key::T;
+    case 16:
+        return Key::Z;
+    case 32:
+        return Key::U;
+    case 34:
+        return Key::I;
+    case 31:
+        return Key::O;
+    case 35:
+        return Key::P;
+    case 30:
+        return Key::Plus;
+    case 36:
+        return Key::Enter;
+    case 0:
+        return Key::A;
+    case 1:
+        return Key::S;
+    case 2:
+        return Key::D;
+    case 3:
+        return Key::F;
+    case 5:
+        return Key::G;
+    case 4:
+        return Key::H;
+    case 38:
+        return Key::J;
+    case 40:
+        return Key::K;
+    case 37:
+        return Key::L;
+    case 42:
+        return Key::Hash;
+    case 50:
+        return Key::AngleBracketOpen;
+    case 6:
+        return Key::Y;
+    case 7:
+        return Key::X;
+    case 8:
+        return Key::C;
+    case 9:
+        return Key::V;
+    case 11:
+        return Key::B;
+    case 45:
+        return Key::N;
+    case 46:
+        return Key::M;
+    case 43:
+        return Key::Comma;
+    case 47:
+        return Key::Period;
+    case 44:
+        return Key::Minus;
+    case 49:
+        return Key::Space;
+    case 126:
+        return Key::UpArrow;
+    case 125:
+        return Key::DownArrow;
+    case 123:
+        return Key::LeftArrow;
+    case 124:
+        return Key::RightArrow;
+    default:
+        return Key::None;
+    }
+}
+
+static InputEvent makeKeyEvent(NSEvent* event) {
     KeyEvent keyEvent{ { .modifierFlags =
                              translateModFlags(event.modifierFlags) },
-                       .key = Key::Period };
+                       .key = translateKeyCodeGerman(event.keyCode) };
     return InputEvent(translateType(event.type), keyEvent);
 }
 
@@ -314,16 +446,8 @@ void Window::platformInit() {
         if (event.window != window) {
             return event;
         }
-        /// Weirdly enough this event is not sent to GLFW, so we catch it here.
-        /// Key code 47 is period
-        if (event.keyCode == 47 &&
-            (event.modifierFlags &
-             NSEventModifierFlagDeviceIndependentFlagsMask) ==
-                NSEventModifierFlagCommand)
-        {
-            if (callbacks.onInputFn) {
-                callbacks.onInputFn(makePeriodKeyEvent(event));
-            }
+        if (callbacks.onInputFn) {
+            callbacks.onInputFn(makeKeyEvent(event));
         }
         return event;
     };

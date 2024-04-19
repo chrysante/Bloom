@@ -59,15 +59,20 @@ struct ActiveData {
     float timestampWidth = 0;
 };
 
+static int const TextSizeMin = 5;
+static int const TextSizeMax = 20;
+
 /// Data that persists between program runs
 struct PersistentData {
     bool showTimeStamps = true;
     bool showStyleEditor = false;
+    int verbosity = EnumCount<Logger::Level>;
+    int textSize = 14;
 };
 
 /// Console that displays logger messages
 struct ConsoleView: View {
-    void init() override;
+    ConsoleView();
 
     void frame() override;
 
@@ -89,7 +94,17 @@ struct ConsoleView: View {
 
 POPPY_REGISTER_VIEW(ConsoleView, "Console", {});
 
-void ConsoleView::init() {}
+static void modifyTextSize(int& textSize, int offset) {
+    textSize = std::clamp(textSize + offset, TextSizeMin, TextSizeMax);
+}
+
+ConsoleView::ConsoleView() {
+    auto& cmd = commandPaletteWrite();
+    cmd.add("Increase Text Size", {},
+            [this] { modifyTextSize(persistent.textSize, 1); });
+    cmd.add("Decrease Text Size", { Key::Minus, ModFlags::Control },
+            [this] { modifyTextSize(persistent.textSize, -1); });
+}
 
 /// # Style
 
@@ -115,7 +130,7 @@ static ConsoleStyle style{
                           /* Warning: */ { 0.95, 0.8, 0.15, 1 },
                           /* Error:   */ { 1, 0.08, 0.08, 1 },
                           /* Fatal:   */ { 1, 0.08, 0.08, 1 } } },
-    .baseFont = { FontSize{ 14 }, FontWeight::Regular, FontStyle::Monospaced }
+    .baseFont = { FontSize{}, FontWeight::Regular, FontStyle::Monospaced }
 };
 
 static void colorEdit(char const* label, float4& color) {
@@ -135,19 +150,21 @@ void displayStyleEditor(bool* open = nullptr) {
     colorEdit("Warning", style.color.level[(size_t)Warning]);
     colorEdit("Error", style.color.level[(size_t)Error]);
     colorEdit("Fatal", style.color.level[(size_t)Fatal]);
-    ImGui::SliderInt("Text Size", (int*)&style.baseFont.size, 5, 20);
     ImGui::SliderFloat("Y Spacing", &style.YSpacing, -10, 20);
     ImGui::SliderFloat("Inner X Spacing", &style.InnerSpacingX, 0, 50);
     ImGui::End();
 }
 
-static ImFont* getTimestampFont() { return FontManager::get(style.baseFont); }
+static ImFont* getTimestampFont(int textSize) {
+    return FontManager::get(style.baseFont.setSize(FontSize{ textSize }));
+}
 
-static ImFont* selectMsgFont(Logger::Level level) {
+static ImFont* selectMsgFont(Logger::Level level, int textSize) {
+    auto base = style.baseFont.setSize(FontSize{ textSize });
     using enum Logger::Level;
     switch (level) {
     case Trace:
-        return FontManager::get(style.baseFont);
+        return FontManager::get(base);
     case Info:
         [[fallthrough]];
     case Debug:
@@ -157,7 +174,7 @@ static ImFont* selectMsgFont(Logger::Level level) {
     case Error:
         [[fallthrough]];
     case Fatal:
-        return FontManager::get(style.baseFont.setWeight(FontWeight::Semibold));
+        return FontManager::get(base.setWeight(FontWeight::Semibold));
     }
 }
 
@@ -201,8 +218,9 @@ static void scrollBehaviour(bool& isMaxScroll) {
     }
 }
 
-static void displayTimestamp(float& tsWidthAcc, TimePoint tp, int ID) {
-    ImGui::PushFont(getTimestampFont());
+static void displayTimestamp(float& tsWidthAcc, TimePoint tp, int ID,
+                             int textSize) {
+    ImGui::PushFont(getTimestampFont(textSize));
     std::string timestamp = formatTime(tp);
     float2 size = ImGui::CalcTextSize(timestamp.data(),
                                       timestamp.data() + timestamp.size());
@@ -217,8 +235,8 @@ static void displayTimestamp(float& tsWidthAcc, TimePoint tp, int ID) {
     ImGui::PopFont();
 }
 
-static void displayMessageText(Message const& msg) {
-    ImGui::PushFont(selectMsgFont(msg.level));
+static void displayMessageText(Message const& msg, int textSize) {
+    ImGui::PushFont(selectMsgFont(msg.level, textSize));
     ImGui::PushStyleColor(ImGuiCol_Text, selectMsgColor(msg.level));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextEx(msg.text.data(), msg.text.data() + msg.text.size());
@@ -231,12 +249,13 @@ void ConsoleView::displayMessage(float& tsWidthAcc, Message const& msg) {
     auto* window = GImGui->CurrentWindow;
     float2 cursorBegin = window->DC.CursorPos;
     if (persistent.showTimeStamps) {
-        displayTimestamp(tsWidthAcc, msg.timestamp, msg.ID);
+        displayTimestamp(tsWidthAcc, msg.timestamp, msg.ID,
+                         persistent.textSize);
     }
     float2 cursorEnd = window->DC.CursorPos;
     window->DC.CursorPos =
         cursorBegin + float2(active.timestampWidth + style.InnerSpacingX, 0);
-    displayMessageText(msg);
+    displayMessageText(msg, persistent.textSize);
     window->DC.CursorPos =
         float2(cursorEnd.x, std::max(cursorEnd.y, window->DC.CursorPos.y));
     window->DC.IsSetPos = true;
@@ -256,7 +275,11 @@ void ConsoleView::frame() {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                         { ImGui::GetStyle().ItemSpacing.x, style.YSpacing });
     for (auto& msg: gLogger->messages()) {
-        displayMessage(tsWidth, msg);
+        if ((int)msg.level >=
+            (int)EnumCount<Logger::Level> - persistent.verbosity)
+        {
+            displayMessage(tsWidth, msg);
+        }
     }
     ImGui::PopStyleVar();
     active.timestampWidth = tsWidth;
@@ -281,6 +304,11 @@ void ConsoleView::backgroundContextMenu() {
     if (ImGui::MenuItem("Clear")) {
         gLogger->clear();
     }
+    ImGui::Separator();
+    ImGui::SliderInt("Verbosity", (int*)&persistent.verbosity, 1,
+                     (int)EnumCount<Logger::Level>);
+    ImGui::SliderInt("Text Size", (int*)&persistent.textSize, TextSizeMin,
+                     TextSizeMax);
     showDebugMenuItems();
     ImGui::EndPopup();
 }
@@ -313,7 +341,8 @@ void ConsoleView::showDebugMenuItems() {
     }
 }
 
-BLOOM_MAKE_TEXT_SERIALIZER(PersistentData, showTimeStamps, showStyleEditor);
+BLOOM_MAKE_TEXT_SERIALIZER(PersistentData, showTimeStamps, showStyleEditor,
+                           verbosity, textSize);
 
 YAML::Node ConsoleView::serialize() const {
     YAML::Node root;

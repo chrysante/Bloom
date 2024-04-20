@@ -51,6 +51,12 @@ struct WindowDescription {
 
     /// This is ignored for now
     bool fullscreen = false;
+
+    /// If set to `true` the window will be created focused
+    bool focused = true;
+
+    /// If set to `true` the window will be focused when `.show()` is called
+    bool focusOnShow = true;
 };
 
 /// Wraps a native window handle

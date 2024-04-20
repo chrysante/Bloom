@@ -91,6 +91,9 @@ public:
     /// \Returns the attached command palette
     CommandPalette const& commandPalette() const { return cmdPalette; }
 
+    /// Used by window backend to close imgui window of closing platform window
+    void setClosing() { desc.open = false; }
+
 protected:
     /// \Returns a mutable reference to the attached command palette
     CommandPalette& commandPaletteWrite() { return cmdPalette; }
@@ -129,6 +132,7 @@ private:
         bool hasPaddingY = false;
         bool open = true;
         bool maximized = false;
+        bool isMoveable = true;
     };
     ViewDescPrivate desc;
     ViewRegisterDescription mRegisterDescription;

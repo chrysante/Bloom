@@ -34,6 +34,8 @@ Window::Window(WindowDescription const& d) {
     desc = WindowDescPrivate{ d };
     desc.fullscreen = false;
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_FOCUSED, d.focused);
+    glfwWindowHint(GLFW_FOCUS_ON_SHOW, d.focusOnShow);
     auto* const w = glfwCreateWindow(desc.size.x, desc.size.y,
                                      desc.title.data(), nullptr, nullptr);
     windowPtr = std::unique_ptr<void, Deleter>(w);
@@ -305,7 +307,6 @@ void Window::setCallbacks() {
     };
     glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.desc.isMoving = true;
         posCallback(window, { posx, posy });
     });
     glfwSetWindowSizeCallback(GLFW_WND,

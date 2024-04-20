@@ -94,11 +94,22 @@ static bool isDocked(ImGuiWindow* window) {
 }
 
 void View::doFrame() {
+    if (isDocked((ImGuiWindow*)desc.imguiWindow)) {
+        desc.isMoveable = true;
+    }
+    else if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        desc.isMoveable = false;
+    }
+    if (auto* window = (ImGuiWindow*)desc.imguiWindow) {
+        window->UserPointer = this;
+    }
     ImGuiWindowFlags flags = 0;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoResize;
+#if 0
     flags |= ImGuiWindowFlags_NoTitleBar;
-    if (!isDocked((ImGuiWindow*)desc.imguiWindow)) {
+#endif
+    if (!desc.isMoveable) {
         flags |= ImGuiWindowFlags_NoMove;
     }
     // Begin block

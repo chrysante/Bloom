@@ -30,6 +30,7 @@
 #ifndef IMGUI_DISABLE
 #import "Bloom/Application/Window.h"
 #import "Poppy/Platform/MacOS/imgui_impl_osx.h"
+#import "Poppy/UI/View.h"
 #import "Poppy/Editor/Editor.h"
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
@@ -899,6 +900,10 @@ static void ConvertNSRect(NSRect* r)
     r->origin.y = firstScreenFrame.size.height - r->origin.y - r->size.height;
 }
 
+static NSWindow* getNative(bloom::Window const* window) {
+    return (__bridge NSWindow*)const_cast<bloom::Window*>(window)->nativeHandle();
+}
+
 static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
 {
     ImGuiViewportP* viewport = static_cast<ImGuiViewportP*>(v);
@@ -911,18 +916,26 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     if (viewport->Flags & ImGuiViewportFlags_NoDecoration) {
         windowDesc.noDecoration = true;
     }
+    windowDesc.focused = true;
+    windowDesc.focusOnShow = true;
     auto* window = &bd->editor->createWindow(windowDesc, nullptr);
+    NSWindow* nsWindow = getNative(window);
+    if (viewport->Flags & ImGuiViewportFlags_TopMost)
+        [nsWindow setLevel:NSFloatingWindowLevel];
 
-    // We probably need to add this for some reason but it stop window content from resizing
+    // We probably need to add this for some reason but it stops window content from resizing
 #if 0
     NSRect rect = NSMakeRect(viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y);
     ConvertNSRect(&rect);
     KeyEventResponder* view = [[KeyEventResponder alloc] initWithFrame:rect];
-    ((__bridge NSWindow*)window->nativeHandle()).contentView = view;
+    nsWindow.contentView = view;
 #endif
 
     data->Window = window;
     data->WindowOwned = true;
+    viewport->PlatformRequestResize = false;
+    viewport->PlatformHandle = window;
+    viewport->PlatformHandleRaw = (__bridge_retained void*)window->nativeHandle();
     window->onResize([=](float2 newSize) {
         viewport->Pos = (float2)window->position();
         viewport->Size = newSize;
@@ -934,9 +947,11 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
         GImGui->MovingWindow = viewport->Window;
         GImGui->ActiveId = viewport->Window->MoveId;
     });
-    viewport->PlatformRequestResize = false;
-    viewport->PlatformHandle = window;
-    viewport->PlatformHandleRaw = (__bridge_retained void*)window->nativeHandle();
+    window->onClose([=] {
+        if (auto* view = (poppy::View*)viewport->Window->UserPointer) {
+            view->setClosing();
+        }
+    });
 }
 
 static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
@@ -959,7 +974,7 @@ static void ImGui_ImplOSX_ShowWindow(ImGuiViewport* viewport)
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
     if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing) {
-        data->Window->setFocused();
+        data->Window->show();
     }
     else {
         data->Window->setFocused();
@@ -998,7 +1013,6 @@ static void ImGui_ImplOSX_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 
 static void ImGui_ImplOSX_SetWindowFocus(ImGuiViewport* viewport)
 {
-    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
     data->Window->setFocused();
@@ -1022,7 +1036,7 @@ static void ImGui_ImplOSX_SetWindowTitle(ImGuiViewport* viewport, const char* ti
 {
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
-    data->Window->setTitle(title);
+    bloom::Logger::Debug("Not honoring ImGui's set title request");
 }
 
 static void ImGui_ImplOSX_SetWindowAlpha(ImGuiViewport* viewport, float alpha)

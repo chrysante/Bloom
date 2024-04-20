@@ -39,6 +39,9 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "Bloom/Platform/Metal/MetalDevice.h"
+#include "Bloom/Platform/Metal/MetalSwapchain.h"
+#include "Bloom/Platform/Metal/MetalCommandQueue.h"
+#include "Bloom/Application/Window.h"
 #include "Poppy/Platform/MacOS/imgui_impl_metal.h"
 #include "Poppy/Editor/Editor.h"
 #import <time.h>
@@ -87,6 +90,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 struct ImGui_ImplMetal_Data
 {
     MetalContext*               SharedMetalContext;
+    poppy::Editor*              editor = nullptr;
 
     ImGui_ImplMetal_Data()      { memset(this, 0, sizeof(*this)); }
 };
@@ -147,6 +151,7 @@ bool ImGui_ImplMetal_Init(poppy::Editor& editor)
 
     bd->SharedMetalContext = [[MetalContext alloc] init];
     bd->SharedMetalContext.device = device;
+    bd->editor = &editor;
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplMetal_InitPlatformInterface();
@@ -426,26 +431,17 @@ static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
     ImGuiViewportDataMetal* data = IM_NEW(ImGuiViewportDataMetal)();
     viewport->RendererUserData = data;
 
-    // PlatformHandleRaw should always be a NSWindow*, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
-    // Some back-ends will leave PlatformHandleRaw == 0, in which case we assume PlatformHandle will contain the NSWindow*.
-    void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
-    IM_ASSERT(handle != nullptr);
-
-    id<MTLDevice> device = bd->SharedMetalContext.device;
-    CAMetalLayer* layer = [CAMetalLayer layer];
-    layer.device = device;
-    layer.framebufferOnly = YES;
-    layer.pixelFormat = bd->SharedMetalContext.framebufferDescriptor.colorPixelFormat;
-#if TARGET_OS_OSX
-    NSWindow* window = (__bridge NSWindow*)handle;
-    NSView* view = window.contentView;
-    view.layer = layer;
-    view.wantsLayer = YES;
-#endif
-    data->MetalLayer = layer;
-    data->CommandQueue = [device newCommandQueue];
+    // PlatformHandle is a bloom::Window* in our fork
+    bloom::Window* window = (bloom::Window*)viewport->PlatformHandle;
+    IM_ASSERT(window != nullptr);
+    window->createDefaultSwapchain(bd->editor->device());
+    window->setCommandQueue(bd->editor->device().createCommandQueue());
+    auto& swapchain = dynamic_cast<bloom::MetalSwapchain&>(window->swapchain());
+    auto& commandQueue = dynamic_cast<bloom::MetalCommandQueue&>(window->commandQueue());
+    data->MetalLayer = swapchain.layer;
+    data->CommandQueue = commandQueue.queue;
     data->RenderPassDescriptor = [[MTLRenderPassDescriptor alloc] init];
-    data->Handle = handle;
+    data->Handle = window;
 }
 
 static void ImGui_ImplMetal_DestroyWindow(ImGuiViewport* viewport)

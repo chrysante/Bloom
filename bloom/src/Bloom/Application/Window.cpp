@@ -229,7 +229,6 @@ void Window::setCallbacks() {
             window.callbacks.onInputFn(event);
         }
     });
-#endif
     glfwSetCursorPosCallback(GLFW_WND,
                              [](GLFWwindow* w, double xpos, double ypos) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -240,6 +239,7 @@ void Window::setCallbacks() {
                 makeInputEventFromGLFWCursorPos(window.userInput, window));
         }
     });
+#endif
     glfwSetCursorEnterCallback(GLFW_WND,
                                [](GLFWwindow* w, [[maybe_unused]] int entered) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);

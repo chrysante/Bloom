@@ -31,129 +31,6 @@ void Window::setSwapchain(std::unique_ptr<Swapchain> swapchain) {
     [window.contentView setLayer:mtlSwapchain.layer];
 }
 
-static MouseButton translateMouseButton(NSEventType type) {
-    switch (type) {
-    case NSEventTypeLeftMouseDown:
-        [[fallthrough]];
-    case NSEventTypeLeftMouseUp:
-        return MouseButton::Left;
-    case NSEventTypeRightMouseDown:
-        [[fallthrough]];
-    case NSEventTypeRightMouseUp:
-        return MouseButton::Right;
-    case NSEventTypeOtherMouseDown:
-        [[fallthrough]];
-    case NSEventTypeOtherMouseUp:
-        return MouseButton::Other;
-    default:
-        return MouseButton::None;
-    }
-}
-
-static bool isMouseButtonDown(NSEventType type) {
-    switch (type) {
-    case NSEventTypeLeftMouseUp:
-        [[fallthrough]];
-    case NSEventTypeRightMouseUp:
-        [[fallthrough]];
-    case NSEventTypeOtherMouseUp: {
-        return false;
-    }
-    case NSEventTypeLeftMouseDown:
-        [[fallthrough]];
-    case NSEventTypeRightMouseDown:
-        [[fallthrough]];
-    case NSEventTypeOtherMouseDown: {
-        return true;
-    }
-    default:
-        BL_UNREACHABLE();
-    }
-}
-
-static ModFlags translateModFlags(NSEventModifierFlags flags) {
-    using enum ModFlags;
-    ModFlags result = None;
-    if (flags & NSEventModifierFlagCapsLock) {
-        result |= CapsLock;
-    }
-    if (flags & NSEventModifierFlagShift) {
-        result |= Shift;
-    }
-    if (flags & NSEventModifierFlagControl) {
-        result |= Control;
-    }
-    if (flags & NSEventModifierFlagOption) {
-        result |= Alt;
-    }
-    if (flags & NSEventModifierFlagCommand) {
-        result |= Super;
-    }
-    if (flags & NSEventModifierFlagNumericPad) {
-        result |= NumLock;
-    }
-    return result;
-}
-
-static InputEventMask translateType(NSEventType type) {
-    switch (type) {
-    case NSEventTypeLeftMouseDown:
-        return InputEventMask::LeftMouseDown;
-    case NSEventTypeLeftMouseUp:
-        return InputEventMask::LeftMouseUp;
-    case NSEventTypeRightMouseDown:
-        return InputEventMask::RightMouseDown;
-    case NSEventTypeRightMouseUp:
-        return InputEventMask::RightMouseUp;
-    case NSEventTypeOtherMouseDown:
-        return InputEventMask::OtherMouseDown;
-    case NSEventTypeOtherMouseUp:
-        return InputEventMask::OtherMouseUp;
-    case NSEventTypeKeyDown:
-        return InputEventMask::KeyDown;
-    case NSEventTypeKeyUp:
-        return InputEventMask::KeyUp;
-    default:
-        return InputEventMask::None;
-    }
-}
-
-static InputEvent makeMouseButtonEvent(InputEventMask type, MouseButton button,
-                                       bool isDown, int clickCount,
-                                       Input const& input,
-                                       Window const& window) {
-    MouseEvent base{ { input.modFlags() },
-                     .locationInWindow = input.mousePositionInWindow(window),
-                     .locationOnScreen = input.mousePosition() };
-    if (isDown) {
-        MouseDownEvent downEvent{ base, .button = button,
-                                  .clickCount = clickCount };
-        return InputEvent(type, downEvent);
-    }
-    else {
-        MouseUpEvent upEvent{ base, .button = button };
-        return InputEvent(type, upEvent);
-    }
-}
-
-static InputEvent makeScrollEvent(NSEvent* event) {
-    ScrollEvent result{};
-    result.isTrackpad = event.momentumPhase != NSEventPhaseNone ||
-                        event.phase != NSEventPhaseNone;
-    result.modifierFlags = translateModFlags(event.modifierFlags);
-    result.locationInWindow = event.locationInWindow;
-    result.offset = { event.scrollingDeltaX, event.scrollingDeltaY };
-    return InputEvent(InputEventMask::ScrollWheel, result);
-}
-
-static InputEvent makeMagnificationEvent(NSEvent* event) {
-    MagnificationEvent result{};
-    result.modifierFlags = translateModFlags(event.modifierFlags);
-    result.locationInWindow = event.locationInWindow;
-    result.offset = event.magnification;
-    return InputEvent(InputEventMask::Magnify, result);
-}
-
 static Key translateKeyCodeGerman(unsigned code) {
     using enum Key;
     switch (code) {
@@ -290,6 +167,155 @@ static Key translateKeyCodeGerman(unsigned code) {
     }
 }
 
+static MouseButton translateMouseButton(NSEventType type) {
+    switch (type) {
+    case NSEventTypeLeftMouseDown:
+        [[fallthrough]];
+    case NSEventTypeLeftMouseUp:
+        return MouseButton::Left;
+    case NSEventTypeRightMouseDown:
+        [[fallthrough]];
+    case NSEventTypeRightMouseUp:
+        return MouseButton::Right;
+    case NSEventTypeOtherMouseDown:
+        [[fallthrough]];
+    case NSEventTypeOtherMouseUp:
+        return MouseButton::Other;
+    default:
+        return MouseButton::None;
+    }
+}
+
+static bool isMouseButtonDown(NSEventType type) {
+    switch (type) {
+    case NSEventTypeLeftMouseUp:
+        [[fallthrough]];
+    case NSEventTypeRightMouseUp:
+        [[fallthrough]];
+    case NSEventTypeOtherMouseUp: {
+        return false;
+    }
+    case NSEventTypeLeftMouseDown:
+        [[fallthrough]];
+    case NSEventTypeRightMouseDown:
+        [[fallthrough]];
+    case NSEventTypeOtherMouseDown: {
+        return true;
+    }
+    default:
+        BL_UNREACHABLE();
+    }
+}
+
+static ModFlags translateModFlags(NSEventModifierFlags flags) {
+    using enum ModFlags;
+    ModFlags result = None;
+    if (flags & NSEventModifierFlagCapsLock) {
+        result |= CapsLock;
+    }
+    if (flags & NSEventModifierFlagShift) {
+        result |= Shift;
+    }
+    if (flags & NSEventModifierFlagControl) {
+        result |= Control;
+    }
+    if (flags & NSEventModifierFlagOption) {
+        result |= Alt;
+    }
+    if (flags & NSEventModifierFlagCommand) {
+        result |= Super;
+    }
+    if (flags & NSEventModifierFlagNumericPad) {
+        result |= NumLock;
+    }
+    return result;
+}
+
+static InputEventMask translateType(NSEventType type) {
+    switch (type) {
+    case NSEventTypeLeftMouseDown:
+        return InputEventMask::LeftMouseDown;
+    case NSEventTypeLeftMouseUp:
+        return InputEventMask::LeftMouseUp;
+    case NSEventTypeRightMouseDown:
+        return InputEventMask::RightMouseDown;
+    case NSEventTypeRightMouseUp:
+        return InputEventMask::RightMouseUp;
+    case NSEventTypeOtherMouseDown:
+        return InputEventMask::OtherMouseDown;
+    case NSEventTypeOtherMouseUp:
+        return InputEventMask::OtherMouseUp;
+    case NSEventTypeKeyDown:
+        return InputEventMask::KeyDown;
+    case NSEventTypeKeyUp:
+        return InputEventMask::KeyUp;
+    default:
+        return InputEventMask::None;
+    }
+}
+
+static MouseEvent makeMouseEvent(NSEvent* event) {
+    MouseEvent result{};
+    result.modifierFlags = translateModFlags(event.modifierFlags);
+    result.locationInWindow = event.locationInWindow;
+    result.locationOnScreen = NSEvent.mouseLocation;
+    result.locationOnScreen.y =
+        CGDisplayPixelsHigh(kCGDirectMainDisplay) - result.locationOnScreen.y;
+    return result;
+}
+
+static InputEvent makeMouseButtonEvent(NSEvent* event) {
+    MouseEvent base = makeMouseEvent(event);
+    auto type = translateType(event.type);
+    MouseButton button = translateMouseButton(event.type);
+    if (isMouseButtonDown(event.type)) {
+        MouseDownEvent downEvent{ base, .button = button,
+                                  .clickCount = event.clickCount };
+        return InputEvent(type, downEvent);
+    }
+    else {
+        MouseUpEvent upEvent{ base, .button = button };
+        return InputEvent(type, upEvent);
+    }
+}
+
+static InputEvent makeScrollEvent(NSEvent* event) {
+    ScrollEvent result{ makeMouseEvent(event),
+                        .offset = { event.scrollingDeltaX,
+                                    event.scrollingDeltaY },
+                        .isTrackpad = event.momentumPhase != NSEventPhaseNone ||
+                                      event.phase != NSEventPhaseNone };
+    return InputEvent(InputEventMask::ScrollWheel, result);
+}
+
+static InputEvent makeMouseMoveDragEvent(NSEvent* event) {
+    MouseMoveEvent base{ makeMouseEvent(event),
+                         .offset = { event.deltaX, event.deltaY } };
+    switch (event.type) {
+    case NSEventTypeMouseMoved:
+        return InputEvent(InputEventMask::MouseMoved, base);
+    case NSEventTypeLeftMouseDragged:
+        return InputEvent(InputEventMask::LeftMouseDragged,
+                          MouseDragEvent{ base, .button = MouseButton::Left });
+    case NSEventTypeRightMouseDragged:
+        return InputEvent(InputEventMask::RightMouseDragged,
+                          MouseDragEvent{ base, .button = MouseButton::Right });
+    case NSEventTypeOtherMouseDragged:
+        return InputEvent(InputEventMask::OtherMouseDragged,
+                          MouseDragEvent{ base, .button = MouseButton::Other });
+    default:
+        BL_UNREACHABLE(); // Invalid cocoa event
+    }
+}
+
+static InputEvent makeMagnificationEvent(NSEvent* event) {
+    MagnificationEvent result{};
+    result.modifierFlags = translateModFlags(event.modifierFlags);
+    result.locationInWindow = event.locationInWindow;
+    result.offset = event.magnification;
+    return InputEvent(InputEventMask::Magnify, result);
+}
+
 static InputEvent makeKeyEvent(NSEvent* event) {
     KeyEvent keyEvent{ { .modifierFlags =
                              translateModFlags(event.modifierFlags) },
@@ -395,9 +421,7 @@ void Window::platformInit() {
         }
         userInput._mouseButtons[(size_t)button] = isDown;
         if (callbacks.onInputFn) {
-            auto inputEvent =
-                makeMouseButtonEvent(translateType(event.type), button, isDown,
-                                     (int)event.clickCount, userInput, *this);
+            auto inputEvent = makeMouseButtonEvent(event);
             callbacks.onInputFn(inputEvent);
         }
         bool isInToolbar =
@@ -429,6 +453,21 @@ void Window::platformInit() {
     };
     [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskScrollWheel
                                           handler:scrollHandler];
+
+    auto mouseMovedDraggedHandler = ^NSEvent*(NSEvent* event) {
+        if (event.window != window) {
+            return event;
+        }
+        if (callbacks.onInputFn) {
+            callbacks.onInputFn(makeMouseMoveDragEvent(event));
+        }
+        return event;
+    };
+    auto moveDragMask = NSEventMaskMouseMoved | NSEventMaskLeftMouseDragged |
+                        NSEventMaskRightMouseDragged |
+                        NSEventMaskOtherMouseDragged;
+    [NSEvent addLocalMonitorForEventsMatchingMask:moveDragMask
+                                          handler:mouseMovedDraggedHandler];
 
     auto magnifyHandler = ^NSEvent*(NSEvent* event) {
         if (event.window != window) {

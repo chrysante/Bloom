@@ -11,7 +11,6 @@
 #include <vml/vml.hpp>
 #include <yaml-cpp/yaml.h>
 
-#include "Bloom/Application/Input.h"
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/GPU/CommandQueue.h"
@@ -49,8 +48,6 @@ struct WindowDescription {
 
 /// Wraps a native window handle
 class BLOOM_API Window {
-    friend class Application;
-
 public:
     /// Sets up the application as a windowed application. Must be called before
     /// creating any windows.
@@ -85,11 +82,9 @@ public:
     /// Sets \p commandQueue as this windows command queue
     void setCommandQueue(std::unique_ptr<CommandQueue> commandQueue);
 
-    /// Resets the scroll and mouse offset in the input class so this must be
-    /// called after each frame. This is not pretty but we go with it for now.
-    void endFrame();
-
     /// Sets the input callback to \p callback
+    /// \p callback will be invoked for every input event that occurs in this
+    /// window
     void onInput(std::function<void(InputEvent const& event)> callback);
 
     /// Sets the text input callback to \p callback
@@ -122,9 +117,6 @@ public:
 
     /// \Returns the window's command queue
     CommandQueue& commandQueue() { return *_commandQueue; }
-
-    /// \Returns the window's input
-    Input const& input() const { return userInput; }
 
     /// \Returns the window's descriptor of the current state
     WindowDescription const& getDescription() const { return desc; }
@@ -198,6 +190,8 @@ public:
     /// @}
 
 private:
+    friend class Application;
+
     struct Deleter {
         void operator()(void*) const;
     };
@@ -235,12 +229,12 @@ private:
     void applyStyle();
     void setCallbacks();
     void resizeSwapchain(vml::int2 size);
+    void onInputImpl(InputEvent const& event, void* native);
 
     WindowDescPrivate desc;
     std::unique_ptr<void, Deleter> windowPtr;
     std::unique_ptr<Swapchain> _swapchain;
     std::unique_ptr<CommandQueue> _commandQueue;
-    Input userInput;
     Callbacks callbacks;
 };
 

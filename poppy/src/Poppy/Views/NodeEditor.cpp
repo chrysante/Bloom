@@ -792,7 +792,8 @@ void Impl::onInput(InputEvent& event) {
             viewData.position += event.offset;
         }
         if (viewData.isSelectionDragging) {
-            viewData.selectionEnd = event.locationInWindow;
+            // FIXME: This must be .locationInWindow when not using viewports
+            viewData.selectionEnd = event.locationOnScreen;
             ImRect selectionRect = viewData.getSelectionRect();
             auto candidates = model.nodes() |
                               ranges::views::filter([&](Node const* node) {

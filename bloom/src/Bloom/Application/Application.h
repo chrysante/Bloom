@@ -7,6 +7,7 @@
 #include <utl/utility.hpp>
 
 #include "Bloom/Application/CoreSystemManager.h"
+#include "Bloom/Application/Input.h"
 #include "Bloom/Application/MessageSystem.h"
 #include "Bloom/Application/Window.h"
 #include "Bloom/Application/WindowDelegate.h"
@@ -39,18 +40,10 @@ enum class RunLoopMode {
 /// to implement their application
 class BLOOM_API Application: protected Receiver, protected Emitter {
 public:
+    Application(Application const&) = delete;
+    Application& operator=(Application const&) = delete;
+
     virtual ~Application();
-
-    /// Called by the framework after core systems have been initialized.
-    virtual void init() {}
-
-    /// Called before the destructor is run
-    /// TODO: Remove this, destructor should be enough
-    virtual void shutdown() {}
-
-    /// Called every frame after the message system has been flushed and before
-    /// the frame delegates of the open windows are called
-    virtual void frame() {}
 
     /// \Returns a reference to the current GPU
     HardwareDevice& device() { return coreSystems().device(); }
@@ -79,6 +72,9 @@ public:
     Window& createWindow(WindowDescription const& desc,
                          std::unique_ptr<WindowDelegate> delegate = nullptr);
 
+    ///
+    Input const& input() const { return mInput; }
+
 protected:
     ///
     Application();
@@ -88,26 +84,34 @@ protected:
     void setRunLoopMode(RunLoopMode mode);
 
 private:
+    struct Impl;
+
+    /// Called by the framework after core systems have been initialized.
+    virtual void init() {}
+
+    /// Called before the destructor is run
+    /// TODO: Remove this, destructor should be enough
+    virtual void shutdown() {}
+
+    /// Called every frame after the message system has been flushed and before
+    /// the frame delegates of the open windows are called
+    virtual void frame() {}
+
+    /// Called for every input event that occurs in any window
+    /// \Returns `true` if the event has been handled
+    virtual bool onInput(InputEvent) { return false; }
+
     friend class AppRunner;
 
     /// Main function of the application. Runs initialization, main loop and
     /// shutdown
     void run();
-
-    ///
     void doInit();
-
-    ///
     void registerListeners();
-
-    ///
     void doShutdown();
-
-    ///
     void doFrame();
-
-    ///
     void clearClosingWindows();
+    void doOnInput(InputEvent const& event, void* native);
 
     /// Owns a window and a corresponding window delegate
     struct WindowWrapper {
@@ -120,6 +124,8 @@ private:
     CoreSystemManager mCoreSystems;
     Timer mTimer;
     RunLoopMode mRunLoopMode = RunLoopMode::Realtime;
+    Input mInput;
+    std::unique_ptr<Impl> impl;
 };
 
 } // namespace bloom

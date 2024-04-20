@@ -104,7 +104,7 @@ void Viewport::init() {
         .buttonAlphaActive = 1,
     });
     sceneRenderer.setRenderer(&editor().coreSystems().renderer());
-    gizmo.setInput(window().input());
+    gizmo.setInput(editor().input());
     overlays.init(this);
 }
 
@@ -138,7 +138,7 @@ void Viewport::frame() {
             detectViewportInput(ImGuiButtonFlags_MouseButtonRight);
         viewportHovered = wantsInput.hovered;
         if (wantsInput.held) {
-            camera.update(Timestep{ 0, 0.166 }, window().input());
+            camera.update(Timestep{ 0, 0.166 }, editor().input());
         }
     }
     if (!isSimulating() && GImGui->DragDropActive) {

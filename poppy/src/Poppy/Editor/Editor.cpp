@@ -265,7 +265,7 @@ void Editor::displayViews() {
     }
 }
 
-void Editor::onInput(InputEvent e) {
+bool Editor::onInput(InputEvent e) {
     invalidateView();
     imguiCtx.onInput(e);
     /// Give to focused view
@@ -275,7 +275,7 @@ void Editor::onInput(InputEvent e) {
     if (focusedViewItr != views.end()) {
         (*focusedViewItr)->doOnInput(e);
         if (e.handled()) {
-            return;
+            return true;
         }
     }
     /// Give to all unfocused views
@@ -285,11 +285,12 @@ void Editor::onInput(InputEvent e) {
         }
         view->doOnInput(e);
         if (e.handled()) {
-            return;
+            return true;
         }
     }
     /// Give to ourself
     cmd.onInput(e);
+    return e.handled();
 }
 
 std::filesystem::path Editor::configFile() const {

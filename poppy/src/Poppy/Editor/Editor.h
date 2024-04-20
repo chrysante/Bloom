@@ -53,7 +53,7 @@ private:
 
     void menuBar();
     void displayViews();
-    void onInput(bloom::InputEvent event);
+    bool onInput(bloom::InputEvent event) override;
 
     /// # Config serialization
     /// @{

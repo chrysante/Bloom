@@ -1,27 +1,26 @@
 #ifndef BLOOM_APPLICATION_INPUTINTERNAL_H
 #define BLOOM_APPLICATION_INPUTINTERNAL_H
 
+#include <functional>
+
 #include <vml/vml.hpp>
 
 namespace bloom {
 
-class Window;
-
-/// Translates GLFW mouse button codes to ours
-MouseButton mouseButtonFromGLFW(int buttonCode);
-
+class Input;
 class InputEvent;
 
-/// Constructor functions
-/// @{
-InputEvent makeInputEventFromGLFWMouseButton(Input const&, Window const& window,
-                                             int button, int action, int mods);
-InputEvent makeInputEventFromGLFWCursorPos(Input const&, Window const& window);
-InputEvent makeInputEventFromGLFWScroll(Input const&, Window const& window,
-                                        double xoffset, double yoffset);
-InputEvent makeInputEventFromGLFWKey(Input const&, int key, int scancode,
-                                     int action, int mods);
-/// @}
+void inputUpdate(Input& input, InputEvent const& event);
+
+void inputEndFrame(Input& input);
+
+/// Registers \p callback to be invoked with every input event that is sent to
+/// the application \Returns an ID that can be used to unregister the callback
+[[nodiscard]] int registerGlobalInputCallback(
+    std::function<void(InputEvent const&, void* nativeEvent)> handler);
+
+/// Unregisters the callback with ID \p ID
+void unregisterGlobalInputCallback(int ID);
 
 } // namespace bloom
 

@@ -118,6 +118,8 @@ set(bloom_sources
   src/Bloom/Graphics/Vertex.h
 
   src/Bloom/Platform/MacOS/Autorelease.mm
+  src/Bloom/Platform/MacOS/CocoaImpl.h
+  src/Bloom/Platform/MacOS/CocoaInput.mm
   src/Bloom/Platform/MacOS/CocoaWindow.mm
   src/Bloom/Platform/MacOS/ResourceUtil.mm
 

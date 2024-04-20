@@ -43,7 +43,6 @@ Window::Window(WindowDescription const& d) {
     glfwGetWindowSize(GLFW_WND, &desc.size.x, &desc.size.y);
     glfwGetWindowContentScale(GLFW_WND, &desc.contentScaleFactor.x,
                               &desc.contentScaleFactor.y);
-
     setCallbacks();
 }
 
@@ -61,8 +60,6 @@ void Window::createDefaultSwapchain(HardwareDevice& device,
 void Window::setCommandQueue(std::unique_ptr<CommandQueue> queue) {
     _commandQueue = std::move(queue);
 }
-
-void Window::endFrame() { userInput.endFrame(); }
 
 void Window::onInput(std::function<void(InputEvent const&)> f) {
     callbacks.onInputFn = std::move(f);

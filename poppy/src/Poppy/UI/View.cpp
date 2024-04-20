@@ -1,13 +1,14 @@
 #include "Poppy/UI/View.h"
 
-#include "Poppy/UI/Font.h"
-#include "Poppy/UI/ImGuiHelpers.h"
-
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <utl/hashset.hpp>
 #include <utl/scope_guard.hpp>
 #include <utl/strcat.hpp>
+
+#include "Bloom/Application/Window.h"
+#include "Poppy/UI/Font.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 
 using namespace bloom;
 using namespace vml::short_types;
@@ -35,11 +36,11 @@ bool View::focused() const {
 }
 
 vml::float2 View::windowSpaceToViewSpace(vml::float2 position) const {
-    return position - desc.position;
+    return position - desc.position + desc.window->position();
 }
 
 vml::float2 View::viewSpaceToWindowSpace(vml::float2 position) const {
-    return position + desc.position;
+    return position + desc.position - desc.window->position();
 }
 
 void View::setFocused() { ImGui::FocusWindow((ImGuiWindow*)desc.imguiWindow); }

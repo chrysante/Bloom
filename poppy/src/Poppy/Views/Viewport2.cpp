@@ -96,7 +96,7 @@ void Viewport2::init() {
         .buttonAlphaHovered = 1,
         .buttonAlphaActive = 1,
     });
-    gizmo.setInput(window().input());
+    gizmo.setInput(editor().input());
 }
 
 void Viewport2::frame() {
@@ -200,7 +200,7 @@ void Viewport2::readInput() {
     }
     mouseState = ::detectViewportInput(ImGuiButtonFlags_MouseButtonRight);
     if (mouseState.held) {
-        cameraController.update(Timestep{ 0, 0.166 }, window().input());
+        cameraController.update(Timestep{ 0, 0.166 }, editor().input());
     }
 }
 

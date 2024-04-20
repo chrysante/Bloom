@@ -27,9 +27,6 @@ enum class ModFlags : unsigned {
 
 UTL_ENUM_OPERATORS(ModFlags);
 
-/// Translates GLFW modifier flags to `bloom::ModFlags`
-ModFlags modFlagsFromGLFW(int glfwModFlags);
-
 /// All known keyboard keys
 enum class Key {
     None = 0,
@@ -144,9 +141,6 @@ enum class Key {
     LAST = UpArrow
 };
 
-/// Translates GLFW key IDs to `bloom::Key`
-Key keyFromGLFW(int);
-
 /// List of all known mouse buttons
 enum struct MouseButton {
     None = -1,
@@ -161,6 +155,8 @@ enum struct MouseButton {
 /// useful if listening to input events is too tedious
 class BLOOM_API Input {
 public:
+    struct Impl;
+
     /// \Returns the current mouse position in screen coordinates
     vml::float2 mousePosition() const { return _mousePosition; }
 
@@ -175,39 +171,22 @@ public:
 
     /// \Returns `true` if \p button is currently pressed
     bool mouseDown(MouseButton button) const {
-        return _mouseButtons[(std::size_t)button];
+        return _mouseButtonDown[(size_t)button];
     }
 
     /// \Returns `true` if \p key is currently pressed
-    bool keyDown(Key key) const { return _keys[(std::size_t)key]; }
-
-    /// \Returns the number of registered repeats of \p key while it is held
-    /// down
-    int keyDownRepeatCount(Key key) const { return _keys[(std::size_t)key]; }
+    bool keyDown(Key key) const { return _keyDown[(size_t)key]; }
 
     /// \Returns a bitfield of the currently pressed modifier keys
     ModFlags modFlags() const { return _modFlags; }
 
 private:
-    friend class Application;
-    friend class Window;
-
-    /// Private setter API used by the `Window` and `Application` classes
-    /// @{
-    /// Resets mouse and scroll offset to zero
-    void endFrame();
-    void setKey(Key key, bool down);
-    void setMouseButton(MouseButton button, bool down);
-    void setMousePosition(vml::float2 position);
-    void setScrollOffset(vml::float2 offset);
-    /// @}
-
     ModFlags _modFlags = ModFlags::None;
     vml::float2 _mousePosition = 0;
     vml::float2 _mouseOffset = 0;
     vml::float2 _scrollOffset = 0;
-    std::array<int, EnumCount<Key>> _keys{};
-    std::array<int, EnumCount<MouseButton>> _mouseButtons{};
+    std::array<int, EnumCount<Key>> _keyDown{};
+    std::array<int, EnumCount<MouseButton>> _mouseButtonDown{};
 };
 
 } // namespace bloom

@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "Bloom/Application/InputInternal.h"
 #include "Bloom/Application/Window.h"
 #include "Bloom/Core/Autorelease.h"
 #include "Bloom/Core/Debug.h"
@@ -27,13 +28,21 @@ std::unique_ptr<bloom::Application> bloom::createApplication() {
     std::terminate();
 }
 
-Application::Application(): mCoreSystems(this) {
+struct Application::Impl {
+    int inputCallbackID = 0;
+};
+
+Application::Application(): mCoreSystems(this), impl(std::make_unique<Impl>()) {
     messageSystem = MessageSystem::Create();
     assignEmitter(makeEmitter());
     assignReceiver(makeReceiver());
+    impl->inputCallbackID = registerGlobalInputCallback(
+        std::bind_front(&Application::doOnInput, this));
 }
 
-Application::~Application() = default;
+Application::~Application() {
+    unregisterGlobalInputCallback(impl->inputCallbackID);
+}
 
 utl::small_vector<Window*> Application::getWindows() {
     utl::small_vector<Window*> result;
@@ -114,7 +123,7 @@ void Application::doFrame() {
             d.frame();
             BLOOM_AUTORELEASE_END
         }
-        window->endFrame();
+        inputEndFrame(mInput);
     }
     mTimer.update();
 }

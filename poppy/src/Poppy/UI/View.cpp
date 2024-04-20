@@ -94,14 +94,15 @@ static bool isDocked(ImGuiWindow* window) {
 }
 
 void View::doFrame() {
-    if (isDocked((ImGuiWindow*)desc.imguiWindow)) {
+    auto* imguiWindow = (ImGuiWindow*)desc.imguiWindow;
+    if (isDocked(imguiWindow)) {
         desc.isMoveable = true;
     }
     else if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
         desc.isMoveable = false;
     }
-    if (auto* window = (ImGuiWindow*)desc.imguiWindow) {
-        window->UserPointer = this;
+    if (imguiWindow) {
+        imguiWindow->UserPointer = this;
     }
     ImGuiWindowFlags flags = 0;
     flags |= ImGuiWindowFlags_NoCollapse;
@@ -137,7 +138,8 @@ void View::doFrame() {
     if (desc.maximized) {
         displayTitle += "-FS";
     }
-    bool open = ImGui::Begin(displayTitle.data(), &desc.open, flags);
+    bool* openFlag = isDocked(imguiWindow) ? &desc.open : nullptr;
+    bool open = ImGui::Begin(displayTitle.data(), openFlag, flags);
     if (desc.bgColor) {
         ImGui::PopStyleColor();
     }

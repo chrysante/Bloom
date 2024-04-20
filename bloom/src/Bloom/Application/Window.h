@@ -38,6 +38,13 @@ struct WindowDescription {
     /// The initial position of the window
     vml::int2 position = 0;
 
+    /// If set to `true` the window will be created without a titlebar and
+    /// without window buttons
+    bool noDecoration = false;
+
+    /// If set to `true` the title bar will be larger
+    bool hasToolbarArea = false;
+
     /// Set to true to make the window automatically resize the swapchain when
     /// window size changes
     bool autoResizeSwapchain = true;
@@ -148,6 +155,9 @@ public:
     /// \Returns true if the window's close button has been pressed
     bool shouldClose() const;
 
+    /// \Returns `true` if the window is currently being moved by the user
+    bool isMoving() const { return desc.isMoving; }
+
     /// \Returns the underlying OS window handle
     void* nativeHandle();
 
@@ -210,6 +220,10 @@ private:
         bool shallPreventClose = false;
         /// See `setMovable()`
         bool movable = true;
+        /// We set this flag when we call `performWindowDragWithEvent` and in
+        /// the window position callback and clear it whenever the left mouse
+        /// button is released
+        bool isMoving = false;
     };
 
     struct Callbacks {

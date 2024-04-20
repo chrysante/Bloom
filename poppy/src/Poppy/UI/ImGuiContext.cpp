@@ -257,6 +257,8 @@ void poppy::ImGuiContext::init(Editor& editor,
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
 #if USE_VIEWORTS
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigViewportsNoAutoMerge = true;
+    io.ConfigViewportsNoDecoration = false;
 #endif
     io.IniFilename = desc.iniFilePath.c_str();
     doInitPlatform();

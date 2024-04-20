@@ -169,7 +169,9 @@ void Editor::initRenderer() {
 
 void Editor::createMainWindow() {
     BL_PROFILE_FUNCTION();
-    auto& window = createWindow(loadWindowConfig(), nullptr);
+    auto desc = loadWindowConfig();
+    desc.hasToolbarArea = true;
+    auto& window = createWindow(desc, nullptr);
     window.onInput([this](InputEvent const& e) { this->onInput(e); });
     window.onTextInput([this](unsigned code) { imguiCtx.onTextInput(code); });
     window.onClose([this] { saveConfigToDisk(); });

@@ -25,7 +25,8 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
-#import "imgui.h"
+#import <imgui.h>
+#import <imgui_internal.h>
 #ifndef IMGUI_DISABLE
 #import "Bloom/Application/Window.h"
 #import "Poppy/Platform/MacOS/imgui_impl_osx.h"
@@ -898,24 +899,44 @@ static void ConvertNSRect(NSRect* r)
     r->origin.y = firstScreenFrame.size.height - r->origin.y - r->size.height;
 }
 
-static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
+static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
 {
+    ImGuiViewportP* viewport = static_cast<ImGuiViewportP*>(v);
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     ImGuiViewportDataOSX* data = IM_NEW(ImGuiViewportDataOSX)();
     viewport->PlatformUserData = data;
     bloom::WindowDescription windowDesc{};
     windowDesc.position = viewport->Pos;
     windowDesc.size = viewport->Size;
-    auto& window = bd->editor->createWindow(windowDesc, nullptr);
-    data->Window = &window;
+    if (viewport->Flags & ImGuiViewportFlags_NoDecoration) {
+        windowDesc.noDecoration = true;
+    }
+    auto* window = &bd->editor->createWindow(windowDesc, nullptr);
+
+    // We probably need to add this for some reason but it stop window content from resizing
+#if 0
+    NSRect rect = NSMakeRect(viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y);
+    ConvertNSRect(&rect);
+    KeyEventResponder* view = [[KeyEventResponder alloc] initWithFrame:rect];
+    ((__bridge NSWindow*)window->nativeHandle()).contentView = view;
+#endif
+
+    data->Window = window;
     data->WindowOwned = true;
-    window.onResize([=](int2 newSize) {
-        viewport->Size = (float2)newSize;
-        viewport->WorkSize = (float2)newSize;
+    window->onResize([=](float2 newSize) {
+        viewport->Pos = (float2)window->position();
+        viewport->Size = newSize;
+        viewport->PlatformRequestResize = true;
+    });
+    window->onMove([=](float2 newPos) {
+        viewport->Pos = newPos;
+        viewport->PlatformRequestMove = true;
+        GImGui->MovingWindow = viewport->Window;
+        GImGui->ActiveId = viewport->Window->MoveId;
     });
     viewport->PlatformRequestResize = false;
-    viewport->PlatformHandle = &window;
-    viewport->PlatformHandleRaw = (__bridge_retained void*)(__bridge_retained NSWindow*)window.nativeHandle();
+    viewport->PlatformHandle = window;
+    viewport->PlatformHandleRaw = (__bridge_retained void*)window->nativeHandle();
 }
 
 static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
@@ -956,7 +977,9 @@ static void ImGui_ImplOSX_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
 {
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
-    data->Window->setPosition(pos);
+    if (!data->Window->isMoving()) {
+        data->Window->setPosition(pos);
+    }
 }
 
 static ImVec2 ImGui_ImplOSX_GetWindowSize(ImGuiViewport* viewport)

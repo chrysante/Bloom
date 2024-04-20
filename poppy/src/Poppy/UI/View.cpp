@@ -89,18 +89,27 @@ void View::doInit() {
 
 void View::doShutdown() { this->shutdown(); }
 
+static bool isDocked(ImGuiWindow* window) {
+    return window && window->ParentWindow;
+}
+
 void View::doFrame() {
     ImGuiWindowFlags flags = 0;
     flags |= ImGuiWindowFlags_NoCollapse;
+    flags |= ImGuiWindowFlags_NoResize;
+    flags |= ImGuiWindowFlags_NoTitleBar;
+    if (!isDocked((ImGuiWindow*)desc.imguiWindow)) {
+        flags |= ImGuiWindowFlags_NoMove;
+    }
     // Begin block
     if (desc.maximized) {
         auto* const viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowSize(viewport->Size);
         ImGui::SetNextWindowPos({ 0, 0 });
-        flags |= ImGuiWindowFlags_NoTitleBar;
-        flags |= ImGuiWindowFlags_NoMove;
-        flags |= ImGuiWindowFlags_NoResize;
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+        flags |= ImGuiWindowFlags_NoResize;
+        flags |= ImGuiWindowFlags_NoMove;
+        flags |= ImGuiWindowFlags_NoTitleBar;
     }
     auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,

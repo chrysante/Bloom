@@ -48,9 +48,17 @@ void Window::applyStyle() {
     NSWindow* window = getNative(this);
     window.title = @"";
     window.movable = false;
-    window.styleMask |= NSWindowStyleMaskFullSizeContentView;
-    window.titlebarAppearsTransparent = true;
-    window.toolbar = [[NSToolbar alloc] init];
+    if (desc.noDecoration) {
+        window.styleMask |= NSWindowStyleMaskBorderless;
+        window.styleMask &= ~NSWindowStyleMaskTitled;
+    }
+    else {
+        window.styleMask |= NSWindowStyleMaskFullSizeContentView;
+        window.titlebarAppearsTransparent = true;
+    }
+    if (desc.hasToolbarArea) {
+        window.toolbar = [[NSToolbar alloc] init];
+    }
 }
 
 float Window::toolbarHeight() const {
@@ -96,8 +104,12 @@ void Window::onInputImpl(InputEvent const& event, void* nativeEvent) {
             nsWindow.frame.size.height - nsEvent.locationInWindow.y <=
             toolbarHeight();
         if (desc.movable && isInToolbar) {
+            desc.isMoving = true;
             [nsWindow performWindowDragWithEvent:nsEvent];
         }
+    }
+    if (nsEvent.type == NSEventTypeLeftMouseUp) {
+        desc.isMoving = false;
     }
 }
 

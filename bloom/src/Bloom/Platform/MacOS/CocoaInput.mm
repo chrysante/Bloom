@@ -493,6 +493,12 @@ void Application::doOnInput(InputEvent const& event, void* native) {
     onInput(event);
     NSEvent* nsEvent = (__bridge NSEvent*)native;
     for (auto& wrapper: mWindows) {
+        /// This could be called from `destroyWindow()` by GLFW as a last step
+        /// before destroying the window, i.e. where the window pointer here is
+        /// already null
+        if (!wrapper.window) {
+            continue;
+        }
         auto& window = *wrapper.window;
         if ((__bridge NSWindow*)window.nativeHandle() != nsEvent.window) {
             continue;

@@ -49,8 +49,6 @@ if(BLOOM_BUILD_TESTS)
   CPMAddPackage("gh:catchorg/Catch2@3.4.0")
 endif()
 
-set(IMGUI_BACKEND_METAL ON)
-set(IMGUI_BACKEND_OSX ON)
 add_subdirectory(imgui)
 
 # Subprojects

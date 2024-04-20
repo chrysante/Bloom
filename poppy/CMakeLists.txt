@@ -4,6 +4,7 @@ include(SourceFiles.cmake)
 add_executable(poppy)
 set_target_properties(poppy PROPERTIES LINKER_LANGUAGE CXX)
 BLSetCompilerOptions(poppy)
+target_compile_options(poppy PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
 
 target_include_directories(poppy
     PUBLIC
@@ -28,7 +29,6 @@ target_link_libraries(poppy
     "-framework CoreImage"
     "-framework QuartzCore"
 )
-target_compile_options(poppy PRIVATE "-fobjc-arc")
 
 target_sources(poppy
   PRIVATE

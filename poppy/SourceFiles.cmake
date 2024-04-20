@@ -10,6 +10,10 @@ set(poppy_sources
   src/Poppy/Editor/SelectionContext.cpp
   src/Poppy/Editor/SelectionContext.h
 
+  src/Poppy/Platform/MacOS/imgui_impl_metal.h
+  src/Poppy/Platform/MacOS/imgui_impl_metal.mm
+  src/Poppy/Platform/MacOS/imgui_impl_osx.h
+  src/Poppy/Platform/MacOS/imgui_impl_osx.mm
   src/Poppy/Platform/MacOS/ImGuiContext.mm
   src/Poppy/Platform/MacOS/SystemAppearance.mm
 

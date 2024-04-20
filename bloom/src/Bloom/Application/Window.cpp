@@ -36,8 +36,10 @@ Window::Window(WindowDescription const& d) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_FOCUSED, d.focused);
     glfwWindowHint(GLFW_FOCUS_ON_SHOW, d.focusOnShow);
-    auto* const w = glfwCreateWindow(desc.size.x, desc.size.y,
-                                     desc.title.data(), nullptr, nullptr);
+    glfwWindowHint(GLFW_CAN_BECOME_KEY, d.canBecomeKey);
+    glfwWindowHint(GLFW_CAN_BECOME_MAIN, d.canBecomeMain);
+    auto* w = glfwCreateWindow(desc.size.x, desc.size.y, desc.title.data(),
+                               nullptr, nullptr);
     windowPtr = std::unique_ptr<void, Deleter>(w);
     platformInit();
     glfwSetWindowUserPointer(GLFW_WND, this);

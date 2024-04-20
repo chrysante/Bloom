@@ -57,6 +57,12 @@ struct WindowDescription {
 
     /// If set to `true` the window will be focused when `.show()` is called
     bool focusOnShow = true;
+
+    /// If set to `true` the window can receive key events when focused
+    bool canBecomeKey = true;
+
+    /// If set to `true` the window can become the main window by clicking on it
+    bool canBecomeMain = true;
 };
 
 /// Wraps a native window handle

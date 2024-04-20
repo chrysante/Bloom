@@ -915,9 +915,11 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     windowDesc.size = viewport->Size;
     if (viewport->Flags & ImGuiViewportFlags_NoDecoration) {
         windowDesc.noDecoration = true;
+        windowDesc.focused = false;
+        windowDesc.focusOnShow = false;
+        windowDesc.canBecomeKey = false;
+        windowDesc.canBecomeMain = false;
     }
-    windowDesc.focused = true;
-    windowDesc.focusOnShow = true;
     auto* window = &bd->editor->createWindow(windowDesc, nullptr);
     NSWindow* nsWindow = getNative(window);
     if (viewport->Flags & ImGuiViewportFlags_TopMost)
@@ -1032,7 +1034,7 @@ static bool ImGui_ImplOSX_GetWindowMinimized(ImGuiViewport* viewport)
     return data->Window->isMiniaturized();
 }
 
-static void ImGui_ImplOSX_SetWindowTitle(ImGuiViewport* viewport, const char* title)
+static void ImGui_ImplOSX_SetWindowTitle(ImGuiViewport* viewport, const char* /* title */)
 {
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);

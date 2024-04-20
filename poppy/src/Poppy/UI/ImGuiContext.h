@@ -22,6 +22,8 @@ class Window;
 
 namespace poppy {
 
+class Editor;
+
 struct ImGuiContextDescription {
     std::filesystem::path iniFilePath;
 };
@@ -29,23 +31,22 @@ struct ImGuiContextDescription {
 class ImGuiContext: bloom::Receiver {
 public:
     ~ImGuiContext();
-    void init(bloom::Application&, ImGuiContextDescription const&);
+    void init(Editor&, ImGuiContextDescription const&);
     void shutdown();
-    void newFrame(bloom::Window&);
-    void drawFrame(bloom::HardwareDevice&, bloom::Window&);
+    void newFrame();
+    void drawFrame();
 
     void onInput(bloom::InputEvent);
     void onTextInput(unsigned int);
 
 private:
-    void doInitPlatform(bloom::HardwareDevice& device, bloom::Window& window);
+    void doInitPlatform();
     void doShutdownPlatform();
-    void doNewFramePlatform(bloom::Window& window);
-    void doDrawFramePlatform(bloom::HardwareDevice& device,
-                             bloom::Window& window);
+    void doNewFramePlatform();
+    void doDrawFramePlatform();
     void uploadCurrentFontAtlas(bloom::HardwareDevice& device);
 
-    bloom::Application* mApplication = nullptr;
+    Editor* mEditor = nullptr;
     ::ImGuiContext* context = nullptr;
     ImGuiContextDescription desc;
 };

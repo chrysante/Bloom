@@ -169,16 +169,13 @@ void Editor::initRenderer() {
 
 void Editor::createMainWindow() {
     BL_PROFILE_FUNCTION();
-    auto delegate = std::make_unique<EditorWindowDelegate>();
-    delegate->onFrame = [this, delegate = delegate.get()] {
-        imguiCtx.drawFrame(device(), delegate->window());
-    };
-    auto& window = createWindow(loadWindowConfig(), std::move(delegate));
+    auto& window = createWindow(loadWindowConfig(), nullptr);
     window.onInput([this](InputEvent const& e) { this->onInput(e); });
     window.onTextInput([this](unsigned code) { imguiCtx.onTextInput(code); });
     window.onClose([this] { saveConfigToDisk(); });
     window.createDefaultSwapchain(device());
     window.setCommandQueue(device().createCommandQueue());
+    _mainWindow = &window;
 }
 
 void Editor::initImGui() {
@@ -208,15 +205,15 @@ void Editor::frame() {
     autoConfigSave();
     clearClosingViews();
     Appearance::staticInstance().update();
-    auto windows = getWindows();
-    if (windows.empty()) {
+    if (!mainWindow()) {
         return;
     }
-    auto& window = *windows.front();
-    imguiCtx.newFrame(window);
+    auto& window = *mainWindow();
+    imguiCtx.newFrame();
     dockspace.display(window);
     displayViews();
     debugViews.display();
+    imguiCtx.drawFrame();
 }
 
 void Editor::menuBar() {

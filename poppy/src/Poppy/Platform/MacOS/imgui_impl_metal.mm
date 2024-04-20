@@ -38,7 +38,9 @@
 
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
-#include "imgui_impl_metal.h"
+#include "Bloom/Platform/Metal/MetalDevice.h"
+#include "Poppy/Platform/MacOS/imgui_impl_metal.h"
+#include "Poppy/Editor/Editor.h"
 #import <time.h>
 #import <Metal/Metal.h>
 
@@ -133,8 +135,9 @@ bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device* device)
 
 #pragma mark - Dear ImGui Metal Backend API
 
-bool ImGui_ImplMetal_Init(id<MTLDevice> device)
+bool ImGui_ImplMetal_Init(poppy::Editor& editor)
 {
+    id device = dynamic_cast<bloom::MetalDevice*>(&editor.device())->device;
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_CreateBackendData();
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererUserData = (void*)bd;

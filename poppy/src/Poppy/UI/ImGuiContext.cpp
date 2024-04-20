@@ -8,6 +8,7 @@
 #include "Bloom/Core.h"
 #include "Bloom/GPU.h"
 #include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Font.h"
 
 using namespace bloom;
@@ -230,19 +231,19 @@ poppy::ImGuiContext::~ImGuiContext() = default;
 
 #define USE_VIEWORTS 1
 
-void poppy::ImGuiContext::init(Application& application,
+void poppy::ImGuiContext::init(Editor& editor,
                                ImGuiContextDescription const& ds) {
-    mApplication = &application;
-    auto& device = application.device();
+    mEditor = &editor;
+    auto& device = editor.device();
     desc = ds;
-    this->assignReceiver(application.makeReceiver());
+    assignReceiver(editor.makeReceiver());
     IMGUI_CHECKVERSION();
     /// Scale factor values are figured out by trial-and-error and are hardcoded
     /// for now.
     static constexpr float ScaleFactor = 2.0;
 
     auto fontManager = std::make_unique<FontManager>(ScaleFactor);
-    static_cast<Emitter&>(*fontManager) = application.makeEmitter();
+    static_cast<Emitter&>(*fontManager) = editor.makeEmitter();
     FontManager::setGlobalInstance(std::move(fontManager));
 
     context =
@@ -258,14 +259,14 @@ void poppy::ImGuiContext::init(Application& application,
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 #endif
     io.IniFilename = desc.iniFilePath.c_str();
-    doInitPlatform(device, *application.getWindows().front());
+    doInitPlatform();
     uploadCurrentFontAtlas(device);
 
     listen([this](ReloadedFontAtlasCommand cmd) {
         BL_ASSERT(cmd.fontManager == FontManager::getGlobalInstance(),
                   "For now...");
         context->IO.Fonts = cmd.fontManager->getAtlas();
-        uploadCurrentFontAtlas(mApplication->device());
+        uploadCurrentFontAtlas(mEditor->device());
         context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
     });
 }
@@ -277,18 +278,22 @@ void poppy::ImGuiContext::shutdown() {
     context = nullptr;
 }
 
-void poppy::ImGuiContext::newFrame(Window& window) {
+void poppy::ImGuiContext::newFrame() {
+    if (!mEditor->mainWindow()) {
+        return;
+    }
+    auto& window = *mEditor->mainWindow();
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = (vml::float2)window.size();
     io.DisplayFramebufferScale = window.contentScaleFactor();
-    doNewFramePlatform(window);
+    doNewFramePlatform();
     ImGui::NewFrame();
 }
 
-void poppy::ImGuiContext::drawFrame(HardwareDevice& device, Window& window) {
+void poppy::ImGuiContext::drawFrame() {
     ImGui::SetCurrentContext(context);
-    doDrawFramePlatform(device, window);
+    doDrawFramePlatform();
 #if USE_VIEWORTS
     ImGui::UpdatePlatformWindows();
     ImGui::RenderPlatformWindowsDefault();

@@ -26,6 +26,13 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 #include "imgui.h"      // IMGUI_IMPL_API
+
+namespace poppy {
+
+class Editor;
+
+} // namespace poppy
+
 #ifndef IMGUI_DISABLE
 
 #ifdef __OBJC__
@@ -33,25 +40,10 @@
 @class NSEvent;
 @class NSView;
 
-IMGUI_IMPL_API bool     ImGui_ImplOSX_Init(NSView* _Nonnull view);
+IMGUI_IMPL_API bool     ImGui_ImplOSX_Init(poppy::Editor& editor);
 IMGUI_IMPL_API void     ImGui_ImplOSX_Shutdown();
-IMGUI_IMPL_API void     ImGui_ImplOSX_NewFrame(NSView* _Nullable view);
+IMGUI_IMPL_API void     ImGui_ImplOSX_NewFrame(poppy::Editor& editor);
 
-#endif
-
-//-----------------------------------------------------------------------------
-// C++ API
-//-----------------------------------------------------------------------------
-
-#ifdef IMGUI_IMPL_METAL_CPP_EXTENSIONS
-// #include <AppKit/AppKit.hpp>
-#ifndef __OBJC__
-
-IMGUI_IMPL_API bool     ImGui_ImplOSX_Init(void* _Nonnull view);
-IMGUI_IMPL_API void     ImGui_ImplOSX_Shutdown();
-IMGUI_IMPL_API void     ImGui_ImplOSX_NewFrame(void* _Nullable view);
-
-#endif
 #endif
 
 #endif // #ifndef IMGUI_DISABLE

@@ -1,8 +1,8 @@
 #include "Poppy/UI/ImGuiContext.h"
 
 #include <AppKit/AppKit.h>
-#include <backends/imgui_impl_metal.h>
-#include <backends/imgui_impl_osx.h>
+#include <Poppy/Platform/MacOS/imgui_impl_metal.h>
+#include <Poppy/Platform/MacOS/imgui_impl_osx.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -18,22 +18,20 @@ using namespace bloom;
 using namespace vml::short_types;
 using namespace poppy;
 
-static NSView* getContentView(Window& window) {
-    NSWindow* nsWindow = (__bridge NSWindow*)window.nativeHandle();
-    return nsWindow.contentView;
+void poppy::ImGuiContext::doInitPlatform() {
+    ImGui_ImplMetal_Init(*mEditor);
+    ImGui_ImplOSX_Init(*mEditor);
 }
 
-void poppy::ImGuiContext::doInitPlatform(HardwareDevice& device,
-                                         Window& window) {
-    ImGui_ImplMetal_Init(dynamic_cast<MetalDevice&>(device).device);
-    ImGui_ImplOSX_Init(getContentView(window));
+void poppy::ImGuiContext::doNewFramePlatform() {
+    ImGui_ImplOSX_NewFrame(*mEditor);
 }
 
-void poppy::ImGuiContext::doNewFramePlatform(Window& window) {
-    ImGui_ImplOSX_NewFrame(getContentView(window));
-}
-
-void poppy::ImGuiContext::doDrawFramePlatform(HardwareDevice&, Window& window) {
+void poppy::ImGuiContext::doDrawFramePlatform() {
+    if (!mEditor->mainWindow()) {
+        return;
+    }
+    auto& window = *mEditor->mainWindow();
     MetalCommandQueue& mtlCommandQueue =
         dynamic_cast<MetalCommandQueue&>(window.commandQueue());
     id<MTLCommandBuffer> commandBuffer = [mtlCommandQueue.queue commandBuffer];

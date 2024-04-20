@@ -4,7 +4,10 @@ include(SourceFiles.cmake)
 add_library(bloom SHARED)
 set_target_properties(bloom PROPERTIES LINKER_LANGUAGE CXX)
 BLSetCompilerOptions(bloom)
-target_compile_options(bloom PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
+#target_compile_options(bloom PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
+#set_target_properties(bloom PROPERTIES
+#  XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+#)
 
 target_include_directories(bloom
     PUBLIC

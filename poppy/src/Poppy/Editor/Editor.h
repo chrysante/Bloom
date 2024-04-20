@@ -43,6 +43,9 @@ public:
     /// Request the view to be redrawn. Can be called asynchronously
     void invalidateView();
 
+    /// ImGui expects one window to be the "main" window so we have this here
+    bloom::Window* mainWindow() const { return _mainWindow; }
+
 private:
     void init() override;
     void initRenderer();
@@ -84,6 +87,7 @@ private:
     void startSimulation();
     void stopSimulation();
 
+    bloom::Window* _mainWindow = nullptr;
     ImGuiContext imguiCtx;
     Dockspace dockspace;
     std::vector<std::unique_ptr<View>> views;

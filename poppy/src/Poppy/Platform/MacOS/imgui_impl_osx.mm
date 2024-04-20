@@ -27,7 +27,9 @@
 
 #import "imgui.h"
 #ifndef IMGUI_DISABLE
-#import "imgui_impl_osx.h"
+#import "Bloom/Application/Window.h"
+#import "Poppy/Platform/MacOS/imgui_impl_osx.h"
+#import "Poppy/Editor/Editor.h"
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
 #import <GameController/GameController.h>
@@ -409,21 +411,15 @@ static ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code)
     }
 }
 
-#ifdef IMGUI_IMPL_METAL_CPP_EXTENSIONS
-
-IMGUI_IMPL_API bool ImGui_ImplOSX_Init(void* _Nonnull view) {
-    return ImGui_ImplOSX_Init((__bridge NSView*)(view));
+static NSView* getContentView(bloom::Window& window) {
+    NSWindow* nsWindow = (__bridge NSWindow*)window.nativeHandle();
+    return nsWindow.contentView;
 }
 
-IMGUI_IMPL_API void ImGui_ImplOSX_NewFrame(void* _Nullable view) {
-    return ImGui_ImplOSX_NewFrame((__bridge NSView*)(view));
-}
-
-#endif
-
-
-bool ImGui_ImplOSX_Init(NSView* view)
+bool ImGui_ImplOSX_Init(poppy::Editor& editor)
 {
+    assert(editor.mainWindow() && "Need a window to init imgui");
+    auto* view = getContentView(*editor.mainWindow());
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_CreateBackendData();
     io.BackendPlatformUserData = (void*)bd;
@@ -436,7 +432,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     io.BackendPlatformName = "imgui_impl_osx";
 
     bd->Observer = [ImGuiObserver new];
-    bd->Window = view.window ?: NSApp.orderedWindows.firstObject;
+    bd->Window = view.window ? view.window : NSApp.orderedWindows.firstObject;
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (__bridge_retained void*)bd->Window;
     ImGui_ImplOSX_UpdateMonitors();
@@ -638,8 +634,12 @@ static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
         [bd->KeyEventResponder updateImePosWithView:view];
 }
 
-void ImGui_ImplOSX_NewFrame(NSView* view)
+void ImGui_ImplOSX_NewFrame(poppy::Editor& editor)
 {
+    if (!editor.mainWindow()) {
+        return;
+    }
+    auto* view = getContentView(*editor.mainWindow());
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
 

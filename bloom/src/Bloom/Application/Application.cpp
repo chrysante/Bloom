@@ -60,8 +60,10 @@ Window& Application::createWindow(WindowDescription const& desc,
                                   std::unique_ptr<WindowDelegate> delegate) {
     auto window = Window::Create(desc);
     window->callbacks.onResizePrivateFn = [this](int2) { doFrame(); };
-    delegate->wnd = window.get();
-    delegate->init();
+    if (delegate) {
+        delegate->wnd = window.get();
+        delegate->init();
+    }
     mWindows.push_back({ std::move(window), std::move(delegate) });
     return *mWindows.back().window;
 }
@@ -135,7 +137,9 @@ void Application::clearClosingWindows() {
             ++itr;
             continue;
         }
-        delegate->shutdown();
+        if (delegate) {
+            delegate->shutdown();
+        }
         itr = mWindows.erase(itr);
         if (!mWindows.empty()) {
             mWindows.front().window->setFocused();

@@ -100,3 +100,5 @@ void Window::onInputImpl(InputEvent const& event, void* nativeEvent) {
         }
     }
 }
+
+bool Window::isMiniaturized() const { return getNative(this).isMiniaturized; }

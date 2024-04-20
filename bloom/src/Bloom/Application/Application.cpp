@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <range/v3/algorithm.hpp>
+
 #include "Bloom/Application/InputInternal.h"
 #include "Bloom/Application/Window.h"
 #include "Bloom/Core/Autorelease.h"
@@ -66,6 +68,13 @@ Window& Application::createWindow(WindowDescription const& desc,
     }
     mWindows.push_back({ std::move(window), std::move(delegate) });
     return *mWindows.back().window;
+}
+
+void Application::destroyWindow(Window* window) {
+    auto itr = ranges::remove_if(mWindows, [&](WindowWrapper const& wrapper) {
+        return wrapper.window.get() == window;
+    });
+    mWindows.erase(itr, mWindows.end());
 }
 
 static void handleEvents(RunLoopMode mode) {

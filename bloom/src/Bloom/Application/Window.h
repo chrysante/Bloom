@@ -142,6 +142,9 @@ public:
     /// \Returns `true` if this window is not in fullscreen mode
     bool isWindowed() const { return !isFullscreen(); }
 
+    /// \Returns `true` if the window is miniaturized
+    bool isMiniaturized() const;
+
     /// \Returns true if the window's close button has been pressed
     bool shouldClose() const;
 

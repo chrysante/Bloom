@@ -72,7 +72,10 @@ public:
     Window& createWindow(WindowDescription const& desc,
                          std::unique_ptr<WindowDelegate> delegate = nullptr);
 
-    ///
+    /// Closes and destroys the window \p window
+    void destroyWindow(Window* window);
+
+    /// \Returns the application global input reference
     Input const& input() const { return mInput; }
 
 protected:

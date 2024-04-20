@@ -80,18 +80,20 @@ Viewport::Viewport(): BasicSceneInspector(this) {
         ToolbarIconButton([this] {
             return maximized() ? "resize-small" : "resize-full";
         })
-        .onClick([this] {
-            dispatch(DispatchToken::NextFrame, [maximized = maximized(), this] {
-                if (maximized) {
-                    restore();
-                    window().makeWindowed();
-                }
-                else {
-                    maximize();
-                    window().makeFullscreen();
-                }
-            });
-        })
+            .onClick([this] {
+                dispatch(DispatchToken::NextFrame, 
+                         [maximized = maximized(), this] {
+                    if (maximized) {
+                        restore();
+                        window().makeWindowed();
+                    }
+                    else {
+                        maximize();
+                        window().makeFullscreen();
+                    }
+                });
+            })
+            .tooltip("Toggle Fullscreen")
     }); // clang-format on
 }
 

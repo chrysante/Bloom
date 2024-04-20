@@ -294,14 +294,16 @@ void Toolbar::cook() {
     }
     /// Calculate block widths
     for (auto& block: blocks) {
-        block.width =
+        float accItemsWidth =
             ranges::accumulate(activeItems.begin() + block.itemBeginIndex,
                                activeItems.begin() + block.itemEndIndex, 0.0f,
                                [](float acc, auto* item) {
             return acc + item->getWidth();
         });
-        block.width += (block.itemEndIndex - block.itemBeginIndex - 1) *
-                       GImGui->Style.ItemSpacing.x;
+        int numItems =
+            utl::narrow_cast<int>(block.itemEndIndex - block.itemBeginIndex);
+        float spacing = std::max(0, numItems - 1) * GImGui->Style.ItemSpacing.x;
+        block.width = accItemsWidth + spacing;
     }
 }
 

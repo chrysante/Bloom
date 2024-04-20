@@ -1,7 +1,8 @@
 #ifndef POPPY_UI_DOCKSPACE_H
 #define POPPY_UI_DOCKSPACE_H
 
-#include <utl/vector.hpp>
+#include <span>
+
 #include <vml/vml.hpp>
 
 #include "Poppy/UI/Toolbar.h"
@@ -35,11 +36,11 @@ private:
 
     void displayToolbar(bloom::Window& window);
 
-    void toolbarLayoutOne(utl::small_vector<int, 2>);
-    void toolbarLayoutTwo(utl::small_vector<int, 2>);
-    void toolbarLayoutThree(utl::small_vector<int, 2>);
+    void toolbarLayoutOne(bloom::Window& window, std::span<int const> spacing);
+    void toolbarLayoutTwo(bloom::Window& window, std::span<int const> spacing);
+    void toolbarLayoutThree(bloom::Window& window,
+                            std::span<int const> spacing);
 
-    utl::small_vector<int, 2> getToolbarSpacing() const;
     void setToolbarHeight(float height);
 
 private:
@@ -47,7 +48,7 @@ private:
     std::array<Toolbar, 3> toolbars;
     float leftInset = 0, rightInset = 0;
 
-    std::size_t spacingCount = 0;
+    size_t spacingCount = 0;
     unsigned mainDockID = 0;
 };
 

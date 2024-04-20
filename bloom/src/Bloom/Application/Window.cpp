@@ -300,13 +300,15 @@ void Window::setCallbacks() {
             window.callbacks.onFileDropFn(pathVec);
         }
     });
-    glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        int2 pos = { posx, posy };
+    static constexpr auto posCallback = [](Window& window, int2 pos) {
         window.desc.position = pos;
         if (window.callbacks.onMoveFn) {
             window.callbacks.onMoveFn(pos);
         }
+    };
+    glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
+        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
+        posCallback(window, { posx, posy });
     });
     glfwSetWindowSizeCallback(GLFW_WND,
                               [](GLFWwindow* w, int sizex, int sizey) {
@@ -314,6 +316,9 @@ void Window::setCallbacks() {
         int2 newSize = { sizex, sizey };
         window.desc.size = newSize;
         window.resizeSwapchain(newSize);
+        int2 position = 0;
+        glfwGetWindowPos(w, &position.x, &position.y);
+        posCallback(window, position);
         if (window.callbacks.onResizePrivateFn) {
             window.callbacks.onResizePrivateFn(newSize);
         }

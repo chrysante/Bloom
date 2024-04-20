@@ -228,7 +228,7 @@ static ImGuiKey toImGuiKeyCode(Key key) {
 
 poppy::ImGuiContext::~ImGuiContext() = default;
 
-#define USE_VIEWORTS 0
+#define USE_VIEWORTS 1
 
 void poppy::ImGuiContext::init(Application& application,
                                ImGuiContextDescription const& ds) {

@@ -2,12 +2,15 @@
 
 #include <set>
 #include <unordered_set>
+#include <vector>
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <range/v3/algorithm.hpp>
 #include <utl/function_view.hpp>
 #include <utl/scope_guard.hpp>
 #include <utl/stack.hpp>
+#include <utl/vector.hpp>
 #include <vml/vml.hpp>
 
 #include "Poppy/Core/Debug.h"
@@ -21,10 +24,14 @@ using namespace vml::short_types;
 static constexpr auto MainWindowID = "__MainWindow__";
 static constexpr auto MainDockspaceID = "__MainWindow_Dockspace__";
 
-template <typename T>
-static void makeUnique(utl::vector<T>& v) {
-    auto last = std::unique(v.begin(), v.end());
-    v.resize(last - v.begin());
+static void makeUnique(auto& vector) {
+    auto last = std::unique(vector.begin(), vector.end());
+    vector.resize(last - vector.begin());
+}
+
+static void eraseIf(auto& vector, auto pred) {
+    auto itr = ranges::remove_if(vector, pred);
+    vector.erase(itr, vector.end());
 }
 
 static void withWindowSizeConstraints(vml::float2 minSize, auto&& block) {
@@ -115,19 +122,115 @@ void Dockspace::submitMasterDockspace() {
     ImGui::DockSpace(mainDockID, /* size = */ {}, flags);
 }
 
-utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
-    utl::vector<vml::rectangle<int>> const potentialRects = [this] {
+static bool usingViewports() {
+    return ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable;
+}
+
+static float2 getPosition(Window const& window) {
+    return usingViewports() ? (float2)window.position() : float2();
+}
+
+[[nodiscard]] static bool beginToolbarWindow(char const* ID, float2 position,
+                                             float2 size) {
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(position);
+    ImGui::SetNextWindowSize(size);
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGuiWindowFlags flags = 0;
+    flags |= ImGuiWindowFlags_NoDocking;
+    flags |= ImGuiWindowFlags_NoTitleBar;
+    flags |= ImGuiWindowFlags_NoResize;
+    flags |= ImGuiWindowFlags_NoMove;
+    flags |= ImGuiWindowFlags_NoNavFocus;
+    flags |= ImGuiWindowFlags_NoFocusOnAppearing;
+    flags |= ImGuiWindowFlags_NoScrollbar;
+    flags |= ImGuiWindowFlags_NoSavedSettings;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
+    bool result = ImGui::Begin(ID, NULL, flags);
+    ImGui::PopStyleVar(2);
+    return result;
+}
+
+static void toolbarBGWindow(float2 position, float2 size) {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    bool open = beginToolbarWindow("Main_Toolbar_BG", position, size);
+    ImGui::PopStyleVar();
+    if (!open) {
+        return;
+    }
+    auto* imguiWindow = ImGui::GetCurrentWindow();
+    auto* DL = imguiWindow->DrawList;
+    // Background
+    auto bgCol = ImGui::ColorConvertFloat4ToU32(
+        ImGui::GetStyleColorVec4(ImGuiCol_TitleBg));
+    DL->AddRectFilled(position, position + (float2)imguiWindow->Size, bgCol);
+    // Bottom separator
+    auto separatorCol = ImGui::ColorConvertFloat4ToU32(
+        GImGui->Style.Colors[ImGuiCol_Separator]);
+    float2 linePos = position + float2(0, imguiWindow->Size.y - 1);
+    DL->AddLine(linePos, linePos + float2(imguiWindow->Size.x, 0),
+                separatorCol);
+    ImGui::End();
+}
+
+static void toolbarWindow(float2 position, float2 size,
+                          utl::function_view<void()> content) {
+    toolbarBGWindow(position, size);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
+    bool open = beginToolbarWindow("Main_Toolbar", position, size);
+    ImGui::PopStyleColor();
+    if (!open) {
+        return;
+    }
+    content();
+    if (ImGui::IsWindowFocused() && GImGui->WindowsFocusOrder.size() > 1 &&
+        ImGui::GetIO().MouseReleased[ImGuiMouseButton_Left])
+    {
+        ImGui::FocusWindow(*(GImGui->WindowsFocusOrder.end() - 2));
+    }
+    ImGui::End();
+}
+
+/// Simulates window titlebar behaviour on the toolbar background
+static void titlebarBehaviour(Window& window, float toolbarHeight) {
+    if (toolbarHeight <= 0) {
+        return;
+    }
+    ImGui::BeginDisabled();
+    float width = window.size().x;
+    float2 windowPadding = GImGui->Style.WindowPadding;
+    ImGui::SetCursorPos(-windowPadding);
+    ImGui::SetNextItemAllowOverlap();
+    ImGui::InvisibleButton("Main_Toolbar_Background_Button",
+                           { width, toolbarHeight });
+    ImGui::EndDisabled();
+    if (GImGui->LastItemData.ID == GImGui->HoveredIdPreviousFrame) {
+        if (GImGui->IO.MouseClickedCount[ImGuiMouseButton_Left] == 2) {
+            window.zoom();
+        }
+        window.setMovable(true);
+    }
+    else {
+        window.setMovable(false);
+    }
+}
+
+static utl::small_vector<int, 2> getToolbarSpacing(Window& window,
+                                                   unsigned mainDockID) {
+    auto potentialRects = [&] {
+        int2 windowPos = getPosition(window);
         ImGuiDockNode const* mainNode = ImGui::DockBuilderGetNode(mainDockID);
         BL_ASSERT(mainNode);
         utl::stack<ImGuiDockNode const*> stack;
         stack.push(mainNode);
-        utl::vector<vml::rectangle<int>> result;
+        std::vector<vml::rectangle<int>> result;
         while (!stack.empty()) {
             auto* node = stack.pop();
             if ((int)node->Pos.y == (int)mainNode->Pos.y && node->IsVisible &&
                 node != mainNode && (int2)node->Size != (int2)mainNode->Size)
             {
-                result.push_back({ node->Pos, node->Size });
+                result.push_back({ (int2)node->Pos - windowPos, node->Size });
             }
             if (!node->IsLeafNode()) {
                 stack.push(node->ChildNodes[0]);
@@ -136,18 +239,16 @@ utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
         }
         return result;
     }();
-    return [&potentialRects]() -> utl::small_vector<int, 2> {
-        utl::vector<int> positions;
+    return [&]() -> utl::small_vector<int, 2> {
+        std::vector<int> positions;
         for (auto rect: potentialRects) {
             positions.push_back(rect.lower_bound().x);
             positions.push_back(rect.upper_bound().x);
         }
-        std::sort(positions.begin(), positions.end());
+        ranges::sort(positions);
         makeUnique(positions);
-        positions.erase(positions.begin());
-        if (!positions.empty()) {
-            positions.erase(positions.end() - 1);
-        }
+        eraseIf(positions,
+                [&](int p) { return p <= 0 || p >= window.size().x; });
         for (int i = 0; auto& p: positions) {
             if (i++ % 2 == 0) {
                 p += 1;
@@ -168,132 +269,25 @@ utl::small_vector<int, 2> Dockspace::getToolbarSpacing() const {
     }();
 }
 
-[[nodiscard]] static bool beginToolbarWindow(char const* ID, float2 size) {
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGuiWindow* mainWindow = ImGui::FindWindowByName(MainWindowID);
-    float2 position = { 0, viewport->Pos.y + mainWindow->MenuBarHeight() };
-    ImGui::SetNextWindowPos(position);
-    ImGui::SetNextWindowSize(size);
-    ImGui::SetNextWindowViewport(viewport->ID);
-    ImGuiWindowFlags flags = 0;
-    flags |= ImGuiWindowFlags_NoDocking;
-    flags |= ImGuiWindowFlags_NoTitleBar;
-    flags |= ImGuiWindowFlags_NoResize;
-    flags |= ImGuiWindowFlags_NoMove;
-    flags |= ImGuiWindowFlags_NoNavFocus;
-    flags |= ImGuiWindowFlags_NoFocusOnAppearing;
-    flags |= ImGuiWindowFlags_NoScrollbar;
-    flags |= ImGuiWindowFlags_NoSavedSettings;
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
-    bool result = ImGui::Begin(ID, NULL, flags);
-    ImGui::PopStyleVar(2);
-    return result;
-}
-
-static void toolbarBGWindow(float2 size) {
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    bool open = beginToolbarWindow("Main_Toolbar_BG", size);
-    ImGui::PopStyleVar();
-    if (!open) {
-        return;
-    }
-    auto* window = ImGui::GetCurrentWindow();
-    auto* DL = window->DrawList;
-    // Background
-    auto bgCol = ImGui::ColorConvertFloat4ToU32(
-        ImGui::GetStyleColorVec4(ImGuiCol_TitleBg));
-    DL->AddRectFilled(window->Pos, window->Size, bgCol);
-    // Bottom separator
-    auto separatorCol = ImGui::ColorConvertFloat4ToU32(
-        GImGui->Style.Colors[ImGuiCol_Separator]);
-    DL->AddLine(float2(0, window->Pos.y + window->Size.y - 1),
-                float2(window->Size.x, window->Pos.y + window->Size.y - 1),
-                separatorCol);
-    ImGui::End();
-}
-
-static void toolbarWindow(float2 size, utl::function_view<void()> content) {
-    toolbarBGWindow(size);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
-    bool open = beginToolbarWindow("Main_Toolbar", size);
-    ImGui::PopStyleColor();
-    if (!open) {
-        return;
-    }
-    content();
-    if (ImGui::IsWindowFocused() && GImGui->WindowsFocusOrder.size() > 1 &&
-        ImGui::GetIO().MouseReleased[ImGuiMouseButton_Left])
-    {
-        ImGui::FocusWindow(*(GImGui->WindowsFocusOrder.end() - 2));
-    }
-    ImGui::End();
-}
-
-/// Simulates window titlebar behaviour on the toolbar background
-static void titlebarBehaviour(Window& window, ImGuiViewport* viewport,
-                              float toolbarHeight) {
-    if (toolbarHeight <= 0) {
-        return;
-    }
-    ImGui::BeginDisabled();
-    float2 windowPadding = GImGui->Style.WindowPadding;
-    ImGui::SetCursorPos(-windowPadding);
-    ImGui::SetNextItemAllowOverlap();
-    ImGui::InvisibleButton("Main_Toolbar_Background_Button",
-                           { viewport->Size.x, toolbarHeight });
-    ImGui::EndDisabled();
-    if (GImGui->LastItemData.ID == GImGui->HoveredIdPreviousFrame) {
-        if (GImGui->IO.MouseClickedCount[ImGuiMouseButton_Left] == 2) {
-            window.zoom();
-        }
-        window.setMovable(true);
-    }
-    else {
-        window.setMovable(false);
-    }
-}
-
 void Dockspace::displayToolbar(Window& window) {
     float height = toolbars[0].getHeight();
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    auto spacing = getToolbarSpacing();
-    float width = viewport->Size.x;
-    switch (spacing.size()) {
-    case 0:
-        break;
-    case 1:
-        // In central third
-        if (spacing[0] >= width * 0.33 && spacing[0] <= width * 0.67) {
-            spacing.clear();
-        }
-        break;
-    case 2:
-        break;
-    default:
-        BL_UNREACHABLE();
-    }
-    for (auto itr = spacing.begin(); itr != spacing.end();) {
-        if (*itr >= viewport->Size.x * 0.33 && *itr <= viewport->Size.x * 0.67)
-        {
-            itr = spacing.erase(itr);
-        }
-        else {
-            ++itr;
-        }
-    }
+    auto spacing = getToolbarSpacing(window, mainDockID);
+    float width = window.size().x;
+    eraseIf(spacing, [&](int pos) {
+        return pos >= width * 0.33 && pos <= width * 0.67;
+    });
     BL_ASSERT(spacing.size() <= 2);
-    toolbarWindow({ viewport->Size.x, height }, [&] {
-        titlebarBehaviour(window, viewport, height);
+    toolbarWindow(getPosition(window), { width, height }, [&] {
+        titlebarBehaviour(window, height);
         switch (spacing.size()) {
         case 0:
-            toolbarLayoutOne(spacing);
+            toolbarLayoutOne(window, spacing);
             break;
         case 1:
-            toolbarLayoutTwo(spacing);
+            toolbarLayoutTwo(window, spacing);
             break;
         case 2:
-            toolbarLayoutThree(spacing);
+            toolbarLayoutThree(window, spacing);
             break;
         default:
             BL_UNREACHABLE();
@@ -301,27 +295,27 @@ void Dockspace::displayToolbar(Window& window) {
     });
 }
 
-void Dockspace::toolbarLayoutOne(utl::small_vector<int, 2> /* spacing */) {
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
+void Dockspace::toolbarLayoutOne(Window& window,
+                                 std::span<int const> /* spacing */) {
+    float windowWidth = window.size().x;
     float2 padding = GImGui->Style.WindowPadding;
     float t0Width = toolbars[0].getWidthWithoutSpacers();
     float t2Width = toolbars[2].getWidthWithoutSpacers();
     ImGui::SetCursorPos(padding);
     toolbars[0].display(t0Width);
     ImGui::SetCursorPos(ImVec2(padding.x + t0Width + padding.x, padding.y));
-    toolbars[1].display(viewport->Size.x - t0Width - t2Width - 4 * padding.x);
-    ImGui::SetCursorPos(
-        ImVec2(viewport->Size.x - t2Width - padding.x, padding.y));
+    toolbars[1].display(windowWidth - t0Width - t2Width - 4 * padding.x);
+    ImGui::SetCursorPos(ImVec2(windowWidth - t2Width - padding.x, padding.y));
     toolbars[2].display(t2Width);
 }
 
-void Dockspace::toolbarLayoutTwo(utl::small_vector<int, 2> spacing) {
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
+void Dockspace::toolbarLayoutTwo(Window& window, std::span<int const> spacing) {
+    float windowWidth = window.size().x;
     float2 padding = GImGui->Style.WindowPadding;
     float spacer = spacing[0];
     float position[2] = { 0, spacer };
-    float width[2] = { spacer, viewport->Size.x - spacer };
-    if (spacer >= viewport->Size.x / 2) {
+    float width[2] = { spacer, windowWidth - spacer };
+    if (spacer >= windowWidth / 2) {
         // Left section is big
         // 1. section
         float t0Width = toolbars[0].getWidthWithoutSpacers();
@@ -344,17 +338,18 @@ void Dockspace::toolbarLayoutTwo(utl::small_vector<int, 2> spacing) {
         ImGui::SetCursorPos(ImVec2(position[1] + padding.x, padding.y));
         toolbars[1].display(width[1] - t2Width - 3 * padding.x);
         ImGui::SetCursorPos(
-            ImVec2(viewport->Size.x - padding.x - t2Width, padding.y));
+            ImVec2(windowWidth - padding.x - t2Width, padding.y));
         toolbars[2].display(t2Width);
     }
 }
 
-void Dockspace::toolbarLayoutThree(utl::small_vector<int, 2> spacing) {
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
+void Dockspace::toolbarLayoutThree(Window& window,
+                                   std::span<int const> spacing) {
+    float windowWidth = window.size().x;
     float2 padding = GImGui->Style.WindowPadding;
     float position[3] = { 0, (float)spacing[0], (float)spacing[1] };
     float width[3] = { (float)spacing[0], (float)(spacing[1] - spacing[0]),
-                       viewport->Size.x - spacing[1] };
+                       windowWidth - spacing[1] };
     for (std::size_t i = 0; i < 3; ++i) {
         ImGui::SetCursorPos(ImVec2(position[i] + padding.x, padding.y));
         toolbars[i].display(width[i] - 2 * padding.x);

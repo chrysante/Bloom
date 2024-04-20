@@ -234,10 +234,10 @@ void FontManager::reloadAsync() {
     /// need to load and then start the reload operation
     dispatch(DispatchToken::NextFrame, [this] {
         haveSignaledReload = false;
-        Logger::Info("Reloading Fonts");
         std::thread([this, scaleFactor = scaleFactor,
                      sortedGlyphMap = makeSortedGlyphMap(glyphMap),
                      data = imguiData]() mutable {
+            BL_PROFILE_FUNCTION("Font Reloading");
             data.atlas = IM_NEW(ImFontAtlas);
             loadAll(data, scaleFactor, sortedGlyphMap);
             postEmptySystemEvent();
@@ -245,7 +245,6 @@ void FontManager::reloadAsync() {
                 IM_FREE(imguiData.atlas);
                 imguiData = std::move(data);
                 dispatch(DispatchToken::Now, ReloadedFontAtlasCommand{ this });
-                Logger::Info("Done Reloading Fonts");
             });
         }).detach();
     });

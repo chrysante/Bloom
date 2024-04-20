@@ -100,7 +100,7 @@ static void modifyTextSize(int& textSize, int offset) {
 
 ConsoleView::ConsoleView() {
     auto& cmd = commandPaletteWrite();
-    cmd.add("Increase Text Size", {},
+    cmd.add("Increase Text Size", { Key::Plus, ModFlags::Control },
             [this] { modifyTextSize(persistent.textSize, 1); });
     cmd.add("Decrease Text Size", { Key::Minus, ModFlags::Control },
             [this] { modifyTextSize(persistent.textSize, -1); });

@@ -162,8 +162,13 @@ private:
 /// Users can replace this function to return their own logger implementation
 __attribute__((weak)) std::unique_ptr<Logger::Impl> makeGlobalLoggerImpl();
 
-#define BL_PROFILE_FUNCTION()                                                  \
-    FunctionProfiler UTL_UNIQUE_NAME(BL_Profiler_)(__func__, __FILE__)
+#define BL_PROFILE_FUNCTION_2(x, Name)                                         \
+    FunctionProfiler UTL_UNIQUE_NAME(BL_Profiler_)(Name, __FILE__)
+
+#define BL_PROFILE_FUNCTION_1(x) BL_PROFILE_FUNCTION_2(x, __func__)
+
+#define BL_PROFILE_FUNCTION(...)                                               \
+    UTL_VFUNC(BL_PROFILE_FUNCTION_, x __VA_OPT__(, ) __VA_ARGS__)
 
 ///
 class FunctionProfiler {

@@ -99,7 +99,7 @@ static void modifyTextSize(int& textSize, int offset) {
     textSize = std::clamp(textSize + offset, TextSizeMin, TextSizeMax);
 }
 
-ConsoleView::ConsoleView(): View({ .title = "Console" }) {
+ConsoleView::ConsoleView() {
     auto& cmd = commandPaletteWrite();
     cmd.add("Increase Text Size", { Key::Plus, ModFlags::Control },
             [this] { modifyTextSize(persistent.textSize, 1); });

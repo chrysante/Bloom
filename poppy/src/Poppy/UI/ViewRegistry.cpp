@@ -8,6 +8,7 @@ using namespace bloom;
 
 std::unique_ptr<View> ViewRegistryEntry::createView() const {
     auto view = factory();
+    view->data.title = name();
     view->data.staticName = name();
     return view;
 }

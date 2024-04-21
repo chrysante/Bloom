@@ -20,11 +20,11 @@ class Editor;
 
 /// View constructor arguments
 struct ViewDescription {
-    /// The default title of the view
-    std::string title;
-
-    /// The default size of the view
+    /// The default display size of the view
     vml::int2 defaultSize = { 500, 400 };
+
+    /// The minimum display size of the view
+    vml::int2 minSize = { 300, 200 };
 };
 
 /// Base class of all UI views
@@ -143,6 +143,7 @@ private:
 
         std::string title;
         vml::float2 size;
+        vml::float2 minSize;
         vml::float2 position;
         void* imguiWindow = nullptr;
         Editor* editor = nullptr;

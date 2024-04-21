@@ -39,8 +39,8 @@ IDFactory IDFactory::instance;
 } // namespace
 
 View::View(ViewDescription data):
-    data{ .title = std::move(data.title),
-          .size = data.defaultSize,
+    data{ .size = data.defaultSize,
+          .minSize = data.minSize,
           .padding = { std::nullopt, std::nullopt } } {}
 
 bool View::focused() const {
@@ -142,6 +142,10 @@ void View::doFrame() {
         flags |= ImGuiWindowFlags_NoMove;
         flags |= ImGuiWindowFlags_NoTitleBar;
     }
+    else {
+        ImGui::SetNextWindowSize(data.size);
+        ImGui::SetNextWindowSizeConstraints(data.minSize, { FLT_MAX, FLT_MAX });
+    }
     auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,
                         data.maximized ? 0 : style.WindowRounding);
@@ -170,7 +174,9 @@ void View::doFrame() {
         data.position = imguiWindow->Pos;
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
         data.window = (Window*)viewport->PlatformHandle;
-        frame();
+        if (data.window) {
+            frame();
+        }
     }
     ImGui::End();
 }

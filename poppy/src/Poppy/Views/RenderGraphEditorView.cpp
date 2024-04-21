@@ -67,7 +67,7 @@ static char const* compStatusMessage(CompilationStatus status) {
 }
 
 RenderGraphEditorView::RenderGraphEditorView():
-    View({ "Render Graph Editor" }), nodeEditor(commandPaletteWrite()) {
+    nodeEditor(commandPaletteWrite()) {
     nodeEditor.setDelegate({ .backgroundPopupMenu = [this](float2 pos) {
         backgroundContextMenu(pos);
     } });

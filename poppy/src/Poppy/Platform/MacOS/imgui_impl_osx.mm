@@ -904,6 +904,14 @@ static NSWindow* getNative(bloom::Window const* window) {
     return (__bridge NSWindow*)const_cast<bloom::Window*>(window)->nativeHandle();
 }
 
+static void copySizeConstaints(bloom::Window& window, ImRect c) {
+    int2 min = (int2)c.Min;
+    int2 max = { c.Max.x == FLT_MAX ? INT_MAX : (int)c.Max.x,
+                 c.Max.y == FLT_MAX ? INT_MAX : (int)c.Max.y };
+    window.setMinSize(min);
+    window.setMaxSize(max);
+}
+
 static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
 {
     ImGuiViewportP* viewport = static_cast<ImGuiViewportP*>(v);
@@ -932,7 +940,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     KeyEventResponder* view = [[KeyEventResponder alloc] initWithFrame:rect];
     nsWindow.contentView = view;
 #endif
-
+    copySizeConstaints(*window, viewport->Window->SizeConstraintRect);
     data->Window = window;
     data->WindowOwned = true;
     viewport->PlatformRequestResize = false;

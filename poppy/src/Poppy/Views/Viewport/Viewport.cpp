@@ -29,7 +29,7 @@ POPPY_REGISTER_VIEW(Viewport, "Viewport");
 
 static bool ShowDebugPanel = false;
 
-Viewport::Viewport(): View({ .title = "Viewport" }), BasicSceneInspector(this) {
+Viewport::Viewport(): BasicSceneInspector(this) {
     // clang-format off
     toolbar = Toolbar({
         ToolbarDropdownMenu()

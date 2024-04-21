@@ -62,8 +62,7 @@ static AssetHandle getHandle(DirectoryEntry const& entry) {
     return handle ? *handle : AssetHandle();
 }
 
-AssetBrowser::AssetBrowser():
-    View({ .title = "Content Browser" }), dirView(commandPaletteWrite()) {
+AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
     // clang-format off
     dirView.setDelegate({
         .openFile = [this](DirectoryEntry const& entry) {

@@ -13,6 +13,7 @@
 #include "Bloom/Application/MessageSystem.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/UI/CommandPalette.h"
+#include "Poppy/UI/Toolbar.h"
 
 namespace poppy {
 
@@ -109,6 +110,17 @@ protected:
     /// \Returns a mutable reference to the attached command palette
     CommandPalette& commandPaletteWrite() { return cmdPalette; }
 
+    /// Calls `display()` on the toolbar of this view. This is virtual to allow
+    /// customized toolbar rendering
+    virtual void displayToolbar();
+
+    /// \Returns a pointer this view's toolbar. This will be null if no toolbar
+    /// is set
+    Toolbar const* toolbar() const { return _toolbar ? &*_toolbar : nullptr; }
+
+    /// Sets the toolbar of this view
+    void setToolbar(Toolbar toolbar) { _toolbar = std::move(toolbar); }
+
 private:
     /// Called after the view has been created and potentially deserialized
     virtual void init() {};
@@ -154,9 +166,9 @@ private:
         bool isMoveable = true;
         bool open = true;
     };
-
     Data data;
     CommandPalette cmdPalette;
+    std::optional<Toolbar> _toolbar;
 };
 
 } // namespace poppy

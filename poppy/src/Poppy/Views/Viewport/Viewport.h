@@ -47,6 +47,10 @@ public:
 
     void receiveSceneDragDrop();
 
+    /// We override this with an empty function because we want to control when
+    /// the toolbar is being displayed
+    void displayToolbar() override {}
+
     //	public:
     struct Parameters {
         enum class FramebufferElements {
@@ -68,7 +72,6 @@ public:
     };
 
     //	private:
-    Toolbar toolbar;
     ViewportOverlays overlays;
     Gizmo gizmo;
 

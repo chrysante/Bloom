@@ -175,10 +175,17 @@ void View::doFrame() {
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
         data.window = (Window*)viewport->PlatformHandle;
         if (data.window) {
+            displayToolbar();
             display();
         }
     }
     ImGui::End();
+}
+
+void View::displayToolbar() {
+    if (_toolbar) {
+        _toolbar->display();
+    }
 }
 
 void View::doOnInput(bloom::InputEvent& event) {

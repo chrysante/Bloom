@@ -40,6 +40,7 @@ public:
 
 private:
     void init() override;
+    void displayToolbar() override;
     void display() override;
     void onInput(bloom::InputEvent& event) override { dirView.onInput(event); }
 
@@ -64,9 +65,6 @@ private:
     AssetBrowserData data;
 
     DirectoryView dirView;
-
-    /// Our toolbar
-    Toolbar toolbar;
 };
 
 } // namespace poppy

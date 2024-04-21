@@ -31,7 +31,7 @@ static bool ShowDebugPanel = false;
 
 Viewport::Viewport(): BasicSceneInspector(this) {
     // clang-format off
-    toolbar = Toolbar({
+    Toolbar toolbar = {
         ToolbarDropdownMenu()
             .content([this] {
                 dropdownMenu();
@@ -95,17 +95,18 @@ Viewport::Viewport(): BasicSceneInspector(this) {
                 });
             })
             .tooltip("Toggle Fullscreen")
-    }); // clang-format on
-}
-
-void Viewport::init() {
-    setPadding({ 0, 0 });
+    }; // clang-format on
     toolbar.setStyle({
         .height = 25,
         .buttonAlpha = 1,
         .buttonAlphaHovered = 1,
         .buttonAlphaActive = 1,
     });
+    setToolbar(std::move(toolbar));
+}
+
+void Viewport::init() {
+    setPadding({ 0, 0 });
     sceneRenderer.setRenderer(&editor().coreSystems().renderer());
     gizmo.setInput(editor().input());
     overlays.init(this);
@@ -129,10 +130,10 @@ void Viewport::display() {
         window->DrawList->AddRectFilled(window->Pos,
                                         (float2)window->Pos +
                                             float2{ window->Size.x,
-                                                    toolbar.getHeight() },
+                                                    toolbar()->getHeight() },
                                         ImGui::ColorConvertFloat4ToU32(color));
         ImGui::SetCursorPos({});
-        toolbar.display();
+        View::displayToolbar();
     }
     if (!scenes().empty()) {
         auto const wantsInput =

@@ -115,7 +115,7 @@ AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
         },
     });   // clang-format on
     // clang-format off
-    toolbar = Toolbar({
+    setToolbar({
         ToolbarIconButton("up-open")
             .onClick([] {
                 Logger::Trace("Going Up");
@@ -166,11 +166,14 @@ AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
     setPadding({ 0, 0 });
 }
 
-void AssetBrowser::display() {
+void AssetBrowser::displayToolbar() {
     bool active = assetManager && !assetManager->projectRootDir().empty();
     ImGui::BeginDisabled(!active);
-    toolbar.display();
+    View::displayToolbar();
     ImGui::EndDisabled();
+}
+
+void AssetBrowser::display() {
     if (!assetManager) {
         displayEmptyWithReason("Asset Manager Not Loaded");
         return;

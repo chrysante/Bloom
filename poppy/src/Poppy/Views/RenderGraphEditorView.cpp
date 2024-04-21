@@ -46,7 +46,6 @@ struct RenderGraphEditorView: View {
 
     RenderGraph* renderGraph;
     NodeEditor nodeEditor;
-    Toolbar toolbar;
     CompilationStatus compilationStatus = CompilationStatus::None;
 };
 
@@ -74,7 +73,7 @@ RenderGraphEditorView::RenderGraphEditorView():
     auto& cmd = commandPaletteWrite();
     cmd.add("Compile", { Key::B, ModFlags::Control }, [this] { compile(); });
     // clang-format off
-    toolbar = Toolbar({
+    setToolbar({
         ToolbarIconButton(commandPalette().find("Compile"), "play"),
         ToolbarSpacer(),
         ToolbarTextItem()
@@ -89,10 +88,7 @@ void RenderGraphEditorView::onInput(InputEvent& event) {
     nodeEditor.onInput(event);
 }
 
-void RenderGraphEditorView::display() {
-    toolbar.display();
-    nodeEditor.display();
-}
+void RenderGraphEditorView::display() { nodeEditor.display(); }
 
 YAML::Node RenderGraphEditorView::serialize() const {
     /// We use these functions to serialize our graph for now. This is not

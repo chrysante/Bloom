@@ -59,21 +59,19 @@ struct MouseState {
 struct Viewport2: View, BasicSceneInspector {
     Viewport2();
     void init() override;
-
     void display() override;
     void displayScenes();
-    void displayToolbar();
+    void displayToolbar() override {}
+    void displayToolbarWithBackground();
     void readInput();
     void acceptDragDrop();
     void receiveSceneDragDrop();
     void onInput(bloom::InputEvent&) override;
     YAML::Node serialize() const override;
     void deserialize(YAML::Node) override;
-
     Toolbar makeToolbar();
     void dropdownMenu();
 
-    Toolbar toolbar;
     Gizmo gizmo;
     Parameters params;
     DebugDrawOptions drawOptions;
@@ -85,18 +83,14 @@ struct Viewport2: View, BasicSceneInspector {
 
 POPPY_REGISTER_VIEW(Viewport2, "Viewport2");
 
-Viewport2::Viewport2(): BasicSceneInspector(this), toolbar(makeToolbar()) {
+Viewport2::Viewport2(): BasicSceneInspector(this) {
     cameraController.setFieldOfView(60);
 }
 
 void Viewport2::init() {
     setPadding({ 0, 0 });
-    toolbar.setStyle({
-        .height = 25,
-        .buttonAlpha = 1,
-        .buttonAlphaHovered = 1,
-        .buttonAlphaActive = 1,
-    });
+    setToolbar(makeToolbar());
+
     gizmo.setInput(editor().input());
 }
 
@@ -108,7 +102,7 @@ void Viewport2::display() {
     else {
         displayEmptyWithReason("No Active Scene");
     }
-    displayToolbar();
+    displayToolbarWithBackground();
     readInput();
     acceptDragDrop();
     ImGui::EndChild();
@@ -161,16 +155,18 @@ void Viewport2::displayScenes() {
                  ImGui::GetContentRegionAvail());
 }
 
-void Viewport2::displayToolbar() {
+void Viewport2::displayToolbarWithBackground() {
     float4 color = float4(ImGui::GetStyleColorVec4(ImGuiCol_WindowBg)) *
                    float4(1, 1, 1, 0.5);
     auto* DL = ImGui::GetWindowDrawList();
     float2 winpos = ImGui::GetWindowPos();
     float2 winsize = ImGui::GetWindowSize();
-    DL->AddRectFilled(winpos, winpos + float2(winsize.x, toolbar.getHeight()),
+    DL->AddRectFilled(winpos,
+                      winpos + float2(winsize.x, toolbar()->getHeight()),
                       ImGui::ColorConvertFloat4ToU32(color));
     ImGui::SetCursorPos({});
-    toolbar.display();
+    ImGui::SetCursorPos({});
+    View::displayToolbar();
 }
 
 static MouseState detectViewportInput(ImGuiButtonFlags buttonFlags) {
@@ -247,7 +243,7 @@ void Viewport2::deserialize(YAML::Node node) {
 
 Toolbar Viewport2::makeToolbar() {
     // clang-format off
-    return Toolbar({
+    Toolbar toolbar{
         ToolbarDropdownMenu()
             .content([this] { dropdownMenu(); })
             .minWidth(400),
@@ -310,7 +306,14 @@ Toolbar Viewport2::makeToolbar() {
                     }
                 });
             })
-    }); // clang-format on
+    }; // clang-format on
+    toolbar.setStyle({
+        .height = 25,
+        .buttonAlpha = 1,
+        .buttonAlphaHovered = 1,
+        .buttonAlphaActive = 1,
+    });
+    return toolbar;
 }
 
 void Viewport2::dropdownMenu() {}

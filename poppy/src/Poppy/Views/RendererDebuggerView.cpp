@@ -8,13 +8,14 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/PropertiesView.h"
+#include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/Viewport/Viewport.h"
 
 using namespace bloom;
 using namespace vml::short_types;
 using namespace poppy;
 
-POPPY_REGISTER_VIEW(RendererDebuggerView, "Renderer Debugger", {});
+POPPY_REGISTER_VIEW(RendererDebuggerView, "Renderer Debugger");
 
 void RendererDebuggerView::init() {
     mRenderer = findRenderer();
@@ -163,6 +164,7 @@ bloom::ForwardRenderer* RendererDebuggerView::findRenderer() const {
 
 std::shared_ptr<bloom::ForwardRendererFramebuffer> RendererDebuggerView::
     findFramebuffer() const {
+#if 0
     auto views = editor().getAllViews();
     for (auto* v: views) {
         auto* viewport = dynamic_cast<Viewport*>(v);
@@ -176,5 +178,6 @@ std::shared_ptr<bloom::ForwardRendererFramebuffer> RendererDebuggerView::
             return fwFramebuffer;
         }
     }
+#endif
     return nullptr;
 }

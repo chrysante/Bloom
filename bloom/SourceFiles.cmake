@@ -6,6 +6,7 @@ set(bloom_sources
   src/Bloom/Application/CoreSystem.h
   src/Bloom/Application/CoreSystemManager.cpp
   src/Bloom/Application/CoreSystemManager.h
+  src/Bloom/Application/Fwd.h
   src/Bloom/Application/Input.cpp
   src/Bloom/Application/Input.h
   src/Bloom/Application/InputInternal.h

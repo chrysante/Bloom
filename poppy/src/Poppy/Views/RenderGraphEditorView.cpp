@@ -12,6 +12,7 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/NodeEditor.h"
 #include "Poppy/Views/RenderGraphNodeController.h"
@@ -51,7 +52,7 @@ struct RenderGraphEditorView: View {
 
 } // namespace
 
-POPPY_REGISTER_VIEW(RenderGraphEditorView, "Render Graph Editor", {})
+POPPY_REGISTER_VIEW(RenderGraphEditorView, "Render Graph Editor");
 
 static char const* compStatusMessage(CompilationStatus status) {
     using enum CompilationStatus;
@@ -66,7 +67,7 @@ static char const* compStatusMessage(CompilationStatus status) {
 }
 
 RenderGraphEditorView::RenderGraphEditorView():
-    nodeEditor(commandPaletteWrite()) {
+    View({ "Render Graph Editor" }), nodeEditor(commandPaletteWrite()) {
     nodeEditor.setDelegate({ .backgroundPopupMenu = [this](float2 pos) {
         backgroundContextMenu(pos);
     } });
@@ -82,7 +83,7 @@ RenderGraphEditorView::RenderGraphEditorView():
     }); // clang-format on
 }
 
-void RenderGraphEditorView::init() { setPadding({}); }
+void RenderGraphEditorView::init() { setPadding({ 0, 0 }); }
 
 void RenderGraphEditorView::onInput(InputEvent& event) {
     nodeEditor.onInput(event);

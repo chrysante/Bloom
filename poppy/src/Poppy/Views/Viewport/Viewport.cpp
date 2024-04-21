@@ -18,17 +18,18 @@
 #include "Poppy/Editor/SelectionContext.h"
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetBrowser.h"
 
 using namespace vml::short_types;
 using namespace bloom;
 using namespace poppy;
 
-POPPY_REGISTER_VIEW(Viewport, "Viewport", {});
+POPPY_REGISTER_VIEW(Viewport, "Viewport");
 
 static bool ShowDebugPanel = false;
 
-Viewport::Viewport(): BasicSceneInspector(this) {
+Viewport::Viewport(): View({ .title = "Viewport" }), BasicSceneInspector(this) {
     // clang-format off
     toolbar = Toolbar({
         ToolbarDropdownMenu()
@@ -98,7 +99,7 @@ Viewport::Viewport(): BasicSceneInspector(this) {
 }
 
 void Viewport::init() {
-    setPadding(0);
+    setPadding({ 0, 0 });
     toolbar.setStyle({
         .height = 25,
         .buttonAlpha = 1,
@@ -109,8 +110,6 @@ void Viewport::init() {
     gizmo.setInput(editor().input());
     overlays.init(this);
 }
-
-void Viewport::shutdown() {}
 
 void Viewport::frame() {
     if (ShowDebugPanel) {

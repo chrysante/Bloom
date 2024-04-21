@@ -78,7 +78,7 @@ void DirectoryView::openDirectory(std::filesystem::path const& dir) {
 
 void DirectoryView::rescan() { openDirectory(currentDirectory); }
 
-void DirectoryView::onInput(InputEvent& event) {}
+void DirectoryView::onInput(InputEvent&) {}
 
 namespace {
 

@@ -15,7 +15,7 @@
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Dockspace.h"
 #include "Poppy/UI/ImGuiContext.h"
-#include "Poppy/UI/View.h"
+#include "Poppy/UI/ViewManager.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/DebugViews.h"
 
@@ -28,9 +28,6 @@ public:
     /// The entity selection context. This is owned by the editor because
     /// several views edit and read this
     SelectionContext& selection() { return mSelection; }
-
-    /// \Returns a list of all currently open views
-    std::vector<View*> getAllViews();
 
     /// Opens the view with \p name on the next frame. \p completion will be run
     /// after opening the view
@@ -55,12 +52,11 @@ private:
     void frame() override;
 
     void menuBar();
-    void displayViews();
     bool onInput(bloom::InputEvent event) override;
 
     /// # Config serialization
     /// @{
-
+    /// \Returns the path of the config file
     std::filesystem::path configFile() const;
     /// Loads the config file
     YAML::Node getStoredConfig();
@@ -69,28 +65,21 @@ private:
     bloom::WindowDescription loadWindowConfig();
     /// Run every frame to regulary save config
     void autoConfigSave();
-    /// \Returns a YAML node storing the configuration of all open views
-    YAML::Node getViewsConfig();
-    /// Opens all views from configs stored in \p node
-    void loadViews(YAML::Node const& node);
-
     /// @}
-
-    /// Misc
-    View& createView(ViewRegistry::Entry const& entry, bloom::Window& window);
-    void populateView(View& view, bloom::Window& window);
-    void clearClosingViews();
 
     /// Saves all currently open assets
     void saveAll();
 
+    /// Start simulating the world
     void startSimulation();
+
+    /// Stops a running simulation
     void stopSimulation();
 
     bloom::Window* _mainWindow = nullptr;
     ImGuiContext imguiCtx;
     Dockspace dockspace;
-    std::vector<std::unique_ptr<View>> views;
+    ViewManager viewManager;
     CommandPalette cmd;
     DebugViews debugViews;
     SelectionContext mSelection;

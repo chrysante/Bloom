@@ -40,7 +40,6 @@ public:
 
 private:
     void init() override;
-    void shutdown() override;
     void frame() override;
     void onInput(bloom::InputEvent& event) override { dirView.onInput(event); }
 

@@ -15,6 +15,7 @@
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/ViewRegistry.h"
 
 using namespace poppy;
 using namespace bloom;
@@ -79,7 +80,7 @@ struct ToolbarBuildTimeStamp: ToolbarItem {
 
 } // namespace
 
-Editor::Editor(): mSelection(makeReceiver()) {
+Editor::Editor(): viewManager(this), mSelection(makeReceiver()) {
     setRunLoopMode(RunLoopMode::EventDriven);
     cmd.add("Save", { Key::S, ModFlags::Control }, [this] { saveAll(); });
     cmd.add("Simulate", { Key::R, ModFlags::Control },
@@ -127,21 +128,11 @@ Editor::Editor(): mSelection(makeReceiver()) {
     // clang-format on
 }
 
-std::vector<View*> Editor::getAllViews() {
-    return views | transform([](auto& view) { return view.get(); }) |
-           ranges::to<std::vector>;
-}
-
 void Editor::openView(std::string name, std::function<void(View&)> completion) {
-    auto const entry = ViewRegistry::get(name);
-    if (!entry) {
-        Logger::Warn("Could not find View '", name, "'");
-        return;
-    }
     dispatch(DispatchToken::NextFrame, [=, this] {
-        auto& view = createView(*entry, *getWindows().front());
-        if (completion) {
-            completion(view);
+        auto* view = viewManager.openView(name);
+        if (view && completion) {
+            completion(*view);
         }
     });
 }
@@ -209,7 +200,6 @@ void Editor::frame() {
         invalidateView();
     }
     autoConfigSave();
-    clearClosingViews();
     Appearance::staticInstance().update();
     if (!mainWindow()) {
         return;
@@ -217,7 +207,7 @@ void Editor::frame() {
     auto& window = *mainWindow();
     imguiCtx.newFrame();
     dockspace.display(window);
-    displayViews();
+    viewManager.display();
     debugViews.display();
     imguiCtx.drawFrame();
 }
@@ -233,63 +223,27 @@ void Editor::menuBar() {
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Views")) {
-        ViewRegistry::forEach([&](std::string_view name, auto const& entry) {
-            auto const [desc, factory, _] = entry;
-            if (!desc.persistent) {
-                return;
+        for (auto& entry: ViewRegistry::entries()) {
+            if (ImGui::MenuItem(entry.name().c_str())) {
+                viewManager.openView(entry);
             }
-            if (ImGui::MenuItem(name.data())) {
-                createView(entry, *getWindows().front());
-            }
-        });
-
+        }
         ImGui::EndMenu();
     }
     debugViews.menubar();
     if (ImGui::BeginMenu("Profile")) {
         if (ImGui::MenuItem("Profiler")) {
-            // profileView.open();
+            Logger::Debug("Profiler view not implemented");
         }
         ImGui::EndMenu();
-    }
-}
-
-void Editor::displayViews() {
-    if (auto const itr = std::find_if(views.begin(), views.end(),
-                                      [](auto&& v) { return v->maximized(); });
-        itr != views.end())
-    {
-        auto& view = **itr;
-        view.doFrame();
-        return;
-    }
-    for (auto& view: views) {
-        view->doFrame();
     }
 }
 
 bool Editor::onInput(InputEvent e) {
     invalidateView();
     imguiCtx.onInput(e);
-    /// Give to focused view
-    auto focusedViewItr =
-        std::find_if(views.begin(), views.end(),
-                     [](auto const& v) { return v->focused(); });
-    if (focusedViewItr != views.end()) {
-        (*focusedViewItr)->doOnInput(e);
-        if (e.handled()) {
-            return true;
-        }
-    }
-    /// Give to all unfocused views
-    for (auto& view: views) {
-        if (view->focused()) {
-            continue;
-        }
-        view->doOnInput(e);
-        if (e.handled()) {
-            return true;
-        }
+    if (viewManager.onInput(e)) {
+        return true;
     }
     /// Give to ourself
     cmd.onInput(e);
@@ -318,7 +272,7 @@ void Editor::saveConfigToDisk() {
     if (!windows.empty()) {
         root["Window"] = windows.front()->getDescription();
     }
-    root["Views"] = getViewsConfig();
+    root["Views"] = viewManager.serialize();
     YAML::Emitter out;
     out << root;
     auto filename = configFile();
@@ -335,7 +289,7 @@ void Editor::restoreConfigFromDisk() {
     YAML::Node root = getStoredConfig();
     Logger::Warn("Resetting style colors on startup");
     ImGui::StyleColorsDark();
-    loadViews(root["Views"]);
+    viewManager.deserialize(root["Views"]);
 }
 
 WindowDescription Editor::loadWindowConfig() {
@@ -356,58 +310,6 @@ void Editor::autoConfigSave() {
     if (autoConfigSaveTimer <= 0) {
         saveConfigToDisk();
         autoConfigSaveTimer = saveConfigInterval();
-    }
-}
-
-YAML::Node Editor::getViewsConfig() {
-    YAML::Node node;
-    for (auto& view: views) {
-        node.push_back(view->doSerialize());
-    }
-    return node;
-}
-
-void Editor::loadViews(YAML::Node const& node) {
-    views.clear();
-    for (auto viewData: node) {
-        auto view = View::doDeserialize(viewData);
-        if (view != nullptr) {
-            populateView(*view, *getWindows().front());
-            view->doInit();
-            views.push_back(std::move(view));
-        }
-    }
-}
-
-View& Editor::createView(ViewRegistry::Entry const& entry, Window& window) {
-    assert((bool)entry.factory);
-    auto view = entry.factory();
-    view->mRegisterDescription = entry.description;
-    view->desc.pub.name = entry.name;
-    populateView(*view, window);
-    view->doInit();
-    views.push_back(std::move(view));
-    return *views.back();
-}
-
-void Editor::populateView(View& view, Window& window) {
-    auto& desc = view.desc;
-    desc.editor = this;
-    desc.window = &window;
-    view.assignEmitter(makeEmitter());
-    view.assignReceiver(makeReceiver());
-}
-
-void Editor::clearClosingViews() {
-    for (auto itr = views.begin(); itr != views.end();) {
-        auto& view = *itr;
-        if (view->shouldClose()) {
-            view->doShutdown();
-            itr = views.erase(itr);
-        }
-        else {
-            ++itr;
-        }
     }
 }
 

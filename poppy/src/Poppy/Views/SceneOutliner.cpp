@@ -16,12 +16,13 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/SelectionContext.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/ViewRegistry.h"
 
 using namespace bloom;
 using namespace vml::short_types;
 using namespace poppy;
 
-POPPY_REGISTER_VIEW(SceneOutliner, "Scene Outliner", {});
+POPPY_REGISTER_VIEW(SceneOutliner, "Scene Outliner");
 
 SceneOutliner::SceneOutliner(): BasicSceneInspector(this) {}
 

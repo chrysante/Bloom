@@ -1,3 +1,6 @@
+#ifndef POPPY_PLATFORM_MACOS_IMGUI_IMPL_METAL_H
+#define POPPY_PLATFORM_MACOS_IMGUI_IMPL_METAL_H
+
 // clang-format off
 
 // dear imgui: Renderer Backend for Metal
@@ -52,3 +55,5 @@ IMGUI_IMPL_API void ImGui_ImplMetal_DestroyDeviceObjects();
 //-----------------------------------------------------------------------------
 
 #endif // #ifndef IMGUI_DISABLE
+
+#endif // POPPY_PLATFORM_MACOS_IMGUI_IMPL_METAL_H

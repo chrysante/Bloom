@@ -44,6 +44,10 @@ set(poppy_sources
   src/Poppy/UI/Toolbar.h
   src/Poppy/UI/View.cpp
   src/Poppy/UI/View.h
+  src/Poppy/UI/ViewManager.cpp
+  src/Poppy/UI/ViewManager.h
+  src/Poppy/UI/ViewRegistry.cpp
+  src/Poppy/UI/ViewRegistry.h
 
   src/Poppy/Views/AssetBrowser.cpp
   src/Poppy/Views/AssetBrowser.h

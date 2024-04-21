@@ -1,0 +1,49 @@
+#ifndef POPPY_UI_VIEWMANAGER_H
+#define POPPY_UI_VIEWMANAGER_H
+
+#include <memory>
+#include <vector>
+
+#include "Bloom/Application/Fwd.h"
+#include "Bloom/Core/Yaml.h"
+#include "Poppy/UI/Fwd.h"
+
+namespace poppy {
+
+class Editor;
+
+/// Creates and destroys all view instances in the application
+class ViewManager {
+public:
+    explicit ViewManager(Editor* editor);
+    ViewManager(ViewManager const&) = delete;
+    ViewManager& operator=(ViewManager const&) = delete;
+    ~ViewManager();
+
+    /// Creates an instance of the view \p entry
+    View* openView(ViewRegistryEntry const& entry);
+
+    /// Finds the view registry entry with name \p name and creates the view
+    View* openView(std::string_view name);
+
+    /// Displays all views
+    void display();
+
+    /// Passes the \p event to all views
+    bool onInput(bloom::InputEvent& event);
+
+    /// Serializes the currently open views
+    YAML::Node serialize() const;
+
+    /// Recreates the views stored in \p node
+    void deserialize(YAML::Node const& node);
+
+private:
+    struct Impl;
+    Editor* editor; // To create emitters and receivers
+    std::vector<std::unique_ptr<View>> views;
+};
+
+} // namespace poppy
+
+#endif // POPPY_UI_VIEWMANAGER_H

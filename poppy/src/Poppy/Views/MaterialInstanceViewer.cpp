@@ -6,13 +6,13 @@
 #include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/PropertiesView.h"
+#include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetBrowser.h"
 
 using namespace bloom;
 using namespace poppy;
 
-POPPY_REGISTER_VIEW(MaterialInstanceViewer, "Material Instance Viewer",
-                    { .persistent = false, .unique = false });
+POPPY_REGISTER_VIEW(MaterialInstanceViewer, "Material Instance Viewer");
 
 void MaterialInstanceViewer::frame() {
     if (!inst) {

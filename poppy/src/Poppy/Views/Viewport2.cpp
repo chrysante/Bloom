@@ -17,6 +17,7 @@
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetBrowser.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/Viewport/Gizmo.h"
@@ -82,14 +83,14 @@ struct Viewport2: View, BasicSceneInspector {
 
 } // namespace
 
-POPPY_REGISTER_VIEW(Viewport2, "Viewport2", {});
+POPPY_REGISTER_VIEW(Viewport2, "Viewport2");
 
 Viewport2::Viewport2(): BasicSceneInspector(this), toolbar(makeToolbar()) {
     cameraController.setFieldOfView(60);
 }
 
 void Viewport2::init() {
-    setPadding(0);
+    setPadding({ 0, 0 });
     toolbar.setStyle({
         .height = 25,
         .buttonAlpha = 1,

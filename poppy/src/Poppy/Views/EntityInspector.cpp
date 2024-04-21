@@ -19,6 +19,7 @@
 #include "Poppy/Editor/SelectionContext.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetBrowser.h"
 
 using namespace vml::short_types;
@@ -26,7 +27,7 @@ using namespace ranges::views;
 using namespace bloom;
 using namespace poppy;
 
-POPPY_REGISTER_VIEW(EntityInspector, "Entity Inspector", {});
+POPPY_REGISTER_VIEW(EntityInspector, "Entity Inspector");
 
 EntityInspector::EntityInspector(): BasicSceneInspector(this) {}
 

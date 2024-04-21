@@ -9,25 +9,44 @@
 #include "Bloom/Application/Window.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/ViewRegistry.h"
 
 using namespace bloom;
-using namespace vml::short_types;
 using namespace poppy;
+using namespace vml::short_types;
 
-static int gID = 0;
-static utl::hashset<int> usedIDs;
+namespace {
 
-static int getFreshID() {
-    while (usedIDs.contains(gID)) {
-        ++gID;
+class IDFactory {
+public:
+    static int getNewID() {
+        while (instance.usedIDs.contains(instance.IDCounter)) {
+            ++instance.IDCounter;
+        }
+        instance.usedIDs.insert(instance.IDCounter);
+        return instance.IDCounter;
     }
-    return gID;
-}
+
+private:
+    static IDFactory instance;
+
+    int IDCounter;
+    utl::hashset<int> usedIDs;
+};
+
+IDFactory IDFactory::instance;
+
+} // namespace
+
+View::View(ViewDescription data):
+    data{ .title = std::move(data.title),
+          .size = data.defaultSize,
+          .padding = { std::nullopt, std::nullopt } } {}
 
 bool View::focused() const {
     auto* w = GImGui->NavWindow;
     while (w) {
-        if (w == desc.imguiWindow) {
+        if (w == data.imguiWindow) {
             return true;
         }
         w = w->ParentWindow;
@@ -35,24 +54,39 @@ bool View::focused() const {
     return false;
 }
 
-vml::float2 View::windowSpaceToViewSpace(vml::float2 position) const {
-    return position - desc.position + desc.window->position();
+vml::float2 View::padding() const {
+    auto& style = ImGui::GetStyle();
+    return {
+        data.padding.x.value_or(style.WindowPadding.x),
+        data.padding.y.value_or(style.WindowPadding.y),
+    };
 }
 
-vml::float2 View::viewSpaceToWindowSpace(vml::float2 position) const {
-    return position + desc.position - desc.window->position();
+Window& View::window() const {
+    BL_ASSERT(
+        data.window,
+        "Cannot call this method during init(). This should change in the future");
+    return *data.window;
 }
 
-void View::setFocused() { ImGui::FocusWindow((ImGuiWindow*)desc.imguiWindow); }
+float2 View::windowSpaceToViewSpace(float2 position) const {
+    return position - data.position + data.window->position();
+}
+
+float2 View::viewSpaceToWindowSpace(float2 position) const {
+    return position + data.position - data.window->position();
+}
+
+void View::setFocused() { ImGui::FocusWindow((ImGuiWindow*)data.imguiWindow); }
 
 void View::maximize() {
-    desc.maximized = true;
-    // send message to window
+    data.maximized = true;
+    // TODO: Send message to window
 }
 
 void View::restore() {
-    desc.maximized = false;
-    // send message to window
+    data.maximized = false;
+    // TODO: Send message to window
 }
 
 void View::toggleMaximize() {
@@ -64,42 +98,27 @@ void View::toggleMaximize() {
     }
 }
 
-void View::setPadding(vml::float2 padding) {
-    desc.hasPaddingX = padding.x >= 0;
-    desc.hasPaddingY = padding.y >= 0;
-
-    desc.pub.padding = padding;
-}
-
-void View::setTitle(std::string newTitle) {
-    desc.pub.title = std::move(newTitle);
-}
-
 void View::doInit() {
-    if (desc.pub.id < 0) {
-        desc.pub.id = getFreshID();
+    if (data.ID < 0) {
+        data.ID = IDFactory::getNewID();
     }
-    usedIDs.insert(desc.pub.id);
-    setPadding(desc.pub.padding);
-
-    desc.pub.title = std::string(name());
-
-    this->init();
+    if (data.title.empty()) {
+        data.title = data.staticName;
+    }
+    init();
 }
-
-void View::doShutdown() { this->shutdown(); }
 
 static bool isDocked(ImGuiWindow* window) {
     return window && window->ParentWindow;
 }
 
 void View::doFrame() {
-    auto* imguiWindow = (ImGuiWindow*)desc.imguiWindow;
+    auto* imguiWindow = (ImGuiWindow*)data.imguiWindow;
     if (isDocked(imguiWindow)) {
-        desc.isMoveable = true;
+        data.isMoveable = true;
     }
     else if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        desc.isMoveable = false;
+        data.isMoveable = false;
     }
     if (imguiWindow) {
         imguiWindow->UserPointer = this;
@@ -110,11 +129,11 @@ void View::doFrame() {
 #if 0
     flags |= ImGuiWindowFlags_NoTitleBar;
 #endif
-    if (!desc.isMoveable) {
+    if (!data.isMoveable) {
         flags |= ImGuiWindowFlags_NoMove;
     }
     // Begin block
-    if (desc.maximized) {
+    if (data.maximized) {
         auto* const viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowSize(viewport->Size);
         ImGui::SetNextWindowPos({ 0, 0 });
@@ -125,34 +144,32 @@ void View::doFrame() {
     }
     auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,
-                        desc.maximized ? 0 : style.WindowRounding);
-    vml::float2 padding = {
-        desc.hasPaddingX ? desc.pub.padding.x : style.WindowPadding.x,
-        desc.hasPaddingY ? desc.pub.padding.y : style.WindowPadding.y
-    };
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
-    if (desc.bgColor) {
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, *desc.bgColor);
+                        data.maximized ? 0 : style.WindowRounding);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding());
+    if (data.bgColor) {
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, *data.bgColor);
     }
-    std::string displayTitle = utl::strcat(title(), "###", name(), "-", id());
-    if (desc.maximized) {
-        displayTitle += "-FS";
+    std::string displayTitle =
+        utl::strcat(title(), "##", data.staticName, "_", data.ID);
+    if (data.maximized) {
+        displayTitle += "_FS";
     }
-    bool* openFlag = isDocked(imguiWindow) ? &desc.open : nullptr;
-    bool open = ImGui::Begin(displayTitle.data(), openFlag, flags);
-    if (desc.bgColor) {
+    bool* beginOpenFlag = isDocked(imguiWindow) ? &data.open : nullptr;
+    bool open = ImGui::Begin(displayTitle.data(), beginOpenFlag, flags);
+    if (data.bgColor) {
         ImGui::PopStyleColor();
     }
     ImGui::PopStyleVar(2);
-    if (desc.maximized) {
+    if (data.maximized) {
         ImGui::PopStyleVar();
     }
     if (open) {
-        auto* window = ImGui::GetCurrentWindow();
-        desc.imguiWindow = window;
-        desc.pub.size = window->Size;
-        desc.position = window->Pos;
-        desc.windowSize = ImGui::GetMainViewport()->Size;
+        auto* imguiWindow = ImGui::GetCurrentWindow();
+        data.imguiWindow = imguiWindow;
+        data.size = imguiWindow->Size;
+        data.position = imguiWindow->Pos;
+        auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
+        data.window = (Window*)viewport->PlatformHandle;
         frame();
     }
     ImGui::End();
@@ -170,26 +187,29 @@ void View::doOnInput(bloom::InputEvent& event) {
 
 YAML::Node View::doSerialize() const {
     YAML::Node node;
-    node["View Base"] = desc.pub;
-    node["Derived View"] = serialize();
+    node["ID"] = data.ID;
+    node["Static Name"] = data.staticName;
+    node["Derived Data"] = serialize();
     return node;
 }
 
 std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
     try {
-        ViewDescription desc = node["View Base"].as<ViewDescription>();
-        BL_ASSERT(desc.id >= 0, "Invalid View ID");
-        auto entry = ViewRegistry::get(desc.name);
+        int ID = node["ID"].as<int>();
+        std::string staticName = node["Static Name"].as<std::string>();
+        if (ID < 0) {
+            throw std::runtime_error("Invalid View ID");
+        }
+        auto entry = ViewRegistry::get(staticName);
         if (!entry) {
-            Logger::Error("Failed to deserialize '", desc.name, "'");
+            Logger::Error("Failed to deserialize view: unknown static name: ",
+                          staticName);
             return nullptr;
         }
-        auto result = entry->factory();
-        ViewDescPrivate privDesc{ desc };
-        result->desc = privDesc;
-        result->deserialize(node["Derived View"]);
-        result->mRegisterDescription = entry->description;
-        return result;
+        auto view = entry->createView();
+        view->data.ID = ID;
+        view->deserialize(node["Derived Data"]);
+        return view;
     }
     catch (std::exception const& e) {
         Logger::Error(e.what());

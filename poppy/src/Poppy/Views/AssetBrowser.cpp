@@ -17,6 +17,7 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetBrowser.h"
 #include "Poppy/Views/MaterialInstanceViewer.h"
 
@@ -54,14 +55,15 @@ std::optional<AssetHandle> poppy::acceptAssetDragDrop(
     return acceptAssetDragDrop(std::span(types));
 }
 
-POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser", {});
+POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser");
 
 static AssetHandle getHandle(DirectoryEntry const& entry) {
     auto* handle = std::any_cast<AssetHandle>(&entry.userData);
     return handle ? *handle : AssetHandle();
 }
 
-AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
+AssetBrowser::AssetBrowser():
+    View({ .title = "Content Browser" }), dirView(commandPaletteWrite()) {
     // clang-format off
     dirView.setDelegate({
         .openFile = [this](DirectoryEntry const& entry) {
@@ -288,8 +290,6 @@ void AssetBrowser::init() {
         openProject(data.projectDir);
     }
 }
-
-void AssetBrowser::shutdown() {}
 
 YAML::Node AssetBrowser::serialize() const {
     YAML::Node node;

@@ -1,3 +1,6 @@
+#ifndef POPPY_PLATFORM_MACOS_IMGUI_IMPL_OSX_H
+#define POPPY_PLATFORM_MACOS_IMGUI_IMPL_OSX_H
+
 // clang-format off
 
 // dear imgui: Platform Backend for OSX / Cocoa
@@ -47,3 +50,5 @@ IMGUI_IMPL_API void     ImGui_ImplOSX_NewFrame(poppy::Editor& editor);
 #endif
 
 #endif // #ifndef IMGUI_DISABLE
+
+#endif // POPPY_PLATFORM_MACOS_IMGUI_IMPL_OSX_H

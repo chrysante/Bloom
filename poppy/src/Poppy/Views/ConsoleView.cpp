@@ -8,6 +8,7 @@
 #include "Bloom/Core/Serialize.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/UI/ViewRegistry.h"
 
 using namespace poppy;
 using namespace bloom;
@@ -92,13 +93,13 @@ struct ConsoleView: View {
 
 } // namespace
 
-POPPY_REGISTER_VIEW(ConsoleView, "Console", {});
+POPPY_REGISTER_VIEW(ConsoleView, "Console");
 
 static void modifyTextSize(int& textSize, int offset) {
     textSize = std::clamp(textSize + offset, TextSizeMin, TextSizeMax);
 }
 
-ConsoleView::ConsoleView() {
+ConsoleView::ConsoleView(): View({ .title = "Console" }) {
     auto& cmd = commandPaletteWrite();
     cmd.add("Increase Text Size", { Key::Plus, ModFlags::Control },
             [this] { modifyTextSize(persistent.textSize, 1); });

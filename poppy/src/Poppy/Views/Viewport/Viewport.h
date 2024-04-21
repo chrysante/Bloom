@@ -27,7 +27,6 @@ public:
 
     //	private:
     void init() override;
-    void shutdown() override;
     void frame() override;
 
     YAML::Node serialize() const override;

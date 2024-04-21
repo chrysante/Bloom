@@ -21,7 +21,7 @@ UTL_ENUM_OPERATORS(ToolbarFlags)
 
 ///
 struct ToolbarStyle {
-    float height = 30.0f;
+    float height = 26.0f;
     float buttonAlpha = 0.0f;
     float buttonAlphaHovered = 0.5f;
     float buttonAlphaActive = 0.5f;

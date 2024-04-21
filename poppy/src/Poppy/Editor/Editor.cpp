@@ -48,28 +48,33 @@ struct ToolbarBuildTimeStamp: ToolbarItem {
     static constexpr auto BuildConfig = STRINGIFY(BUILD_CONFIG);
     static constexpr auto Timestamp = __DATE__ " " __TIME__;
 
-    virtual void display(ToolbarStyle const&) override {
+    virtual void display(ToolbarStyle const& style) override {
         float2 pos = ImGui::GetCursorPos();
+        if (height >= 0) {
+            pos.y += (style.actualHeight - height) / 2;
+        }
         width = 0;
         ImGui::PushStyleColor(ImGuiCol_Text,
                               ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
         auto defFontDesc = FontDesc::UIDefault();
         withFont(defFontDesc.setWeight(FontWeight::Semibold), [&] {
             width = std::max(width, ImGui::CalcTextSize(BuildConfig).x);
-            ImGui::SetCursorPosX(pos.x + getWidth() - width);
+            ImGui::SetCursorPos(pos + float2(getWidth() - width, 0));
             ImGui::Text("%s", BuildConfig);
         });
-        ImGui::SetCursorPos(pos + float2(0, (float)defFontDesc.size + 2));
         withFont(defFontDesc.setSize(defFontDesc.size - 4), [&] {
             width = std::max(width, ImGui::CalcTextSize(Timestamp).x);
+            ImGui::SetCursorPos(pos + float2(0, (float)defFontDesc.size + 2));
             ImGui::Text("%s", Timestamp);
         });
+        height = ImGui::GetCursorPosY() - pos.y;
         ImGui::PopStyleColor();
     }
 
     virtual float calcWidth(float /* height */) const override { return width; }
 
     float width = 0;
+    float height = -1;
 };
 
 } // namespace
@@ -87,7 +92,7 @@ Editor::Editor(): mSelection(makeReceiver()) {
     dockspace.setLeftToolbar({
         /// Very annoying hack to prevent the toolbar from rendering under the
         /// window buttons on MacOS
-        ToolbarEmptyItem().width(75),
+//        ToolbarEmptyItem().width(75),
         ToolbarDropdownMenu()
             .icon([] { return "menu"; })
             .content([this] {
@@ -113,12 +118,12 @@ Editor::Editor(): mSelection(makeReceiver()) {
         ToolbarIconButton("attention-circled")
             .onClick([]{ Logger::Trace("Some Button Clicked"); }),
         ToolbarSpacer{},
+        ToolbarBuildTimeStamp(),
         ToolbarDropdownMenu()
             .icon([] { return "menu"; })
             .content([] {
                 ImGui::Text("Placeholder Menu");
             }),
-        ToolbarBuildTimeStamp(),
     });
     // clang-format on
 }
@@ -296,7 +301,15 @@ std::filesystem::path Editor::configFile() const {
     return libraryDir() / "Poppy.settings";
 }
 
-YAML::Node Editor::getStoredConfig() { return YAML::LoadFile(configFile()); }
+YAML::Node Editor::getStoredConfig() {
+    try {
+        return YAML::LoadFile(configFile());
+    }
+    catch (YAML::BadFile const& e) {
+        Logger::Warn("Failed to open config file: ", e.what());
+        return YAML::Node();
+    }
+}
 
 void Editor::saveConfigToDisk() {
     /// We load the existing config to not destroy any saved state that is not

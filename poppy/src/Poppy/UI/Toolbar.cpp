@@ -112,7 +112,11 @@ void ToolbarIconButton::display(ToolbarStyle const& style) {
     }
 }
 
-float ToolbarIconButton::calcWidth(float height) const { return height * 1.5f; }
+static float const IconButtonWidthHeightRatio = 1.7;
+
+float ToolbarIconButton::calcWidth(float height) const {
+    return height * IconButtonWidthHeightRatio;
+}
 
 ToolbarDropdownMenu::ToolbarDropdownMenu():
     _id(utl::uuid::generate().to_string()) {}
@@ -165,7 +169,7 @@ void ToolbarDropdownMenu::display(ToolbarStyle const& style) {
 
 float ToolbarDropdownMenu::calcWidth(float height) const {
     if (!_preview) {
-        return height * 1.5f;
+        return height * IconButtonWidthHeightRatio;
     }
     float2 textSize = withFont(FontWeight::Semibold, FontStyle::Roman, [&] {
         return ImGui::CalcTextSize(_preview().data());

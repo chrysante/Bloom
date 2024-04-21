@@ -15,38 +15,67 @@ class Window;
 
 namespace poppy {
 
+/// Wrapper around ImGui's docking feature
 class Dockspace {
 public:
-    Dockspace();
-
+    /// Makes the entire content area of \p window a dockable area and draws
+    /// toolbars in the windows titlebar
     void display(bloom::Window& window);
 
-    void setLeftToolbar(Toolbar toolbar);
-    void setCenterToolbar(Toolbar toolbar);
-    void setRightToolbar(Toolbar toolbar);
+    /// # Toolbar Layout
+    /// A dockspace has three toolbars. Depending on the docked windows in the
+    /// dockspace a layout is for the three toolbars is automatically chosen.
+    /// For example if there is a window on the left and on the right side of
+    /// the dock space which are not larger than one third of the dockspace, the
+    /// toolbars are aligned to these windows:
+    /// ```
+    /// ┌──────────────┬──────────────────┬───────────────┐
+    /// │ Left Toolbar │ Center Toolbar   │ Right Toolbar │
+    /// ├──────────────┼──────────────────┼───────────────┤
+    /// │              │                  │               │
+    /// │ Left Window  │ Center Window(s) │ Right Window  │
+    /// │              │                  │               │
+    /// └──────────────┴──────────────────┴───────────────┘
+    /// ┌──────────────┬──────────────────┬───────────────┐
+    /// │ Left Toolbar │ Center Toolbar   │ Right Toolbar │
+    /// ├──────────────┼──────────────────┴───────────────┤
+    /// │              │                                  │
+    /// │ Left Window  │        Other Windows             │
+    /// │              │                                  │
+    /// └──────────────┴──────────────────────────────────┘
+    /// ┌──────────────┬──────────────────┬───────────────┐
+    /// │ Left Toolbar │ Center Toolbar   │ Right Toolbar │
+    /// ├──────────────┴──────────────────┼───────────────┤
+    /// │                                 │               │
+    /// │          Left Windows           │ Right Window  │
+    /// │                                 │               │
+    /// └─────────────────────────────────┴───────────────┘
+    /// ┌──────────────┬──────────────────┬───────────────┐
+    /// │ Left Toolbar │ Center Toolbar   │ Right Toolbar │
+    /// ├──────────────┴──────────────────┴───────────────┤
+    /// │                                                 │
+    /// │ Single window or windows that don't meet the    │
+    /// │ requirements                                    │
+    /// │                                                 │
+    /// └─────────────────────────────────────────────────┘
+    /// ```
 
-    /// Zones from left and right window border where no controls should be
-    /// displayed
-    void setInsets(float left, float right);
+    /// Assigns the left toolbar
+    void setLeftToolbar(Toolbar toolbar);
+
+    /// Assigns the center toolbar
+    void setCenterToolbar(Toolbar toolbar);
+
+    /// Assigns the right toolbar
+    void setRightToolbar(Toolbar toolbar);
 
 private:
     void mainWindow();
 
-    void submitMasterDockspace();
+    void displayToolbars(bloom::Window& window);
 
-    void displayToolbar(bloom::Window& window);
-
-    void toolbarLayoutOne(bloom::Window& window, std::span<int const> spacing);
-    void toolbarLayoutTwo(bloom::Window& window, std::span<int const> spacing);
-    void toolbarLayoutThree(bloom::Window& window,
-                            std::span<int const> spacing);
-
-    void setToolbarHeight(float height);
-
-private:
     vml::float2 minWindowSize = { 250, 100 };
     std::array<Toolbar, 3> toolbars;
-    float leftInset = 0, rightInset = 0;
 
     size_t spacingCount = 0;
     unsigned mainDockID = 0;

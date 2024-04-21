@@ -21,8 +21,8 @@ using namespace poppy;
 using namespace bloom;
 using namespace vml::short_types;
 
-static constexpr auto MainWindowID = "__MainWindow__";
-static constexpr auto MainDockspaceID = "__MainWindow_Dockspace__";
+static constexpr auto MainWindowID = "MainWindow";
+static constexpr auto MainDockspaceID = "MainWindow_Dockspace";
 
 static void makeUnique(auto& vector) {
     auto last = std::unique(vector.begin(), vector.end());
@@ -43,12 +43,13 @@ static void withWindowSizeConstraints(vml::float2 minSize, auto&& block) {
     block();
 }
 
-Dockspace::Dockspace() = default;
-
 void Dockspace::display(Window& window) {
     mainWindow();
-    setToolbarHeight(window.toolbarHeight());
-    displayToolbar(window);
+    float height = window.titlebarHeight();
+    for (auto& toolbar: toolbars) {
+        toolbar.setHeight(height);
+    }
+    displayToolbars(window);
 }
 
 ToolbarStyle const tbStyle{ .padding = float2(0, 0),
@@ -69,15 +70,13 @@ void Dockspace::setRightToolbar(Toolbar tb) {
     toolbars[2] = std::move(tb);
 }
 
-void Dockspace::setToolbarHeight(float height) {
-    for (auto& toolbar: toolbars) {
-        toolbar.setHeight(height);
-    }
-}
-
-void Dockspace::setInsets(float left, float right) {
-    leftInset = left;
-    rightInset = right;
+static ImGuiID submitDockspace() {
+    ImGuiDockNodeFlags flags = 0;
+    flags |= ImGuiDockNodeFlags_NoWindowMenuButton;
+    flags |= ImGuiDockNodeFlags_NoCloseButton;
+    ImGuiID ID = ImGui::GetID(MainDockspaceID);
+    ImGui::DockSpace(ID, /* size = */ {}, flags);
+    return ID;
 }
 
 void Dockspace::mainWindow() {
@@ -108,18 +107,10 @@ void Dockspace::mainWindow() {
     withFont(FontDesc::UIDefault(), [&] {
         ImGui::Begin(MainWindowID, nullptr, windowFlags);
         withWindowSizeConstraints(minWindowSize,
-                                  [&] { submitMasterDockspace(); });
+                                  [&] { mainDockID = submitDockspace(); });
         ImGui::End();
     });
     ImGui::PopStyleVar(6);
-}
-
-void Dockspace::submitMasterDockspace() {
-    ImGuiDockNodeFlags flags = 0;
-    flags |= ImGuiDockNodeFlags_NoWindowMenuButton;
-    flags |= ImGuiDockNodeFlags_NoCloseButton;
-    mainDockID = ImGui::GetID(MainDockspaceID);
-    ImGui::DockSpace(mainDockID, /* size = */ {}, flags);
 }
 
 static bool usingViewports() {
@@ -177,9 +168,12 @@ static void toolbarBGWindow(float2 position, float2 size) {
 static void toolbarWindow(float2 position, float2 size,
                           utl::function_view<void()> content) {
     toolbarBGWindow(position, size);
+    /// 6 is good looking with compact title bar style
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 6));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
     bool open = beginToolbarWindow("Main_Toolbar", position, size);
     ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
     if (!open) {
         return;
     }
@@ -199,8 +193,7 @@ static void titlebarBehaviour(Window& window, float toolbarHeight) {
     }
     ImGui::BeginDisabled();
     float width = window.size().x;
-    float2 windowPadding = GImGui->Style.WindowPadding;
-    ImGui::SetCursorPos(-windowPadding);
+    ImGui::SetCursorPos({});
     ImGui::SetNextItemAllowOverlap();
     ImGui::InvisibleButton("Main_Toolbar_Background_Button",
                            { width, toolbarHeight });
@@ -269,7 +262,85 @@ static utl::small_vector<int, 2> getToolbarSpacing(Window& window,
     }();
 }
 
-void Dockspace::displayToolbar(Window& window) {
+namespace {
+
+struct ToolbarLayout {
+    float totalWidth;
+    float leftInset;
+};
+
+} // namespace
+
+static void toolbarLayoutOne(ToolbarLayout layout, std::span<Toolbar> toolbars,
+                             std::span<int const> /* spacing */) {
+    float2 padding = ImGui::GetCurrentWindow()->WindowPadding;
+    float t0Width = toolbars[0].getWidthWithoutSpacers();
+    float t2Width = toolbars[2].getWidthWithoutSpacers();
+    ImGui::SetCursorPos(float2(padding.x + layout.leftInset, padding.y));
+    toolbars[0].display(t0Width);
+    ImGui::SetCursorPos(
+        float2(padding.x + layout.leftInset + t0Width + padding.x, padding.y));
+    toolbars[1].display(layout.totalWidth - layout.leftInset - t0Width -
+                        t2Width - 4 * padding.x);
+    ImGui::SetCursorPos(
+        float2(layout.totalWidth - t2Width - padding.x, padding.y));
+    toolbars[2].display(t2Width);
+}
+
+static void toolbarLayoutTwo(ToolbarLayout layout, std::span<Toolbar> toolbars,
+                             std::span<int const> spacing) {
+    float2 padding = ImGui::GetCurrentWindow()->WindowPadding;
+    float spacer = spacing[0];
+    float position[2] = { 0, spacer };
+    float width[2] = { spacer, layout.totalWidth - spacer };
+    if (spacer >= layout.totalWidth / 2) {
+        // Left section is big
+        // 1. section
+        float t0Width = toolbars[0].getWidthWithoutSpacers();
+        ImGui::SetCursorPos(
+            float2(position[0] + padding.x + layout.leftInset, padding.y));
+        toolbars[0].display(t0Width);
+        ImGui::SetCursorPos(float2(position[0] + padding.x + layout.leftInset +
+                                       t0Width + padding.x,
+                                   padding.y));
+        toolbars[1].display(width[0] - t0Width - layout.leftInset -
+                            3 * padding.x);
+        // 2. section
+        ImGui::SetCursorPos(float2(position[1] + padding.x, padding.y));
+        toolbars[2].display(width[1] - 2 * padding.x);
+    }
+    else {
+        // Right section is big
+        // 1. section
+        ImGui::SetCursorPos(
+            float2(position[0] + padding.x + layout.leftInset, padding.y));
+        toolbars[0].display(width[0] - layout.leftInset - 2 * padding.x);
+        // 2. section
+        float t2Width = toolbars[2].getWidthWithoutSpacers();
+        ImGui::SetCursorPos(float2(position[1] + padding.x, padding.y));
+        toolbars[1].display(width[1] - t2Width - 3 * padding.x);
+        ImGui::SetCursorPos(
+            float2(layout.totalWidth - padding.x - t2Width, padding.y));
+        toolbars[2].display(t2Width);
+    }
+}
+
+static void toolbarLayoutThree(ToolbarLayout layout,
+                               std::span<Toolbar> toolbars,
+                               std::span<int const> spacing) {
+    float2 padding = ImGui::GetCurrentWindow()->WindowPadding;
+    float position[3] = { layout.leftInset, (float)spacing[0],
+                          (float)spacing[1] };
+    float width[3] = { (float)spacing[0] - layout.leftInset,
+                       (float)(spacing[1] - spacing[0]),
+                       layout.totalWidth - spacing[1] };
+    for (std::size_t i = 0; i < 3; ++i) {
+        ImGui::SetCursorPos(float2(position[i] + padding.x, padding.y));
+        toolbars[i].display(width[i] - 2 * padding.x);
+    }
+}
+
+void Dockspace::displayToolbars(Window& window) {
     float height = toolbars[0].getHeight();
     auto spacing = getToolbarSpacing(window, mainDockID);
     float width = window.size().x;
@@ -279,79 +350,13 @@ void Dockspace::displayToolbar(Window& window) {
     BL_ASSERT(spacing.size() <= 2);
     toolbarWindow(getPosition(window), { width, height }, [&] {
         titlebarBehaviour(window, height);
-        switch (spacing.size()) {
-        case 0:
-            toolbarLayoutOne(window, spacing);
-            break;
-        case 1:
-            toolbarLayoutTwo(window, spacing);
-            break;
-        case 2:
-            toolbarLayoutThree(window, spacing);
-            break;
-        default:
-            BL_UNREACHABLE();
-        }
+        auto titleButtonsArea = window.titleButtonsArea();
+        float leftInset =
+            titleButtonsArea.lower_bound().x + titleButtonsArea.upper_bound().x;
+        std::array{
+            toolbarLayoutOne, toolbarLayoutTwo, toolbarLayoutThree
+        }[spacing.size()]({ .totalWidth = (float)window.size().x,
+                            .leftInset = leftInset },
+                          toolbars, spacing);
     });
-}
-
-void Dockspace::toolbarLayoutOne(Window& window,
-                                 std::span<int const> /* spacing */) {
-    float windowWidth = window.size().x;
-    float2 padding = GImGui->Style.WindowPadding;
-    float t0Width = toolbars[0].getWidthWithoutSpacers();
-    float t2Width = toolbars[2].getWidthWithoutSpacers();
-    ImGui::SetCursorPos(padding);
-    toolbars[0].display(t0Width);
-    ImGui::SetCursorPos(ImVec2(padding.x + t0Width + padding.x, padding.y));
-    toolbars[1].display(windowWidth - t0Width - t2Width - 4 * padding.x);
-    ImGui::SetCursorPos(ImVec2(windowWidth - t2Width - padding.x, padding.y));
-    toolbars[2].display(t2Width);
-}
-
-void Dockspace::toolbarLayoutTwo(Window& window, std::span<int const> spacing) {
-    float windowWidth = window.size().x;
-    float2 padding = GImGui->Style.WindowPadding;
-    float spacer = spacing[0];
-    float position[2] = { 0, spacer };
-    float width[2] = { spacer, windowWidth - spacer };
-    if (spacer >= windowWidth / 2) {
-        // Left section is big
-        // 1. section
-        float t0Width = toolbars[0].getWidthWithoutSpacers();
-        ImGui::SetCursorPos(ImVec2(position[0] + padding.x, padding.y));
-        toolbars[0].display(t0Width);
-        ImGui::SetCursorPos(
-            ImVec2(position[0] + padding.x + t0Width + padding.x, padding.y));
-        toolbars[1].display(width[0] - t0Width - 3 * padding.x);
-        // 2. section
-        ImGui::SetCursorPos(ImVec2(position[1] + padding.x, padding.y));
-        toolbars[2].display(width[1] - 2 * padding.x);
-    }
-    else {
-        // Right section is big
-        // 1. section
-        ImGui::SetCursorPos(ImVec2(position[0] + padding.x, padding.y));
-        toolbars[0].display(width[0] - 2 * padding.x);
-        // 2. section
-        float const t2Width = toolbars[2].getWidthWithoutSpacers();
-        ImGui::SetCursorPos(ImVec2(position[1] + padding.x, padding.y));
-        toolbars[1].display(width[1] - t2Width - 3 * padding.x);
-        ImGui::SetCursorPos(
-            ImVec2(windowWidth - padding.x - t2Width, padding.y));
-        toolbars[2].display(t2Width);
-    }
-}
-
-void Dockspace::toolbarLayoutThree(Window& window,
-                                   std::span<int const> spacing) {
-    float windowWidth = window.size().x;
-    float2 padding = GImGui->Style.WindowPadding;
-    float position[3] = { 0, (float)spacing[0], (float)spacing[1] };
-    float width[3] = { (float)spacing[0], (float)(spacing[1] - spacing[0]),
-                       windowWidth - spacing[1] };
-    for (std::size_t i = 0; i < 3; ++i) {
-        ImGui::SetCursorPos(ImVec2(position[i] + padding.x, padding.y));
-        toolbars[i].display(width[i] - 2 * padding.x);
-    }
 }

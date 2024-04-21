@@ -958,9 +958,14 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
 
 static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
 {
+    assert(viewport);
     bloom::Window* window = (bloom::Window*)viewport->PlatformHandle;
-    ImGui_ImplOSX_GetBackendData()->editor->destroyWindow(window);
-
+    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
+    if (!window) {
+        return;
+    }
+    assert(bd);
+    bd->editor->destroyWindow(window);
     if (ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData)
     {
         data->Window = nullptr;

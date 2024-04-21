@@ -176,10 +176,11 @@ public:
     /// # Experimental and hacky "pretty window" API for MacOS
     /// @{
 
-    /// \Returns the height of the window tool bar in MacOS
-    float toolbarHeight() const;
+    /// \Returns the height of the window's title bar
+    float titlebarHeight() const;
 
-    /// \Returns the bounding box of the close, minimize and maximize buttons
+    /// \Returns the bounding box of the close, minimize and maximize buttons in
+    /// window coordinates
     vml::AABB<float, 2> titleButtonsArea() const;
 
     /// Flag to indicate if the mouse is over an area from which the window may

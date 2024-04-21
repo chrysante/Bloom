@@ -753,11 +753,13 @@ void Impl::backgroundPopup(bool show) {
 }
 
 void Impl::backgroundBehaviour() {
-    bool windowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow);
+    bool windowHovered =
+        ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow) &&
+        ImGui::GetCurrentWindow()->Rect().Contains(ImGui::GetMousePos());
     bool haveNodeInteraction = viewData.activeNode || viewData.activePin;
     bool showPopup = false;
     if (windowHovered && !haveNodeInteraction) {
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
             !viewData.isSelectionDragging)
         {
             viewData.isSelectionDragging = true;

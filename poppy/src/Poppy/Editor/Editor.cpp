@@ -92,7 +92,6 @@ Editor::Editor(): mSelection(makeReceiver()) {
     dockspace.setLeftToolbar({
         /// Very annoying hack to prevent the toolbar from rendering under the
         /// window buttons on MacOS
-//        ToolbarEmptyItem().width(75),
         ToolbarDropdownMenu()
             .icon([] { return "menu"; })
             .content([this] {

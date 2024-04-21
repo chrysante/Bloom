@@ -25,7 +25,7 @@ public:
     SceneOutliner();
 
 private:
-    void frame() override;
+    void display() override;
     void onInput(bloom::InputEvent&) override;
 
     struct TreeNodeDescription {

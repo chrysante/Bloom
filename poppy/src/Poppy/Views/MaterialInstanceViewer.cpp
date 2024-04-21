@@ -14,7 +14,7 @@ using namespace poppy;
 
 POPPY_REGISTER_VIEW(MaterialInstanceViewer, "Material Instance Viewer");
 
-void MaterialInstanceViewer::frame() {
+void MaterialInstanceViewer::display() {
     if (!inst) {
         displayEmptyWithReason("No Material Instance Open");
         return;

@@ -111,7 +111,7 @@ void Viewport::init() {
     overlays.init(this);
 }
 
-void Viewport::frame() {
+void Viewport::display() {
     if (ShowDebugPanel) {
         debugPanel();
     }
@@ -122,7 +122,7 @@ void Viewport::frame() {
     else {
         displayScene();
     }
-    /* Display toolbar with padding */ {
+    /* Display toolbar with transparent background */ {
         auto* window = ImGui::GetCurrentWindow();
         auto color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
         color.w = 0.5;

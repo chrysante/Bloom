@@ -166,7 +166,7 @@ AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
     setPadding({ 0, 0 });
 }
 
-void AssetBrowser::frame() {
+void AssetBrowser::display() {
     bool active = assetManager && !assetManager->projectRootDir().empty();
     ImGui::BeginDisabled(!active);
     toolbar.display();

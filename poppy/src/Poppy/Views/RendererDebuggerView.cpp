@@ -22,7 +22,7 @@ void RendererDebuggerView::init() {
     mFramebuffer = findFramebuffer();
 }
 
-void RendererDebuggerView::frame() {
+void RendererDebuggerView::display() {
     currentFramebuffer.reset();
     currentFramebuffer = mFramebuffer.lock();
 

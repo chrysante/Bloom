@@ -12,7 +12,7 @@ public:
     RendererSettingsView();
 
 private:
-    void frame() override;
+    void display() override;
 
     void shadowProperties();
 };

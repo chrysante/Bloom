@@ -31,7 +31,7 @@ POPPY_REGISTER_VIEW(EntityInspector, "Entity Inspector");
 
 EntityInspector::EntityInspector(): BasicSceneInspector(this) {}
 
-void EntityInspector::frame() {
+void EntityInspector::display() {
     if (scenes().empty()) {
         displayEmptyWithReason("No Active Scene");
         return;

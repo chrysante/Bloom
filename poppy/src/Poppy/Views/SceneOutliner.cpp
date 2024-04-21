@@ -26,7 +26,7 @@ POPPY_REGISTER_VIEW(SceneOutliner, "Scene Outliner");
 
 SceneOutliner::SceneOutliner(): BasicSceneInspector(this) {}
 
-void SceneOutliner::frame() {
+void SceneOutliner::display() {
     if (scenes().empty()) {
         displayEmptyWithReason("No Active Scene");
         return;

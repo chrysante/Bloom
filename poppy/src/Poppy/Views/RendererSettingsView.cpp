@@ -15,7 +15,7 @@
 //	}
 //
 //
-//	void RendererSettingsView::frame() {
+//	void RendererSettingsView::display() {
 //		shadowProperties();
 //	}
 //

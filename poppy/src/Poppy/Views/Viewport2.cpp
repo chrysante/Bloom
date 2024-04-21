@@ -60,7 +60,7 @@ struct Viewport2: View, BasicSceneInspector {
     Viewport2();
     void init() override;
 
-    void frame() override;
+    void display() override;
     void displayScenes();
     void displayToolbar();
     void readInput();
@@ -100,7 +100,7 @@ void Viewport2::init() {
     gizmo.setInput(editor().input());
 }
 
-void Viewport2::frame() {
+void Viewport2::display() {
     ImGui::BeginChild("Child");
     if (!scenes().empty()) {
         displayScenes();

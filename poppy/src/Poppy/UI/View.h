@@ -110,14 +110,11 @@ protected:
     CommandPalette& commandPaletteWrite() { return cmdPalette; }
 
 private:
-    friend class ViewRegistryEntry;
-    friend class ViewManager;
-
     /// Called after the view has been created and potentially deserialized
     virtual void init() {};
 
     /// Called on every frame the application is rendered
-    virtual void frame() {};
+    virtual void display() {};
 
     /// Called for all input events
     virtual void onInput(bloom::InputEvent&) {}
@@ -127,6 +124,9 @@ private:
 
     /// Callback to deserialize derived view data
     virtual void deserialize(YAML::Node) {}
+
+    friend class ViewRegistryEntry;
+    friend class ViewManager;
 
     void doInit();
     void doFrame();

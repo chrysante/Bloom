@@ -33,7 +33,7 @@ struct RenderGraphEditorView: View {
 
     void onInput(bloom::InputEvent& event) override;
 
-    void frame() override;
+    void display() override;
 
     YAML::Node serialize() const override;
 
@@ -89,7 +89,7 @@ void RenderGraphEditorView::onInput(InputEvent& event) {
     nodeEditor.onInput(event);
 }
 
-void RenderGraphEditorView::frame() {
+void RenderGraphEditorView::display() {
     toolbar.display();
     nodeEditor.display();
 }

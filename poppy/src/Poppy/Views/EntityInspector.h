@@ -16,7 +16,7 @@ public:
     EntityInspector();
 
 private:
-    void frame() override;
+    void display() override;
 
     // Component Inspectors
     void inspectTag(bloom::EntityHandle);

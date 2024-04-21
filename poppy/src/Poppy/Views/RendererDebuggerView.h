@@ -11,7 +11,7 @@ namespace poppy {
 class RendererDebuggerView: public View {
 public:
     void init() override;
-    void frame() override;
+    void display() override;
 
 private:
     bloom::ForwardRenderer* findRenderer() const;

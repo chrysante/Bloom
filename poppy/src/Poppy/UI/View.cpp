@@ -175,7 +175,7 @@ void View::doFrame() {
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
         data.window = (Window*)viewport->PlatformHandle;
         if (data.window) {
-            frame();
+            display();
         }
     }
     ImGui::End();

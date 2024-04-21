@@ -75,7 +75,7 @@ struct PersistentData {
 struct ConsoleView: View {
     ConsoleView();
 
-    void frame() override;
+    void display() override;
 
     void displayMessage(float& tsWidthAcc, Message const& msg);
 
@@ -262,7 +262,7 @@ void ConsoleView::displayMessage(float& tsWidthAcc, Message const& msg) {
     window->DC.IsSetPos = true;
 }
 
-void ConsoleView::frame() {
+void ConsoleView::display() {
     if (!gLogger) {
         return;
     }

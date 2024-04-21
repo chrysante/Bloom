@@ -40,7 +40,7 @@ public:
 
 private:
     void init() override;
-    void frame() override;
+    void display() override;
     void onInput(bloom::InputEvent& event) override { dirView.onInput(event); }
 
     YAML::Node serialize() const override;

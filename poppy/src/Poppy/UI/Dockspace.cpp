@@ -81,10 +81,9 @@ static ImGuiID submitDockspace() {
 
 void Dockspace::mainWindow() {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
-    auto windowPosition =
-        float2(viewport->Pos) + float2(0, toolbars[0].getHeight());
-    auto windowSize =
-        float2(viewport->Size) - float2(0, toolbars[0].getHeight());
+    float2 localPos = float2(0, toolbars[0].getHeight() + 1);
+    auto windowPosition = (float2)viewport->Pos + localPos;
+    auto windowSize = (float2)viewport->Size - localPos;
     ImGui::SetNextWindowPos(windowPosition);
     ImGui::SetNextWindowSize(windowSize);
     ImGui::SetNextWindowViewport(viewport->ID);
@@ -145,7 +144,8 @@ static float2 getPosition(Window const& window) {
 
 static void toolbarBGWindow(float2 position, float2 size) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    bool open = beginToolbarWindow("Main_Toolbar_BG", position, size);
+    bool open =
+        beginToolbarWindow("Main_Toolbar_BG", position, size + float2(0, 1));
     ImGui::PopStyleVar();
     if (!open) {
         return;

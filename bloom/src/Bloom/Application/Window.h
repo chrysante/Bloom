@@ -116,6 +116,9 @@ public:
     /// Sets the move callback to \p callback
     void onMove(std::function<void(vml::int2 newPosition)>);
 
+    ///
+    void onMoveStart(std::function<void()>);
+
     /// Sets the resize callback to \p callback
     void onResize(std::function<void(vml::int2 newSize)>);
 
@@ -247,6 +250,7 @@ private:
         std::function<void(std::span<std::filesystem::path const>)>
             onFileDropFn;
         std::function<void(vml::int2 newPosition)> onMoveFn;
+        std::function<void()> onMoveStartFn;
         std::function<void(vml::int2 newSize)> onResizeFn;
         /// Used by the application to run the main loop during resizing
         std::function<void(vml::int2 newPosition)> onResizePrivateFn;

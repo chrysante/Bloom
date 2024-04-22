@@ -36,7 +36,8 @@
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-07-05: Metal: Added new Metal backend implementation.
 
-#include "imgui.h"
+#include <imgui.h>
+#include <imgui_internal.h>
 #ifndef IMGUI_DISABLE
 #include "Bloom/Platform/Metal/MetalDevice.h"
 #include "Bloom/Platform/Metal/MetalSwapchain.h"

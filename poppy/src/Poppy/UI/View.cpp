@@ -19,7 +19,10 @@ namespace {
 
 class IDFactory {
 public:
-    static int getNewID() {
+    static int makeUnique(int existing) {
+        if (existing >= 0 && instance.usedIDs.insert(existing).second) {
+            return existing;
+        }
         while (instance.usedIDs.contains(instance.IDCounter)) {
             ++instance.IDCounter;
         }
@@ -99,9 +102,7 @@ void View::toggleMaximize() {
 }
 
 void View::doInit() {
-    if (data.ID < 0) {
-        data.ID = IDFactory::getNewID();
-    }
+    data.ID = IDFactory::makeUnique(data.ID);
     if (data.title.empty()) {
         data.title = data.staticName;
     }

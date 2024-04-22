@@ -82,6 +82,10 @@ void Window::onMove(std::function<void(vml::int2 newPosition)> f) {
     callbacks.onMoveFn = std::move(f);
 }
 
+void Window::onMoveStart(std::function<void()> f) {
+    callbacks.onMoveStartFn = std::move(f);
+}
+
 void Window::onResize(std::function<void(vml::int2 newSize)> f) {
     callbacks.onResizeFn = std::move(f);
 }
@@ -316,7 +320,9 @@ void Window::setCallbacks() {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         int2 newSize = { sizex, sizey };
         window.desc.size = newSize;
-        window.resizeSwapchain(newSize);
+        if (window.desc.autoResizeSwapchain) {
+            window.resizeSwapchain(newSize);
+        }
         int2 position = 0;
         glfwGetWindowPos(w, &position.x, &position.y);
         posCallback(window, position);
@@ -361,7 +367,7 @@ void Window::setCallbacks() {
 }
 
 void Window::resizeSwapchain(vml::int2 newSize) {
-    if (_swapchain && desc.autoResizeSwapchain) {
+    if (_swapchain) {
         swapchain().resize(newSize * contentScaleFactor());
     }
 }

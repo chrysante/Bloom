@@ -106,6 +106,9 @@ void Window::onInputImpl(InputEvent const& event, void* nativeEvent) {
             titlebarHeight();
         if (desc.movable && isInToolbar) {
             desc.isMoving = true;
+            if (callbacks.onMoveStartFn) {
+                callbacks.onMoveStartFn();
+            }
             [nsWindow performWindowDragWithEvent:nsEvent];
         }
     }

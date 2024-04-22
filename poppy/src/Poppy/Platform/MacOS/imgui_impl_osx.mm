@@ -933,6 +933,8 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     bloom::WindowDescription windowDesc{};
     windowDesc.position = viewport->Pos;
     windowDesc.size = viewport->Size;
+    /// We let the ImGui Metal backend perform the resizing because for reasons I don't understand it looks cleaner
+    windowDesc.autoResizeSwapchain = false;
     if (viewport->Flags & ImGuiViewportFlags_NoDecoration) {
         windowDesc.noDecoration = true;
         windowDesc.focused = false;
@@ -945,13 +947,6 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     if (viewport->Flags & ImGuiViewportFlags_TopMost)
         [nsWindow setLevel:NSFloatingWindowLevel];
 
-    // We probably need to add this for some reason but it stops window content from resizing
-#if 0
-    NSRect rect = NSMakeRect(viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y);
-    ConvertNSRect(&rect);
-    KeyEventResponder* view = [[KeyEventResponder alloc] initWithFrame:rect];
-    nsWindow.contentView = view;
-#endif
     copySizeConstaints(*window, viewport->Window->SizeConstraintRect);
     data->Window = window;
     data->WindowOwned = true;

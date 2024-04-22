@@ -27,8 +27,14 @@ void poppy::ImGuiContext::doNewFramePlatform() {
     ImGui_ImplOSX_NewFrame(*mEditor);
 }
 
+static bool isOccluded(Window& window) {
+    NSWindow* nsWindow = (__bridge NSWindow*)window.nativeHandle();
+    return (nsWindow.occlusionState & NSWindowOcclusionStateVisible) == 0;
+}
+
 void poppy::ImGuiContext::doDrawFramePlatform() {
-    if (!mEditor->mainWindow()) {
+    if (!mEditor->mainWindow() || isOccluded(*mEditor->mainWindow())) {
+        ImGui::Render();
         return;
     }
     auto& window = *mEditor->mainWindow();

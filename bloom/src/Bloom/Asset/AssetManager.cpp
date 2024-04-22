@@ -700,6 +700,16 @@ bool AssetManager::isValid(AssetHandle handle) const {
 void AssetManager::saveToDisk(AssetHandle handle) { impl->flushToDisk(handle); }
 
 void AssetManager::saveAll() {
+    if (impl->rootDir.empty()) {
+        Logger::Trace("Not saving: No asset directory open");
+        return;
+    }
+    if (!std::filesystem::is_directory(impl->rootDir)) {
+        Logger::Error("Asset root directory path is not a directory: ",
+                      impl->rootDir);
+        return;
+    }
+    Logger::Trace("Saving asset directory: ", impl->rootDir);
     impl->writeRegistryToDisk();
     for (auto& [ID, entry]: impl->assets) {
         saveToDisk(entry.handle);

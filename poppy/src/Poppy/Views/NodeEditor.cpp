@@ -1,5 +1,6 @@
 #include "Poppy/Views/NodeEditor.h"
 
+#include <functional>
 #include <optional>
 #include <vector>
 
@@ -651,10 +652,13 @@ struct NodeEditor::Impl {
 
     void deleteSelected();
 
+    void defer(auto f) { deferList.push_back(f); }
+
     NodeEditorGraph model;
     Selection selection;
     ViewData viewData;
     NodeEditorDelegate delegate;
+    std::vector<std::function<void()>> deferList;
 };
 
 NodeEditor::NodeEditor(CommandPalette& commandPalette):
@@ -1228,7 +1232,7 @@ void Impl::nodeBodyPopup(Node& node, bool show) {
     BL_ASSERT(selection.contains(&node),
               "Popup should not open on unselected node");
     if (ImGui::MenuItem("Delete")) {
-        deleteSelected();
+        defer([this] { deleteSelected(); });
     }
     if (auto* controller = node.controller()) {
         controller->contextMenuContent();
@@ -1340,6 +1344,8 @@ void Impl::display() {
         viewData.resetActiveData();
         selection.applyCandidates();
     }
+    ranges::for_each(deferList, ranges::invoke);
+    deferList.clear();
     ImGui::EndChild();
 }
 

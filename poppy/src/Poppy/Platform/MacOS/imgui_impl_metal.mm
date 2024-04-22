@@ -247,7 +247,8 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
     {
         // No luck; make a new render pipeline state
         renderPipelineState = [ctx renderPipelineStateForFramebufferDescriptor:ctx.framebufferDescriptor device:commandBuffer.device];
-
+        if (ctx.framebufferDescriptor == nil)
+            return;
         // Cache render pipeline state for later reuse
         ctx.renderPipelineStateCache[ctx.framebufferDescriptor] = renderPipelineState;
     }

@@ -301,6 +301,7 @@ public:
     /// \Returns the actual height of the toolbar including padding
     float getHeight() const;
 
+    ///
     void setHeight(float value) { style.height = value; }
 
     ///
@@ -308,6 +309,12 @@ public:
 
     ///
     void setStyle(ToolbarStyle const& value) { style = value; }
+
+    /// \Returns the resolved padding value
+    vml::float2 getPadding() const;
+
+    /// Overrides the padding
+    void setPadding(std::optional<vml::float2> value) { style.padding = value; }
 
 private:
     /// A block is a list of items without spacers
@@ -332,8 +339,6 @@ private:
 
     /// Called every frame
     void calcOffsets(float totalWidth);
-
-    vml::float2 getPadding() const;
 
     std::vector<std::unique_ptr<ToolbarItem>> allItems;
     std::vector<ToolbarItem*> activeItems;

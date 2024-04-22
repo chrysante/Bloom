@@ -32,8 +32,6 @@ struct ViewDescription {
 ///
 /// Wraps an ImGui window and extends and specializes its functionality
 class View: protected bloom::Emitter, protected bloom::Receiver {
-    friend class Editor;
-
 public:
     virtual ~View() = default;
 
@@ -98,11 +96,10 @@ public:
     /// \Returns the attached command palette
     CommandPalette const& commandPalette() const { return cmdPalette; }
 
-    /// Used by window backend to close imgui window of closing platform window
-    void setClosing() { data.open = false; }
-
     vml::float2 windowSpaceToViewSpace(vml::float2) const;
     vml::float2 viewSpaceToWindowSpace(vml::float2) const;
+
+    struct BackendImpl;
 
 protected:
     explicit View(ViewDescription desc = {});

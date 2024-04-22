@@ -126,9 +126,9 @@ void View::doFrame() {
     ImGuiWindowFlags flags = 0;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoResize;
-#if 0
-    flags |= ImGuiWindowFlags_NoTitleBar;
-#endif
+    if (_toolbar) {
+        flags |= ImGuiWindowFlags_NoTitleBar;
+    }
     if (!data.isMoveable) {
         flags |= ImGuiWindowFlags_NoMove;
     }
@@ -174,6 +174,10 @@ void View::doFrame() {
         data.position = imguiWindow->Pos;
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
         data.window = (Window*)viewport->PlatformHandle;
+        if (data.window && GImGui->CurrentViewport->Window == imguiWindow) {
+            _toolbar ? data.window->addToolbarArea() :
+                       data.window->removeToolbarArea();
+        }
         if (data.window) {
             displayToolbar();
             display();
@@ -182,10 +186,46 @@ void View::doFrame() {
     ImGui::End();
 }
 
+/// Copied from Dockspace.cpp
+static float computeLeftInset(Window const& window) {
+    auto titleButtonsArea = window.titleButtonsArea();
+    return titleButtonsArea.lower_bound().x + titleButtonsArea.upper_bound().x;
+}
+
+static bool mouseInZoomArea(ImGuiWindow* imWindow, float titlebarHeight) {
+    bool windowHovered =
+        GImGui->HoveredWindow &&
+        ImGui::IsWindowChildOf(GImGui->HoveredWindow, imWindow, false, false);
+    return windowHovered && !ImGui::IsAnyItemHovered() &&
+           ImGui::GetMousePos().y - imWindow->Pos.y <= titlebarHeight;
+}
+
 void View::displayToolbar() {
-    if (_toolbar) {
-        _toolbar->display();
+    if (!_toolbar) {
+        return;
     }
+    float2 padding = { 6, 6 };
+    _toolbar->setPadding(padding);
+    float posx = 0;
+    ImGuiWindow* imWindow = (ImGuiWindow*)data.imguiWindow;
+    if (!isDocked(imWindow) && data.window) {
+        posx += computeLeftInset(window());
+        float titlebarHeight = window().titlebarHeight();
+        _toolbar->setHeight(titlebarHeight - 2 * padding.y);
+        window().setMovable(!ImGui::IsAnyItemHovered());
+        if (mouseInZoomArea(imWindow, titlebarHeight) &&
+            ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        {
+            window().zoom();
+        }
+    }
+    else {
+        _toolbar->setHeight(26);
+    }
+    ImGui::SetCursorPosX(posx);
+    float posy = ImGui::GetCursorPosY();
+    _toolbar->display();
+    ImGui::SetCursorPos({ 0, posy + _toolbar->getHeight() + 1 });
 }
 
 void View::doOnInput(bloom::InputEvent& event) {

@@ -912,6 +912,18 @@ static void copySizeConstaints(bloom::Window& window, ImRect c) {
     window.setMaxSize(max);
 }
 
+struct poppy::View::BackendImpl {
+    static poppy::View* getView(ImGuiViewport* viewport) {
+        return (poppy::View*)((ImGuiViewportP*)viewport)->Window->UserPointer;
+    }
+
+    static void setClosing(ImGuiViewport* viewport) {
+        if (auto* view = getView(viewport)) {
+            view->data.open = false;
+        }
+    }
+};
+
 static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
 {
     ImGuiViewportP* viewport = static_cast<ImGuiViewportP*>(v);
@@ -958,9 +970,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
         GImGui->ActiveId = viewport->Window->MoveId;
     });
     window->onClose([=] {
-        if (auto* view = (poppy::View*)viewport->Window->UserPointer) {
-            view->setClosing();
-        }
+        poppy::View::BackendImpl::setClosing(viewport);
     });
 }
 

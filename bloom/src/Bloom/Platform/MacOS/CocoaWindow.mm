@@ -115,3 +115,22 @@ void Window::onInputImpl(InputEvent const& event, void* nativeEvent) {
 }
 
 bool Window::isMiniaturized() const { return getNative(this).isMiniaturized; }
+
+void Window::addToolbarArea() {
+    if (desc.hasToolbarArea) {
+        return;
+    }
+    desc.hasToolbarArea = true;
+    auto* nsWindow = getNative(this);
+    nsWindow.toolbarStyle = NSWindowToolbarStyleUnifiedCompact;
+    nsWindow.toolbar = [[NSToolbar alloc] init];
+}
+
+void Window::removeToolbarArea() {
+    if (!desc.hasToolbarArea) {
+        return;
+    }
+    desc.hasToolbarArea = false;
+    auto* nsWindow = getNative(this);
+    nsWindow.toolbar = nil;
+}

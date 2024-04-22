@@ -120,6 +120,7 @@ static float2 getPosition(Window const& window) {
     return usingViewports() ? (float2)window.position() : float2();
 }
 
+/// Calls `ImGui::Begin` with every possible interaction and decoration disabled
 [[nodiscard]] static bool beginToolbarWindow(char const* ID, float2 position,
                                              float2 size) {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -142,6 +143,7 @@ static float2 getPosition(Window const& window) {
     return result;
 }
 
+/// Draws a window in the toolbar area that renders the background color
 static void toolbarBGWindow(float2 position, float2 size) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     bool open =
@@ -165,6 +167,7 @@ static void toolbarBGWindow(float2 position, float2 size) {
     ImGui::End();
 }
 
+/// Displays the window in which the toolbar is drawn through \p content
 static void toolbarWindow(float2 position, float2 size,
                           utl::function_view<void()> content) {
     toolbarBGWindow(position, size);
@@ -340,6 +343,11 @@ static void toolbarLayoutThree(ToolbarLayout layout,
     }
 }
 
+static float computeLeftInset(Window const& window) {
+    auto titleButtonsArea = window.titleButtonsArea();
+    return titleButtonsArea.lower_bound().x + titleButtonsArea.upper_bound().x;
+}
+
 void Dockspace::displayToolbars(Window& window) {
     float height = toolbars[0].getHeight();
     auto spacing = getToolbarSpacing(window, mainDockID);
@@ -350,13 +358,11 @@ void Dockspace::displayToolbars(Window& window) {
     BL_ASSERT(spacing.size() <= 2);
     toolbarWindow(getPosition(window), { width, height }, [&] {
         titlebarBehaviour(window, height);
-        auto titleButtonsArea = window.titleButtonsArea();
-        float leftInset =
-            titleButtonsArea.lower_bound().x + titleButtonsArea.upper_bound().x;
-        std::array{
-            toolbarLayoutOne, toolbarLayoutTwo, toolbarLayoutThree
-        }[spacing.size()]({ .totalWidth = (float)window.size().x,
-                            .leftInset = leftInset },
-                          toolbars, spacing);
+        auto* toolbarLayoutFn =
+            std::array{ toolbarLayoutOne, toolbarLayoutTwo,
+                        toolbarLayoutThree }[spacing.size()];
+        toolbarLayoutFn({ .totalWidth = (float)window.size().x,
+                          .leftInset = computeLeftInset(window) },
+                        toolbars, spacing);
     });
 }

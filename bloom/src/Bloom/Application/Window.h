@@ -200,6 +200,8 @@ public:
     void setSize(vml::int2 size);
     void setMinSize(vml::int2 minSize);
     void setMaxSize(vml::int2 maxSize);
+    void addToolbarArea();
+    void removeToolbarArea();
     void setFocused();
     void show();
     void hide();

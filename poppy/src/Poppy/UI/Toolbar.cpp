@@ -255,9 +255,8 @@ void Toolbar::display(std::optional<float> width) noexcept {
         auto* window = ImGui::GetCurrentWindowRead();
         float2 pos =
             (float2)ImGui::GetWindowPos() + float2(0, window->TitleBarHeight());
-        float2 from = pos + float2(0, heightWithPadding - 1);
-        float2 to =
-            pos + float2(ImGui::GetWindowWidth(), heightWithPadding - 1);
+        float2 from = pos + float2(0, heightWithPadding);
+        float2 to = from + float2(ImGui::GetWindowWidth(), 0);
         auto* DL = ImGui::GetWindowDrawList();
         DL->AddLine(from, to, ImGui::GetColorU32(ImGuiCol_Separator), 1);
     }

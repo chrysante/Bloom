@@ -308,7 +308,6 @@ Toolbar Viewport2::makeToolbar() {
             })
     }; // clang-format on
     toolbar.setStyle({
-        .height = 25,
         .buttonAlpha = 1,
         .buttonAlphaHovered = 1,
         .buttonAlphaActive = 1,

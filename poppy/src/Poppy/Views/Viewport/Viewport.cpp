@@ -97,7 +97,6 @@ Viewport::Viewport(): BasicSceneInspector(this) {
             .tooltip("Toggle Fullscreen")
     }; // clang-format on
     toolbar.setStyle({
-        .height = 25,
         .buttonAlpha = 1,
         .buttonAlphaHovered = 1,
         .buttonAlphaActive = 1,

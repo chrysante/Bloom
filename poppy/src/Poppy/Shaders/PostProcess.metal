@@ -4,7 +4,7 @@
 #include "BloomShader.h"
 #include "PostProcess.h"
 
-#include "Bloom/Shader/PostProcessing.h"
+#include "Bloom/Shader/SharedTypes.h"
 
 using namespace metal;
 using namespace bloom;

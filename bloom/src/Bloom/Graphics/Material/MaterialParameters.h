@@ -1,7 +1,7 @@
 #ifndef BLOOM_GRAPHICS_MATERIAL_MATERIALPARAMETERS_H
 #define BLOOM_GRAPHICS_MATERIAL_MATERIALPARAMETERS_H
 
-#include "Bloom/Graphics/ShaderBase.h"
+#include "Bloom/Shader/Common.h"
 
 namespace bloom {
 

@@ -12,7 +12,7 @@
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Graphics/RenderGraph/SceneRenderer.h"
 #include "Bloom/Runtime/SceneSystem.h"
-#include "Bloom/Shader/PostProcessing.h"
+#include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/Toolbar.h"

@@ -2,7 +2,7 @@
 #define BLOOM_GRAPHICS_RENDERER_SHADERPARAMETERS_H
 
 #include "Bloom/Graphics/Lights.h"
-#include "Bloom/Graphics/ShaderBase.h"
+#include "Bloom/Shader/Common.h"
 
 namespace bloom {
 

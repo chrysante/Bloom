@@ -7,7 +7,7 @@
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Scene.h"
-#include "Bloom/Shader/PostProcessing.h"
+#include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
 using namespace rg;

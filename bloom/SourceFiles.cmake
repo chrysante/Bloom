@@ -113,7 +113,6 @@ set(bloom_sources
   src/Bloom/Graphics/Mesh.cpp
   src/Bloom/Graphics/Mesh.h
   src/Bloom/Graphics/Renderer.h
-  src/Bloom/Graphics/ShaderBase.h
   src/Bloom/Graphics/StaticMesh.cpp
   src/Bloom/Graphics/StaticMesh.h
   src/Bloom/Graphics/Vertex.h
@@ -166,7 +165,8 @@ set(bloom_sources
   src/Bloom/Scene/SceneCamera.cpp
   src/Bloom/Scene/SceneCamera.h
 
-  src/Bloom/Shader/PostProcessing.h
+  src/Bloom/Shader/Common.h
+  src/Bloom/Shader/SharedTypes.h
 )
 
 set(bloom_test_sources

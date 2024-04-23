@@ -1,8 +1,7 @@
 #ifndef BLOOM_GRAPHICS_LIGHTS_H
 #define BLOOM_GRAPHICS_LIGHTS_H
 
-// TODO: Make path relative to base
-#include "ShaderBase.h"
+#include "Bloom/Shader/Common.h"
 
 namespace bloom {
 

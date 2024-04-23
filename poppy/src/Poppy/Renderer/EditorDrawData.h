@@ -1,7 +1,7 @@
 #ifndef POPPY_RENDERER_EDITORDRAWDATA_H
 #define POPPY_RENDERER_EDITORDRAWDATA_H
 
-#include "Bloom/Graphics/ShaderBase.h"
+#include "Bloom/Shader/Common.h"
 
 namespace poppy {
 

@@ -1,9 +1,15 @@
-#ifndef BLOOM_SHADER_POSTPROCESSING_H
-#define BLOOM_SHADER_POSTPROCESSING_H
+#ifndef BLOOM_SHADER_SHAREDTYPES_H
+#define BLOOM_SHADER_SHAREDTYPES_H
 
-#include "Bloom/Graphics/ShaderBase.h"
+#include "Bloom/Shader/Common.h"
 
 namespace bloom {
+
+///
+struct CameraParameters {
+    metal::float4x4 camera;
+    metal::float3 cameraPosition;
+};
 
 /// Different tone mapping functions
 enum class ToneMappingFunction { ACES, reinhard };
@@ -26,4 +32,4 @@ struct PostProcessParameters {
 
 } // namespace bloom
 
-#endif // BLOOM_SHADER_POSTPROCESSING_H
+#endif // BLOOM_SHADER_SHAREDTYPES_H

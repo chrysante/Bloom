@@ -1,7 +1,7 @@
 #ifndef BLOOM_GRAPHICS_VERTEX_H
 #define BLOOM_GRAPHICS_VERTEX_H
 
-#include "Bloom/Graphics/ShaderBase.h"
+#include "Bloom/Shader/Common.h"
 
 namespace bloom {
 

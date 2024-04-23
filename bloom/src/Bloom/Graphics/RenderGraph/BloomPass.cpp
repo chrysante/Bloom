@@ -2,7 +2,7 @@
 
 #include "Bloom/GPU/ComputeContext.h"
 #include "Bloom/GPU/HardwareDevice.h"
-#include "Bloom/Shader/PostProcessing.h"
+#include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
 using namespace rg;

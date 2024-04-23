@@ -1,5 +1,5 @@
-#ifndef BLOOM_GRAPHICS_SHADERBASE_H
-#define BLOOM_GRAPHICS_SHADERBASE_H
+#ifndef BLOOM_SHADER_COMMON_H
+#define BLOOM_SHADER_COMMON_H
 
 #include "Bloom/Core/Base.h"
 
@@ -16,4 +16,4 @@ namespace metal = vml;
 
 #endif
 
-#endif // BLOOM_GRAPHICS_SHADERBASE_H
+#endif // BLOOM_SHADER_COMMON_H

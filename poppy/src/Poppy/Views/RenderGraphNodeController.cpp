@@ -9,7 +9,7 @@
 #include "Bloom/Graphics/RenderGraph/ForwardShadingPass.h"
 #include "Bloom/Graphics/RenderGraph/PostProcessPass.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
-#include "Bloom/Shader/PostProcessing.h"
+#include "Bloom/Shader/SharedTypes.h"
 
 using namespace poppy;
 using namespace nodeEditor;

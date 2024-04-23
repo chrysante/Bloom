@@ -1,6 +1,6 @@
 #include "Bloom/Application/Input.h"
 
-#include <GLFW/glfw3.h>
+#include <ostream>
 
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Application/InputInternal.h"
@@ -8,6 +8,28 @@
 
 using namespace bloom;
 using namespace vml::short_types;
+
+std::ostream& bloom::operator<<(std::ostream& str, ModFlags flags) {
+    using enum ModFlags;
+    str << "[";
+    bool any = false;
+#define CASE(Name)                                                             \
+    if (test(flags & Name)) {                                                  \
+        if (any) {                                                             \
+            str << ", ";                                                       \
+        }                                                                      \
+        any = true;                                                            \
+        str << #Name;                                                          \
+    }
+    CASE(CapsLock)
+    CASE(Shift)
+    CASE(Control)
+    CASE(Alt)
+    CASE(Super)
+    CASE(NumLock)
+#undef CASE
+    return str << "]";
+}
 
 vml::float2 Input::mousePositionInWindow(Window const& window) const {
     return mousePosition() - window.position();

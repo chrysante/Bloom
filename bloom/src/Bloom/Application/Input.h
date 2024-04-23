@@ -2,6 +2,7 @@
 #define BLOOM_APPLICATION_INPUT_H
 
 #include <array>
+#include <iosfwd>
 
 #include <utl/common.hpp>
 #include <vml/vml.hpp>
@@ -24,6 +25,8 @@ enum class ModFlags : unsigned {
     Super = 1u << 4,
     NumLock = 1u << 5,
 };
+
+std::ostream& operator<<(std::ostream& ostream, ModFlags flags);
 
 UTL_ENUM_OPERATORS(ModFlags);
 

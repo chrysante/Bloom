@@ -43,7 +43,7 @@ private:
     RenderGraph* mRenderGraph = nullptr;
     rg::GeometryResource* geometry = nullptr;
     rg::LightsResource* lights = nullptr;
-    rg::BufferResource* sceneParams = nullptr;
+    rg::BufferResource* cameraBuffer = nullptr;
     FrameParameters frameParams;
     Camera camera;
 };

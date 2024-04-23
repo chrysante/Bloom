@@ -129,8 +129,7 @@ struct GlobalInputNodeController: RenderGraphNodeController {
         sources.clear();
         declare<Geometry>(rg, "Geometry", {});
         declare<Lights>(rg, "Lights", {});
-        declare<Buffer>(rg, "SceneParameters",
-                        { .size = sizeof(SceneRenderParameters) });
+        declare<Buffer>(rg, "Camera", { .size = sizeof(CameraInput) });
         declare<Buffer>(rg, "BloomParameters",
                         { .size = sizeof(BloomParameters) });
         declare<Buffer>(rg, "PostProcessParameters",
@@ -160,7 +159,7 @@ REGISTER_NODE(GlobalInputNodeController, {
     .outputs = {
         { .name = "Geometry" },
         { .name = "Lights" },
-        { .name = "Scene Parameters" },
+        { .name = "Camera" },
         { .name = "Bloom Parameters" },
         { .name = "Post Process Parameters" },
     },
@@ -289,8 +288,8 @@ std::unique_ptr<RenderGraph> poppy::constructRenderGraph(
     for (auto* node: model.nodes()) {
         auto* controller = getController(*node);
         if (!controller) {
-            Logger::Warn("Ignoring node (no controller attached): ",
-                         node->name());
+            Logger::Error("Ignoring node (no controller attached): ",
+                          node->name());
             continue;
         }
         controller->create(*rg);

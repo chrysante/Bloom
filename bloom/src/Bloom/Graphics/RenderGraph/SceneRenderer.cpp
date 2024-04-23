@@ -18,8 +18,8 @@ rg::SceneRenderer::SceneRenderer(RenderGraph* renderGraph):
         renderGraph->findInputSource("Geometry")->resource());
     lights = cast<rg::LightsResource*>(
         renderGraph->findInputSource("Lights")->resource());
-    sceneParams = cast<rg::BufferResource*>(
-        renderGraph->findInputSource("SceneParameters")->resource());
+    cameraBuffer = cast<rg::BufferResource*>(
+        renderGraph->findInputSource("Camera")->resource());
 }
 
 void rg::SceneRenderer::begin(FrameParameters const& frameParams,
@@ -125,17 +125,15 @@ void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
         lights->prepare(device);
     }
     mRenderGraph->allocateResources(frameParams);
-    auto* sceneParamBuffer = dyncast<rg::BufferResource*>(
-        mRenderGraph->findInputSource("SceneParameters")->resource());
-    if (sceneParamBuffer && sceneParamBuffer->handle()) {
-        SceneRenderParameters sceneParams = {
+    auto* cameraBuffer = dyncast<rg::BufferResource*>(
+        mRenderGraph->findInputSource("Camera")->resource());
+    if (cameraBuffer && cameraBuffer->handle()) {
+        CameraInput cameraParams = {
             .camera = vml::transpose(camera.viewProjection()),
             .cameraPosition = camera.position(),
-            .screenSize = frameParams.screenSize,
-            .screenResolution = frameParams.screenSize
         };
-        device.fillManagedBuffer(sceneParamBuffer->handle(), &sceneParams,
-                                 sizeof sceneParams);
+        device.fillManagedBuffer(cameraBuffer->handle(), &cameraParams,
+                                 sizeof cameraParams);
     }
     auto* bloomParamBuffer = dyncast<rg::BufferResource*>(
         mRenderGraph->findInputSource("BloomParameters")->resource());

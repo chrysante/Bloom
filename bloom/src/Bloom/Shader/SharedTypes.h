@@ -6,7 +6,7 @@
 namespace bloom {
 
 ///
-struct CameraParameters {
+struct CameraInput {
     metal::float4x4 camera;
     metal::float3 cameraPosition;
 };

@@ -6,8 +6,8 @@
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
-#include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/StaticMesh.h"
+#include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
 using namespace rg;
@@ -27,9 +27,9 @@ BEGIN_SINK_DECL(ForwardShadingPass) {
         &ForwardShadingPass::lights
     },
     BufferInterface{
-        "SceneParameters",
-        &ForwardShadingPass::sceneParameters,
-        { .size = sizeof(SceneRenderParameters) }
+        "Camera",
+        &ForwardShadingPass::cameraBuffer,
+        { .size = sizeof(CameraInput) }
     },
 }
 END_DECL()
@@ -70,9 +70,9 @@ void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     dDesc.texture = depth;
     desc.depthAttachment = dDesc;
     ctx.begin(desc);
-    ctx.setVertexBuffer(sceneParameters, 0);
+    ctx.setVertexBuffer(cameraBuffer, 0);
     ctx.setVertexBuffer(geometry->transformBuffer(), 2);
-    ctx.setFragmentBuffer(sceneParameters, 0);
+    ctx.setFragmentBuffer(cameraBuffer, 0);
     ctx.setFragmentBuffer(lights->lightBuffer(), 1);
     Material const* currentMaterial = nullptr;
     MaterialInstance const* currentMaterialInstance = nullptr;

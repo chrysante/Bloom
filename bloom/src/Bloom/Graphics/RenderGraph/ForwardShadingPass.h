@@ -21,9 +21,9 @@ private:
     void doExecute(FrameParameters const& params, RenderContext& ctx) override;
 
     // Sinks
-    BufferHandle sceneParameters;
     GeometryResource* geometry;
     LightsResource* lights;
+    BufferHandle cameraBuffer;
 
     // Sources
     TextureHandle rawColor;

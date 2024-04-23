@@ -3,6 +3,7 @@
 #include "Bloom/Graphics/Material/MaterialParameters.h"
 #include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/Vertex.h"
+#include "Bloom/Shader/SharedTypes.h"
 #include "Lights.h"
 #include "PBRShader.h"
 
@@ -150,7 +151,7 @@ fragment MainPassFragmentData
 
 // # Render graph shaders
 
-vertex MainPassData rgMainPassVS(SceneRenderParameters device const& scene
+vertex MainPassData rgMainPassVS(CameraInput device const& cameraBuffer
                                  [[buffer(0)]],
                                  Vertex3D device const* vertices [[buffer(1)]],
                                  float4x4 device const& transform [[buffer(2)]],
@@ -161,7 +162,7 @@ vertex MainPassData rgMainPassVS(SceneRenderParameters device const& scene
     float4 vertexNormalMS = float4(v.normal, 0);
     float4 vertexPositionWS = transform * vertexPositionMS;
     MainPassData result;
-    result.positionCS = scene.camera * vertexPositionWS;
+    result.positionCS = cameraBuffer.camera * vertexPositionWS;
     result.normalWS = (transform * vertexNormalMS).xyz;
     result.positionWS = vertexPositionWS.xyz;
     result.color = v.color.rgb;
@@ -170,7 +171,7 @@ vertex MainPassData rgMainPassVS(SceneRenderParameters device const& scene
 
 fragment MainPassFragmentData
     rgMainPassFS(MainPassData in [[stage_in]],
-                 SceneRenderParameters device const& sceneParams [[buffer(0)]],
+                 CameraInput device const& cameraBuffer [[buffer(0)]],
                  LightBufferContents device const& lights [[buffer(1)]],
                  float4x4 device const* lightSpaceTransforms [[buffer(2)]],
                  MaterialParameters device const& materialParams [[buffer(3)]],
@@ -183,7 +184,7 @@ fragment MainPassFragmentData
                  .ao = 1 };
     float3 worldPosition = in.positionWS;
     float3 N = normalize(in.normalWS.xyz);
-    float3 V = normalize(sceneParams.cameraPosition - worldPosition);
+    float3 V = normalize(cameraBuffer.cameraPosition - worldPosition);
     float3 lightAcc = 0;
     lightAcc += computePointLights(pbr, N, V, worldPosition,
                                    lights.numPointLights, lights.pointLights);

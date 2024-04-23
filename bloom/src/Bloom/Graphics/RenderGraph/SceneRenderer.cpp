@@ -30,6 +30,8 @@ rg::SceneRenderer::SceneRenderer(RenderGraph* renderGraph):
     cameraBuffer = findResource<rg::BufferResource>(renderGraph, "Camera");
     lightSpaceTransformBuffer =
         findResource<rg::BufferResource>(renderGraph, "LightSpaceTransforms");
+    shadowMetadataBuffer =
+        findResource<rg::BufferResource>(renderGraph, "ShadowMetadata");
     bloomParams =
         findResource<rg::BufferResource>(renderGraph, "BloomParameters");
     postProcessParams =
@@ -109,6 +111,7 @@ void rg::SceneRenderer::submit(Scene const& scene) {
             light.light.direction = vml::normalize(
                 (transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
         });
+        shadowMetadata.numShadowCasters = 0;
         submitLights<DirectionalLightComponent>(
             *lights, scene,
             [&](TransformMatrixComponent const& transform,
@@ -126,6 +129,8 @@ void rg::SceneRenderer::submit(Scene const& scene) {
                     vml::transpose(lightSpaceTransform));
                 distance *= light.cascadeDistributionExponent;
             }
+            shadowMetadata.numCascades[shadowMetadata.numShadowCasters++] =
+                light.numCascades;
         });
         submitLights<SkyLightComponent>(*lights, scene);
     }
@@ -157,6 +162,7 @@ static BloomParameters makeBloomParams(BloomSettings settings) {
 }
 
 void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
+    mRenderGraph->allocateResources(frameParams);
     auto& device = mRenderGraph->device();
     if (geometry) {
         geometry->prepare(mRenderGraph->device());
@@ -171,7 +177,11 @@ void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
         };
         device.fillManagedBuffer(cameraBuffer->handle(), &value, sizeof value);
     }
-    if (lightSpaceTransformBuffer && lightSpaceTransformBuffer->handle()) {
+    if (shadowMetadataBuffer && shadowMetadataBuffer->handle()) {
+        device.fillManagedBuffer(shadowMetadataBuffer->handle(),
+                                 &shadowMetadata, sizeof shadowMetadata);
+    }
+    if (lightSpaceTransformBuffer) {
         size_t byteSize = std::max(size_t{ 1 }, lightSpaceTransforms.size()) *
                           sizeof(float4x4);
         if (lightSpaceTransformBuffer->handle().size() < byteSize) {
@@ -196,6 +206,5 @@ void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
         device.fillManagedBuffer(postProcessParams->handle(), &values,
                                  sizeof values);
     }
-    mRenderGraph->allocateResources(frameParams);
     mRenderGraph->execute(frameParams, commandQueue);
 }

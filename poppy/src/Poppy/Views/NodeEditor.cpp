@@ -1158,9 +1158,6 @@ static ImRect drawNodeBody(Node const& node, bool selected) {
 /// \Returns true if the background has been clicked with the left or right
 /// mouse button
 static bool displayNodeContent(ImRect contentRect, Node const& node) {
-    if (!node.desc().content) {
-        return false;
-    }
     if (!beginInvisibleWindow("Content", contentRect.Min,
                               contentRect.GetSize()))
     {
@@ -1175,7 +1172,10 @@ static bool displayNodeContent(ImRect contentRect, Node const& node) {
                                    ImGuiButtonFlags_MouseButtonLeft |
                                    ImGuiButtonFlags_MouseButtonRight);
     ImGui::SetCursorPos({});
-    node.desc().content();
+
+    if (node.controller()) {
+        node.controller()->bodyContent();
+    }
     ImGui::EndChild();
     return bgPressed;
 }

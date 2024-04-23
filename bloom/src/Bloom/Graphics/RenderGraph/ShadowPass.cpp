@@ -2,6 +2,7 @@
 
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
+#include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
 using namespace rg;
@@ -29,8 +30,14 @@ BEGIN_SOURCE_DECL(ShadowPass) {
         "ShadowMaps",
         &ShadowPass::shadowMaps,
         {
+            .type = TextureType::Texture2DArray,
             .pixelFormat = PixelFormat::Depth32Float,
-            .size = TextureSize::Absolute2D(Resolution)
+            .size = TextureSize::Absolute2D(Resolution),
+            // FIXME: Add dynamic interface descriptors
+            // Setting the array length here is a hack to avoid reallocation of
+            // the texture array, because the users of the texture (forward
+            // shading pass) would not be notified
+            .arrayLength = 20
         }
     },
 }
@@ -105,5 +112,4 @@ void ShadowPass::doAllocateResources(FrameParameters const&,
         .depthWrite = true,
         .depthCompareFunction = CompareFunction::LessEqual,
     });
-    sampler = device.createSampler({});
 }

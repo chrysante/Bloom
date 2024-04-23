@@ -106,7 +106,8 @@ static void allocateBackingResources(
     for (auto* pass: executionOrder) {
         for (auto* sink: pass->activeSinks()) {
             auto* source = sink->source();
-            if (!source->pass()) {
+            /// Here we lazily allocate resources for graph inputs
+            if (!source->resource() && !source->pass()) {
                 allocateBackingResource(pool, *source);
             }
             auto* resource = source->resource();

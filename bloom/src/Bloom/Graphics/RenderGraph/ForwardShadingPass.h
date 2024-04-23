@@ -19,15 +19,23 @@ private:
     friend class PassImpl;
 
     void doExecute(FrameParameters const& params, RenderContext& ctx) override;
+    void doAllocateResources(FrameParameters const& params,
+                             HardwareDevice& device) override;
 
     // Sinks
     GeometryResource* geometry;
     LightsResource* lights;
     BufferHandle cameraBuffer;
+    BufferHandle lightSpaceTransforms;
+    BufferHandle shadowMetadata;
+    TextureHandle shadowMaps;
 
     // Sources
     TextureHandle rawColor;
     TextureHandle depth;
+
+    // Internal resources
+    SamplerHandle shadowMapSampler;
 };
 
 } // namespace bloom::rg

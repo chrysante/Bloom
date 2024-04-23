@@ -62,6 +62,9 @@ public:
     /// determine the static type of the node controller
     virtual YAML::Node serialize() const { return YAML::Node{}; }
 
+    /// Callback to display content in the node body
+    virtual void bodyContent() {}
+
     /// Callback to display the content of the nodes context menu
     virtual void contextMenuContent() {}
 };
@@ -89,9 +92,6 @@ struct NodeDesc {
 
     ///
     std::vector<PinDesc> outputs;
-
-    ///
-    std::function<void()> content;
 
     /// The color of the node body
     vml::float4 color = { 1, 0, 0.5, 1 };

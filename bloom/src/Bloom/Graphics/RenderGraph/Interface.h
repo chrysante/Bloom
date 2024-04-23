@@ -153,6 +153,9 @@ public:
     /// \Returns the name of this interface
     std::string const& name() const { return _name; }
 
+    /// \Returns the name qualified with the name of the owning pass
+    std::string qualifiedName() const;
+
     /// \Returns the pass the which this interface belongs
     Pass* pass() { return _pass; }
 

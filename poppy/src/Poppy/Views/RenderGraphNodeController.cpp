@@ -131,6 +131,8 @@ struct GlobalInputNodeController: RenderGraphNodeController {
         declare<Geometry>(rg, "Geometry", {});
         declare<Lights>(rg, "Lights", {});
         declare<Buffer>(rg, "Camera", { .size = sizeof(CameraInput) });
+        declare<Buffer>(rg, "ShadowMetadata",
+                        { .size = sizeof(ShadowRenderMetadata) });
         declare<Buffer>(rg, "LightSpaceTransforms", { .size = 0 });
         declare<Buffer>(rg, "BloomParameters",
                         { .size = sizeof(BloomParameters) });
@@ -162,6 +164,7 @@ REGISTER_NODE(GlobalInputNodeController, {
         { .name = "Geometry" },
         { .name = "Lights" },
         { .name = "Camera" },
+        { .name = "Shadow Metadata" },
         { .name = "Light Space Transforms" },
         { .name = "Bloom Parameters" },
         { .name = "Post Process Parameters" },
@@ -246,8 +249,24 @@ struct ForwardShadingPassController: PassNodeController {
     ForwardShadingPassController(): PassNodeController("ForwardShadingPass") {}
 
     Pass* createPass(RenderGraph& rg) override {
-        return rg.addPass(std::make_unique<ForwardShadingPass>(name));
+        pass = rg.addPass(std::make_unique<ForwardShadingPass>(name));
+        return pass;
     }
+
+    void bodyContent() override {
+        if (!pass) {
+            return;
+        }
+        auto* resource =
+            dyncast<TextureResource const*>(pass->source(0)->resource());
+        if (!resource) {
+            return;
+        }
+        ImGui::Image(resource->handle().nativeHandle(),
+                     ImGui::GetContentRegionAvail());
+    }
+
+    ForwardShadingPass* pass = nullptr;
 };
 
 REGISTER_PASS(ForwardShadingPass, ForwardShadingPassController);
@@ -256,8 +275,25 @@ struct ShadowPassController: PassNodeController {
     ShadowPassController(): PassNodeController("ShadowPass") {}
 
     Pass* createPass(RenderGraph& rg) override {
-        return rg.addPass(std::make_unique<ShadowPass>(name));
+        pass = rg.addPass(std::make_unique<ShadowPass>(name));
+        return pass;
     }
+
+    void bodyContent() override {
+        if (!pass) {
+            return;
+        }
+        auto* resource =
+            dyncast<TextureResource const*>(pass->source(0)->resource());
+        if (!resource) {
+            return;
+        }
+        ImGui::Image(resource->handle().nativeHandle(),
+                     ImGui::GetContentRegionAvail());
+    }
+
+    ShadowPass* pass = nullptr;
+    TextureHandle tex;
 };
 
 REGISTER_PASS(ShadowPass, ShadowPassController);
@@ -320,7 +356,8 @@ std::unique_ptr<RenderGraph> poppy::constructRenderGraph(
                     continue;
                 }
                 auto* sink = sinkController->getSink(target->indexInParent());
-                Logger::Trace("Linking ", source->name(), " to ", sink->name());
+                Logger::Trace("Linking ", source->qualifiedName(), " to ",
+                              sink->qualifiedName());
                 rg->addLink(source, sink);
             }
         }

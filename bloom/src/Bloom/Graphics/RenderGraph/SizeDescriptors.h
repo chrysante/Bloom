@@ -21,7 +21,7 @@ struct TextureSize {
 
     using Element = std::variant<Absolute, RelativeToScreen>;
 
-    vml::vector<Element, 3> value;
+    vml::vector<Element, 3> value{ Absolute{}, Absolute{}, Absolute{} };
 
     /// Size descriptor that describes the screen size
     static TextureSize const ScreenSize;

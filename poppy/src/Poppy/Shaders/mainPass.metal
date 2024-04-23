@@ -98,6 +98,40 @@ static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
     return lightAcc;
 }
 
+// Render graph version
+static float3 computeDirLights2(PBRData pbr, float3 N, float3 V,
+                                float3 worldPosition,
+                                float4x4 const device* lightSpaceTransforms,
+                                uint numLights,
+                                DirectionalLight device const* lights,
+                                ShadowRenderMetadata const device& shadowData,
+                                sampler shadowMapSampler,
+                                texture2d_array<float> shadowMaps)
+{
+    float3 lightAcc{};
+    for (uint i = 0, shadowCasterIndex = 0, shadowMapOffset = 0; i < numLights;
+         ++i)
+    {
+        auto light = lights[i];
+        float3 dirLight = calculateDirectionalLight(pbr, light, V, N);
+        if (!light.castsShadows) {
+            lightAcc += dirLight;
+            continue;
+        }
+        int numCascades = shadowData.numCascades[shadowCasterIndex];
+        float shadow =
+            calculateDirLightCascadedShadow(shadowMaps, shadowMapSampler,
+                                            shadowMapOffset, numCascades,
+                                            lightSpaceTransforms,
+                                            float4(worldPosition, 1),
+                                            dot(N, light.direction));
+        shadowMapOffset += numCascades;
+        ++shadowCasterIndex;
+        lightAcc += shadow * dirLight;
+    }
+    return lightAcc;
+}
+
 static float3 computeSkyLights(PBRData pbr, uint numLights,
                                SkyLight device const* lights)
 {
@@ -169,14 +203,15 @@ vertex MainPassData rgMainPassVS(CameraInput device const& cameraBuffer
     return result;
 }
 
-fragment MainPassFragmentData
-    rgMainPassFS(MainPassData in [[stage_in]],
-                 CameraInput device const& cameraBuffer [[buffer(0)]],
-                 LightBufferContents device const& lights [[buffer(1)]],
-                 float4x4 device const* lightSpaceTransforms [[buffer(2)]],
-                 MaterialParameters device const& materialParams [[buffer(3)]],
-                 texture2d_array<float> shadowMaps [[texture(0)]],
-                 sampler shadowMapSampler [[sampler(0)]])
+fragment MainPassFragmentData rgMainPassFS(
+    MainPassData in [[stage_in]],
+    CameraInput device const& cameraBuffer [[buffer(0)]],
+    LightBufferContents device const& lights [[buffer(1)]],
+    float4x4 device const* lightSpaceTransforms [[buffer(2)]],
+    ShadowRenderMetadata device const& shadowMetadata [[buffer(3)]],
+    MaterialParameters device const& materialParams [[buffer(4)]],
+    texture2d_array<float> shadowMaps [[texture(0)]],
+    sampler shadowMapSampler [[sampler(0)]])
 {
     PBRData pbr{ .albedo = materialParams.baseColor,
                  .metallic = materialParams.metallic,
@@ -190,11 +225,10 @@ fragment MainPassFragmentData
                                    lights.numPointLights, lights.pointLights);
     lightAcc += computeSpotLights(pbr, N, V, worldPosition,
                                   lights.numSpotLights, lights.spotLights);
-#if 0
-    lightAcc += computeDirLights(pbr, N, V, worldPosition, lightSpaceTransforms,
-                                 lights.numDirLights, lights.dirLights,
-                                 shadowData, shadowMapSampler, shadowMaps);
-#endif
+    lightAcc += computeDirLights2(pbr, N, V, worldPosition,
+                                  lightSpaceTransforms, lights.numDirLights,
+                                  lights.dirLights, shadowMetadata,
+                                  shadowMapSampler, shadowMaps);
     lightAcc += computeSkyLights(pbr, lights.numSkyLights, lights.skyLights);
     lightAcc += computeEmissive(materialParams);
     return MainPassFragmentData{ .color = float4(lightAcc, 1) };

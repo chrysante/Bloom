@@ -11,6 +11,17 @@ struct CameraInput {
     metal::float3 cameraPosition;
 };
 
+BLOOM_SHADER_CONSTANT int NumMaxShadowCasters = 32;
+
+/// Describes the layout of the shadow map texture array
+struct alignas(metal::float4x4) ShadowRenderMetadata {
+    /// The number of lights that cast shadows
+    int numShadowCasters;
+
+    /// For each shadow caster the number of cascades
+    int numCascades[NumMaxShadowCasters];
+};
+
 /// Different tone mapping functions
 enum class ToneMappingFunction { ACES, reinhard };
 

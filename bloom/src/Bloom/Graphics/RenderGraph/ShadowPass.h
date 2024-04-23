@@ -26,7 +26,6 @@ private:
 
     RenderPipelineHandle pipeline;
     DepthStencilHandle depthStencil;
-    SamplerHandle sampler;
 };
 
 } // namespace bloom::rg

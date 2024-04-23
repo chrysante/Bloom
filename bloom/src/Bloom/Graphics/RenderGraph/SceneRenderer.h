@@ -10,6 +10,7 @@
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
+#include "Bloom/Shader/SharedTypes.h"
 
 namespace bloom {
 
@@ -47,6 +48,8 @@ private:
     rg::BufferResource* cameraBuffer = nullptr;
     std::vector<vml::float4x4> lightSpaceTransforms;
     rg::BufferResource* lightSpaceTransformBuffer = nullptr;
+    ShadowRenderMetadata shadowMetadata;
+    rg::BufferResource* shadowMetadataBuffer;
     rg::LightsResource* lights = nullptr;
     rg::BufferResource* bloomParams = nullptr;
     rg::BufferResource* postProcessParams = nullptr;

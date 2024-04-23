@@ -89,7 +89,7 @@ public:
     void assign(TextureHandle texture);
 
     ///
-    TextureHandle const& handle() { return _handle; }
+    TextureHandle const& handle() const { return _handle; }
 
     ///
     Desc const& desc() const { return _desc; }

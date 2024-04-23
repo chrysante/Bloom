@@ -2,6 +2,7 @@
 
 #include <vml/vml.hpp>
 
+#include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/RenderContext.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
@@ -28,6 +29,21 @@ BEGIN_SINK_DECL(ForwardShadingPass) {
         "Camera",
         &ForwardShadingPass::cameraBuffer,
         { .size = sizeof(CameraInput) }
+    },
+    BufferInterface{
+        "Light Space Transforms",
+        &ForwardShadingPass::lightSpaceTransforms,
+        {}
+    },
+    BufferInterface{
+        "Shadow Metadata",
+        &ForwardShadingPass::shadowMetadata,
+        {}
+    },
+    TextureInterface{
+        "Shadow Maps",
+        &ForwardShadingPass::shadowMaps,
+        {}
     },
 }
 END_DECL()
@@ -72,6 +88,10 @@ void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     ctx.setVertexBuffer(geometry->transformBuffer(), 2);
     ctx.setFragmentBuffer(cameraBuffer, 0);
     ctx.setFragmentBuffer(lights->lightBuffer(), 1);
+    ctx.setFragmentBuffer(lightSpaceTransforms, 2);
+    ctx.setFragmentBuffer(shadowMetadata, 3);
+    ctx.setFragmentTexture(shadowMaps, 0);
+    ctx.setFragmentSampler(shadowMapSampler, 0);
     Material const* currentMaterial = nullptr;
     MaterialInstance const* currentMaterialInstance = nullptr;
     StaticMeshRenderer const* currentMesh = nullptr;
@@ -85,7 +105,7 @@ void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
         }
         if (object.materialInstance.get() != currentMaterialInstance) {
             ctx.setFragmentBuffer(object.materialInstance->parameterBuffer(),
-                                  3);
+                                  4);
             currentMaterialInstance = object.materialInstance.get();
         }
         if (object.mesh.get() != currentMesh) {
@@ -104,4 +124,10 @@ void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     }
     ctx.end();
     ctx.commit();
+}
+
+void ForwardShadingPass::doAllocateResources(FrameParameters const&,
+                                             HardwareDevice& device) {
+
+    shadowMapSampler = device.createSampler({});
 }

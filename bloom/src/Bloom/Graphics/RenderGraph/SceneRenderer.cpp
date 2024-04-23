@@ -14,12 +14,16 @@ using namespace rg;
 
 rg::SceneRenderer::SceneRenderer(RenderGraph* renderGraph):
     mRenderGraph(renderGraph) {
-    geometry = cast<rg::GeometryResource*>(
+    geometry = dyncast<rg::GeometryResource*>(
         renderGraph->findInputSource("Geometry")->resource());
-    lights = cast<rg::LightsResource*>(
+    lights = dyncast<rg::LightsResource*>(
         renderGraph->findInputSource("Lights")->resource());
-    cameraBuffer = cast<rg::BufferResource*>(
+    cameraBuffer = dyncast<rg::BufferResource*>(
         renderGraph->findInputSource("Camera")->resource());
+    bloomParams = dyncast<rg::BufferResource*>(
+        renderGraph->findInputSource("BloomParameters")->resource());
+    postProcessParams = dyncast<rg::BufferResource*>(
+        mRenderGraph->findInputSource("PostProcessParameters")->resource());
 }
 
 void rg::SceneRenderer::begin(FrameParameters const& frameParams,
@@ -124,36 +128,28 @@ void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
     if (lights) {
         lights->prepare(device);
     }
-    mRenderGraph->allocateResources(frameParams);
-    auto* cameraBuffer = dyncast<rg::BufferResource*>(
-        mRenderGraph->findInputSource("Camera")->resource());
     if (cameraBuffer && cameraBuffer->handle()) {
-        CameraInput cameraParams = {
+        CameraInput value = {
             .camera = vml::transpose(camera.viewProjection()),
             .cameraPosition = camera.position(),
         };
-        device.fillManagedBuffer(cameraBuffer->handle(), &cameraParams,
-                                 sizeof cameraParams);
+        device.fillManagedBuffer(cameraBuffer->handle(), &value, sizeof value);
     }
-    auto* bloomParamBuffer = dyncast<rg::BufferResource*>(
-        mRenderGraph->findInputSource("BloomParameters")->resource());
-    if (bloomParamBuffer && bloomParamBuffer->handle()) {
-        BloomParameters bloomParams = makeBloomParams({
+    if (bloomParams && bloomParams->handle()) {
+        BloomParameters values = makeBloomParams({
             .physicallyCorrect = true,
             .clamp = 100,
             .diffusion = 1,
             .contribution = 0.1,
         });
-        device.fillManagedBuffer(bloomParamBuffer->handle(), &bloomParams,
-                                 sizeof bloomParams);
+        device.fillManagedBuffer(bloomParams->handle(), &values, sizeof values);
     }
-    auto* ppParamBuffer = dyncast<rg::BufferResource*>(
-        mRenderGraph->findInputSource("PostProcessParameters")->resource());
-    if (ppParamBuffer && ppParamBuffer->handle()) {
-        PostProcessParameters ppParams{ .toneMappingFunction =
-                                            ToneMappingFunction::ACES };
-        device.fillManagedBuffer(ppParamBuffer->handle(), &ppParams,
-                                 sizeof ppParams);
+    if (postProcessParams && postProcessParams->handle()) {
+        PostProcessParameters values{ .toneMappingFunction =
+                                          ToneMappingFunction::ACES };
+        device.fillManagedBuffer(postProcessParams->handle(), &values,
+                                 sizeof values);
     }
+    mRenderGraph->allocateResources(frameParams);
     mRenderGraph->execute(frameParams, commandQueue);
 }

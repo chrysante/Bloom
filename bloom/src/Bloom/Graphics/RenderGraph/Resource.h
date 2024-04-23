@@ -104,7 +104,7 @@ UTL_SOA_TYPE(Geometry, (Reference<StaticMeshRenderer>, mesh),
              (Reference<MaterialInstance>, materialInstance),
              (vml::float4x4, transform));
 
-/// Set of meshes in a scene. This is rebuild every frame
+/// Set of visible meshes in a scene. This is rebuild every frame
 class GeometryResource: public Resource {
 public:
     static constexpr InterfaceType Type = InterfaceType::Geometry;
@@ -117,15 +117,15 @@ public:
     ///
     GeometryResource* handle() { return this; }
 
-    ///
+    /// Adds an object to the resource
     void add(Reference<StaticMeshRenderer> mesh,
              Reference<MaterialInstance> material,
              vml::float4x4 const& transform);
 
-    ///
+    /// Must be called when starting a new frame
     void clear();
 
-    ///
+    /// Uploads the transform buffer
     void prepare(HardwareDevice& device);
 
     ///

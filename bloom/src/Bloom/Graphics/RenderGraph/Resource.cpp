@@ -64,15 +64,16 @@ static constexpr auto RenderGeometryOrder = [](Geometry::reference a,
 void GeometryResource::prepare(HardwareDevice& device) {
     std::sort(objects.begin(), objects.end(), RenderGeometryOrder);
     size_t transformBufferSize = objects.size() * sizeof(float4x4);
-    if (transformBufferSize > 0) {
-        if (transforms.size() < transformBufferSize) {
-            transforms =
-                device.createBuffer({ .size = transformBufferSize,
-                                      .storageMode = StorageMode::Managed });
-        }
-        device.fillManagedBuffer(transforms, objects.data().transform,
-                                 transformBufferSize);
+    if (transformBufferSize == 0) {
+        return;
     }
+    if (transforms.size() < transformBufferSize) {
+        transforms =
+            device.createBuffer({ .size = transformBufferSize,
+                                  .storageMode = StorageMode::Managed });
+    }
+    device.fillManagedBuffer(transforms, objects.data().transform,
+                             transformBufferSize);
 }
 
 void LightsResource::add(PointLight const& light) {

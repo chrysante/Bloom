@@ -44,6 +44,8 @@ private:
     rg::GeometryResource* geometry = nullptr;
     rg::LightsResource* lights = nullptr;
     rg::BufferResource* cameraBuffer = nullptr;
+    rg::BufferResource* bloomParams = nullptr;
+    rg::BufferResource* postProcessParams = nullptr;
     FrameParameters frameParams;
     Camera camera;
 };

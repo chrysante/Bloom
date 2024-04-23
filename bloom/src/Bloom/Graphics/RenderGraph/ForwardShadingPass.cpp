@@ -13,8 +13,6 @@ using namespace bloom;
 using namespace rg;
 using namespace vml;
 
-using Impl = PassImpl<ForwardShadingPass>;
-
 // clang-format off
 
 BEGIN_SINK_DECL(ForwardShadingPass) {

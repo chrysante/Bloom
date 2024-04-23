@@ -113,7 +113,6 @@ void ForwardRenderer::createGPUState(HardwareDevice& device) {
     renderObjects.shadows.depthStencil = device.createDepthStencil({
         .depthWrite = true,
         .depthCompareFunction = CompareFunction::LessEqual,
-
     });
     renderObjects.shadows.sampler = device.createSampler({});
     renderObjects.postprocessSampler =

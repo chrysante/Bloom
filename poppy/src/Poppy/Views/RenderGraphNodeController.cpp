@@ -9,6 +9,7 @@
 #include "Bloom/Graphics/RenderGraph/ForwardShadingPass.h"
 #include "Bloom/Graphics/RenderGraph/PostProcessPass.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
+#include "Bloom/Graphics/RenderGraph/ShadowPass.h"
 #include "Bloom/Shader/SharedTypes.h"
 
 using namespace poppy;
@@ -130,6 +131,7 @@ struct GlobalInputNodeController: RenderGraphNodeController {
         declare<Geometry>(rg, "Geometry", {});
         declare<Lights>(rg, "Lights", {});
         declare<Buffer>(rg, "Camera", { .size = sizeof(CameraInput) });
+        declare<Buffer>(rg, "LightSpaceTransforms", { .size = 0 });
         declare<Buffer>(rg, "BloomParameters",
                         { .size = sizeof(BloomParameters) });
         declare<Buffer>(rg, "PostProcessParameters",
@@ -160,6 +162,7 @@ REGISTER_NODE(GlobalInputNodeController, {
         { .name = "Geometry" },
         { .name = "Lights" },
         { .name = "Camera" },
+        { .name = "Light Space Transforms" },
         { .name = "Bloom Parameters" },
         { .name = "Post Process Parameters" },
     },
@@ -248,6 +251,16 @@ struct ForwardShadingPassController: PassNodeController {
 };
 
 REGISTER_PASS(ForwardShadingPass, ForwardShadingPassController);
+
+struct ShadowPassController: PassNodeController {
+    ShadowPassController(): PassNodeController("ShadowPass") {}
+
+    Pass* createPass(RenderGraph& rg) override {
+        return rg.addPass(std::make_unique<ShadowPass>(name));
+    }
+};
+
+REGISTER_PASS(ShadowPass, ShadowPassController);
 
 struct PostProcessPassController: PassNodeController {
     PostProcessPassController(): PassNodeController("PostProcessPass") {}

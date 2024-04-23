@@ -4,6 +4,8 @@
 /// This file will replace Renderer/SceneRenderer once we get rid of the old
 /// renderer class
 
+#include <vector>
+
 #include "Bloom/Core/Base.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/Camera.h"
@@ -42,8 +44,10 @@ public:
 private:
     RenderGraph* mRenderGraph = nullptr;
     rg::GeometryResource* geometry = nullptr;
-    rg::LightsResource* lights = nullptr;
     rg::BufferResource* cameraBuffer = nullptr;
+    std::vector<vml::float4x4> lightSpaceTransforms;
+    rg::BufferResource* lightSpaceTransformBuffer = nullptr;
+    rg::LightsResource* lights = nullptr;
     rg::BufferResource* bloomParams = nullptr;
     rg::BufferResource* postProcessParams = nullptr;
     FrameParameters frameParams;

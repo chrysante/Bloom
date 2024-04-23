@@ -8,8 +8,6 @@ using namespace bloom;
 using namespace rg;
 using namespace vml::short_types;
 
-using Impl = PassImpl<BloomPass>;
-
 static constexpr size_t NumMips = BloomPass::NumMips;
 
 // clang-format off

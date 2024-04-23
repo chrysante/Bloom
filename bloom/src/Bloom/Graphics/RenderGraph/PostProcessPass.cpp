@@ -8,8 +8,6 @@ using namespace bloom;
 using namespace rg;
 using namespace vml::short_types;
 
-using Impl = PassImpl<PostProcessPass>;
-
 // clang-format off
 
 BEGIN_SINK_DECL(PostProcessPass) {

@@ -26,6 +26,11 @@ struct TextureSize {
     /// Size descriptor that describes the screen size
     static TextureSize const ScreenSize;
 
+    /// Static constructor for absolute  2D sizes
+    static TextureSize Absolute2D(vml::usize2 size) {
+        return { { Absolute{ size.x }, Absolute{ size.y }, Absolute{ 1 } } };
+    }
+
     /// Static constructor for 2D sizes relative to screen size
     static TextureSize Relative2D(vml::double2 factor) {
         return { { RelativeToScreen{ factor.x }, RelativeToScreen{ factor.y },

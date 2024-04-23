@@ -11,19 +11,29 @@
 
 using namespace bloom;
 using namespace rg;
+using namespace vml::short_types;
+
+template <typename R>
+static R* findResource(RenderGraph* renderGraph, std::string_view name) {
+    auto* source = renderGraph->findInputSource(name);
+    if (!source) {
+        Logger::Warn("Resource not found: ", name);
+        return nullptr;
+    }
+    return dyncast<R*>(source->resource());
+}
 
 rg::SceneRenderer::SceneRenderer(RenderGraph* renderGraph):
     mRenderGraph(renderGraph) {
-    geometry = dyncast<rg::GeometryResource*>(
-        renderGraph->findInputSource("Geometry")->resource());
-    lights = dyncast<rg::LightsResource*>(
-        renderGraph->findInputSource("Lights")->resource());
-    cameraBuffer = dyncast<rg::BufferResource*>(
-        renderGraph->findInputSource("Camera")->resource());
-    bloomParams = dyncast<rg::BufferResource*>(
-        renderGraph->findInputSource("BloomParameters")->resource());
-    postProcessParams = dyncast<rg::BufferResource*>(
-        mRenderGraph->findInputSource("PostProcessParameters")->resource());
+    geometry = findResource<rg::GeometryResource>(renderGraph, "Geometry");
+    lights = findResource<rg::LightsResource>(renderGraph, "Lights");
+    cameraBuffer = findResource<rg::BufferResource>(renderGraph, "Camera");
+    lightSpaceTransformBuffer =
+        findResource<rg::BufferResource>(renderGraph, "LightSpaceTransforms");
+    bloomParams =
+        findResource<rg::BufferResource>(renderGraph, "BloomParameters");
+    postProcessParams =
+        findResource<rg::BufferResource>(renderGraph, "PostProcessParameters");
 }
 
 void rg::SceneRenderer::begin(FrameParameters const& frameParams,
@@ -36,6 +46,7 @@ void rg::SceneRenderer::begin(FrameParameters const& frameParams,
     if (lights) {
         lights->clear();
     }
+    lightSpaceTransforms.clear();
 }
 
 template <typename LightComponent>
@@ -70,6 +81,19 @@ static void submitScene(Scene const& scene, rg::GeometryResource& geometry) {
     });
 }
 
+static float4x4 makeDirectionalLightSpaceTransform(Camera const& camera,
+                                                   float dist, float zDist,
+                                                   float3 lightDirection) {
+    float4x4 const lsProj =
+        vml::ortho<vml::right_handed>(-dist, dist, -dist, dist, -zDist, zDist);
+
+    float4x4 const lsView =
+        vml::look_at<vml::right_handed>(camera.position(),
+                                        camera.position() - lightDirection,
+                                        { 0, 1, 0 });
+    return lsProj * lsView;
+}
+
 void rg::SceneRenderer::submit(Scene const& scene) {
     if (geometry) {
         submitScene(scene, *geometry);
@@ -85,11 +109,23 @@ void rg::SceneRenderer::submit(Scene const& scene) {
             light.light.direction = vml::normalize(
                 (transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
         });
-        submitLights<DirectionalLightComponent>(*lights, scene,
-                                                [](auto& transform,
-                                                   auto& light) {
-            light.light.direction = vml::normalize(
+        submitLights<DirectionalLightComponent>(
+            *lights, scene,
+            [&](TransformMatrixComponent const& transform,
+                DirectionalLightComponent& comp) {
+            auto& light = comp.light;
+            light.direction = vml::normalize(
                 (transform.matrix * vml::float4{ 0, 0, 1, 0 }).xyz);
+            float distance = light.shadowDistance;
+            for (int i = 0; i < light.numCascades; ++i) {
+                auto lightSpaceTransform =
+                    makeDirectionalLightSpaceTransform(camera, distance,
+                                                       light.shadowDistanceZ,
+                                                       light.direction);
+                lightSpaceTransforms.push_back(
+                    vml::transpose(lightSpaceTransform));
+                distance *= light.cascadeDistributionExponent;
+            }
         });
         submitLights<SkyLightComponent>(*lights, scene);
     }
@@ -134,6 +170,16 @@ void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
             .cameraPosition = camera.position(),
         };
         device.fillManagedBuffer(cameraBuffer->handle(), &value, sizeof value);
+    }
+    if (lightSpaceTransformBuffer && lightSpaceTransformBuffer->handle()) {
+        size_t byteSize = std::max(size_t{ 1 }, lightSpaceTransforms.size()) *
+                          sizeof(float4x4);
+        if (lightSpaceTransformBuffer->handle().size() < byteSize) {
+            lightSpaceTransformBuffer->assign(device.createBuffer(
+                { .size = byteSize, .storageMode = StorageMode::Managed }));
+        }
+        device.fillManagedBuffer(lightSpaceTransformBuffer->handle(),
+                                 lightSpaceTransforms.data(), byteSize);
     }
     if (bloomParams && bloomParams->handle()) {
         BloomParameters values = makeBloomParams({

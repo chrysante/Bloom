@@ -174,16 +174,7 @@ private:
 /// This class exists to simplify defining pass interfaces in code
 template <typename PassType>
 class PassImpl {
-
 public:
-    using BufferInterface = Interface<InterfaceType::Buffer, PassType>;
-    using TextureInterface = Interface<InterfaceType::Texture, PassType>;
-    using GeometryInterface = Interface<InterfaceType::Geometry, PassType>;
-    using LightsInterface = Interface<InterfaceType::Lights, PassType>;
-
-    using InterfaceVariant = std::variant<BufferInterface, TextureInterface,
-                                          GeometryInterface, LightsInterface>;
-
     /// To be defined by the pass author
     static std::span<InterfaceVariant const> Sinks();
 
@@ -207,18 +198,18 @@ protected:
         for (auto const& interface: PassType::Sinks()) {
             // clang-format off
             std::visit([&]<InterfaceType Type>(
-                Interface<Type, PassType> const& interface) {
+                Interface<Type> const& interface) {
                     pass->declareSink(std::string(interface.name),
-                                      &(pass->*interface.impl), interface.desc,
+                                      &(interface.accessor(*pass)), interface.desc,
                                       interface.flags);
                 }, interface); // clang-format on
         }
         for (auto const& interface: PassType::Sources()) {
             // clang-format off
             std::visit([&]<InterfaceType Type>(
-                Interface<Type, PassType> const& interface) {
+                Interface<Type> const& interface) {
                     pass->declareSource(std::string(interface.name),
-                                        &(pass->*interface.impl),
+                                        &(interface.accessor(*pass)),
                                         interface.desc, interface.flags);
                 }, interface); // clang-format on
         }
@@ -227,8 +218,7 @@ protected:
 
 #define BEGIN_INTERFACE_DECL_IMPL(Name, PassType)                              \
     template <>                                                                \
-    ::std::span<                                                               \
-        typename ::bloom::rg::PassImpl<PassType>::InterfaceVariant const>      \
+    ::std::span<InterfaceVariant const>                                        \
         bloom::rg::PassImpl<PassType>::Name() {                                \
         static std::vector<InterfaceVariant> list
 

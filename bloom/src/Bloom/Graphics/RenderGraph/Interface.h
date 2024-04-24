@@ -95,15 +95,53 @@ struct InterfaceDesc<InterfaceType::Texture> {
     }
 };
 
+/// Type erasing wrapper around a member pointer to derived pass classes. This
+/// exists so we don't have to parametrize `Interface` on the derived pass type
+template <InterfaceType Type>
+class InterfaceAccessor {
+    template <typename PassType>
+    using MemPtrType = InterfaceViewType<Type>(PassType::*);
+
+public:
+    template <typename PassType>
+    InterfaceAccessor(InterfaceViewType<Type>(PassType::*member)):
+        fn(impl<PassType>) {
+        static_assert(sizeof(MemPtrType<PassType>) == sizeof(MemPtrType<Pass>));
+        static_assert(alignof(MemPtrType<PassType>) ==
+                      alignof(MemPtrType<Pass>));
+        std::memcpy(&memptr, &member, sizeof member);
+    }
+
+    InterfaceViewType<Type>& operator()(Pass& pass) const {
+        return fn(*this, pass);
+    }
+
+private:
+    template <typename PassType>
+#if defined(__GNUC__)
+    // See comment on PassImpl::PassImpl()
+    __attribute__((no_sanitize("vptr")))
+#endif
+    static InterfaceViewType<Type>&
+        impl(InterfaceAccessor const& This, Pass& pass) {
+        using MemPtr = InterfaceViewType<Type>(PassType::*);
+        auto member = *reinterpret_cast<MemPtr const*>(This.memptr);
+        return static_cast<PassType&>(pass).*member;
+    }
+
+    InterfaceViewType<Type>& (*fn)(InterfaceAccessor const&, Pass&);
+    alignas(MemPtrType<Pass>) char memptr[sizeof(MemPtrType<Pass>)];
+};
+
 /// Interfaces statically describe the sources and sinks of a pass
-template <InterfaceType Type, typename PassType>
+template <InterfaceType Type>
 struct Interface {
     /// The name of this interface
     std::string name;
 
     /// The data member of the pass class that holds the handle of this
     /// interface
-    InterfaceViewType<Type>(PassType::*impl);
+    InterfaceAccessor<Type> accessor;
 
     /// The interface descriptor. This is used for type checking and resource
     /// allocation
@@ -112,6 +150,14 @@ struct Interface {
     /// Additional interface flags
     InterfaceFlags flags = InterfaceFlags::None;
 };
+
+using BufferInterface = Interface<InterfaceType::Buffer>;
+using TextureInterface = Interface<InterfaceType::Texture>;
+using GeometryInterface = Interface<InterfaceType::Geometry>;
+using LightsInterface = Interface<InterfaceType::Lights>;
+
+using InterfaceVariant = std::variant<BufferInterface, TextureInterface,
+                                      GeometryInterface, LightsInterface>;
 
 /// Base class of `PassSource` and `PassSink`
 class PassInterfaceBase {

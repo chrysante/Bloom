@@ -131,9 +131,9 @@ struct GlobalInputNodeController: RenderGraphNodeController {
         declare<Geometry>(rg, "Geometry", {});
         declare<Lights>(rg, "Lights", {});
         declare<Buffer>(rg, "Camera", { .size = sizeof(CameraInput) });
+        declare<Buffer>(rg, "LightSpaceTransforms", { .size = 0 });
         declare<Buffer>(rg, "ShadowMetadata",
                         { .size = sizeof(ShadowRenderMetadata) });
-        declare<Buffer>(rg, "LightSpaceTransforms", { .size = 0 });
         declare<Buffer>(rg, "BloomParameters",
                         { .size = sizeof(BloomParameters) });
         declare<Buffer>(rg, "PostProcessParameters",
@@ -164,8 +164,8 @@ REGISTER_NODE(GlobalInputNodeController, {
         { .name = "Geometry" },
         { .name = "Lights" },
         { .name = "Camera" },
-        { .name = "Shadow Metadata" },
         { .name = "Light Space Transforms" },
+        { .name = "Shadow Metadata" },
         { .name = "Bloom Parameters" },
         { .name = "Post Process Parameters" },
     },

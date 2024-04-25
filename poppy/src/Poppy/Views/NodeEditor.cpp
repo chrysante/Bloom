@@ -35,6 +35,7 @@ struct NodeEditorStyleColors {
     float4 pinMissingIndicator;
     float4 pinLinkIndicator;
     float4 link;
+    float4 backgroundGridline;
     float4 selectionRect;
     float4 selectionRectOutline;
 };
@@ -78,6 +79,7 @@ struct NodeEditorStyle {
         light.pinMissingIndicator = { 1, 0, 0.2, 1 };
         light.link = { 0, 0, 0, 0.6 };
         light.pinLinkIndicator = { 1, 1, 1, 0.8 };
+        light.backgroundGridline = { 0, 0, 0, 0.2 };
         light.selectionRect = { 0, 0, 0, 0.14 };
         light.selectionRectOutline = { 0, 0, 0, 0.3 };
 
@@ -89,6 +91,7 @@ struct NodeEditorStyle {
         dark.pinMissingIndicator = light.pinMissingIndicator;
         dark.link = { 1, 1, 1, 0.8 };
         dark.pinLinkIndicator = dark.link;
+        dark.backgroundGridline = { 0.33, 0.33, 0.33, 1 };
         dark.selectionRect = { 1, 1, 1, 0.3 };
         dark.selectionRectOutline = { 1, 1, 1, 0.3 };
     }
@@ -121,6 +124,7 @@ static void styleEditor(bool* open) {
     ImGui::ColorEdit4("White Outline", col.whiteOutline.data());
     ImGui::ColorEdit4("Black Outline", col.blackOutline.data());
     ImGui::ColorEdit4("Link", col.link.data());
+    ImGui::ColorEdit4("Background Grid Line", col.backgroundGridline.data());
     ImGui::ColorEdit4("Selection Rect", col.selectionRect.data());
     ImGui::ColorEdit4("Selection Rect Outline", col.selectionRectOutline.data());
     ImGui::ColorEdit4("Pin Background", col.pinBG.data());
@@ -912,7 +916,7 @@ static void drawLines(float begin, float end, float dist, Axis axis,
 }
 
 static void drawBackground(float2 viewPos) {
-    float4 color = ImGui::GetStyleColorVec4(ImGuiCol_Separator);
+    float4 color = styleColors().backgroundGridline;
     float2 begin = vml::fmod(viewPos, styleVars().BackgroundLineDist);
     drawLines(begin.x, ImGui::GetWindowWidth(),
               styleVars().BackgroundLineDist.x, Axis::Horizontal, color);

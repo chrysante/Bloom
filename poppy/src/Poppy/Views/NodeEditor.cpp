@@ -31,7 +31,7 @@ static float4 BlackOutlineColor = { 0, 0, 0, 0.7 };
 static float4 LinkColor = { 1, 1, 1, 0.8 };
 static float LinkWidth = 3;
 static float LinkWidthHovered = 5;
-static float LinkHoverDist = 4;
+static float LinkHoverDist = 7;
 static float4 PinColorConnected = { 0.2, 0.2, 0.2, 1 };
 static float4 PinColorOptional = { 0.4, 0.4, 0.4, 1 };
 static float4 PinColorMissing = { 1, 0, 0.2, 1 };
@@ -898,7 +898,7 @@ void Impl::linkPopup(bool show, Link link) {
         ImGui::OpenPopup(name);
     }
     if (ImGui::BeginPopup(name)) {
-        if (ImGui::MenuItem("Delete")) {
+        if (ImGui::MenuItem("Delete Link")) {
             deleteLink(viewData.popupLink);
         }
         ImGui::EndPopup();
@@ -1520,7 +1520,9 @@ void Impl::nodeBodyPopup(Node& node, bool show) {
     }
     BL_ASSERT(selection.contains(&node),
               "Popup should not open on unselected node");
-    if (ImGui::MenuItem("Delete")) {
+    if (ImGui::MenuItem(selection.size() == 1 ? "Delete Node" :
+                                                "Delete Selected Nodes"))
+    {
         defer([this] { deleteSelected(); });
     }
     if (auto* controller = node.controller()) {
@@ -1564,9 +1566,8 @@ void Impl::displayNodeBody(Node& node) {
         viewData.activeNode = &node;
     }
     /// Selected nodes change selection state when mouse is released
-    bool anyButtonReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
-                             ImGui::IsMouseReleased(ImGuiMouseButton_Right);
-    if (isSelected && viewData.activeNode == &node && anyButtonReleased &&
+    if (isSelected && viewData.activeNode == &node &&
+        ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
         !viewData.isDraggingNode && !viewData.handledSelectionSinceMousePressed)
     {
         selection.amend(&node);

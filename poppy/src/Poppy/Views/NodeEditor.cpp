@@ -564,6 +564,7 @@ private:
 /// This is reset at the start of each new frame
 struct FrameViewData {
     ImRect clipRect = {};
+    bool windowHovered = false;
     HoverItem<Pin*> hoveredPin;
     HoverItem<Node*> hoveredNode;
     HoverItem<Link> hoveredLink;
@@ -960,12 +961,9 @@ void Impl::backgroundPopup(bool show) {
 }
 
 void Impl::backgroundBehaviour() {
-    bool windowHovered =
-        ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow) &&
-        ImGui::GetCurrentWindow()->Rect().Contains(ImGui::GetMousePos());
     bool haveNodeInteraction = viewData.activeNode || viewData.activePin;
     bool showPopup = false;
-    if (windowHovered && !haveNodeInteraction) {
+    if (viewData.windowHovered && !haveNodeInteraction) {
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
             !viewData.isSelectionDragging)
         {
@@ -1257,7 +1255,7 @@ static void displayPinLink(ViewData& viewData, InputPin& pin,
                          !viewData.activePin;
     bool hovered = displayLink(begin, end, ImGui::GetMousePos(), mayHighlight,
                                mustHighlight);
-    if (hovered && !viewData.activePin) {
+    if (hovered && viewData.windowHovered && !viewData.activePin) {
         viewData.hoveredLink.set(link);
     }
 }
@@ -1673,6 +1671,9 @@ void Impl::display() {
     }
     viewData.beginFrame();
     drawBackground(viewData.position);
+    viewData.windowHovered =
+        ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow) &&
+        ImGui::GetCurrentWindow()->Rect().Contains(ImGui::GetMousePos());
     /// We make a copy here because we may reorder the nodes during traversal.
     /// This may seem wasteful but I'm sure it's fine
     auto nodes = model.nodes() | ranges::to<std::vector>;

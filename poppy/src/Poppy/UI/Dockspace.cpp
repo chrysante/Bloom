@@ -219,7 +219,9 @@ static utl::small_vector<int, 2> getToolbarSpacing(Window& window,
             if ((int)node->Pos.y == (int)mainNode->Pos.y && node->IsVisible &&
                 node != mainNode && (int2)node->Size != (int2)mainNode->Size)
             {
-                result.push_back({ (int2)node->Pos - windowPos, node->Size });
+                int2 min = (int2)node->Pos - windowPos;
+                int2 max = min + (int2)node->Size;
+                result.push_back({ min, max });
             }
             if (!node->IsLeafNode()) {
                 stack.push(node->ChildNodes[0]);

@@ -10,7 +10,6 @@
 #include "Bloom/Application/Input.h"
 #include "Bloom/Application/MessageSystem.h"
 #include "Bloom/Application/Window.h"
-#include "Bloom/Application/WindowDelegate.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Time.h"
 
@@ -69,8 +68,7 @@ public:
 
     /// Creates a new window with from window description \p desc and window
     /// delegate \p delegate
-    Window& createWindow(WindowDescription const& desc,
-                         std::unique_ptr<WindowDelegate> delegate = nullptr);
+    Window& createWindow(WindowDescription const& desc);
 
     /// Closes and destroys the window \p window
     void destroyWindow(Window* window);
@@ -116,14 +114,8 @@ private:
     void clearClosingWindows();
     void doOnInput(InputEvent const& event, void* native);
 
-    /// Owns a window and a corresponding window delegate
-    struct WindowWrapper {
-        std::unique_ptr<bloom::Window> window;
-        std::unique_ptr<bloom::WindowDelegate> delegate;
-    };
-
     std::shared_ptr<MessageSystem> messageSystem;
-    std::vector<WindowWrapper> mWindows;
+    std::vector<std::unique_ptr<Window>> mWindows;
     CoreSystemManager mCoreSystems;
     Timer mTimer;
     RunLoopMode mRunLoopMode = RunLoopMode::Realtime;

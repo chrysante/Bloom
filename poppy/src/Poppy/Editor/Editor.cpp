@@ -30,16 +30,6 @@ std::unique_ptr<Application> bloom::createApplication() {
     return std::make_unique<poppy::Editor>();
 }
 
-struct EditorWindowDelegate: public WindowDelegate {
-    void frame() override {
-        if (onFrame) {
-            onFrame();
-        }
-    }
-
-    utl::function<void()> onFrame;
-};
-
 namespace {
 
 #define STRINGIFY_IMPL(x) #x
@@ -162,13 +152,28 @@ void Editor::initRenderer() {
     coreSystems().setRenderer(std::move(editorRenderer));
 }
 
+struct Editor::Impl {
+    struct EditorWindowDelegate: WindowDelegate {
+        EditorWindowDelegate(Editor* editor): editor(editor) {}
+
+        void onTextInput(unsigned code) override {
+            editor->imguiCtx.onTextInput(code);
+        }
+
+        void onResize(int2) override { editor->invalidateView(); }
+
+        void onClose() override { editor->saveConfigToDisk(); }
+
+        Editor* editor;
+    };
+};
+
 void Editor::createMainWindow() {
     BL_PROFILE_FUNCTION();
     auto desc = loadWindowConfig();
     desc.hasToolbarArea = true;
-    auto& window = createWindow(desc, nullptr);
-    window.onTextInput([this](unsigned code) { imguiCtx.onTextInput(code); });
-    window.onClose([this] { saveConfigToDisk(); });
+    auto& window = createWindow(desc);
+    window.addDelegate(std::make_unique<Impl::EditorWindowDelegate>(this));
     window.createDefaultSwapchain(device());
     window.setCommandQueue(device().createCommandQueue());
     _mainWindow = &window;

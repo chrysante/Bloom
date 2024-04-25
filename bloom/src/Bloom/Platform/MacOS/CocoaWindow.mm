@@ -91,25 +91,32 @@ void Window::zoom() {
     [NSApp postEvent:event atStart:YES];
 }
 
+static bool isInToolbar(Window& window, NSEvent* event) {
+    return event.window.frame.size.height - event.locationInWindow.y <=
+           window.titlebarHeight();
+}
+
 void Window::onInputImpl(InputEvent const& event, void* nativeEvent) {
     NSEvent* nsEvent = (__bridge NSEvent*)nativeEvent;
     auto* nsWindow = getNative(this);
     if (nsEvent.window != nsWindow) {
         return;
     }
-    if (callbacks.onInputFn) {
-        callbacks.onInputFn(event);
-    }
-    if (nsEvent.type == NSEventTypeLeftMouseDown) {
-        bool isInToolbar =
-            nsWindow.frame.size.height - nsEvent.locationInWindow.y <=
-            titlebarHeight();
-        if (desc.movable && isInToolbar) {
+    invokeDelegates(&WindowDelegate::onInput, event);
+    if (nsEvent.type == NSEventTypeLeftMouseDown && desc.movable &&
+        isInToolbar(*this, nsEvent))
+    {
+        switch (nsEvent.clickCount) {
+        case 1:
             desc.isMoving = true;
-            if (callbacks.onMoveStartFn) {
-                callbacks.onMoveStartFn();
-            }
+            invokeDelegates(&WindowDelegate::onMoveStart);
             [nsWindow performWindowDragWithEvent:nsEvent];
+            break;
+        case 2:
+            zoom();
+            break;
+        default:
+            break;
         }
     }
     if (nsEvent.type == NSEventTypeLeftMouseUp) {

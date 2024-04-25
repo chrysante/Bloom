@@ -65,46 +65,11 @@ void Window::setCommandQueue(std::unique_ptr<CommandQueue> queue) {
     _commandQueue = std::move(queue);
 }
 
-void Window::onInput(std::function<void(InputEvent const&)> f) {
-    callbacks.onInputFn = std::move(f);
-}
-
-void Window::onTextInput(std::function<void(unsigned)> f) {
-    callbacks.onCharInputFn = std::move(f);
-}
-
-void Window::onFileDrop(
-    std::function<void(std::span<std::filesystem::path const>)> f) {
-    callbacks.onFileDropFn = std::move(f);
-}
-
-void Window::onMove(std::function<void(vml::int2 newPosition)> f) {
-    callbacks.onMoveFn = std::move(f);
-}
-
-void Window::onMoveStart(std::function<void()> f) {
-    callbacks.onMoveStartFn = std::move(f);
-}
-
-void Window::onResize(std::function<void(vml::int2 newSize)> f) {
-    callbacks.onResizeFn = std::move(f);
-}
-
-void Window::onFocus(std::function<void()> f) {
-    callbacks.onFocusFn = std::move(f);
-}
-
-void Window::onFocusLoss(std::function<void()> f) {
-    callbacks.onFocusLossFn = std::move(f);
-}
-
-void Window::onClose(std::function<void()> f) {
-    callbacks.onCloseFn = std::move(f);
-}
-
-void Window::onContentScaleChange(
-    std::function<void(vml::float2 newContentScale)> f) {
-    callbacks.onContentScaleChangeFn = std::move(f);
+WindowDelegate* Window::addDelegate(std::unique_ptr<WindowDelegate> delegate) {
+    auto* result = delegate.get();
+    delegates.push_back(std::move(delegate));
+    result->_window = this;
+    return result;
 }
 
 bool Window::shouldClose() const {
@@ -289,9 +254,7 @@ void Window::setCallbacks() {
 #endif
     glfwSetCharCallback(GLFW_WND, [](GLFWwindow* w, unsigned int codepoint) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        if (window.callbacks.onCharInputFn) {
-            window.callbacks.onCharInputFn(codepoint);
-        }
+        window.invokeDelegates(&WindowDelegate::onTextInput, codepoint);
     });
     glfwSetDropCallback(GLFW_WND,
                         [](GLFWwindow* w, int pathCount, char const* paths[]) {
@@ -301,15 +264,11 @@ void Window::setCallbacks() {
         for (int i = 0; i < pathCount; ++i) {
             pathVec.push_back(std::filesystem::path(paths[i]));
         }
-        if (window.callbacks.onFileDropFn) {
-            window.callbacks.onFileDropFn(pathVec);
-        }
+        window.invokeDelegates(&WindowDelegate::onFileDrop, pathVec);
     });
     static constexpr auto posCallback = [](Window& window, int2 pos) {
         window.desc.position = pos;
-        if (window.callbacks.onMoveFn) {
-            window.callbacks.onMoveFn(pos);
-        }
+        window.invokeDelegates(&WindowDelegate::onMove, pos);
     };
     glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
@@ -325,44 +284,34 @@ void Window::setCallbacks() {
         }
         int2 position = 0;
         glfwGetWindowPos(w, &position.x, &position.y);
-        posCallback(window, position);
-        if (window.callbacks.onResizePrivateFn) {
-            window.callbacks.onResizePrivateFn(newSize);
+        if (window.desc.position != position) {
+            posCallback(window, position);
         }
-        if (window.callbacks.onResizeFn) {
-            window.callbacks.onResizeFn(newSize);
-        }
+        window.invokeDelegates(&WindowDelegate::onResize, newSize);
     });
     glfwSetWindowFocusCallback(GLFW_WND, [](GLFWwindow* w, int focus) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         if (focus == GLFW_TRUE) {
             window.desc.focused = true;
-            if (window.callbacks.onFocusFn) {
-                window.callbacks.onFocusFn();
-            }
+            window.invokeDelegates(&WindowDelegate::onFocus);
         }
         else {
             window.desc.focused = false;
-            if (window.callbacks.onFocusLossFn) {
-                window.callbacks.onFocusLossFn();
-            }
+            window.invokeDelegates(&WindowDelegate::onFocusLoss);
         }
     });
     glfwSetWindowCloseCallback(GLFW_WND, [](GLFWwindow* w) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         window.desc.shallPreventClose = false;
-        if (window.callbacks.onCloseFn) {
-            window.callbacks.onCloseFn();
-        }
+        window.invokeDelegates(&WindowDelegate::onClose);
     });
     glfwSetWindowContentScaleCallback(GLFW_WND,
                                       [](GLFWwindow* w, float x, float y) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         float2 contentScale = { x, y };
         window.desc.contentScaleFactor = contentScale;
-        if (window.callbacks.onContentScaleChangeFn) {
-            window.callbacks.onContentScaleChangeFn(contentScale);
-        }
+        window.invokeDelegates(&WindowDelegate::onContentScaleChange,
+                               contentScale);
     });
 }
 

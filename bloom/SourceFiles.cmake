@@ -18,8 +18,6 @@ set(bloom_sources
   src/Bloom/Application/ResourceUtil.h
   src/Bloom/Application/Window.cpp
   src/Bloom/Application/Window.h
-  src/Bloom/Application/WindowDelegate.cpp
-  src/Bloom/Application/WindowDelegate.h
 
   src/Bloom/Asset/Asset.cpp
   src/Bloom/Asset/Asset.h

@@ -924,6 +924,34 @@ struct poppy::View::BackendImpl {
     }
 };
 
+namespace {
+
+struct ImGui_ImplOSX_WindowDelegate: bloom::WindowDelegate {
+    ImGui_ImplOSX_WindowDelegate(ImGuiViewportP* viewport): viewport(viewport) {}
+    
+    void onResize(int2 newSize) override {
+        viewport->Pos = (float2)window()->position();
+        viewport->Size = (float2)newSize;
+        viewport->PlatformRequestResize = true;
+    }
+    
+    void onMove(int2 newPos) override {
+        viewport->Pos = (float2)newPos;
+        viewport->PlatformRequestMove = true;
+        auto& g = *GImGui;
+        g.MovingWindow = viewport->Window;
+        g.ActiveId = viewport->Window->MoveId;
+    }
+    
+    void onClose() override {
+        poppy::View::BackendImpl::setClosing(viewport);
+    }
+
+    ImGuiViewportP* viewport;
+};
+
+} // namespace
+
 static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
 {
     ImGuiViewportP* viewport = static_cast<ImGuiViewportP*>(v);
@@ -942,7 +970,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
         windowDesc.canBecomeKey = false;
         windowDesc.canBecomeMain = false;
     }
-    auto* window = &bd->editor->createWindow(windowDesc, nullptr);
+    auto* window = &bd->editor->createWindow(windowDesc);
     NSWindow* nsWindow = getNative(window);
     if (viewport->Flags & ImGuiViewportFlags_TopMost)
         [nsWindow setLevel:NSFloatingWindowLevel];
@@ -953,20 +981,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = window;
     viewport->PlatformHandleRaw = (__bridge_retained void*)window->nativeHandle();
-    window->onResize([=](float2 newSize) {
-        viewport->Pos = (float2)window->position();
-        viewport->Size = newSize;
-        viewport->PlatformRequestResize = true;
-    });
-    window->onMove([=](float2 newPos) {
-        viewport->Pos = newPos;
-        viewport->PlatformRequestMove = true;
-        GImGui->MovingWindow = viewport->Window;
-        GImGui->ActiveId = viewport->Window->MoveId;
-    });
-    window->onClose([=] {
-        poppy::View::BackendImpl::setClosing(viewport);
-    });
+    window->addDelegate(std::make_unique<ImGui_ImplOSX_WindowDelegate>(viewport));
 }
 
 static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)

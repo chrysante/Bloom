@@ -201,15 +201,8 @@ static void titlebarBehaviour(Window& window, float toolbarHeight) {
     ImGui::InvisibleButton("Main_Toolbar_Background_Button",
                            { width, toolbarHeight });
     ImGui::EndDisabled();
-    if (GImGui->LastItemData.ID == GImGui->HoveredIdPreviousFrame) {
-        if (GImGui->IO.MouseClickedCount[ImGuiMouseButton_Left] == 2) {
-            window.zoom();
-        }
-        window.setMovable(true);
-    }
-    else {
-        window.setMovable(false);
-    }
+    window.setMovable(GImGui->LastItemData.ID ==
+                      GImGui->HoveredIdPreviousFrame);
 }
 
 static utl::small_vector<int, 2> getToolbarSpacing(Window& window,

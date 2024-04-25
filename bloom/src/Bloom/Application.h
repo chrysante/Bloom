@@ -6,6 +6,5 @@
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Application/ResourceUtil.h"
 #include "Bloom/Application/Window.h"
-#include "Bloom/Application/WindowDelegate.h"
 
 #endif // BLOOM_APPLICATION_H

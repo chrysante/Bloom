@@ -65,6 +65,53 @@ struct WindowDescription {
     bool canBecomeMain = true;
 };
 
+/// Provides user callbacks for window events
+class BLOOM_API WindowDelegate {
+public:
+    virtual ~WindowDelegate() = default;
+
+    /// Called for every input event that occurs in this window
+    virtual void onInput([[maybe_unused]] InputEvent event) {}
+
+    /// Called on text input
+    virtual void onTextInput([[maybe_unused]] unsigned code) {}
+
+    /// Called when the user drops files into the window
+    virtual void onFileDrop(
+        [[maybe_unused]] std::span<std::filesystem::path const> paths) {}
+
+    /// Called when the window position changes
+    virtual void onMove([[maybe_unused]] vml::int2 newPosition) {}
+
+    /// Called when the user starts moving the window
+    virtual void onMoveStart() {}
+
+    /// Called when the window size changes
+    virtual void onResize([[maybe_unused]] vml::int2 newSize) {}
+
+    /// Called when the window is focused
+    virtual void onFocus() {}
+
+    /// Called when the window loses focus
+    virtual void onFocusLoss() {}
+
+    /// Called when the user closes the window
+    virtual void onClose() {}
+
+    /// Called when the content scale factor changes
+    virtual void onContentScaleChange(
+        [[maybe_unused]] vml::float2 newContentScale) {}
+
+protected:
+    /// \Returns the window that this delegate is attached to
+    Window* window() const { return _window; };
+
+private:
+    friend class Window;
+
+    Window* _window;
+};
+
 /// Wraps a native window handle
 class BLOOM_API Window {
 public:
@@ -101,38 +148,9 @@ public:
     /// Sets \p commandQueue as this windows command queue
     void setCommandQueue(std::unique_ptr<CommandQueue> commandQueue);
 
-    /// Sets the input callback to \p callback
-    /// \p callback will be invoked for every input event that occurs in this
-    /// window
-    void onInput(std::function<void(InputEvent const& event)> callback);
-
-    /// Sets the text input callback to \p callback
-    void onTextInput(std::function<void(unsigned int)>);
-
-    /// Sets the file drop callback to \p callback
-    void onFileDrop(
-        std::function<void(std::span<std::filesystem::path const>)>);
-
-    /// Sets the move callback to \p callback
-    void onMove(std::function<void(vml::int2 newPosition)>);
-
-    ///
-    void onMoveStart(std::function<void()>);
-
-    /// Sets the resize callback to \p callback
-    void onResize(std::function<void(vml::int2 newSize)>);
-
-    /// Sets the focus gain callback to \p callback
-    void onFocus(std::function<void()>);
-
-    /// Sets the focus loss callback to \p callback
-    void onFocusLoss(std::function<void()>);
-
-    /// Sets the close loss callback to \p callback
-    void onClose(std::function<void()>);
-
-    /// Sets the content scale change loss callback to \p callback
-    void onContentScaleChange(std::function<void(vml::float2 newContentScale)>);
+    /// Adds the window delegate \p delegate to this window.
+    /// \Returns a pointer to \p delegate
+    WindowDelegate* addDelegate(std::unique_ptr<WindowDelegate> delegate);
 
     /// \Returns the window's swapchain
     Swapchain& swapchain() { return *_swapchain; }
@@ -223,6 +241,8 @@ public:
 private:
     friend class Application;
 
+    struct Impl;
+
     struct Deleter {
         void operator()(void*) const;
     };
@@ -244,34 +264,25 @@ private:
         bool isMoving = false;
     };
 
-    struct Callbacks {
-        std::function<void(InputEvent)> onInputFn;
-        std::function<void(unsigned)> onCharInputFn;
-        std::function<void(std::span<std::filesystem::path const>)>
-            onFileDropFn;
-        std::function<void(vml::int2 newPosition)> onMoveFn;
-        std::function<void()> onMoveStartFn;
-        std::function<void(vml::int2 newSize)> onResizeFn;
-        /// Used by the application to run the main loop during resizing
-        std::function<void(vml::int2 newPosition)> onResizePrivateFn;
-        std::function<void()> onFocusFn;
-        std::function<void()> onFocusLossFn;
-        std::function<void()> onCloseFn;
-        std::function<void(vml::float2 newContentScale)> onContentScaleChangeFn;
-    };
-
     Window(WindowDescription const& desc);
     void platformInit();
     void applyStyle();
     void setCallbacks();
     void resizeSwapchain(vml::int2 size);
     void onInputImpl(InputEvent const& event, void* native);
+    template <typename... Args, typename... Args2>
+    void invokeDelegates(void (WindowDelegate::*callback)(Args...),
+                         Args2&&... args) const {
+        for (auto& del: delegates) {
+            (del.get()->*callback)(std::forward<Args2>(args)...);
+        }
+    }
 
     WindowDescPrivate desc;
     std::unique_ptr<void, Deleter> windowPtr;
     std::unique_ptr<Swapchain> _swapchain;
     std::unique_ptr<CommandQueue> _commandQueue;
-    Callbacks callbacks;
+    std::vector<std::unique_ptr<WindowDelegate>> delegates;
 };
 
 } // namespace bloom

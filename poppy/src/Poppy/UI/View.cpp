@@ -193,14 +193,6 @@ static float computeLeftInset(Window const& window) {
     return titleButtonsArea.lower_bound().x + titleButtonsArea.upper_bound().x;
 }
 
-static bool mouseInZoomArea(ImGuiWindow* imWindow, float titlebarHeight) {
-    bool windowHovered =
-        GImGui->HoveredWindow &&
-        ImGui::IsWindowChildOf(GImGui->HoveredWindow, imWindow, false, false);
-    return windowHovered && !ImGui::IsAnyItemHovered() &&
-           ImGui::GetMousePos().y - imWindow->Pos.y <= titlebarHeight;
-}
-
 void View::displayToolbar() {
     if (!_toolbar) {
         return;
@@ -214,11 +206,6 @@ void View::displayToolbar() {
         float titlebarHeight = window().titlebarHeight();
         _toolbar->setHeight(titlebarHeight - 2 * padding.y);
         window().setMovable(!ImGui::IsAnyItemHovered());
-        if (mouseInZoomArea(imWindow, titlebarHeight) &&
-            ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-        {
-            window().zoom();
-        }
     }
     else {
         _toolbar->setHeight(26);

@@ -8,6 +8,7 @@
 #include "Bloom/Application/Window.h"
 #include "Bloom/Core/Autorelease.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Ranges.h"
 
 using namespace bloom;
 using namespace vml::short_types;
@@ -31,6 +32,14 @@ std::unique_ptr<bloom::Application> bloom::createApplication() {
 }
 
 struct Application::Impl {
+    struct AppWindowDelegate: WindowDelegate {
+        AppWindowDelegate(Application* app): app(app) {}
+
+        void onResize(int2) override { app->doFrame(); }
+
+        Application* app;
+    };
+
     int inputCallbackID = 0;
 };
 
@@ -47,33 +56,23 @@ Application::~Application() {
 }
 
 utl::small_vector<Window*> Application::getWindows() {
-    utl::small_vector<Window*> result;
-    result.reserve(mWindows.size());
-    std::transform(mWindows.begin(), mWindows.end(), std::back_inserter(result),
-                   [](auto& wrapper) { return wrapper.window.get(); });
-    return result;
+    return mWindows | ToAddress<> | ToSmallVector<>;
 }
 
 Emitter Application::makeEmitter() { return messageSystem->makeEmitter(); }
 
 Receiver Application::makeReceiver() { return messageSystem->makeReceiver(); }
 
-Window& Application::createWindow(WindowDescription const& desc,
-                                  std::unique_ptr<WindowDelegate> delegate) {
+Window& Application::createWindow(WindowDescription const& desc) {
     auto window = Window::Create(desc);
-    window->callbacks.onResizePrivateFn = [this](int2) { doFrame(); };
-    if (delegate) {
-        delegate->wnd = window.get();
-        delegate->init();
-    }
-    mWindows.push_back({ std::move(window), std::move(delegate) });
-    return *mWindows.back().window;
+    window->addDelegate(std::make_unique<Impl::AppWindowDelegate>(this));
+    mWindows.push_back(std::move(window));
+    return *mWindows.back();
 }
 
 void Application::destroyWindow(Window* window) {
-    auto itr = ranges::remove_if(mWindows, [&](WindowWrapper const& wrapper) {
-        return wrapper.window.get() == window;
-    });
+    auto itr =
+        ranges::remove_if(mWindows, [&](auto& w) { return w.get() == window; });
     mWindows.erase(itr, mWindows.end());
 }
 
@@ -127,31 +126,20 @@ void Application::doFrame() {
     BLOOM_AUTORELEASE_BEGIN
     this->frame();
     BLOOM_AUTORELEASE_END
-    for (auto&& [window, delegate]: mWindows) {
-        if (delegate) {
-            auto& d = *delegate;
-            BLOOM_AUTORELEASE_BEGIN
-            d.frame();
-            BLOOM_AUTORELEASE_END
-        }
-        inputEndFrame(mInput);
-    }
+    inputEndFrame(mInput);
     mTimer.update();
 }
 
 void Application::clearClosingWindows() {
     for (auto itr = mWindows.begin(); itr != mWindows.end();) {
-        auto&& [window, delegate] = *itr;
+        auto* window = itr->get();
         if (!window->shouldClose()) {
             ++itr;
             continue;
         }
-        if (delegate) {
-            delegate->shutdown();
-        }
         itr = mWindows.erase(itr);
         if (!mWindows.empty()) {
-            mWindows.front().window->setFocused();
+            mWindows.front()->setFocused();
         }
     }
 }

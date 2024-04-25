@@ -44,6 +44,8 @@ public:
     bloom::Window* mainWindow() const { return _mainWindow; }
 
 private:
+    struct Impl;
+
     void init() override;
     void initRenderer();
     void createMainWindow();

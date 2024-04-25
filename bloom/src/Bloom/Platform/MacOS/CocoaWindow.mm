@@ -73,7 +73,8 @@ vml::AABB<float, 2> Window::titleButtonsArea() const {
     auto b = [window standardWindowButton:NSWindowMiniaturizeButton].frame;
     auto c = [window standardWindowButton:NSWindowZoomButton].frame;
     auto rect = NSUnionRect(NSUnionRect(a, b), c);
-    return { rect.origin, { rect.size.width, rect.size.height } };
+    return { (float2)rect.origin,
+             (float2)rect.origin + float2(rect.size.width, rect.size.height) };
 }
 
 void Window::zoom() {

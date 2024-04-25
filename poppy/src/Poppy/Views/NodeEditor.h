@@ -73,6 +73,15 @@ public:
 
     /// Decides whether to always display output names or only on hover
     virtual bool alwaysDisplayOutputNames() const { return false; }
+
+    /// Used by the `Node` class to create pins
+    virtual std::vector<PinDesc> makeInputDescriptors() { return {}; }
+
+    /// See `makeInputDescriptors()`
+    virtual std::vector<PinDesc> makeOutputDescriptors() { return {}; }
+
+    /// The color of the node body
+    virtual vml::float4 nodeColor() { return { 1, 0, 0.5, 1 }; }
 };
 
 /// Descriptor structure used to create nodes
@@ -87,22 +96,10 @@ struct NodeDesc {
     /// The position at which the node will be created
     vml::float2 position;
 
-    /// Minimum size below which the node cannot be resized
-    vml::float2 minSize;
-
     /// The size with which the node will be created.
     vml::float2 size;
 
-    ///
-    std::vector<PinDesc> inputs;
-
-    ///
-    std::vector<PinDesc> outputs;
-
-    /// The color of the node body
-    vml::float4 color = { 1, 0, 0.5, 1 };
-
-    ///
+    /// The controller that will be added to the node
     std::unique_ptr<NodeController> controller;
 };
 
@@ -266,14 +263,14 @@ public:
     /// Sets the size of this node to \p size
     void setSize(vml::float2 size) { _desc.size = size; }
 
-    /// \Returns the minimum size of this node
-    vml::float2 minSize() const { return desc().minSize; }
-
     /// \Returns the position of this node
     vml::float2 position() const { return desc().position; }
 
     /// Sets the position of this node to \p position
     void setPosition(vml::float2 position) { _desc.position = position; }
+
+    /// \Returns the body color of the node
+    vml::float4 color() const { return _color; }
 
     /// Internal to the node editor
     LayoutData& layoutData() { return *_layoutData; }
@@ -285,6 +282,7 @@ private:
     friend class Pin;
 
     NodeDesc _desc;
+    vml::float4 _color = {};
     std::unique_ptr<LayoutData> _layoutData;
     std::vector<bloom::DynUniquePtr<nodeEditor::InputPin>> _inputs;
     std::vector<bloom::DynUniquePtr<nodeEditor::OutputPin>> _outputs;

@@ -66,9 +66,8 @@ struct RenderGraphEditorView: View {
 POPPY_REGISTER_VIEW(RenderGraphEditorView, "Render Graph Editor");
 
 static constexpr float4 InputNodeColor = { 0.4, 0.7, 0.2, 1.0 };
-static constexpr float4 PassNodeColor = { 0.3, 0.0, 0.8, 1.0 };
+static constexpr float4 PassNodeColor = { 0.27, 0.58, 0.92, 1.0 };
 static constexpr float4 OutputNodeColor = { 1.0, 0.0, 0.2, 1.0 };
-static constexpr float2 MinSize = { 100, 0 };
 
 class RenderGraphNodeController: public NodeController {
 public:
@@ -96,23 +95,24 @@ struct GlobalInputNodeController: RenderGraphNodeController {
     static std::string StaticName() { return "Input"; }
 
     static NodeDesc MakeDesc(float2 position) {
+        return { .name = StaticName(),
+                 .position = position,
+                 .controller = std::make_unique<GlobalInputNodeController>() };
+    }
+
+    std::vector<PinDesc> makeOutputDescriptors() override {
         return {
-            .name = StaticName(),
-            .outputs = {
-                { .name = "Geometry" },
-                { .name = "Lights" },
-                { .name = "Camera" },
-                { .name = "Light Space Transforms" },
-                { .name = "Shadow Metadata" },
-                { .name = "Bloom Parameters" },
-                { .name = "Post Process Parameters" },
-            },
-            .color = InputNodeColor,
-            .position = position,
-            .minSize = MinSize,
-            .controller = std::make_unique<GlobalInputNodeController>()
+            { .name = "Geometry" },
+            { .name = "Lights" },
+            { .name = "Camera" },
+            { .name = "Light Space Transforms" },
+            { .name = "Shadow Metadata" },
+            { .name = "Bloom Parameters" },
+            { .name = "Post Process Parameters" },
         };
     }
+
+    float4 nodeColor() override { return InputNodeColor; }
 
     YAML::Node serialize() const override {
         YAML::Node root;
@@ -161,15 +161,16 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
     static std::string StaticName() { return "Output"; }
 
     static NodeDesc MakeDesc(float2 position) {
-        return {
-            .name = StaticName(),
-            .inputs = { { .name = "Color" }, },
-            .color = OutputNodeColor,
-            .position = position,
-            .minSize = MinSize,
-            .controller = std::make_unique<GlobalOutputNodeController>()
-        };
+        return { .name = StaticName(),
+                 .position = position,
+                 .controller = std::make_unique<GlobalOutputNodeController>() };
     }
+
+    std::vector<PinDesc> makeInputDescriptors() override {
+        return { { .name = "Color" } };
+    }
+
+    float4 nodeColor() override { return OutputNodeColor; }
 
     YAML::Node serialize() const override {
         YAML::Node root;
@@ -233,17 +234,23 @@ struct PassNodeController: RenderGraphNodeController {
         return {
             .name = entry.name,
             .position = position,
-            .minSize = MinSize,
-            .inputs = entry.vtable.sinks() | transform([](auto& interface) {
-                return interfaceToPinDesc(interface);
-            }) | ranges::to<std::vector>,
-            .outputs = entry.vtable.sources() | transform([](auto& interface) {
-                return interfaceToPinDesc(interface);
-            }) | ranges::to<std::vector>,
-            .color = PassNodeColor,
             .controller = std::make_unique<PassNodeController>(entry),
         }; // clang-format on
     }
+
+    std::vector<PinDesc> makeInputDescriptors() override {
+        return registryEntry.vtable.sinks() | transform([](auto& interface) {
+            return interfaceToPinDesc(interface);
+        }) | ranges::to<std::vector>;
+    }
+
+    std::vector<PinDesc> makeOutputDescriptors() override {
+        return registryEntry.vtable.sources() | transform([](auto& interface) {
+            return interfaceToPinDesc(interface);
+        }) | ranges::to<std::vector>;
+    }
+
+    float4 nodeColor() override { return PassNodeColor; }
 
     YAML::Node serialize() const override {
         YAML::Node root;

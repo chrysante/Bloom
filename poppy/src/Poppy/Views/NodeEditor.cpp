@@ -317,64 +317,41 @@ utl::small_vector<Node const*> NodeEditorGraph::sinks() const {
     return sinksImpl(nodes()) | ranges::to<utl::small_vector<Node const*>>;
 }
 
-static YAML::Node serializePin(Pin const& pin) {
-    YAML::Node root;
-    root["Name"] = pin.name();
-    root["Flags"] = (unsigned)pin.desc().flags;
-    return root;
-}
-
-static YAML::Node serializeInput(InputPin const& pin) {
-    return serializePin(pin);
-}
-
-static YAML::Node serializeOutput(OutputPin const& pin) {
-    auto root = serializePin(pin);
-    YAML::Node targets;
-    for (auto* target: pin.targets()) {
-        YAML::Node targetNode;
-        targetNode["NodeID"] = target->parent().ID();
-        targetNode["Index"] = target->indexInParent();
-        targets.push_back(targetNode);
-    }
-    root["Targets"] = targets;
-    return root;
-}
-
 static YAML::Node serializeNode(Node const& node) {
     auto& desc = node.desc();
     YAML::Node root;
     root["ID"] = desc.ID;
     root["Name"] = desc.name;
     root["Position"] = desc.position;
-    root["MinSize"] = desc.minSize;
     root["Size"] = desc.size;
-    root["Color"] = desc.color;
     if (desc.controller) {
         root["Controller"] = desc.controller->serialize();
-    }
-    for (auto inputs = root["Inputs"]; auto* input: node.inputs()) {
-        inputs.push_back(serializeInput(*input));
-    }
-    for (auto outputs = root["Outputs"]; auto* output: node.outputs()) {
-        outputs.push_back(serializeOutput(*output));
     }
     return root;
 }
 
-static PinDesc deserializePin(YAML::Node const& node) {
-    PinDesc desc;
-    desc.name = node["Name"].as<std::string>();
-    desc.flags = (PinFlags)node["Flags"].as<unsigned>();
-    return desc;
+static YAML::Node serializeLink(OutputPin const& out, InputPin const& in) {
+    YAML::Node root;
+    root["FromID"] = out.parent().ID();
+    root["FromIndex"] = out.indexInParent();
+    root["ToID"] = in.parent().ID();
+    root["ToIndex"] = in.indexInParent();
+    return root;
 }
 
-static PinDesc deserializeInput(YAML::Node const& node) {
-    return deserializePin(node);
-}
-
-static PinDesc deserializeOutput(YAML::Node const& node) {
-    return deserializePin(node);
+YAML::Node NodeEditorGraph::serialize() const {
+    YAML::Node root;
+    auto nodeList = root["Nodes"];
+    auto linkList = root["Links"];
+    for (auto* node: nodes()) {
+        nodeList.push_back(serializeNode(*node));
+        for (auto* input: node->inputs()) {
+            if (input->origin()) {
+                linkList.push_back(serializeLink(*input->origin(), *input));
+            }
+        }
+    }
+    return root;
 }
 
 static std::unique_ptr<Node> deserializeNode(
@@ -385,27 +362,43 @@ static std::unique_ptr<Node> deserializeNode(
     desc.ID = source["ID"].as<utl::uuid>();
     desc.name = source["Name"].as<std::string>();
     desc.position = source["Position"].as<vml::float2>();
-    desc.minSize = source["MinSize"].as<vml::float2>();
     desc.size = source["Size"].as<vml::float2>();
-    desc.color = source["Color"].as<vml::float4>();
     if (deserializeController) {
         desc.controller = deserializeController(source["Controller"]);
-    }
-    for (auto& input: source["Inputs"]) {
-        desc.inputs.push_back(deserializeInput(input));
-    }
-    for (auto& output: source["Outputs"]) {
-        desc.outputs.push_back(deserializeOutput(output));
     }
     return std::make_unique<Node>(std::move(desc));
 }
 
-YAML::Node NodeEditorGraph::serialize() const {
-    YAML::Node root;
-    for (auto* node: nodes()) {
-        root.push_back(serializeNode(*node));
+static Node* findNode(utl::hashmap<utl::uuid, Node*> const& map, utl::uuid ID) {
+    auto itr = map.find(ID);
+    if (itr != map.end()) {
+        return itr->second;
     }
-    return root;
+    return nullptr;
+}
+
+static void deserializeLink(YAML::Node const& source,
+                            utl::hashmap<utl::uuid, Node*> const& map) {
+
+    auto fromID = source["FromID"].as<utl::uuid>();
+    auto fromIndex = source["FromIndex"].as<size_t>();
+    auto toID = source["ToID"].as<utl::uuid>();
+    auto toIndex = source["ToIndex"].as<size_t>();
+    Node* fromNode = findNode(map, fromID);
+    Node* toNode = findNode(map, toID);
+    if (!fromNode || !toNode) {
+        Logger::Warn("Failed to deserialize link: node not found");
+        return;
+    }
+    if (fromIndex >= fromNode->outputs().size()) {
+        Logger::Warn("Failed to deserialize link: output index out of range: ",
+                     fromIndex, " (on node ", fromNode->name(), ")");
+    }
+    if (toIndex >= toNode->inputs().size()) {
+        Logger::Warn("Failed to deserialize link: input index out of range: ",
+                     toIndex, " (on node ", toNode->name(), ")");
+    }
+    link(*fromNode->output(fromIndex), *toNode->input(toIndex));
 }
 
 bool NodeEditorGraph::deserialize(
@@ -415,26 +408,15 @@ bool NodeEditorGraph::deserialize(
     try {
         _nodes.clear();
         utl::hashmap<utl::uuid, Node*> map;
-        for (auto& nodeSource: source) {
+        for (auto& nodeSource: source["Nodes"]) {
             auto node = deserializeNode(nodeSource, deserializeController);
             if (!utl::is_null(node->ID())) {
                 map[node->ID()] = node.get();
             }
             add(std::move(node));
         }
-        for (auto [nodeSource, node]: zip(source, nodes())) {
-            auto outputs = nodeSource["Outputs"];
-            for (auto [outputSource, outputPin]: zip(outputs, node->outputs()))
-            {
-                for (auto targetSource: outputSource["Targets"]) {
-                    if (auto* destNode =
-                            map[targetSource["NodeID"].as<utl::uuid>()])
-                    {
-                        size_t index = targetSource["Index"].as<size_t>();
-                        link(*outputPin, *destNode->input(index));
-                    }
-                }
-            }
+        for (auto& linkSource: source["Links"]) {
+            deserializeLink(linkSource, map);
         }
         return true;
     }
@@ -769,13 +751,17 @@ Node::Node(NodeDesc desc):
     if (utl::is_null(_desc.ID)) {
         _desc.ID = utl::uuid::generate();
     }
-    _desc.size = vml::max(_desc.size, _desc.minSize);
-    _inputs = _desc.inputs | transform([&](PinDesc const& pin) {
-        return DynUniquePtr<InputPin>(new InputPin(pin, *this));
-    }) | ranges::to<std::vector>;
-    _outputs = _desc.outputs | transform([&](PinDesc const& pin) {
-        return DynUniquePtr<OutputPin>(new OutputPin(pin, *this));
-    }) | ranges::to<std::vector>;
+    if (controller()) {
+        _color = controller()->nodeColor();
+        auto inputDescs = controller()->makeInputDescriptors();
+        _inputs = inputDescs | transform([&](PinDesc const& pin) {
+            return DynUniquePtr<InputPin>(new InputPin(pin, *this));
+        }) | ranges::to<std::vector>;
+        auto outputDescs = controller()->makeOutputDescriptors();
+        _outputs = outputDescs | transform([&](PinDesc const& pin) {
+            return DynUniquePtr<OutputPin>(new OutputPin(pin, *this));
+        }) | ranges::to<std::vector>;
+    }
 }
 
 struct NodeEditor::Impl {
@@ -1055,8 +1041,6 @@ static void drawPin(float2 position, PinDrawOptions options) {
                       ImGui::ColorConvertFloat4ToU32(PinColorMissing), 0,
                       MissingInputIndicatorWidth);
     }
-    DL->AddCircle(center, PinRadius,
-                  ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
     if (options.connected) {
         float radius =
             ((options.hovered ? LinkWidthHovered : LinkWidth) + 1) / 2;
@@ -1365,7 +1349,7 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
 static float2 computeNodeMinSize(Node const& node, float2 bodyPadding) {
     float pinHeight =
         PinAreaSize * std::max(node.inputs().size(), node.outputs().size());
-    return vml::max(node.minSize(), node.layoutData().minSize,
+    return vml::max(node.layoutData().minSize,
                     float2(0, pinHeight + NodeBodyTitleHeight)) +
            2 * bodyPadding + float2(0, NodeBodyBottomPadding);
 }
@@ -1419,7 +1403,7 @@ static ImRect drawNodeBody(Node const& node, bool selected) {
     float2 pos = (float2)ImGui::GetWindowPos() + NodeOuterPadding();
     auto* DL = ImGui::GetWindowDrawList();
     DL->AddRectFilled(pos, pos + node.size(),
-                      ImGui::ColorConvertFloat4ToU32(node.desc().color),
+                      ImGui::ColorConvertFloat4ToU32(node.color()),
                       NodeBodyRounding + 1);
     if (selected) {
         DL->AddRect(pos + NodeBodySelectionOutlineInset,

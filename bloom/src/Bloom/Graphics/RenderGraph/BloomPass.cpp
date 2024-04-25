@@ -1,7 +1,9 @@
-#include "Bloom/Graphics/RenderGraph/BloomPass.h"
+#include <array>
 
 #include "Bloom/GPU/ComputeContext.h"
 #include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/HardwarePrimitives.h"
+#include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Shader/SharedTypes.h"
 
@@ -9,7 +11,37 @@ using namespace bloom;
 using namespace rg;
 using namespace vml::short_types;
 
-static constexpr size_t NumMips = BloomPass::NumMips;
+static constexpr size_t NumMips = 8;
+
+namespace {
+
+struct BloomPass: ComputePass, PassImpl<BloomPass> {
+    explicit BloomPass(std::string name);
+
+    void doExecute(FrameParameters const& params, ComputeContext& ctx) override;
+
+    void doAllocateResources(FrameParameters const& params,
+                             HardwareDevice& device) override;
+
+    ComputePipelineHandle prefilterPipeline;
+    ComputePipelineHandle downsamplePipeline;
+    ComputePipelineHandle upsamplePipeline;
+    ComputePipelineHandle compositePipeline;
+
+    // Sinks
+    BufferHandle parameters;
+    TextureHandle rawColor;
+
+    // Sources
+    TextureHandle output;
+
+    TextureHandle downsample;
+    std::array<TextureHandle, NumMips> downsampleMips;
+    TextureHandle upsample;
+    std::array<TextureHandle, NumMips - 1> upsampleMips;
+};
+
+} // namespace
 
 // clang-format off
 

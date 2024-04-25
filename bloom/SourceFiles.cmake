@@ -81,9 +81,7 @@ set(bloom_sources
   src/Bloom/Graphics/Renderer/ShaderParameters.h
 
   src/Bloom/Graphics/RenderGraph/BloomPass.cpp
-  src/Bloom/Graphics/RenderGraph/BloomPass.h
   src/Bloom/Graphics/RenderGraph/ForwardShadingPass.cpp
-  src/Bloom/Graphics/RenderGraph/ForwardShadingPass.h
   src/Bloom/Graphics/RenderGraph/Fwd.cpp
   src/Bloom/Graphics/RenderGraph/Fwd.h
   src/Bloom/Graphics/RenderGraph/Interface.cpp
@@ -93,7 +91,6 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/PassRegistry.cpp
   src/Bloom/Graphics/RenderGraph/PassRegistry.h
   src/Bloom/Graphics/RenderGraph/PostProcessPass.cpp
-  src/Bloom/Graphics/RenderGraph/PostProcessPass.h
   src/Bloom/Graphics/RenderGraph/RenderGraph.cpp
   src/Bloom/Graphics/RenderGraph/RenderGraph.h
   src/Bloom/Graphics/RenderGraph/Resource.cpp
@@ -103,6 +100,7 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/ResourcePool.h
   src/Bloom/Graphics/RenderGraph/SceneRenderer.cpp
   src/Bloom/Graphics/RenderGraph/SceneRenderer.h
+  src/Bloom/Graphics/RenderGraph/ShadowPass.cpp
   src/Bloom/Graphics/RenderGraph/SizeDescriptors.h
 
   src/Bloom/Graphics/Camera.cpp

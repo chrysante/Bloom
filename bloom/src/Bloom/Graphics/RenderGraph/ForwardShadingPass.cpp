@@ -1,11 +1,11 @@
-#include "Bloom/Graphics/RenderGraph/ForwardShadingPass.h"
-
 #include <vml/vml.hpp>
 
 #include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/GPU/RenderContext.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Graphics/StaticMesh.h"
@@ -14,6 +14,33 @@
 using namespace bloom;
 using namespace rg;
 using namespace vml;
+
+namespace {
+
+struct ForwardShadingPass: RenderPass, PassImpl<ForwardShadingPass> {
+    explicit ForwardShadingPass(std::string name);
+
+    void doExecute(FrameParameters const& params, RenderContext& ctx) override;
+    void doAllocateResources(FrameParameters const& params,
+                             HardwareDevice& device) override;
+
+    // Sinks
+    GeometryResource* geometry;
+    LightsResource* lights;
+    BufferHandle cameraBuffer;
+    BufferHandle lightSpaceTransforms;
+    BufferHandle shadowMetadata;
+    TextureHandle shadowMaps;
+
+    // Sources
+    TextureHandle rawColor;
+    TextureHandle depth;
+
+    // Internal resources
+    SamplerHandle shadowMapSampler;
+};
+
+} // namespace
 
 // clang-format off
 

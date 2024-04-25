@@ -1,6 +1,6 @@
-#include "Bloom/Graphics/RenderGraph/ShadowPass.h"
-
 #include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/HardwarePrimitives.h"
+#include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Shader/SharedTypes.h"
@@ -10,6 +10,28 @@ using namespace rg;
 using namespace vml::short_types;
 
 static ulong2 const Resolution = { 512, 512 };
+
+namespace {
+
+struct ShadowPass: RenderPass, PassImpl<ShadowPass> {
+    ShadowPass(std::string name);
+
+    void doExecute(FrameParameters const& params, RenderContext& ctx) override;
+    void doAllocateResources(FrameParameters const& params,
+                             HardwareDevice& device) override;
+
+    // Sinks
+    GeometryResource* geometry;
+    BufferHandle lightSpaceTransforms; // Buffer of light space "cameras"
+
+    // Sources
+    TextureHandle shadowMaps; // Texture array, one element for each cascade
+
+    RenderPipelineHandle pipeline;
+    DepthStencilHandle depthStencil;
+};
+
+} // namespace
 
 // clang-format off
 

@@ -1,13 +1,30 @@
-#include "Bloom/Graphics/RenderGraph/PostProcessPass.h"
-
 #include "Bloom/GPU/ComputeContext.h"
 #include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/HardwarePrimitives.h"
+#include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
 using namespace rg;
 using namespace vml::short_types;
+
+namespace {
+
+struct PostProcessPass: ComputePass, PassImpl<PostProcessPass> {
+    PostProcessPass(std::string name);
+
+    void doExecute(FrameParameters const& params, ComputeContext& ctx) override;
+    void doAllocateResources(FrameParameters const& params,
+                             HardwareDevice& device) override;
+
+    ComputePipelineHandle pipeline;
+    BufferHandle parameterBuffer;
+    TextureHandle rawColor;
+    TextureHandle output;
+};
+
+} // namespace
 
 // clang-format off
 

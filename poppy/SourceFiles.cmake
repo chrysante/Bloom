@@ -66,8 +66,6 @@ set(poppy_sources
   src/Poppy/Views/MaterialInstanceViewer.h
   src/Poppy/Views/RendererDebuggerView.cpp
   src/Poppy/Views/RendererDebuggerView.h
-  src/Poppy/Views/RenderGraphNodeController.h
-  src/Poppy/Views/RenderGraphNodeController.cpp
   src/Poppy/Views/RenderGraphEditorView.cpp
   src/Poppy/Views/RendererSettingsView.cpp
   src/Poppy/Views/RendererSettingsView.h

@@ -16,6 +16,8 @@ class RenderPass;
 class ComputePass;
 class PassSink;
 class PassSource;
+struct PassRegistryEntry;
+class PassRegistry;
 
 /// Forward declaration of resource nodes
 #define RG_RESOURCE_DEF(Name, ...) class Name;

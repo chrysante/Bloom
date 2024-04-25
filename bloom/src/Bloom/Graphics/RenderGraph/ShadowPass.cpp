@@ -1,6 +1,7 @@
 #include "Bloom/Graphics/RenderGraph/ShadowPass.h"
 
 #include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Shader/SharedTypes.h"
 
@@ -21,7 +22,7 @@ BEGIN_SINK_DECL(ShadowPass) {
         "Light Space Transforms",
         &ShadowPass::lightSpaceTransforms,
         {} // TODO: What to do with size? Do sinks actually need to declare size?
-    },
+    }
 }
 END_DECL()
 
@@ -39,14 +40,15 @@ BEGIN_SOURCE_DECL(ShadowPass) {
             // shading pass) would not be notified
             .arrayLength = 20
         }
-    },
+    }
 }
 END_DECL()
 
-    // clang-format on
+// clang-format on
 
-    ShadowPass::ShadowPass(std::string name):
-    RenderPass(std::move(name)) {}
+BL_REGISTER_PASS(ShadowPass, "Shadow Pass");
+
+ShadowPass::ShadowPass(std::string name): RenderPass(std::move(name)) {}
 
 static TextureHandle createShadowMaps(HardwareDevice& device,
                                       size_t totalShadowMaps,

@@ -6,6 +6,7 @@
 #include "Bloom/GPU/RenderContext.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Graphics/StaticMesh.h"
 #include "Bloom/Shader/SharedTypes.h"
@@ -69,6 +70,8 @@ BEGIN_SOURCE_DECL(ForwardShadingPass) {
 END_DECL()
 
 // clang-format on
+
+BL_REGISTER_PASS(ForwardShadingPass, "Forward Shading Pass");
 
 ForwardShadingPass::ForwardShadingPass(std::string name):
     RenderPass(std::move(name)) {}

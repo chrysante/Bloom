@@ -3,24 +3,28 @@
 #include <vector>
 
 #include <imgui.h>
+#include <range/v3/view.hpp>
 #include <utl/hashtable.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
+#include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/NodeEditor.h"
-#include "Poppy/Views/RenderGraphNodeController.h"
 
 using namespace poppy;
+using namespace nodeEditor;
 using namespace bloom;
 using namespace rg;
 using namespace vml::short_types;
+using namespace ranges::views;
 
 namespace {
 
@@ -49,9 +53,290 @@ struct RenderGraphEditorView: View {
     CompilationStatus compilationStatus = CompilationStatus::None;
 };
 
+POPPY_REGISTER_VIEW(RenderGraphEditorView, "Render Graph Editor");
+
+static constexpr float4 InputNodeColor = { 0.4, 0.7, 0.2, 1.0 };
+static constexpr float4 PassNodeColor = { 0.3, 0.0, 0.8, 1.0 };
+static constexpr float4 OutputNodeColor = { 1.0, 0.0, 0.2, 1.0 };
+static constexpr float2 MinSize = { 100, 0 };
+
+class RenderGraphNodeController: public NodeController {
+public:
+    /// Creates this node in \p renderGraph
+    virtual void create(bloom::rg::RenderGraph& renderGraph) = 0;
+
+    /// \Returns the source at index \p index
+    /// \Param index is the index in the node editor UI
+    /// \Pre \p index must be valid and `create(RenderGraph)` must have been
+    /// called before
+    virtual bloom::rg::PassSource* getSource(size_t index) const = 0;
+
+    /// \Returns the sink at index \p index
+    /// \Param index is the index in the node editor UI
+    /// \Pre \p index must be valid and `create(RenderGraph)` must have been
+    /// called before
+    virtual bloom::rg::PassSink* getSink(size_t index) const = 0;
+
+    /// Counterpart to the non-static `NodeController::serialize`
+    static std::unique_ptr<RenderGraphNodeController> deserialize(
+        YAML::Node node);
+};
+
+struct GlobalInputNodeController: RenderGraphNodeController {
+    static std::string StaticName() { return "Input"; }
+
+    static NodeDesc MakeDesc(float2 position) {
+        return {
+            .name = StaticName(),
+            .outputs = {
+                { .name = "Geometry" },
+                { .name = "Lights" },
+                { .name = "Camera" },
+                { .name = "Light Space Transforms" },
+                { .name = "Shadow Metadata" },
+                { .name = "Bloom Parameters" },
+                { .name = "Post Process Parameters" },
+            },
+            .color = InputNodeColor,
+            .position = position,
+            .minSize = MinSize,
+            .controller = std::make_unique<GlobalInputNodeController>()
+        };
+    }
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["ControllerName"] = StaticName();
+        return root;
+    }
+
+    void create(RenderGraph& rg) override {
+        using enum InterfaceType;
+        sources.clear();
+        declare<Geometry>(rg, "Geometry", {});
+        declare<Lights>(rg, "Lights", {});
+        declare<Buffer>(rg, "Camera", { .size = sizeof(CameraInput) });
+        declare<Buffer>(rg, "LightSpaceTransforms", { .size = 0 });
+        declare<Buffer>(rg, "ShadowMetadata",
+                        { .size = sizeof(ShadowRenderMetadata) });
+        declare<Buffer>(rg, "BloomParameters",
+                        { .size = sizeof(BloomParameters) });
+        declare<Buffer>(rg, "PostProcessParameters",
+                        { .size = sizeof(PostProcessParameters) });
+    }
+
+    PassSource* getSource(size_t index) const override {
+        BL_ASSERT(index < sources.size());
+        return sources[index];
+    }
+
+    PassSink* getSink([[maybe_unused]] size_t index) const override {
+        BL_UNREACHABLE();
+    }
+
+    template <InterfaceType Type>
+    void declare(RenderGraph& rg, std::string name, InterfaceDesc<Type> desc) {
+        RenderGraphSink* sink = rg.declareSink<Type>(std::move(name), desc);
+        sources.push_back(sink->internalSource());
+    }
+
+    std::vector<PassSource*> sources;
+};
+
+struct GlobalOutputNodeController: RenderGraphNodeController {
+    static std::string StaticName() { return "Output"; }
+
+    static NodeDesc MakeDesc(float2 position) {
+        return {
+            .name = StaticName(),
+            .inputs = { { .name = "Color" }, },
+            .color = OutputNodeColor,
+            .position = position,
+            .minSize = MinSize,
+            .controller = std::make_unique<GlobalOutputNodeController>()
+        };
+    }
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["ControllerName"] = StaticName();
+        return root;
+    }
+
+    void create(RenderGraph& rg) override {
+        using enum InterfaceType;
+        sinks.clear();
+        declare<Texture>(rg, "Color",
+                         {
+                             .pixelFormat = PixelFormat::RGBA8Unorm,
+                             .size = TextureSize::ScreenSize,
+                         });
+    }
+
+    PassSource* getSource([[maybe_unused]] size_t index) const override {
+        BL_UNREACHABLE();
+    }
+
+    PassSink* getSink(size_t index) const override {
+        BL_ASSERT(index < sinks.size());
+        return sinks[index];
+    }
+
+    template <InterfaceType Type>
+    void declare(RenderGraph& rg, std::string name, InterfaceDesc<Type> desc) {
+        RenderGraphSource* source =
+            rg.declareSource<Type>(std::move(name), desc);
+        sinks.push_back(source->internalSink());
+    }
+
+    std::vector<PassSink*> sinks;
+};
+
+static PinFlags translateFlags(InterfaceFlags flags) {
+    PinFlags result{};
+    if (test(flags & InterfaceFlags::Optional)) {
+        result |= PinFlags::Optional;
+    }
+    return result;
+}
+
+static PinDesc interfaceToPinDesc(auto const& interface) {
+    // clang-format off
+    return std::visit([&](auto& interface) {
+        return PinDesc {
+            .name = interface.name,
+            .flags = translateFlags(interface.flags)
+        };
+    }, interface); // clang-format on
+}
+
+struct PassNodeController: RenderGraphNodeController {
+    PassNodeController(PassRegistryEntry entry):
+        registryEntry(std::move(entry)) {}
+
+    static NodeDesc MakeDesc(float2 position, PassRegistryEntry entry) {
+        // clang-format off
+        return {
+            .name = entry.name,
+            .position = position,
+            .minSize = MinSize,
+            .inputs = entry.vtable.sinks() | transform([](auto& interface) {
+                return interfaceToPinDesc(interface);
+            }) | ranges::to<std::vector>,
+            .outputs = entry.vtable.sources() | transform([](auto& interface) {
+                return interfaceToPinDesc(interface);
+            }) | ranges::to<std::vector>,
+            .color = PassNodeColor,
+            .controller = std::make_unique<PassNodeController>(entry),
+        }; // clang-format on
+    }
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["ControllerName"] = registryEntry.name;
+        return root;
+    }
+
+    void contextMenuContent() override { ImGui::MenuItem("Preview"); }
+
+    void create(RenderGraph& rg) final {
+        pass = rg.addPass(registryEntry.vtable.make(registryEntry.name));
+    }
+
+    PassSource* getSource(size_t index) const final {
+        return pass->source(index);
+    }
+
+    PassSink* getSink(size_t index) const final { return pass->sink(index); }
+
+    Pass* pass;
+    PassRegistryEntry registryEntry;
+};
+
 } // namespace
 
-POPPY_REGISTER_VIEW(RenderGraphEditorView, "Render Graph Editor");
+using ControllerFactory =
+    std::function<std::unique_ptr<RenderGraphNodeController>()>;
+
+static std::map<std::string, ControllerFactory>& factoryMap() {
+    static auto map = [] {
+        std::map<std::string, ControllerFactory> map;
+        map[GlobalInputNodeController::StaticName()] = [] {
+            return std::make_unique<GlobalInputNodeController>();
+        };
+        map[GlobalOutputNodeController::StaticName()] = [] {
+            return std::make_unique<GlobalOutputNodeController>();
+        };
+        for (auto& entry: PassRegistry::entries()) {
+            map[entry.name] = [=] {
+                return std::make_unique<PassNodeController>(entry);
+            };
+        }
+        return map;
+    }();
+    return map;
+}
+
+std::unique_ptr<RenderGraphNodeController> RenderGraphNodeController::
+    deserialize(YAML::Node node) {
+    auto name = node["ControllerName"].as<std::string>();
+    auto& map = factoryMap();
+    auto itr = map.find(name);
+    if (itr != map.end()) {
+        return itr->second();
+    }
+    Logger::Warn("Failed to deserialize node controller: name not found: ",
+                 name);
+    return nullptr;
+}
+
+static RenderGraphNodeController* getController(Node const& node) {
+    return dynamic_cast<RenderGraphNodeController*>(node.controller());
+}
+
+static std::string uniqueName(std::string_view name) {
+    static int counter = 0;
+    return utl::strcat(name, ++counter);
+}
+
+static std::unique_ptr<RenderGraph> constructRenderGraph(
+    RenderGraphContext& ctx, HardwareDevice& device,
+    NodeEditorGraph const& model) {
+    auto rg =
+        std::make_unique<RenderGraph>(uniqueName("RenderGraph"), ctx, device);
+    for (auto* node: model.nodes()) {
+        auto* controller = getController(*node);
+        if (!controller) {
+            Logger::Error("Ignoring node (no controller attached): ",
+                          node->name());
+            continue;
+        }
+        controller->create(*rg);
+    }
+    for (auto* node: model.nodes()) {
+        auto* sourceController = getController(*node);
+        if (!sourceController) {
+            continue;
+        }
+        for (auto* output: node->outputs()) {
+            auto* source = sourceController->getSource(output->indexInParent());
+            for (auto* target: output->targets()) {
+                auto* sinkController = getController(target->parent());
+                if (!sinkController) {
+                    continue;
+                }
+                auto* sink = sinkController->getSink(target->indexInParent());
+                Logger::Trace("Linking ", source->qualifiedName(), " to ",
+                              sink->qualifiedName());
+                rg->addLink(source, sink);
+            }
+        }
+    }
+    if (!rg->compile()) {
+        return nullptr;
+    }
+    return rg;
+}
 
 static char const* compStatusMessage(CompilationStatus status) {
     using enum CompilationStatus;
@@ -124,11 +409,15 @@ void RenderGraphEditorView::doCompile() {
 }
 
 void RenderGraphEditorView::backgroundContextMenu(float2 position) {
-    for (auto& entry: PassRegistry::get()) {
+    if (ImGui::MenuItem("Input")) {
+        nodeEditor.addNode(GlobalInputNodeController::MakeDesc(position));
+    }
+    if (ImGui::MenuItem("Output")) {
+        nodeEditor.addNode(GlobalOutputNodeController::MakeDesc(position));
+    }
+    for (auto& entry: PassRegistry::entries()) {
         if (ImGui::MenuItem(entry.name.c_str())) {
-            auto desc = entry.factory();
-            desc.position = position;
-            nodeEditor.addNode(std::move(desc));
+            nodeEditor.addNode(PassNodeController::MakeDesc(position, entry));
         }
     }
 }

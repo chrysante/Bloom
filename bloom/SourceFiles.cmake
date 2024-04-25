@@ -92,6 +92,8 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/Interface.h
   src/Bloom/Graphics/RenderGraph/Pass.cpp
   src/Bloom/Graphics/RenderGraph/Pass.h
+  src/Bloom/Graphics/RenderGraph/PassRegistry.cpp
+  src/Bloom/Graphics/RenderGraph/PassRegistry.h
   src/Bloom/Graphics/RenderGraph/PostProcessPass.cpp
   src/Bloom/Graphics/RenderGraph/PostProcessPass.h
   src/Bloom/Graphics/RenderGraph/RenderGraph.cpp

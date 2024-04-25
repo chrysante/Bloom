@@ -2,6 +2,7 @@
 
 #include "Bloom/GPU/ComputeContext.h"
 #include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
@@ -43,6 +44,8 @@ BEGIN_SOURCE_DECL(BloomPass) {
 END_DECL()
 
 // clang-format on
+
+BL_REGISTER_PASS(BloomPass, "Bloom Pass");
 
 BloomPass::BloomPass(std::string name): ComputePass(std::move(name)) {}
 

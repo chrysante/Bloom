@@ -67,6 +67,12 @@ public:
 
     /// Callback to display the content of the nodes context menu
     virtual void contextMenuContent() {}
+
+    /// Decides whether to always display input names or only on hover
+    virtual bool alwaysDisplayInputNames() const { return true; }
+
+    /// Decides whether to always display output names or only on hover
+    virtual bool alwaysDisplayOutputNames() const { return false; }
 };
 
 /// Descriptor structure used to create nodes
@@ -192,9 +198,11 @@ private:
     utl::small_vector<InputPin*> _targets;
 };
 
-///
+/// Models a node in the node editor
 class Node {
 public:
+    struct LayoutData;
+
     explicit Node(NodeDesc desc);
 
     /// Nodes need address stability and are therefore not copyable
@@ -267,10 +275,17 @@ public:
     /// Sets the position of this node to \p position
     void setPosition(vml::float2 position) { _desc.position = position; }
 
+    /// Internal to the node editor
+    LayoutData& layoutData() { return *_layoutData; }
+
+    /// \overload
+    LayoutData const& layoutData() const { return *_layoutData; }
+
 private:
     friend class Pin;
 
     NodeDesc _desc;
+    std::unique_ptr<LayoutData> _layoutData;
     std::vector<bloom::DynUniquePtr<nodeEditor::InputPin>> _inputs;
     std::vector<bloom::DynUniquePtr<nodeEditor::OutputPin>> _outputs;
 };

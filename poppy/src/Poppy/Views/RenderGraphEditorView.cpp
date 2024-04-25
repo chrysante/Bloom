@@ -144,6 +144,10 @@ struct GlobalInputNodeController: RenderGraphNodeController {
         BL_UNREACHABLE();
     }
 
+    bool alwaysDisplayInputNames() const override { return false; }
+
+    bool alwaysDisplayOutputNames() const override { return true; }
+
     template <InterfaceType Type>
     void declare(RenderGraph& rg, std::string name, InterfaceDesc<Type> desc) {
         RenderGraphSink* sink = rg.declareSink<Type>(std::move(name), desc);

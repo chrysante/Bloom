@@ -37,6 +37,10 @@ static float4 PinColorMissing = { 1, 0, 0.2, 1 };
 /// The side length of the square that is occupied by a pin. This is the
 /// interaction area, the rendered size is smaller
 static float PinAreaSize = 20;
+static float PinRadius = 6;
+static float NodeBodyTitleHeight = 20;
+/// Additional bottom padding because it looks better
+static float NodeBodyBottomPadding = 3;
 static float NodeBodyRounding = 10;
 static float NodeBodySelectionOutlineInset = 3;
 static float PinHighlightHaloWidth = 3;
@@ -71,6 +75,9 @@ static void styleEditor(bool* open) {
     ImGui::ColorEdit4("PinHighlightHaloColor", PinHighlightHaloColor.data());
     ImGui::ColorEdit4("PinColorMissing", PinColorMissing.data());
     ImGui::SliderFloat("PinAreaSize", &PinAreaSize, 0, 100);
+    ImGui::SliderFloat("PinRadius", &PinRadius, 0, 100);
+    ImGui::SliderFloat("NodeBodyTitleHeight", &NodeBodyTitleHeight, 0, 100);
+    ImGui::SliderFloat("NodeBodyBottomPadding", &NodeBodyBottomPadding, 0, 100);
     ImGui::SliderFloat("NodeBodyRounding", &NodeBodyRounding, 0, 100);
     ImGui::SliderFloat("NodeBodySelectionOutlineInset",
                        &NodeBodySelectionOutlineInset, 0, 100);
@@ -619,7 +626,13 @@ private:
 
 } // namespace
 
-Node::Node(NodeDesc desc): _desc(std::move(desc)) {
+struct Node::LayoutData {
+    /// Minimal node size due to layout constrains
+    float2 minSize = 0;
+};
+
+Node::Node(NodeDesc desc):
+    _desc(std::move(desc)), _layoutData(std::make_unique<LayoutData>()) {
     if (utl::is_null(_desc.ID)) {
         _desc.ID = utl::uuid::generate();
     }
@@ -644,7 +657,8 @@ struct NodeEditor::Impl {
     void drawOverlays();
     void displayLinks(Node const& node);
     void pinPopup(Pin& pin, bool show);
-    void displayPin(Pin& pin, float2 position);
+    void displayPin(Pin& pin, float2 position, float& maxLabelWith,
+                    bool displayLabelInBody);
     void displayPins(Node& node);
     void nodeBodyPopup(Node& node, bool show);
     void displayNodeBody(Node& node);
@@ -838,16 +852,19 @@ void NodeEditor::addNode(NodeDesc desc) {
 NodeEditorGraph const& NodeEditor::model() const { return impl->model; }
 
 /// Computes the position of \p pin relative to its parent node
+/// This is the single source of truth of pin positions
 static float2 computePinPosition(Pin const& pin, size_t index) {
     // clang-format off
     return visit(pin, utl::overload{
         [&](InputPin const&) {
             return float2(PinInset,
-                          NodeBodyPadding().y + index * PinAreaSize);
+                          NodeBodyPadding().y + NodeBodyTitleHeight + 
+                          index * PinAreaSize);
         },
         [&](OutputPin const& pin) {
             return float2(pin.parent().size().x - PinInset - PinAreaSize,
-                          NodeBodyPadding().y + index * PinAreaSize);
+                          NodeBodyPadding().y + NodeBodyTitleHeight + 
+                          index * PinAreaSize);
         }
     }); // clang-format on
 }
@@ -877,21 +894,20 @@ struct PinDrawOptions {
 
 static void drawPin(float2 position, PinDrawOptions options) {
     auto* DL = ImGui::GetWindowDrawList();
-    float radius = 6;
     float2 center = position + PinAreaSize / 2;
     if (options.highlight) {
-        DL->AddCircleFilled(center, radius + PinHighlightHaloWidth,
+        DL->AddCircleFilled(center, PinRadius + PinHighlightHaloWidth,
                             ImGui::ColorConvertFloat4ToU32(
                                 PinHighlightHaloColor));
     }
-    DL->AddCircleFilled(center, radius,
+    DL->AddCircleFilled(center, PinRadius,
                         ImGui::ColorConvertFloat4ToU32(options.color));
     if (options.missingInput) {
-        DL->AddCircle(center, radius + MissingInputIndicatorWidth / 2,
+        DL->AddCircle(center, PinRadius + MissingInputIndicatorWidth / 2,
                       ImGui::ColorConvertFloat4ToU32(PinColorMissing), 0,
                       MissingInputIndicatorWidth);
     }
-    DL->AddCircle(center, radius,
+    DL->AddCircle(center, PinRadius,
                   ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
     if (options.connected) {
         DL->AddCircleFilled(center, LinkWidth / 2,
@@ -917,7 +933,7 @@ static float2 pinLabelPosition(Pin const& pin, float2 bgPadding,
     }); // clang-format on
 }
 
-static void displayPinLabel(Pin const& pin, ViewData const& viewData) {
+static void displayPinLabelOverlay(Pin const& pin, ViewData const& viewData) {
     float2 pinPosition = computeViewPinPosition(viewData, pin);
     auto* DL = ImGui::GetWindowDrawList();
     auto* textBegin = pin.name().data();
@@ -1023,6 +1039,26 @@ void Impl::pinPopup(Pin& pin, bool show) {
     ImGui::EndPopup();
 }
 
+namespace {
+
+enum class TextAlign { Left, Right };
+
+} // namespace
+
+static void displayPinLabelInBody(std::string_view label, float2 position,
+                                  TextAlign align, float& maxLabelWidth) {
+    char const* begin = label.data();
+    char const* end = begin + label.size();
+    float2 textSize = ImGui::CalcTextSize(begin, end);
+    position.y -= textSize.y / 2;
+    if (align == TextAlign::Right) {
+        position.x -= textSize.x;
+    }
+    auto* DL = ImGui::GetWindowDrawList();
+    DL->AddText(position, ImGui::GetColorU32(ImGuiCol_Text), begin, end);
+    maxLabelWidth = std::max(maxLabelWidth, textSize.x);
+}
+
 static bool isOptional(Pin const& pin) {
     return test(pin.desc().flags & PinFlags::Optional);
 }
@@ -1053,7 +1089,18 @@ static bool isConnected(Pin const& pin) {
     }); // clang-format on
 }
 
-void Impl::displayPin(Pin& pin, float2 position) {
+static float2 pinInBodyLabelPosition(Pin const& pin, float2 pinPosition) {
+    // clang-format off
+    return pinPosition + visit(pin, utl::overload{
+        [&](InputPin const&) {
+            return float2(PinAreaSize, PinAreaSize / 2);
+        },
+        [&](OutputPin const&) { return float2(0, PinAreaSize / 2) ; },
+    }); // clang-format on
+}
+
+void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
+                      bool displayLabelInBody) {
     ImGui::PushID(&pin);
     ImRect bb(position, position + float2(PinAreaSize));
     ImGui::ItemSize(float2(PinAreaSize));
@@ -1076,6 +1123,12 @@ void Impl::displayPin(Pin& pin, float2 position) {
                         .missingInput = inputMissing(pin),
                         .connected = isConnected(pin) || highlightPin,
                         .highlight = highlightPin });
+    if (displayLabelInBody) {
+        displayPinLabelInBody(pin.name(), pinInBodyLabelPosition(pin, position),
+                              isa<InputPin>(pin) ? TextAlign::Left :
+                                                   TextAlign::Right,
+                              maxLabelWith);
+    }
     if (hovered) {
         viewData.hoveredPin = &pin;
     }
@@ -1087,24 +1140,56 @@ void Impl::displayPin(Pin& pin, float2 position) {
     ImGui::PopID();
 }
 
-static float2 computeMinNodeSize(Node const& node, float2 bodyPadding) {
+static float2 computeNodeMinSize(Node const& node, float2 bodyPadding) {
     float pinHeight =
         PinAreaSize * std::max(node.inputs().size(), node.outputs().size());
-    return vml::max(node.minSize(), float2(0, pinHeight)) + 2 * bodyPadding;
+    return vml::max(node.minSize(), node.layoutData().minSize,
+                    float2(0, pinHeight + NodeBodyTitleHeight)) +
+           2 * bodyPadding + float2(0, NodeBodyBottomPadding);
+}
+
+static bool alwaysDisplayInputNames(Node const& node) {
+    return !node.controller() || node.controller()->alwaysDisplayInputNames();
+}
+
+static bool alwaysDisplayOutputNames(Node const& node) {
+    return node.controller() && node.controller()->alwaysDisplayOutputNames();
+}
+
+static bool alwaysDisplayPinNames(Node const& node, PinType type) {
+    switch (type) {
+    case PinType::InputPin:
+        return alwaysDisplayInputNames(node);
+    case PinType::OutputPin:
+        return alwaysDisplayOutputNames(node);
+    default:
+        BL_UNREACHABLE();
+    }
 }
 
 void Impl::displayPins(Node& node) {
     float2 nodepos = (float2)ImGui::GetWindowPos() + NodeOuterPadding();
-    ImGui::PushID("Inputs");
-    for (auto [index, pin]: node.inputs() | enumerate) {
-        displayPin(*pin, nodepos + computePinPosition(*pin, index));
+    float maxInputLabelWidth = 0;
+    float maxOutputLabelWidth = 0;
+    {
+        ImGui::PushID("Inputs");
+        bool displayInBody = alwaysDisplayInputNames(node);
+        for (auto [index, pin]: node.inputs() | enumerate) {
+            displayPin(*pin, nodepos + computePinPosition(*pin, index),
+                       maxInputLabelWidth, displayInBody);
+        }
+        ImGui::PopID();
     }
-    ImGui::PopID();
-    ImGui::PushID("Outputs");
-    for (auto [index, pin]: node.outputs() | enumerate) {
-        displayPin(*pin, nodepos + computePinPosition(*pin, index));
+    {
+        ImGui::PushID("Outputs");
+        bool displayInBody = alwaysDisplayOutputNames(node);
+        for (auto [index, pin]: node.outputs() | enumerate) {
+            displayPin(*pin, nodepos + computePinPosition(*pin, index),
+                       maxOutputLabelWidth, displayInBody);
+        }
+        ImGui::PopID();
     }
-    ImGui::PopID();
+    node.layoutData().minSize.x = maxInputLabelWidth + maxOutputLabelWidth;
 }
 
 /// \Returns the area in which content can be drawn
@@ -1137,7 +1222,7 @@ static ImRect drawNodeBody(Node const& node, bool selected) {
     float2 labelSize =
         vml::min((float2)ImGui::CalcTextSize(label, labelEnd),
                  node.size() -
-                     float2(PinAreaSize + 2 * NodeBodyPadding().x, 0));
+                     float2(2 * (NodeBodySelectionOutlineInset + 1), 0));
     float2 labelPos =
         pos + float2((node.size().x - labelSize.x) / 2, NodeBodyPadding().y);
     auto labelCol =
@@ -1146,7 +1231,6 @@ static ImRect drawNodeBody(Node const& node, bool selected) {
     DL->AddText(labelPos, labelCol, label, labelEnd);
     ImGui::PopClipRect();
     ImGui::PopFont();
-
     float2 contentRectMin =
         pos + NodeBodyPadding() + float2(0, labelSize.y + NodeBodyPadding().y);
     float2 contentRectMax = pos + node.size() - NodeBodyPadding();
@@ -1194,7 +1278,7 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node) {
     bool dragging = viewData.activeResize == &node &&
                     ImGui::IsMouseDown(ImGuiMouseButton_Left);
     if (dragging) {
-        float2 minSize = computeMinNodeSize(node, NodeBodyPadding());
+        float2 minSize = computeNodeMinSize(node, NodeBodyPadding());
         viewData.resizeSize += ImGui::GetIO().MouseDelta;
         float2 newSize = vml::max(viewData.resizeSize, minSize);
         node.setSize(newSize);
@@ -1293,7 +1377,7 @@ void Impl::displayNodeBody(Node& node) {
 
 void Impl::displayNode(Node& node) {
     node.setSize(
-        vml::max(node.size(), computeMinNodeSize(node, NodeBodyPadding())));
+        vml::max(node.size(), computeNodeMinSize(node, NodeBodyPadding())));
     ImGui::PushID(&node);
     displayNodeBody(node);
     ImGui::PopID();
@@ -1337,8 +1421,12 @@ void Impl::display() {
     }
 }
 
-static bool needDrawLabel(ViewData const& viewData) {
+static bool needDrawLabelOverlay(ViewData const& viewData) {
     if (!viewData.hoveredPin) {
+        return false;
+    }
+    auto& node = viewData.hoveredPin->parent();
+    if (alwaysDisplayPinNames(node, viewData.hoveredPin->type())) {
         return false;
     }
     if (!viewData.activePin) {
@@ -1355,8 +1443,8 @@ void Impl::drawOverlays() {
         ImGui::EndChild();
         return;
     }
-    if (needDrawLabel(viewData)) {
-        displayPinLabel(*viewData.hoveredPin, viewData);
+    if (needDrawLabelOverlay(viewData)) {
+        displayPinLabelOverlay(*viewData.hoveredPin, viewData);
     }
     if (viewData.isSelectionDragging) {
         auto rect = viewData.getSelectionRect();

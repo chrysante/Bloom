@@ -30,9 +30,10 @@ static float4 WhiteOutlineColor = { 1, 1, 1, 0.5 };
 static float4 BlackOutlineColor = { 0, 0, 0, 0.7 };
 static float4 LinkColor = { 1, 1, 1, 0.8 };
 static float LinkWidth = 3;
+static float LinkWidthHovered = 5;
+static float LinkHoverDist = 4;
 static float4 PinColorConnected = { 0.2, 0.2, 0.2, 1 };
 static float4 PinColorOptional = { 0.4, 0.4, 0.4, 1 };
-static float4 PinHighlightHaloColor = { 1, 1, 1, 0.3 };
 static float4 PinColorMissing = { 1, 0, 0.2, 1 };
 /// The side length of the square that is occupied by a pin. This is the
 /// interaction area, the rendered size is smaller
@@ -43,7 +44,6 @@ static float NodeBodyTitleHeight = 20;
 static float NodeBodyBottomPadding = 3;
 static float NodeBodyRounding = 10;
 static float NodeBodySelectionOutlineInset = 3;
-static float PinHighlightHaloWidth = 3;
 static float MissingInputIndicatorWidth = 3;
 /// How far the pins are moved into the node. If this is zero the outer edge of
 /// the node aligns with the edge of the pin
@@ -69,10 +69,11 @@ static void styleEditor(bool* open) {
     ImGui::ColorEdit4("BlackOutlineColor", BlackOutlineColor.data());
     ImGui::ColorEdit4("LinkColor", LinkColor.data());
     ImGui::SliderFloat("LinkWidth", &LinkWidth, 0, 10);
+    ImGui::SliderFloat("LinkWidthHovered", &LinkWidthHovered, 0, 10);
+    ImGui::SliderFloat("LinkHoverDist", &LinkHoverDist, 0, 20);
     ImGui::ColorEdit4("SelectionRectColor", SelectionRectColor.data());
     ImGui::ColorEdit4("PinColorConnected", PinColorConnected.data());
     ImGui::ColorEdit4("PinColorOptional", PinColorOptional.data());
-    ImGui::ColorEdit4("PinHighlightHaloColor", PinHighlightHaloColor.data());
     ImGui::ColorEdit4("PinColorMissing", PinColorMissing.data());
     ImGui::SliderFloat("PinAreaSize", &PinAreaSize, 0, 100);
     ImGui::SliderFloat("PinRadius", &PinRadius, 0, 100);
@@ -81,7 +82,6 @@ static void styleEditor(bool* open) {
     ImGui::SliderFloat("NodeBodyRounding", &NodeBodyRounding, 0, 100);
     ImGui::SliderFloat("NodeBodySelectionOutlineInset",
                        &NodeBodySelectionOutlineInset, 0, 100);
-    ImGui::SliderFloat("PinHighlightHaloWidth", &PinHighlightHaloWidth, 0, 10);
     ImGui::SliderFloat("MissingInputIndicatorWidth",
                        &MissingInputIndicatorWidth, 0, 10);
     ImGui::SliderFloat("PinInset", &PinInset, -100, 100);
@@ -213,6 +213,7 @@ void nodeEditor::link(OutputPin& out, InputPin& in) {
     in.setOrigin(&out);
 }
 
+/// Links the pins \p a and \p b if compatible
 static void link(Pin& a, Pin& b) {
     // clang-format off
     visit(a, b, utl::overload{
@@ -223,6 +224,20 @@ static void link(Pin& a, Pin& b) {
             link(out, in);
         },
         [&](Pin&, Pin&) {},
+    }); // clang-format on
+}
+
+/// \Returns `true` if there is a link between pin \p a and pin \p b
+static bool isLinked(Pin const& a, Pin const& b) {
+    // clang-format off
+    return visit(a, b, utl::overload{
+        [&](InputPin const& in, OutputPin const& out) {
+            return in.origin() == &out;
+        },
+        [&](OutputPin const& out, InputPin const& in) {
+            return in.origin() == &out;
+        },
+        [&](Pin const&, Pin const&) { return false; },
     }); // clang-format on
 }
 
@@ -453,7 +468,30 @@ struct PersistentViewData {
     float zoom = 1.0;
 };
 
-/// Data that persists between frames when performing some actions
+struct Link {
+    OutputPin* origin;
+    InputPin* dest;
+
+    bool operator==(Link const&) const = default;
+
+    bool contains(Pin const* pin) const {
+        if (!pin) {
+            return false;
+        }
+        // clang-format off
+        return visit(*pin, utl::overload {
+            [&](OutputPin const& pin) { return &pin == origin; },
+            [&](InputPin const& pin) { return &pin == dest; }
+        }); // clang-format on
+    }
+
+    explicit operator bool() const { return origin || dest; }
+};
+
+static void deleteLink(Link link) { link.dest->clearLinks(); }
+
+/// Data that persists between frames when performing some actions.
+/// This is reset whenever a mouse button is released
 struct ActiveViewData {
     /// True if a node is currently being dragged
     bool isDraggingNode = false;
@@ -463,26 +501,121 @@ struct ActiveViewData {
     bool isSelectionDragging = false;
     bool beginMoveDragging = false;
     bool isMoveDragging = false;
-    Node* activeNode = nullptr;
-    Node* activeResize = nullptr;
-    Pin* activePin = nullptr;
-    Pin* hoveredPin = nullptr;
     float2 resizeSize = 0;
     float2 selectionBegin = 0;
     float2 selectionEnd = 0;
+    Node* activeNode = nullptr;
+    Node* activeResize = nullptr;
+    Pin* activePin = nullptr;
 
     ImRect getSelectionRect() const {
         return toRect(selectionBegin, selectionEnd);
     }
 };
 
-struct ViewData: PersistentViewData, ActiveViewData {
+template <typename T>
+struct HoverItem {
+    void set(T item) { thisFrame = item; }
+
+    T get() const { return thisFrame == lastFrame ? thisFrame : T(); }
+
+    T getLast() const { return lastFrame; }
+
+    void update() {
+        lastFrame = thisFrame;
+        thisFrame = T();
+    }
+
+private:
+    T thisFrame{}, lastFrame{};
+};
+
+/// This is reset at the start of each new frame
+struct FrameViewData {
     ImRect clipRect = {};
+    HoverItem<Pin*> hoveredPin;
+    HoverItem<Node*> hoveredNode;
+    HoverItem<Link> hoveredLink;
+
+    void update() {
+        auto* window = ImGui::GetCurrentWindow();
+        clipRect = window->ContentRegionRect;
+        hoveredPin.update();
+        hoveredNode.update();
+        hoveredLink.update();
+    }
+};
+
+struct ViewData: PersistentViewData, ActiveViewData, FrameViewData {
+    Link popupLink = {};
+
+    void beginFrame() { FrameViewData::update(); }
 
     void resetActiveData() {
         static_cast<ActiveViewData&>(*this) = ActiveViewData{};
     }
 };
+
+static void debuggerItem(char const* name, Node const* node) {
+    ImGui::Text("%s: %s", name, node ? node->name().data() : "");
+}
+
+static void debuggerItem(char const* name, Pin const* pin) {
+    ImGui::Text("%s: %s", name, pin ? pin->name().data() : "");
+}
+
+static void debuggerItem(char const* name, Link link) {
+    if (!link) {
+        ImGui::Text("%s", name);
+    }
+    else {
+        ImGui::Text("%s: %s -> %s", name, link.origin->name().data(),
+                    link.dest->name().data());
+    }
+}
+
+static void debuggerItem(char const* name, float value) {
+    ImGui::Text("%s: %f", name, value);
+}
+
+static void debuggerItem(char const* name, float2 value) {
+    ImGui::Text("%s: (%f, %f)", name, value.x, value.y);
+}
+
+static void debuggerItem(char const* name, bool value) {
+    ImGui::Text("%s: %s", name, value ? "true" : "false");
+}
+
+template <typename T>
+static void debuggerItem(char const* name, HoverItem<T> item) {
+    return debuggerItem(name, item.get());
+}
+
+static void viewDataDebugger(ViewData const& viewData, bool* open) {
+#define ITEM(name) debuggerItem(#name, viewData.name)
+    ImGui::Begin("View Data Viewer", open);
+    ImGui::SeparatorText("Persistent Data");
+    ITEM(position);
+    ITEM(zoom);
+    ImGui::SeparatorText("Active Data");
+    ITEM(isDraggingNode);
+    ITEM(handledSelectionSinceMousePressed);
+    ITEM(isSelectionDragging);
+    ITEM(beginMoveDragging);
+    ITEM(isMoveDragging);
+    ITEM(resizeSize);
+    ITEM(selectionBegin);
+    ITEM(selectionEnd);
+    ITEM(activeNode);
+    ITEM(activeResize);
+    ITEM(activePin);
+    ImGui::SeparatorText("Frame Data");
+    ITEM(hoveredPin);
+    ITEM(hoveredNode);
+    ITEM(hoveredLink);
+    ImGui::End();
+#undef ITEM
+}
 
 enum class SelectionMode {
     Replace, /// Default, existing selection is replaced
@@ -652,10 +785,11 @@ struct NodeEditor::Impl {
 
     void display();
 
+    void linkPopup(bool show, Link link);
     void backgroundPopup(bool show);
     void backgroundBehaviour();
     void drawOverlays();
-    void displayLinks(Node const& node);
+    void displayLinks(Node& node);
     void pinPopup(Pin& pin, bool show);
     void displayPin(Pin& pin, float2 position, float& maxLabelWith,
                     bool displayLabelInBody);
@@ -675,6 +809,7 @@ struct NodeEditor::Impl {
     ViewData viewData;
     std::unique_ptr<NodeEditorDelegate> delegate;
     std::vector<std::function<void()>> deferList;
+    bool showDebugger = false;
     bool showStyleEditor = false;
 };
 
@@ -756,6 +891,20 @@ static bool nodeOverlapsRect(ViewData const& viewData, Node const& node,
     return rect.Overlaps(nodeRect);
 }
 
+void Impl::linkPopup(bool show, Link link) {
+    static constexpr auto name = "Link_Popup";
+    if (show) {
+        viewData.popupLink = link;
+        ImGui::OpenPopup(name);
+    }
+    if (ImGui::BeginPopup(name)) {
+        if (ImGui::MenuItem("Delete")) {
+            deleteLink(viewData.popupLink);
+        }
+        ImGui::EndPopup();
+    }
+}
+
 void Impl::backgroundPopup(bool show) {
     static constexpr auto name = "Background_Popup";
     if (show) {
@@ -763,6 +912,7 @@ void Impl::backgroundPopup(bool show) {
     }
     float2 windowPos = ImGui::GetWindowPos();
     if (ImGui::BeginPopup(name)) {
+        showDebugger |= ImGui::MenuItem("Show Debugger");
         showStyleEditor |= ImGui::MenuItem("Show Style Editor");
         ImGui::Separator();
         if (delegate) {
@@ -796,7 +946,9 @@ void Impl::backgroundBehaviour() {
                     !ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Right) &&
                     !viewData.isMoveDragging;
     }
-    backgroundPopup(showPopup);
+    linkPopup(showPopup && viewData.hoveredLink.get(),
+              viewData.hoveredLink.get());
+    backgroundPopup(showPopup && !viewData.hoveredLink.get());
 }
 
 Impl::Impl(CommandPalette& cmd) {
@@ -869,14 +1021,15 @@ static float2 computePinPosition(Pin const& pin, size_t index) {
     }); // clang-format on
 }
 
-/// Computes the position of \p pin relative to the world
+/// Computes the position of \p pin relative to the node "world" / surface
 static float2 computeWorldPinPosition(Pin const& pin) {
     return pin.parent().position() +
            computePinPosition(pin, pin.indexInParent());
 }
 
-/// Computes the position of \p pin relative to the view
-static float2 computeViewPinPosition(ViewData const& viewData, Pin const& pin) {
+/// Computes the position of \p pin in screen coordinates
+static float2 computeScreenPinPosition(ViewData const& viewData,
+                                       Pin const& pin) {
     float2 basePos = (float2)viewData.clipRect.Min + viewData.position;
     return basePos + computeWorldPinPosition(pin);
 }
@@ -887,7 +1040,7 @@ struct PinDrawOptions {
     float4 color;
     bool missingInput;
     bool connected;
-    bool highlight;
+    bool hovered;
 };
 
 } // namespace
@@ -895,11 +1048,6 @@ struct PinDrawOptions {
 static void drawPin(float2 position, PinDrawOptions options) {
     auto* DL = ImGui::GetWindowDrawList();
     float2 center = position + PinAreaSize / 2;
-    if (options.highlight) {
-        DL->AddCircleFilled(center, PinRadius + PinHighlightHaloWidth,
-                            ImGui::ColorConvertFloat4ToU32(
-                                PinHighlightHaloColor));
-    }
     DL->AddCircleFilled(center, PinRadius,
                         ImGui::ColorConvertFloat4ToU32(options.color));
     if (options.missingInput) {
@@ -910,7 +1058,9 @@ static void drawPin(float2 position, PinDrawOptions options) {
     DL->AddCircle(center, PinRadius,
                   ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
     if (options.connected) {
-        DL->AddCircleFilled(center, LinkWidth / 2,
+        float radius =
+            ((options.hovered ? LinkWidthHovered : LinkWidth) + 1) / 2;
+        DL->AddCircleFilled(center, radius,
                             ImGui::ColorConvertFloat4ToU32(LinkColor));
     }
 }
@@ -934,7 +1084,7 @@ static float2 pinLabelPosition(Pin const& pin, float2 bgPadding,
 }
 
 static void displayPinLabelOverlay(Pin const& pin, ViewData const& viewData) {
-    float2 pinPosition = computeViewPinPosition(viewData, pin);
+    float2 pinPosition = computeScreenPinPosition(viewData, pin);
     auto* DL = ImGui::GetWindowDrawList();
     auto* textBegin = pin.name().data();
     auto* textEnd = textBegin + pin.name().size();
@@ -956,18 +1106,31 @@ static bool isCompatible(Pin const& a, Pin const& b) {
 
 namespace {
 
+/// Bezier curve discriptor for drawing a link. All points are in screen
+/// coordinates
 struct LinkDrawData {
+    /// The start point of the link
     float2 begin;
+
+    /// The end point of the link
     float2 end;
+
+    /// The mid point between `begin` and `end`
     float2 mid;
+
+    /// The size of the AABB spanned by `begin` and `end`
     float2 area;
+
+    /// The bezier control point for the start point
     float2 beginControlPoint;
+
+    /// The bezier control point for the end point
     float2 endControlPoint;
 };
 
 } // namespace
 
-static LinkDrawData getLinkDrawData(float2 begin, float2 end) {
+static LinkDrawData computeLinkDrawData(float2 begin, float2 end) {
     LinkDrawData dd{};
     dd.begin = begin;
     dd.end = end;
@@ -984,43 +1147,93 @@ static LinkDrawData getLinkDrawData(float2 begin, float2 end) {
     return dd;
 }
 
+static bool testPathOverlap(std::span<ImVec2 const> path, float2 point) {
+    for (size_t i = 0; i < path.size() - 1; ++i) {
+        float2 p1 = path[i];
+        float2 p2 = path[i + 1];
+        if (vml::distance(vml::line_segment_2D<>(p1, p2), point) <=
+            LinkHoverDist)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool testLinkOverlap(float2 begin, float2 end,
+                            std::span<ImVec2 const> path, float2 point) {
+    vml::AABB<float, 2> rect(begin, end);
+    vml::AABB<float, 2> wideRect(rect.lower_bound() - float2(LinkHoverDist),
+                                 rect.upper_bound() + float2(LinkHoverDist));
+    if (!vml::do_intersect(wideRect, point)) {
+        return false;
+    }
+    return testPathOverlap(path, point);
+}
+
 /// Draws a link from \p begin to \p end in screen coordinates
-static void drawLink(float2 begin, float2 end) {
+/// \Returns `true` if \p mousePos overlaps the link
+static bool displayLink(float2 begin, float2 end,
+                        std::optional<float2> mousePos, bool mayHighlight,
+                        bool mustHighlight) {
     auto* DL = ImGui::GetWindowDrawList();
-    auto dd = getLinkDrawData(begin, end);
+    auto dd = computeLinkDrawData(begin, end);
     DL->PathLineTo(begin);
     DL->PathBezierQuadraticCurveTo(dd.beginControlPoint, dd.mid, 0);
     DL->PathBezierQuadraticCurveTo(dd.endControlPoint, end, 0);
     auto col = ImGui::ColorConvertFloat4ToU32(LinkColor);
-    DL->PathStroke(col, ImDrawFlags_None, LinkWidth);
+    bool hovered = mousePos &&
+                   testLinkOverlap(begin, end, DL->_Path, *mousePos);
+    bool drawHighlighted = (mayHighlight && hovered) || mustHighlight;
+    float width = drawHighlighted ? LinkWidthHovered : LinkWidth;
+    DL->PathStroke(col, ImDrawFlags_None, width);
+    return hovered;
 }
 
-static void drawPinLinks(ViewData const& viewData, InputPin const& pin,
-                         float2 pinPosition) {
-    if (auto* origin = pin.origin()) {
-        float2 begin =
-            computeViewPinPosition(viewData, *origin) + PinAreaSize / 2;
-        drawLink(begin, pinPosition + PinAreaSize / 2);
+static void drawLink(float2 begin, float2 end, bool highlighted) {
+    displayLink(begin, end, std::nullopt, /* mayHighlight: */ true,
+                /* mustHighlight: */ highlighted);
+}
+
+static void displayPinLink(ViewData& viewData, InputPin& pin,
+                           float2 pinPosition) {
+    auto* origin = pin.origin();
+    if (!origin) {
+        return;
+    }
+    Link link = { origin, &pin };
+    float2 begin =
+        computeScreenPinPosition(viewData, *origin) + PinAreaSize / 2;
+    float2 end = pinPosition + PinAreaSize / 2;
+    bool mayHighlight = viewData.hoveredLink.getLast() == link;
+    bool mustHighlight = link.contains(viewData.hoveredPin.getLast()) &&
+                         !viewData.activePin;
+    bool hovered = displayLink(begin, end, ImGui::GetMousePos(), mayHighlight,
+                               mustHighlight);
+    if (hovered && !viewData.activePin) {
+        viewData.hoveredLink.set(link);
     }
 }
 
-void Impl::displayLinks(Node const& node) {
+void Impl::displayLinks(Node& node) {
     float2 nodepos =
         (float2)ImGui::GetWindowPos() + node.position() + viewData.position;
     ImGui::PushID("Inputs");
     for (auto [index, pin]: node.inputs() | enumerate) {
-        drawPinLinks(viewData, *pin, nodepos + computePinPosition(*pin, index));
+        displayPinLink(viewData, *pin,
+                       nodepos + computePinPosition(*pin, index));
     }
     ImGui::PopID();
     // Display dragging link
     if (viewData.activePin && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        float2 pos = computeViewPinPosition(viewData, *viewData.activePin) +
+        float2 pos = computeScreenPinPosition(viewData, *viewData.activePin) +
                      PinAreaSize / 2;
+        bool highlighted = true;
         if (isa<InputPin>(viewData.activePin)) {
-            drawLink(ImGui::GetMousePos(), pos);
+            drawLink(ImGui::GetMousePos(), pos, highlighted);
         }
         else {
-            drawLink(pos, ImGui::GetMousePos());
+            drawLink(pos, ImGui::GetMousePos(), highlighted);
         }
     }
 }
@@ -1118,11 +1331,20 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
     pinPopup(pin, /* show: */ clickedRight);
     bool isDraggingCompatiblePin = viewData.activePin &&
                                    isCompatible(*viewData.activePin, pin);
-    bool highlightPin = hovered && isDraggingCompatiblePin;
+    bool drawConnected = isConnected(pin) ||
+                         (hovered && isDraggingCompatiblePin) ||
+                         (viewData.activePin == &pin &&
+                          ImGui::IsMouseDown(ImGuiMouseButton_Left));
+    bool drawHovered =
+        (hovered && (!viewData.activePin || isDraggingCompatiblePin)) ||
+        viewData.hoveredLink.get().contains(&pin) ||
+        (!viewData.activePin && viewData.hoveredPin.getLast() &&
+         isLinked(pin, *viewData.hoveredPin.getLast())) ||
+        viewData.activePin == &pin;
     drawPin(position, { .color = selectPinColor(pin),
                         .missingInput = inputMissing(pin),
-                        .connected = isConnected(pin) || highlightPin,
-                        .highlight = highlightPin });
+                        .connected = drawConnected,
+                        .hovered = drawHovered });
     if (displayLabelInBody) {
         displayPinLabelInBody(pin.name(), pinInBodyLabelPosition(pin, position),
                               isa<InputPin>(pin) ? TextAlign::Left :
@@ -1130,7 +1352,7 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
                               maxLabelWith);
     }
     if (hovered) {
-        viewData.hoveredPin = &pin;
+        viewData.hoveredPin.set(&pin);
     }
     if (hovered && isDraggingCompatiblePin &&
         ImGui::IsMouseReleased(ImGuiMouseButton_Left))
@@ -1310,8 +1532,9 @@ void Impl::nodeBodyPopup(Node& node, bool show) {
 void Impl::displayNodeBody(Node& node) {
     float2 pos =
         (float2)ImGui::GetWindowPos() + viewData.position + node.position();
-    bool open = beginInvisibleWindow("Body", pos - NodeOuterPadding(),
-                                     node.size() + 2 * NodeOuterPadding());
+    float2 windowPos = pos - NodeOuterPadding();
+    float2 windowSize = node.size() + 2 * NodeOuterPadding();
+    bool open = beginInvisibleWindow("Body", windowPos, windowSize);
     if (!open && viewData.activeNode != &node) {
         ImGui::EndChild();
         return;
@@ -1324,6 +1547,10 @@ void Impl::displayNodeBody(Node& node) {
     ImRect bb(pos, pos + node.size());
     ImGui::ItemSize(node.size());
     ImGui::ItemAdd(bb, id);
+    if (ImGui::IsMouseHoveringRect(windowPos + 2, windowPos + windowSize - 4)) {
+        viewData.hoveredLink.set({});
+        viewData.hoveredNode.set(&node);
+    }
     bool bgClickedLeft = ImGui::IsItemClicked(ImGuiMouseButton_Left);
     bool bgClickedRight = ImGui::IsItemClicked(ImGuiMouseButton_Right);
     displayPins(node);
@@ -1391,9 +1618,7 @@ void Impl::display() {
         ImGui::EndChild();
         return;
     }
-    auto* window = ImGui::GetCurrentWindow();
-    viewData.clipRect = window->ContentRegionRect;
-    viewData.hoveredPin = nullptr;
+    viewData.beginFrame();
     drawBackground(viewData.position);
     /// We make a copy here because we may reorder the nodes during traversal.
     /// This may seem wasteful but I'm sure it's fine
@@ -1416,23 +1641,36 @@ void Impl::display() {
     deferList.clear();
     ImGui::EndChild();
 
+    if (showDebugger) {
+        viewDataDebugger(viewData, &showDebugger);
+    }
     if (showStyleEditor) {
         styleEditor(&showStyleEditor);
     }
 }
 
-static bool needDrawLabelOverlay(ViewData const& viewData) {
-    if (!viewData.hoveredPin) {
-        return false;
-    }
-    auto& node = viewData.hoveredPin->parent();
-    if (alwaysDisplayPinNames(node, viewData.hoveredPin->type())) {
+static bool needDrawLabelOverlay(ViewData const& viewData,
+                                 Pin const& hoveredPin) {
+    auto& node = hoveredPin.parent();
+    if (alwaysDisplayPinNames(node, hoveredPin.type())) {
         return false;
     }
     if (!viewData.activePin) {
         return true;
     }
-    return isCompatible(*viewData.hoveredPin, *viewData.activePin);
+    return isCompatible(hoveredPin, *viewData.activePin);
+}
+
+static void drawSelectionRect(ImRect rect) {
+    auto size = rect.GetSize();
+    if (size.x <= 1 || size.y <= 1) {
+        return;
+    }
+    auto* DL = ImGui::GetWindowDrawList();
+    DL->AddRectFilled(rect.Min, rect.Max,
+                      ImGui::ColorConvertFloat4ToU32(SelectionRectColor));
+    DL->AddRect(rect.Min, rect.Max,
+                ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
 }
 
 void Impl::drawOverlays() {
@@ -1443,16 +1681,13 @@ void Impl::drawOverlays() {
         ImGui::EndChild();
         return;
     }
-    if (needDrawLabelOverlay(viewData)) {
-        displayPinLabelOverlay(*viewData.hoveredPin, viewData);
+    if (auto* pin = viewData.hoveredPin.get();
+        pin && needDrawLabelOverlay(viewData, *pin))
+    {
+        displayPinLabelOverlay(*pin, viewData);
     }
     if (viewData.isSelectionDragging) {
-        auto rect = viewData.getSelectionRect();
-        auto* DL = ImGui::GetWindowDrawList();
-        DL->AddRectFilled(rect.Min, rect.Max,
-                          ImGui::ColorConvertFloat4ToU32(SelectionRectColor));
-        DL->AddRect(rect.Min, rect.Max,
-                    ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
+        drawSelectionRect(viewData.getSelectionRect());
     }
     ImGui::EndChild();
 }

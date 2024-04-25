@@ -31,6 +31,16 @@ namespace {
 enum CompilationStatus { None, Success, Error };
 
 struct RenderGraphEditorView: View {
+    struct Delegate: NodeEditorDelegate {
+        Delegate(RenderGraphEditorView* view): view(view) {}
+
+        void backgroundPopupMenu(float2 position) override {
+            view->backgroundContextMenu(position);
+        }
+
+        RenderGraphEditorView* view;
+    };
+
     RenderGraphEditorView();
 
     void init() override;
@@ -352,9 +362,7 @@ static char const* compStatusMessage(CompilationStatus status) {
 
 RenderGraphEditorView::RenderGraphEditorView():
     nodeEditor(commandPaletteWrite()) {
-    nodeEditor.setDelegate({ .backgroundPopupMenu = [this](float2 pos) {
-        backgroundContextMenu(pos);
-    } });
+    nodeEditor.setDelegate(std::make_unique<Delegate>(this));
     auto& cmd = commandPaletteWrite();
     cmd.add("Compile", { Key::B, ModFlags::Control }, [this] { compile(); });
     // clang-format off

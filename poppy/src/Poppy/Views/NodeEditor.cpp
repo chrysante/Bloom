@@ -657,7 +657,7 @@ struct NodeEditor::Impl {
     NodeEditorGraph model;
     Selection selection;
     ViewData viewData;
-    NodeEditorDelegate delegate;
+    std::unique_ptr<NodeEditorDelegate> delegate;
     std::vector<std::function<void()>> deferList;
 };
 
@@ -666,7 +666,7 @@ NodeEditor::NodeEditor(CommandPalette& commandPalette):
 
 NodeEditor::~NodeEditor() = default;
 
-void NodeEditor::setDelegate(NodeEditorDelegate delegate) {
+void NodeEditor::setDelegate(std::unique_ptr<NodeEditorDelegate> delegate) {
     impl->delegate = std::move(delegate);
 }
 
@@ -740,7 +740,7 @@ static bool nodeOverlapsRect(ViewData const& viewData, Node const& node,
 }
 
 void Impl::backgroundPopup(bool show) {
-    if (!delegate.backgroundPopupMenu) {
+    if (!delegate) {
         return;
     }
     static constexpr auto name = "Background_Popup";
@@ -751,7 +751,7 @@ void Impl::backgroundPopup(bool show) {
     if (ImGui::BeginPopup(name)) {
         float2 position =
             (float2)ImGui::GetWindowPos() - windowPos - viewData.position;
-        delegate.backgroundPopupMenu(position);
+        delegate->backgroundPopupMenu(position);
         ImGui::EndPopup();
     }
 }

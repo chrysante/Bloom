@@ -338,10 +338,13 @@ private:
     std::vector<std::unique_ptr<Node>> _nodes;
 };
 
-/// Callbacks to customize the behaviour of a node editor
-struct NodeEditorDelegate {
+/// Provides callbacks to customize the behaviour of a node editor
+class NodeEditorDelegate {
+public:
+    virtual ~NodeEditorDelegate() = default;
+
     /// Content callback for the editor background popup menu
-    std::function<void(vml::float2 position)> backgroundPopupMenu;
+    virtual void backgroundPopupMenu([[maybe_unused]] vml::float2 position) {}
 };
 
 /// Generic customizable node editor
@@ -352,7 +355,7 @@ public:
 
     ~NodeEditor();
 
-    void setDelegate(NodeEditorDelegate delegate);
+    void setDelegate(std::unique_ptr<NodeEditorDelegate> delegate);
 
     void setGraph(NodeEditorGraph graph);
 

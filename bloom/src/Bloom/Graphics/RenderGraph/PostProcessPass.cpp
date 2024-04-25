@@ -30,7 +30,7 @@ struct PostProcessPass: ComputePass, PassImpl<PostProcessPass> {
 
 BEGIN_SINK_DECL(PostProcessPass) {
     TextureInterface{
-        "RawColor",
+        "Raw Color",
         &PostProcessPass::rawColor,
         {
             .pixelFormat = PixelFormat::RGBA32Float,

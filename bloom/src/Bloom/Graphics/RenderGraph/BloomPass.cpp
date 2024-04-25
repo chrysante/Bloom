@@ -47,7 +47,7 @@ struct BloomPass: ComputePass, PassImpl<BloomPass> {
 
 BEGIN_SINK_DECL(BloomPass) {
     TextureInterface{
-        "RawColor",
+        "Raw Color",
         &BloomPass::rawColor,
         {
             .pixelFormat = PixelFormat::RGBA32Float,
@@ -64,7 +64,7 @@ END_DECL()
 
 BEGIN_SOURCE_DECL(BloomPass) {
     TextureInterface{
-        "Output",
+        "Raw Color",
         &BloomPass::output,
         {
             .type = TextureType::Texture2D,

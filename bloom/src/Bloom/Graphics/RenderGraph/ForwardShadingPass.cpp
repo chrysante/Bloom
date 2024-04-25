@@ -78,7 +78,7 @@ END_DECL()
 
 BEGIN_SOURCE_DECL(ForwardShadingPass) {
     TextureInterface{
-        "RawColor",
+        "Raw Color",
         &ForwardShadingPass::rawColor,
         {
             .pixelFormat = PixelFormat::RGBA32Float,

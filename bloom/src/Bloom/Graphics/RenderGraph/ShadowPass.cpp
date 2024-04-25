@@ -50,7 +50,7 @@ END_DECL()
 
 BEGIN_SOURCE_DECL(ShadowPass) {
     TextureInterface{
-        "ShadowMaps",
+        "Shadow Maps",
         &ShadowPass::shadowMaps,
         {
             .type = TextureType::Texture2DArray,

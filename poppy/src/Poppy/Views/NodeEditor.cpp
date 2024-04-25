@@ -11,8 +11,10 @@
 #include <utl/utility.hpp>
 
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/EnumCount.h"
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Core/Yaml.h"
+#include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Font.h"
 
@@ -24,78 +26,125 @@ using namespace ranges::views;
 
 /// # Style
 
-/// These values are not const so we can edit them with the style editor window
+struct NodeEditorStyleColors {
+    float4 whiteOutline;
+    float4 blackOutline;
+    float4 nodeBodyText;
+    float4 pinBG;
+    float4 pinOptBG;
+    float4 pinMissingIndicator;
+    float4 pinLinkIndicator;
+    float4 link;
+    float4 selectionRect;
+    float4 selectionRectOutline;
+};
 
-static float4 WhiteOutlineColor = { 1, 1, 1, 0.5 };
-static float4 BlackOutlineColor = { 0, 0, 0, 0.7 };
-static float4 LinkColor = { 1, 1, 1, 0.8 };
-static float LinkWidth = 3;
-static float LinkWidthHovered = 5;
-static float LinkHoverDist = 7;
-static float4 PinColorConnected = { 0.2, 0.2, 0.2, 1 };
-static float4 PinColorOptional = { 0.4, 0.4, 0.4, 1 };
-static float4 PinColorMissing = { 1, 0, 0.2, 1 };
-/// The side length of the square that is occupied by a pin. This is the
-/// interaction area, the rendered size is smaller
-static float PinAreaSize = 20;
-static float PinRadius = 6;
-static float NodeBodyTitleHeight = 20;
-/// Additional bottom padding because it looks better
-static float NodeBodyBottomPadding = 3;
-static float NodeBodyRounding = 10;
-static float NodeBodySelectionOutlineInset = 3;
-static float MissingInputIndicatorWidth = 3;
-/// How far the pins are moved into the node. If this is zero the outer edge of
-/// the node aligns with the edge of the pin
-static float PinInset = 0;
-static float2 MinNodeBodyPadding = 5;
-static float4 SelectionRectColor = { 1, 1, 1, 0.3 };
-static float2 BackgroundLineDist = { 30, 30 };
-float LinkBezierControlPointXMin = 100;
-float LinkBezierControlPointXMax = 100;
-float LinkBezierControlPointYFalloff = 150;
+struct NodeEditorStyleVars {
+    float LinkWidth = 3;
+    float LinkWidthHovered = 5;
+    float LinkHoverDist = 7;
+    /// The side length of the square that is occupied by a pin. This is the
+    /// interaction area, the rendered size is smaller
+    float PinAreaSize = 20;
+    float PinRadius = 6;
+    float NodeBodyTitleHeight = 20;
+    /// Additional bottom padding because it looks better
+    float NodeBodyBottomPadding = 3;
+    float NodeBodyRounding = 10;
+    float NodeBodySelectionOutlineInset = 3;
+    float MissingInputIndicatorWidth = 3;
+    /// How far the pins are moved into the node. If this is zero the outer edge
+    /// of the node aligns with the edge of the pin
+    float PinInset = 0;
+    float2 MinNodeBodyPadding = 5;
+    float2 BackgroundLineDist = { 30, 30 };
+    float LinkBezierControlPointXMin = 100;
+    float LinkBezierControlPointXMax = 100;
+    float LinkBezierControlPointYFalloff = 150;
+};
+
+struct NodeEditorStyle {
+    EnumArray<AppearanceType, NodeEditorStyleColors> colors;
+    NodeEditorStyleVars vars;
+
+    NodeEditorStyle() {
+        auto& light = colors[AppearanceType::Light];
+        auto& dark = colors[AppearanceType::Dark];
+        light.whiteOutline = { 1, 1, 1, 0.5 };
+        light.blackOutline = { 0, 0, 0, 0.7 };
+        light.nodeBodyText = { 1, 1, 1, 1 };
+        light.pinBG = { 0.2, 0.2, 0.2, 1 };
+        light.pinOptBG = { 0.4, 0.4, 0.4, 1 };
+        light.pinMissingIndicator = { 1, 0, 0.2, 1 };
+        light.link = { 0, 0, 0, 0.6 };
+        light.pinLinkIndicator = { 1, 1, 1, 0.8 };
+        light.selectionRect = { 0, 0, 0, 0.14 };
+        light.selectionRectOutline = { 0, 0, 0, 0.3 };
+
+        dark.whiteOutline = light.whiteOutline;
+        dark.blackOutline = light.blackOutline;
+        dark.nodeBodyText = light.nodeBodyText;
+        dark.pinBG = light.pinBG;
+        dark.pinOptBG = light.pinOptBG;
+        dark.pinMissingIndicator = light.pinMissingIndicator;
+        dark.link = { 1, 1, 1, 0.8 };
+        dark.pinLinkIndicator = dark.link;
+        dark.selectionRect = { 1, 1, 1, 0.3 };
+        dark.selectionRectOutline = { 1, 1, 1, 0.3 };
+    }
+};
+
+/// This is not const so we can edit the values with the style editor window
+static NodeEditorStyle style;
+
+static NodeEditorStyleColors const& styleColors() {
+    return style.colors[Appearance::get().type()];
+}
+
+static NodeEditorStyleVars const& styleVars() { return style.vars; }
 
 /// Derived properties
 static float2 NodeBodyPadding() {
-    return vml::max(MinNodeBodyPadding, float2(PinAreaSize + PinInset, 0));
+    return vml::max(styleVars().MinNodeBodyPadding,
+                    float2(styleVars().PinAreaSize + styleVars().PinInset, 0));
 }
 static float2 NodeOuterPadding() {
-    return vml::max(float2(1), float2(-PinInset, 0));
+    return vml::max(float2(1), float2(-styleVars().PinInset, 0));
 }
 
 static void styleEditor(bool* open) {
+    auto& col = style.colors[Appearance::get().type()];
+    auto& var = style.vars;
     ImGui::Begin("Node Editor Style Viewer", open);
-    ImGui::ColorEdit4("WhiteOutlineColor", WhiteOutlineColor.data());
-    ImGui::ColorEdit4("BlackOutlineColor", BlackOutlineColor.data());
-    ImGui::ColorEdit4("LinkColor", LinkColor.data());
-    ImGui::SliderFloat("LinkWidth", &LinkWidth, 0, 10);
-    ImGui::SliderFloat("LinkWidthHovered", &LinkWidthHovered, 0, 10);
-    ImGui::SliderFloat("LinkHoverDist", &LinkHoverDist, 0, 20);
-    ImGui::ColorEdit4("SelectionRectColor", SelectionRectColor.data());
-    ImGui::ColorEdit4("PinColorConnected", PinColorConnected.data());
-    ImGui::ColorEdit4("PinColorOptional", PinColorOptional.data());
-    ImGui::ColorEdit4("PinColorMissing", PinColorMissing.data());
-    ImGui::SliderFloat("PinAreaSize", &PinAreaSize, 0, 100);
-    ImGui::SliderFloat("PinRadius", &PinRadius, 0, 100);
-    ImGui::SliderFloat("NodeBodyTitleHeight", &NodeBodyTitleHeight, 0, 100);
-    ImGui::SliderFloat("NodeBodyBottomPadding", &NodeBodyBottomPadding, 0, 100);
-    ImGui::SliderFloat("NodeBodyRounding", &NodeBodyRounding, 0, 100);
-    ImGui::SliderFloat("NodeBodySelectionOutlineInset",
-                       &NodeBodySelectionOutlineInset, 0, 100);
-    ImGui::SliderFloat("MissingInputIndicatorWidth",
-                       &MissingInputIndicatorWidth, 0, 10);
-    ImGui::SliderFloat("PinInset", &PinInset, -100, 100);
-    ImGui::SliderFloat2("MinNodeBodyPadding", MinNodeBodyPadding.data(), 0, 50);
-    ImGui::SliderFloat2("BackgroundLineDist", BackgroundLineDist.data(), 0,
-                        200);
-    ImGui::SliderFloat("LinkBezierControlPointXMin",
-                       &LinkBezierControlPointXMin, 0,
-                       LinkBezierControlPointXMax);
-    ImGui::SliderFloat("LinkBezierControlPointXMax",
-                       &LinkBezierControlPointXMax, LinkBezierControlPointXMin,
-                       1000);
-    ImGui::SliderFloat("LinkBezierControlPointYFalloff",
-                       &LinkBezierControlPointYFalloff, 0, 1000);
+    // clang-format off
+    ImGui::SeparatorText("Style Colors");
+    ImGui::ColorEdit4("White Outline", col.whiteOutline.data());
+    ImGui::ColorEdit4("Black Outline", col.blackOutline.data());
+    ImGui::ColorEdit4("Link", col.link.data());
+    ImGui::ColorEdit4("Selection Rect", col.selectionRect.data());
+    ImGui::ColorEdit4("Selection Rect Outline", col.selectionRectOutline.data());
+    ImGui::ColorEdit4("Pin Background", col.pinBG.data());
+    ImGui::ColorEdit4("Optional Pin Background", col.pinOptBG.data());
+    ImGui::ColorEdit4("Missing Pin Indicator", col.pinMissingIndicator.data());
+    ImGui::ColorEdit4("Pin Link Indicator", col.pinMissingIndicator.data());
+    ImGui::SeparatorText("Style Vars");
+    ImGui::SliderFloat("LinkWidth", &var.LinkWidth, 0, 10);
+    ImGui::SliderFloat("LinkWidthHovered", &var.LinkWidthHovered, 0, 10);
+    ImGui::SliderFloat("LinkHoverDist", &var.LinkHoverDist, 0, 20);
+    ImGui::SliderFloat("PinAreaSize", &var.PinAreaSize, 0, 100);
+    ImGui::SliderFloat("PinRadius", &var.PinRadius, 0, 100);
+    ImGui::SliderFloat("NodeBodyTitleHeight", &var.NodeBodyTitleHeight, 0, 100);
+    ImGui::SliderFloat("NodeBodyBottomPadding", &var.NodeBodyBottomPadding, 0, 100);
+    ImGui::SliderFloat("NodeBodyRounding", &var.NodeBodyRounding, 0, 100);
+    ImGui::SliderFloat("NodeBodySelectionOutlineInset", &var.NodeBodySelectionOutlineInset, 0, 100);
+    ImGui::SliderFloat("MissingInputIndicatorWidth", &var.MissingInputIndicatorWidth, 0, 10);
+    ImGui::SliderFloat("PinInset", &var.PinInset, -100, 100);
+    ImGui::SliderFloat2("MinNodeBodyPadding", var.MinNodeBodyPadding.data(), 0, 50);
+    ImGui::SliderFloat2("BackgroundLineDist", var.BackgroundLineDist.data(), 0, 200);
+    ImGui::SliderFloat("LinkBezierControlPointXMin", &var.LinkBezierControlPointXMin, 0, var.LinkBezierControlPointXMax);
+    ImGui::SliderFloat("LinkBezierControlPointXMax", &var.LinkBezierControlPointXMax, var.LinkBezierControlPointXMin, 1000);
+    ImGui::SliderFloat("LinkBezierControlPointYFalloff", &var.LinkBezierControlPointYFalloff, 0, 1000);
+    // clang-format on
     ImGui::End();
 }
 
@@ -863,11 +912,11 @@ static void drawLines(float begin, float end, float dist, Axis axis,
 
 static void drawBackground(float2 viewPos) {
     float4 color = ImGui::GetStyleColorVec4(ImGuiCol_Separator);
-    float2 begin = vml::fmod(viewPos, BackgroundLineDist);
-    drawLines(begin.x, ImGui::GetWindowWidth(), BackgroundLineDist.x,
-              Axis::Horizontal, color);
-    drawLines(begin.y, ImGui::GetWindowHeight(), BackgroundLineDist.y,
-              Axis::Vertical, color);
+    float2 begin = vml::fmod(viewPos, styleVars().BackgroundLineDist);
+    drawLines(begin.x, ImGui::GetWindowWidth(),
+              styleVars().BackgroundLineDist.x, Axis::Horizontal, color);
+    drawLines(begin.y, ImGui::GetWindowHeight(),
+              styleVars().BackgroundLineDist.y, Axis::Vertical, color);
 }
 
 static bool nodeOverlapsRect(ViewData const& viewData, Node const& node,
@@ -995,14 +1044,17 @@ static float2 computePinPosition(Pin const& pin, size_t index) {
     // clang-format off
     return visit(pin, utl::overload{
         [&](InputPin const&) {
-            return float2(PinInset,
-                          NodeBodyPadding().y + NodeBodyTitleHeight + 
-                          index * PinAreaSize);
+            return float2(styleVars().PinInset,
+                          NodeBodyPadding().y + 
+                              styleVars().NodeBodyTitleHeight +
+                              index * styleVars().PinAreaSize);
         },
         [&](OutputPin const& pin) {
-            return float2(pin.parent().size().x - PinInset - PinAreaSize,
-                          NodeBodyPadding().y + NodeBodyTitleHeight + 
-                          index * PinAreaSize);
+            return float2(pin.parent().size().x - styleVars().PinInset -
+                              styleVars().PinAreaSize,
+                          NodeBodyPadding().y +
+                              styleVars().NodeBodyTitleHeight +
+                              index * styleVars().PinAreaSize);
         }
     }); // clang-format on
 }
@@ -1033,19 +1085,25 @@ struct PinDrawOptions {
 
 static void drawPin(float2 position, PinDrawOptions options) {
     auto* DL = ImGui::GetWindowDrawList();
-    float2 center = position + PinAreaSize / 2;
-    DL->AddCircleFilled(center, PinRadius,
+    float2 center = position + styleVars().PinAreaSize / 2;
+    DL->AddCircleFilled(center, styleVars().PinRadius,
                         ImGui::ColorConvertFloat4ToU32(options.color));
     if (options.missingInput) {
-        DL->AddCircle(center, PinRadius + MissingInputIndicatorWidth / 2,
-                      ImGui::ColorConvertFloat4ToU32(PinColorMissing), 0,
-                      MissingInputIndicatorWidth);
+        DL->AddCircle(center,
+                      styleVars().PinRadius +
+                          styleVars().MissingInputIndicatorWidth / 2,
+                      ImGui::ColorConvertFloat4ToU32(
+                          styleColors().pinMissingIndicator),
+                      0, styleVars().MissingInputIndicatorWidth);
     }
     if (options.connected) {
-        float radius =
-            ((options.hovered ? LinkWidthHovered : LinkWidth) + 1) / 2;
+        float radius = ((options.hovered ? styleVars().LinkWidthHovered :
+                                           styleVars().LinkWidth) +
+                        1) /
+                       2;
         DL->AddCircleFilled(center, radius,
-                            ImGui::ColorConvertFloat4ToU32(LinkColor));
+                            ImGui::ColorConvertFloat4ToU32(
+                                styleColors().pinLinkIndicator));
     }
 }
 
@@ -1055,13 +1113,13 @@ static float2 pinLabelPosition(Pin const& pin, float2 bgPadding,
     // clang-format off
     return visit(pin, utl::overload{
         [&](InputPin const&) -> float2 {
-            return { pinPosition.x - std::max(PinInset, 1.0f) - textSize.x -
-                     bgPadding.x,
+            return { pinPosition.x - std::max(styleVars().PinInset, 1.0f) - 
+                         textSize.x - bgPadding.x,
                      ypos + pinPosition.y };
         },
         [&](OutputPin const&) -> float2 {
-            return { pinPosition.x + std::max(PinInset, 1.0f) + PinAreaSize +
-                     bgPadding.x,
+            return { pinPosition.x + std::max(styleVars().PinInset, 1.0f) + 
+                         styleVars().PinAreaSize + bgPadding.x,
                      ypos + pinPosition.y };
         },
     }); // clang-format on
@@ -1073,7 +1131,7 @@ static void displayPinLabelOverlay(Pin const& pin, ViewData const& viewData) {
     auto* textBegin = pin.name().data();
     auto* textEnd = textBegin + pin.name().size();
     float2 textSize = ImGui::CalcTextSize(textBegin, textEnd);
-    float ypos = PinAreaSize / 2 - textSize.y / 2;
+    float ypos = styleVars().PinAreaSize / 2 - textSize.y / 2;
     float2 bgPadding = 3;
     float bgRounding = 3;
     auto bgCol = ImGui::GetColorU32(ImGuiCol_PopupBg);
@@ -1121,11 +1179,13 @@ static LinkDrawData computeLinkDrawData(float2 begin, float2 end) {
     dd.mid = (begin + end) / 2;
     dd.area = vml::abs(end - begin);
     float crtlPointFactor =
-        2.0f * std::atan(dd.area.y / LinkBezierControlPointYFalloff) /
+        2.0f *
+        std::atan(dd.area.y / styleVars().LinkBezierControlPointYFalloff) /
         vml::constants<float>::pi;
-    float ctrlPointX = crtlPointFactor * std::clamp(dd.area.x,
-                                                    LinkBezierControlPointXMin,
-                                                    LinkBezierControlPointXMax);
+    float ctrlPointX =
+        crtlPointFactor * std::clamp(dd.area.x,
+                                     styleVars().LinkBezierControlPointXMin,
+                                     styleVars().LinkBezierControlPointXMax);
     dd.beginControlPoint = dd.begin + float2(ctrlPointX, 0);
     dd.endControlPoint = dd.end - float2(ctrlPointX, 0);
     return dd;
@@ -1136,7 +1196,7 @@ static bool testPathOverlap(std::span<ImVec2 const> path, float2 point) {
         float2 p1 = path[i];
         float2 p2 = path[i + 1];
         if (vml::distance(vml::line_segment_2D<>(p1, p2), point) <=
-            LinkHoverDist)
+            styleVars().LinkHoverDist)
         {
             return true;
         }
@@ -1147,8 +1207,10 @@ static bool testPathOverlap(std::span<ImVec2 const> path, float2 point) {
 static bool testLinkOverlap(float2 begin, float2 end,
                             std::span<ImVec2 const> path, float2 point) {
     vml::AABB<float, 2> rect(begin, end);
-    vml::AABB<float, 2> wideRect(rect.lower_bound() - float2(LinkHoverDist),
-                                 rect.upper_bound() + float2(LinkHoverDist));
+    vml::AABB<float, 2> wideRect(rect.lower_bound() -
+                                     float2(styleVars().LinkHoverDist),
+                                 rect.upper_bound() +
+                                     float2(styleVars().LinkHoverDist));
     if (!vml::do_intersect(wideRect, point)) {
         return false;
     }
@@ -1165,11 +1227,12 @@ static bool displayLink(float2 begin, float2 end,
     DL->PathLineTo(begin);
     DL->PathBezierQuadraticCurveTo(dd.beginControlPoint, dd.mid, 0);
     DL->PathBezierQuadraticCurveTo(dd.endControlPoint, end, 0);
-    auto col = ImGui::ColorConvertFloat4ToU32(LinkColor);
+    auto col = ImGui::ColorConvertFloat4ToU32(styleColors().link);
     bool hovered = mousePos &&
                    testLinkOverlap(begin, end, DL->_Path, *mousePos);
     bool drawHighlighted = (mayHighlight && hovered) || mustHighlight;
-    float width = drawHighlighted ? LinkWidthHovered : LinkWidth;
+    float width = drawHighlighted ? styleVars().LinkWidthHovered :
+                                    styleVars().LinkWidth;
     DL->PathStroke(col, ImDrawFlags_None, width);
     return hovered;
 }
@@ -1186,9 +1249,9 @@ static void displayPinLink(ViewData& viewData, InputPin& pin,
         return;
     }
     Link link = { origin, &pin };
-    float2 begin =
-        computeScreenPinPosition(viewData, *origin) + PinAreaSize / 2;
-    float2 end = pinPosition + PinAreaSize / 2;
+    float2 begin = computeScreenPinPosition(viewData, *origin) +
+                   styleVars().PinAreaSize / 2;
+    float2 end = pinPosition + styleVars().PinAreaSize / 2;
     bool mayHighlight = viewData.hoveredLink.getLast() == link;
     bool mustHighlight = link.contains(viewData.hoveredPin.getLast()) &&
                          !viewData.activePin;
@@ -1211,7 +1274,7 @@ void Impl::displayLinks(Node& node) {
     // Display dragging link
     if (viewData.activePin && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
         float2 pos = computeScreenPinPosition(viewData, *viewData.activePin) +
-                     PinAreaSize / 2;
+                     styleVars().PinAreaSize / 2;
         bool highlighted = true;
         if (isa<InputPin>(viewData.activePin)) {
             drawLink(ImGui::GetMousePos(), pos, highlighted);
@@ -1252,7 +1315,9 @@ static void displayPinLabelInBody(std::string_view label, float2 position,
         position.x -= textSize.x;
     }
     auto* DL = ImGui::GetWindowDrawList();
-    DL->AddText(position, ImGui::GetColorU32(ImGuiCol_Text), begin, end);
+    DL->AddText(position,
+                ImGui::ColorConvertFloat4ToU32(styleColors().nodeBodyText),
+                begin, end);
     maxLabelWidth = std::max(maxLabelWidth, textSize.x);
 }
 
@@ -1262,9 +1327,9 @@ static bool isOptional(Pin const& pin) {
 
 static float4 selectPinColor(Pin const& pin) {
     if (isOptional(pin)) {
-        return PinColorOptional;
+        return styleColors().pinOptBG;
     }
-    return PinColorConnected;
+    return styleColors().pinBG;
 }
 
 static bool inputMissing(Pin const& pin) {
@@ -1290,17 +1355,17 @@ static float2 pinInBodyLabelPosition(Pin const& pin, float2 pinPosition) {
     // clang-format off
     return pinPosition + visit(pin, utl::overload{
         [&](InputPin const&) {
-            return float2(PinAreaSize, PinAreaSize / 2);
+            return float2(styleVars().PinAreaSize, styleVars().PinAreaSize / 2);
         },
-        [&](OutputPin const&) { return float2(0, PinAreaSize / 2) ; },
+        [&](OutputPin const&) { return float2(0, styleVars().PinAreaSize / 2) ; },
     }); // clang-format on
 }
 
 void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
                       bool displayLabelInBody) {
     ImGui::PushID(&pin);
-    ImRect bb(position, position + float2(PinAreaSize));
-    ImGui::ItemSize(float2(PinAreaSize));
+    ImRect bb(position, position + float2(styleVars().PinAreaSize));
+    ImGui::ItemSize(float2(styleVars().PinAreaSize));
     auto ID = ImGui::GetID("Pin_Handle");
     ImGui::ItemAdd(bb, ID);
     bool hovered = ImGui::ItemHoverable(bb, ID, ImGuiItemFlags_AllowOverlap);
@@ -1347,11 +1412,11 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
 }
 
 static float2 computeNodeMinSize(Node const& node, float2 bodyPadding) {
-    float pinHeight =
-        PinAreaSize * std::max(node.inputs().size(), node.outputs().size());
+    float pinHeight = styleVars().PinAreaSize *
+                      std::max(node.inputs().size(), node.outputs().size());
     return vml::max(node.layoutData().minSize,
-                    float2(0, pinHeight + NodeBodyTitleHeight)) +
-           2 * bodyPadding + float2(0, NodeBodyBottomPadding);
+                    float2(0, pinHeight + styleVars().NodeBodyTitleHeight)) +
+           2 * bodyPadding + float2(0, styleVars().NodeBodyBottomPadding);
 }
 
 static bool alwaysDisplayInputNames(Node const& node) {
@@ -1404,22 +1469,25 @@ static ImRect drawNodeBody(Node const& node, bool selected) {
     auto* DL = ImGui::GetWindowDrawList();
     DL->AddRectFilled(pos, pos + node.size(),
                       ImGui::ColorConvertFloat4ToU32(node.color()),
-                      NodeBodyRounding + 1);
+                      styleVars().NodeBodyRounding + 1);
     if (selected) {
-        DL->AddRect(pos + NodeBodySelectionOutlineInset,
-                    pos + node.size() - NodeBodySelectionOutlineInset,
-                    ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor),
-                    NodeBodyRounding - NodeBodySelectionOutlineInset,
-                    ImDrawFlags_None, 2 * NodeBodySelectionOutlineInset);
+        DL->AddRect(pos + styleVars().NodeBodySelectionOutlineInset,
+                    pos + node.size() -
+                        styleVars().NodeBodySelectionOutlineInset,
+                    ImGui::ColorConvertFloat4ToU32(styleColors().whiteOutline),
+                    styleVars().NodeBodyRounding -
+                        styleVars().NodeBodySelectionOutlineInset,
+                    ImDrawFlags_None,
+                    2 * styleVars().NodeBodySelectionOutlineInset);
     }
     float highlightOutlineInset = 1;
     DL->AddRect(pos + highlightOutlineInset,
                 pos + node.size() - highlightOutlineInset,
-                ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor),
-                NodeBodyRounding - highlightOutlineInset);
+                ImGui::ColorConvertFloat4ToU32(styleColors().whiteOutline),
+                styleVars().NodeBodyRounding - highlightOutlineInset);
     DL->AddRect(pos, pos + node.size(),
-                ImGui::ColorConvertFloat4ToU32(BlackOutlineColor),
-                NodeBodyRounding);
+                ImGui::ColorConvertFloat4ToU32(styleColors().blackOutline),
+                styleVars().NodeBodyRounding);
     auto* font =
         FontManager::get(FontDesc::UIDefault().setWeight(FontWeight::Bold));
     ImGui::PushFont(font);
@@ -1428,11 +1496,11 @@ static ImRect drawNodeBody(Node const& node, bool selected) {
     float2 labelSize =
         vml::min((float2)ImGui::CalcTextSize(label, labelEnd),
                  node.size() -
-                     float2(2 * (NodeBodySelectionOutlineInset + 1), 0));
+                     float2(2 * (styleVars().NodeBodySelectionOutlineInset + 1),
+                            0));
     float2 labelPos =
         pos + float2((node.size().x - labelSize.x) / 2, NodeBodyPadding().y);
-    auto labelCol =
-        ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
+    auto labelCol = ImGui::ColorConvertFloat4ToU32(styleColors().nodeBodyText);
     ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
     DL->AddText(labelPos, labelCol, label, labelEnd);
     ImGui::PopClipRect();
@@ -1653,9 +1721,11 @@ static void drawSelectionRect(ImRect rect) {
     }
     auto* DL = ImGui::GetWindowDrawList();
     DL->AddRectFilled(rect.Min, rect.Max,
-                      ImGui::ColorConvertFloat4ToU32(SelectionRectColor));
+                      ImGui::ColorConvertFloat4ToU32(
+                          styleColors().selectionRect));
     DL->AddRect(rect.Min, rect.Max,
-                ImGui::ColorConvertFloat4ToU32(WhiteOutlineColor));
+                ImGui::ColorConvertFloat4ToU32(
+                    styleColors().selectionRectOutline));
 }
 
 void Impl::drawOverlays() {

@@ -9,7 +9,7 @@
 namespace poppy {
 
 ///
-enum struct AppearanceType { None = -1, Light, Dark };
+enum struct AppearanceType { None = -1, Light, Dark, LAST = Dark };
 
 /// UI variables used in the application
 struct StyleVars {

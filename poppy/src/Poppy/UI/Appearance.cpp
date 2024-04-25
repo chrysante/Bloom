@@ -96,9 +96,9 @@ static StyleDescription makeStyle(SystemAppearance s) {
         .checkMark = s.controlAccentColor,
         .windowTitleBar = s.windowBackgroundColor,
         .activeWindowTitleBar = s.windowBackgroundColor,
-        .border = { 0.313, 0.313, 0.313, 1 },
+        .border = s.separatorColor,
         .scrollbar = s.controlColor,
-        .separator = { 0.313, 0.313, 0.313, 1 },
+        .separator = s.separatorColor,
         .tab = { 0, 0, 0, 0 },
         .tabHovered = s.selectedControlColor,
         .tabActive = s.selectedControlColor,
@@ -107,7 +107,7 @@ static StyleDescription makeStyle(SystemAppearance s) {
         .dockingPreview = s.selectedControlColor,
     };
     StyleVars vars{
-        .windowBorder = true,
+        .windowBorder = false,
         .childWindowBorder = false,
         .popupBorder = true,
         .frameBorder = true,

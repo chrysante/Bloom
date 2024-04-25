@@ -150,10 +150,11 @@ private:
         /// Name of the derived view class. Used for serialization
         std::string staticName;
 
-        std::string title;
+        vml::float2 position;
         vml::float2 size;
         vml::float2 minSize;
-        vml::float2 position;
+        bool docked = false;
+        std::string title;
         void* imguiWindow = nullptr;
         Editor* editor = nullptr;
         bloom::Window* window = nullptr;

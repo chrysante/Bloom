@@ -7,6 +7,7 @@
 #include <utl/strcat.hpp>
 
 #include "Bloom/Application/Window.h"
+#include "Bloom/Core/Yaml.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/ViewRegistry.h"
@@ -134,6 +135,10 @@ void View::doFrame() {
         flags |= ImGuiWindowFlags_NoMove;
     }
     // Begin block
+    if (!imguiWindow && !data.maximized && !data.docked) {
+        ImGui::SetNextWindowPos(data.position);
+        ImGui::SetNextWindowSize(data.size);
+    }
     if (data.maximized) {
         auto* const viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowSize(viewport->Size);
@@ -144,7 +149,6 @@ void View::doFrame() {
         flags |= ImGuiWindowFlags_NoTitleBar;
     }
     else {
-        ImGui::SetNextWindowSize(data.size);
         ImGui::SetNextWindowSizeConstraints(data.minSize, { FLT_MAX, FLT_MAX });
     }
     auto& style = ImGui::GetStyle();
@@ -171,8 +175,9 @@ void View::doFrame() {
     if (open) {
         auto* imguiWindow = ImGui::GetCurrentWindow();
         data.imguiWindow = imguiWindow;
-        data.size = imguiWindow->Size;
         data.position = imguiWindow->Pos;
+        data.size = imguiWindow->Size;
+        data.docked = imguiWindow->DockNode != nullptr;
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
         data.window = (Window*)viewport->PlatformHandle;
         if (data.window && GImGui->CurrentViewport->Window == imguiWindow) {
@@ -229,6 +234,9 @@ void View::doOnInput(bloom::InputEvent& event) {
 YAML::Node View::doSerialize() const {
     YAML::Node node;
     node["ID"] = data.ID;
+    node["Position"] = data.position;
+    node["Size"] = data.size;
+    node["Docked"] = data.docked;
     node["Static Name"] = data.staticName;
     node["Derived Data"] = serialize();
     return node;
@@ -249,6 +257,9 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
         }
         auto view = entry->createView();
         view->data.ID = ID;
+        view->data.position = node["Position"].as<float2>();
+        view->data.size = node["Size"].as<float2>();
+        view->data.docked = node["Docked"].as<bool>();
         view->deserialize(node["Derived Data"]);
         return view;
     }

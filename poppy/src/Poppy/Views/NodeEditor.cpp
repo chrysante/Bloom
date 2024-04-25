@@ -62,6 +62,8 @@ struct NodeEditorStyleVars {
     float LinkBezierControlPointXMin = 100;
     float LinkBezierControlPointXMax = 100;
     float LinkBezierControlPointYFalloff = 150;
+    float MinZoom = .25;
+    float MaxZoom = 1;
 };
 
 struct NodeEditorStyle {
@@ -147,6 +149,8 @@ static void styleEditor(bool* open) {
     ImGui::SliderFloat("LinkBezierControlPointXMin", &var.LinkBezierControlPointXMin, 0, var.LinkBezierControlPointXMax);
     ImGui::SliderFloat("LinkBezierControlPointXMax", &var.LinkBezierControlPointXMax, var.LinkBezierControlPointXMin, 1000);
     ImGui::SliderFloat("LinkBezierControlPointYFalloff", &var.LinkBezierControlPointYFalloff, 0, 1000);
+    ImGui::SliderFloat("MinZoom", &var.MinZoom, 0.01, var.MaxZoom);
+    ImGui::SliderFloat("MaxZoom", &var.MaxZoom, var.MinZoom, 1000);
     // clang-format on
     ImGui::End();
 }
@@ -934,6 +938,12 @@ static void drawLines(float begin, float end, float dist, Axis axis,
 }
 
 static void drawBackground(float2 viewPos, float zoom) {
+    while (zoom <= 0.5) {
+        zoom *= 2;
+    }
+    while (zoom >= 2) {
+        zoom /= 2;
+    }
     float4 color = styleColors().backgroundGridline;
     float2 dist = styleVars().BackgroundLineDist * zoom;
     float2 begin = vml::fmod(-viewPos, dist);
@@ -1055,7 +1065,8 @@ void Impl::onInput(InputEvent& event) {
         float2 mouseLocVS =
             event.locationOnScreen - (float2)viewData.clipRect.Min;
         float2 mouseLocWS = (mouseLocVS + viewData.position) / 1;
-        float newZoom = std::clamp(zoom + (float)event.offset, 0.5f, 4.0f);
+        float newZoom = std::clamp(zoom * (1 + (float)event.offset),
+                                   styleVars().MinZoom, styleVars().MaxZoom);
         float effectiveOffset = newZoom - zoom;
         viewData.position += mouseLocWS / zoom * effectiveOffset;
         viewData.zoom = newZoom;
@@ -1231,10 +1242,11 @@ static bool testPathOverlap(std::span<ImVec2 const> path, float2 point,
     return false;
 }
 
-static bool testLinkOverlap(float2 begin, float2 end,
+static bool testLinkOverlap(LinkDrawData const& dd,
                             std::span<ImVec2 const> path, float2 point,
                             float dist) {
-    vml::AABB<float, 2> rect(begin, end);
+    vml::AABB<float, 2> rect(dd.begin, dd.end, dd.beginControlPoint,
+                             dd.endControlPoint);
     vml::AABB<float, 2> wideRect(rect.lower_bound() - float2(dist),
                                  rect.upper_bound() + float2(dist));
     if (!vml::do_intersect(wideRect, point)) {
@@ -1255,7 +1267,7 @@ static bool displayLink(float2 begin, float2 end,
     DL->PathBezierQuadraticCurveTo(dd.endControlPoint, end, 0);
     auto col = ImGui::ColorConvertFloat4ToU32(styleColors().link);
     bool hovered = mousePos &&
-                   testLinkOverlap(begin, end, DL->_Path, *mousePos,
+                   testLinkOverlap(dd, DL->_Path, *mousePos,
                                    styleVars().LinkHoverDist * zoom);
     bool drawHighlighted = (mayHighlight && hovered) || mustHighlight;
     float width = drawHighlighted ? styleVars().LinkWidthHovered :
@@ -1690,7 +1702,7 @@ void Impl::displayNodeBody(Node& node) {
         viewData.isDraggingNode = true;
         float2 delta = ImGui::GetIO().MouseDelta;
         for (auto* node: selection.nodes()) {
-            node->setPosition(node->position() + delta);
+            node->setPosition(node->position() + delta / viewData.zoom);
         }
     }
     DL->PopClipRect();

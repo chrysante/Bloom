@@ -301,10 +301,8 @@ static InputEvent makeMouseMoveDragEvent(NSEvent* event) {
 }
 
 static InputEvent makeMagnificationEvent(NSEvent* event) {
-    MagnificationEvent result{};
-    result.modifierFlags = translateModFlags(event.modifierFlags);
-    result.locationInWindow = event.locationInWindow;
-    result.offset = event.magnification;
+    MagnificationEvent result{ makeMouseEvent(event),
+                               .offset = event.magnification };
     return InputEvent(InputEventMask::Magnify, result);
 }
 

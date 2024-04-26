@@ -96,8 +96,11 @@ public:
     /// \Returns the attached command palette
     CommandPalette const& commandPalette() const { return cmdPalette; }
 
-    vml::float2 windowSpaceToViewSpace(vml::float2) const;
-    vml::float2 viewSpaceToWindowSpace(vml::float2) const;
+    /// Converts the point \p p from screen coordinates into view coordinates
+    vml::float2 screenSpaceToViewSpace(vml::float2 p) const;
+
+    /// Converts the point \p p from view coordinates into screen coordinates
+    vml::float2 viewSpaceToScreenSpace(vml::float2 p) const;
 
     struct BackendImpl;
 

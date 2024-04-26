@@ -245,7 +245,7 @@ void Viewport::onInput(InputEvent& event) {
         if (!viewportHovered || gizmo.isHovered() || gameView) {
             return false;
         }
-        auto locationInView = windowSpaceToViewSpace(e.locationInWindow);
+        auto locationInView = screenSpaceToViewSpace(e.locationOnScreen);
         if (auto const entity = overlays.hitTest(locationInView)) {
             selection().select(entity);
             return true;
@@ -481,9 +481,9 @@ vml::float3 Viewport::worldSpaceToViewSpace(vml::float3 const positionWS) {
     return { posVS, ndc.z };
 }
 
-vml::float3 Viewport::worldSpaceToWindowSpace(vml::float3 position) {
+vml::float3 Viewport::worldSpaceToScreenSpace(vml::float3 position) {
     auto const vs = worldSpaceToViewSpace(position);
-    return { viewSpaceToWindowSpace(vs.xy), vs.z };
+    return { viewSpaceToScreenSpace(vs.xy), vs.z };
 }
 
 vml::float2 Viewport::worldSpaceDirToViewSpace(vml::float3 const positionWS) {
@@ -498,6 +498,6 @@ vml::float2 Viewport::worldSpaceDirToViewSpace(vml::float3 const positionWS) {
     return dirVS;
 }
 
-vml::float2 Viewport::worldSpaceDirToWindowSpace(vml::float3 direction) {
+vml::float2 Viewport::worldSpaceDirToScreenSpace(vml::float3 direction) {
     return worldSpaceDirToViewSpace(direction);
 }

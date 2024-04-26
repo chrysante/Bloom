@@ -21,7 +21,7 @@ private:
     template <typename>
     void drawLightOverlays();
     template <typename Light>
-    void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionInWindow,
+    void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionOnScreen,
                              bool selected, bloom::Transform const&,
                              Light const&);
 

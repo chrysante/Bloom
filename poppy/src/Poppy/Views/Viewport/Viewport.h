@@ -20,10 +20,10 @@ public:
     Viewport();
 
     vml::float3 worldSpaceToViewSpace(vml::float3 position);
-    vml::float3 worldSpaceToWindowSpace(vml::float3 position);
+    vml::float3 worldSpaceToScreenSpace(vml::float3 position);
 
     vml::float2 worldSpaceDirToViewSpace(vml::float3 direction);
-    vml::float2 worldSpaceDirToWindowSpace(vml::float3 direction);
+    vml::float2 worldSpaceDirToScreenSpace(vml::float3 direction);
 
     //	private:
     void init() override;

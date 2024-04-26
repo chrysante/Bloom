@@ -73,12 +73,12 @@ Window& View::window() const {
     return *data.window;
 }
 
-float2 View::windowSpaceToViewSpace(float2 position) const {
-    return position - data.position + data.window->position();
+float2 View::screenSpaceToViewSpace(float2 position) const {
+    return position - data.position;
 }
 
-float2 View::viewSpaceToWindowSpace(float2 position) const {
-    return position + data.position - data.window->position();
+float2 View::viewSpaceToScreenSpace(float2 position) const {
+    return position + data.position;
 }
 
 void View::setFocused() { ImGui::FocusWindow((ImGuiWindow*)data.imguiWindow); }

@@ -88,10 +88,10 @@ void ViewportOverlays::drawLightOverlays() {
             if (positionVS.z < 0 || positionVS.z > 1) {
                 return;
             }
-            auto const positionInWindow =
-                viewport->viewSpaceToWindowSpace(positionVS.xy);
+            auto const positionOnScreen =
+                viewport->viewSpaceToScreenSpace(positionVS.xy);
             auto const entity = scene->getHandle(id);
-            drawOneLightOverlay(entity, positionInWindow,
+            drawOneLightOverlay(entity, positionOnScreen,
                                 selection.isSelected(entity),
                                 Transform::fromMatrix(transform.matrix),
                                 light.light);
@@ -101,18 +101,18 @@ void ViewportOverlays::drawLightOverlays() {
 
 template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
-                                           vml::float2 positionInWindow,
+                                           vml::float2 positionOnScreen,
                                            bool selected, Transform const&,
                                            PointLight const& light) {
-    drawPointLightIcon(positionInWindow, light.common.color, selected);
+    drawPointLightIcon(positionOnScreen, light.common.color, selected);
 }
 
 template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
-                                           vml::float2 positionInWindow,
+                                           vml::float2 positionOnScreen,
                                            bool selected, Transform const&,
                                            SpotLight const& s) {
-    drawSpotLightIcon(positionInWindow, s.common.color);
+    drawSpotLightIcon(positionOnScreen, s.common.color);
     if (selected) {
         drawSpotlightVizWS(entity, s.radius,
                            (s.innerCutoff + s.outerCutoff) / 2,
@@ -122,21 +122,21 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
 
 template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
-                                           vml::float2 positionInWindow,
+                                           vml::float2 positionOnScreen,
                                            bool /* selected */,
                                            Transform const& transform,
                                            DirectionalLight const& light) {
     float3 const lightDirWS = vml::rotate({ 0, 0, 1 }, transform.orientation);
-    drawDirectionalLightIcon(positionInWindow, lightDirWS, light.common.color);
+    drawDirectionalLightIcon(positionOnScreen, lightDirWS, light.common.color);
 }
 
 template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
-                                           vml::float2 positionInWindow,
+                                           vml::float2 positionOnScreen,
                                            bool /* selected */,
                                            Transform const&,
                                            SkyLight const& light) {
-    drawSkyLightIcon(positionInWindow, light.common.color);
+    drawSkyLightIcon(positionOnScreen, light.common.color);
 }
 
 void ViewportOverlays::drawPointLightIcon(vml::float2 position,
@@ -247,27 +247,27 @@ void ViewportOverlays::drawSpotlightVizWS(bloom::EntityHandle entity,
         p = (transform * float4(p, 1)).xyz;
     }
 
-    utl::small_vector<float2, 32> pointsWindowSpace1;
+    utl::small_vector<float2, 32> pointsScreenSpace1;
     std::transform(circlePoints1.begin(), circlePoints1.end(),
-                   std::back_inserter(pointsWindowSpace1), [this](float3 x) {
-        return viewport->worldSpaceToWindowSpace(x).xy;
+                   std::back_inserter(pointsScreenSpace1), [this](float3 x) {
+        return viewport->worldSpaceToScreenSpace(x).xy;
     });
-    utl::small_vector<float2, 32> pointsWindowSpace2;
+    utl::small_vector<float2, 32> pointsScreenSpace2;
     std::transform(circlePoints2.begin(), circlePoints2.end(),
-                   std::back_inserter(pointsWindowSpace2), [this](float3 x) {
-        return viewport->worldSpaceToWindowSpace(x).xy;
+                   std::back_inserter(pointsScreenSpace2), [this](float3 x) {
+        return viewport->worldSpaceToScreenSpace(x).xy;
     });
 
     for (int i = 0; i < segments; i += 4) {
-        drawList->AddLine(pointsWindowSpace1[i], pointsWindowSpace2[i],
+        drawList->AddLine(pointsScreenSpace1[i], pointsScreenSpace2[i],
                           toUCol32(color));
     }
     for (int i = 0; i < segments; ++i) {
-        drawList->AddLine(pointsWindowSpace1[i],
-                          pointsWindowSpace1[(i + 1) % segments],
+        drawList->AddLine(pointsScreenSpace1[i],
+                          pointsScreenSpace1[(i + 1) % segments],
                           toUCol32(color));
-        drawList->AddLine(pointsWindowSpace2[i],
-                          pointsWindowSpace2[(i + 1) % segments],
+        drawList->AddLine(pointsScreenSpace2[i],
+                          pointsScreenSpace2[(i + 1) % segments],
                           toUCol32(color));
     }
 }

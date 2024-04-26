@@ -949,6 +949,9 @@ struct ImGui_ImplOSX_WindowDelegate: bloom::WindowDelegate {
     
     void onClose() override {
         poppy::View::BackendImpl::setClosing(viewport);
+        if (!viewport->Window->UserPointer) {
+            window()->setShouldClose(false);
+        }
     }
     
     void onDestroy() override {

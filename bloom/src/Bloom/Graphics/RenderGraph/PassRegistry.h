@@ -1,3 +1,6 @@
+#ifndef BLOOM_GRAPHICS_RENDERGRAPH_PASSREGISTRY_H
+#define BLOOM_GRAPHICS_RENDERGRAPH_PASSREGISTRY_H
+
 #include <functional>
 #include <memory>
 #include <span>
@@ -65,3 +68,5 @@ static PassRegistryEntry makeEntry(std::string name) {
 } // namespace internal
 
 } // namespace bloom::rg
+
+#endif // BLOOM_GRAPHICS_RENDERGRAPH_PASSREGISTRY_H

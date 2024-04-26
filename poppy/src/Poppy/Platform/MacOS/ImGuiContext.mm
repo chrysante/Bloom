@@ -82,6 +82,10 @@ void poppy::ImGuiContext::drawFramePlatform() {
             continue;
         }
         auto& window = *(Window*)viewport->PlatformHandle;
+        NSWindow* native = (__bridge NSWindow*)window.nativeHandle();
+        if ((native.occlusionState & NSWindowOcclusionStateVisible) == 0) {
+            continue;
+        }
         ++numRenderTasks;
         mEditor->onRenderThread([=, this, swapchain = window.swapchain(),
                                  commandQueue = window.commandQueue()] {

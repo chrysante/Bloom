@@ -192,18 +192,19 @@ static float computeLeftInset(Window const& window) {
     return titleButtonsArea.lower_bound().x + titleButtonsArea.upper_bound().x;
 }
 
-static void dockTitlebarBehaviour(ImGuiWindow* imWindow, ImRect toolbarBB,
-                                  ImGuiWindowFlags& nextFrameFlags) {
+static void dockTitlebarBehaviour(ImGuiWindow* imWindow, ImRect toolbarBB) {
     auto& g = *GImGui;
     bool windowDragging =
         ImGui::IsWindowFocused() &&
         toolbarBB.Contains(g.IO.MouseClickedPos[ImGuiMouseButton_Left]) &&
         !ImGui::IsAnyItemHovered() &&
-        ImGui::IsMouseDragging(ImGuiMouseButton_Left);
+        ImGui::IsMouseDragging(ImGuiMouseButton_Left, 20);
     if (windowDragging) {
-        g.MovingWindow = imWindow;
-        g.ActiveId = imWindow->MoveId;
-        nextFrameFlags |= ImGuiWindowFlags_NoDocking;
+        auto* node = imWindow->DockNode;
+        ImGui::StartMouseMovingWindowOrNode(imWindow,
+                                            node->Windows.Size == 1 ? node :
+                                                                      nullptr,
+                                            true);
     }
 }
 
@@ -237,8 +238,7 @@ void View::displayToolbar() {
         float2 pos = ImGui::GetWindowPos();
         ImRect toolbarRect(pos, pos + float2(ImGui::GetWindowWidth(),
                                              _toolbar->getHeight()));
-        dockTitlebarBehaviour(imWindow, toolbarRect,
-                              (ImGuiWindowFlags&)data.nextFrameFlags);
+        dockTitlebarBehaviour(imWindow, toolbarRect);
     }
 }
 

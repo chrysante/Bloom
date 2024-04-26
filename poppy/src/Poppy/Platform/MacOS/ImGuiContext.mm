@@ -27,89 +27,70 @@ void poppy::ImGuiContext::newFramePlatform() {
     ImGui_ImplOSX_NewFrame(*mEditor);
 }
 
-static void drawMainWindow(Window& window) {
-    MetalCommandQueue& mtlCommandQueue =
-        dynamic_cast<MetalCommandQueue&>(window.commandQueue());
-    id<MTLCommandBuffer> commandBuffer = [mtlCommandQueue.queue commandBuffer];
-    MTLRenderPassDescriptor* renderPassDescriptor =
-        [[MTLRenderPassDescriptor alloc] init];
+static void assignBackbufferToRPDesc(MTLRenderPassDescriptor* desc,
+                                     Backbuffer& backbuffer) {
     MTLRenderPassColorAttachmentDescriptor* caDesc =
         [[MTLRenderPassColorAttachmentDescriptor alloc] init];
-    std::unique_ptr const backbuffer = window.swapchain().nextBackbuffer();
     caDesc.texture =
-        (__bridge id<MTLTexture>)backbuffer->texture().nativeHandle();
+        (__bridge id<MTLTexture>)backbuffer.texture().nativeHandle();
     caDesc.loadAction = MTLLoadActionClear;
     caDesc.storeAction = MTLStoreActionStore;
-    [renderPassDescriptor.colorAttachments setObject:caDesc
-                                  atIndexedSubscript:0];
-    ImGui_ImplMetal_NewFrame(renderPassDescriptor);
-    ImDrawData* drawData = ImGui::GetDrawData();
-    renderPassDescriptor.colorAttachments[0].clearColor =
-        MTLClearColorMake(0, 0, 0, 1);
-    id<MTLRenderCommandEncoder> renderEncoder =
-        [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-    [renderEncoder pushDebugGroup:@"Dear ImGui rendering"];
-    ImGui_ImplMetal_RenderDrawData(drawData, commandBuffer, renderEncoder);
-    [renderEncoder popDebugGroup];
-    [renderEncoder endEncoding];
-    // Present
-    auto& mtlBackbuffer = dynamic_cast<MetalBackbuffer&>(*backbuffer);
-    [commandBuffer presentDrawable:mtlBackbuffer.drawable];
-    [commandBuffer commit];
+    [desc.colorAttachments setObject:caDesc atIndexedSubscript:0];
+    desc.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 1);
 }
 
-static void drawSecondaryWindow(ImGuiViewportP* viewport) {
-    BL_UNIMPLEMENTED();
-#if 0
-    ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
-    void* handle = viewport->PlatformHandleRaw;
-    NSWindow* window = (__bridge NSWindow*)handle;
-    // Always render the first frame, regardless of occlusionState, to avoid an initial flicker
-    if ((window.occlusionState & NSWindowOcclusionStateVisible) == 0 && !data->FirstFrame)
-    {
-        // Do not render windows which are completely occluded. Calling -[CAMetalLayer nextDrawable] will hang for
-        // approximately 1 second if the Metal layer is completely occluded.
-        return;
-    }
-    data->FirstFrame = false;
+struct poppy::ImGuiContext::BackendImpl {
+    static void drawWindow(poppy::ImGuiContext& ctx, Window& window,
+                           ImGuiViewport* viewport,
+                           MTLRenderPassDescriptor* renderPassDescriptor,
+                           int index) {
+        // If this is the first window we need to get the backbuffer early
+        // because the imgui backend derives pixel format and other data from
+        // the texture in ImGui_ImplMetal_NewFrame()
+        std::unique_ptr<Backbuffer> backbuffer;
+        if (index == 0) {
+            backbuffer = window.swapchain().nextBackbuffer();
+            assignBackbufferToRPDesc(renderPassDescriptor, *backbuffer);
+            ImGui_ImplMetal_NewFrame(renderPassDescriptor);
+        }
 
-    viewport->DpiScale = (float)window.backingScaleFactor;
-    if (data->MetalLayer.contentsScale != viewport->DpiScale)
-    {
-        data->MetalLayer.contentsScale = viewport->DpiScale;
-        data->MetalLayer.drawableSize = MakeScaledSize(window.frame.size, viewport->DpiScale);
-    }
-    viewport->DrawData->FramebufferScale = ImVec2(viewport->DpiScale, viewport->DpiScale);
-    id <CAMetalDrawable> drawable = [data->MetalLayer nextDrawable];
-    if (drawable == nil)
-        return;
-    MTLRenderPassDescriptor* renderPassDescriptor = data->RenderPassDescriptor;
-    renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
-    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
-    if ((viewport->Flags & ImGuiViewportFlags_NoRendererClear) == 0)
-        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+        // Render
+        ImDrawData* drawData = viewport->DrawData;
+        if (!backbuffer) {
+            backbuffer = window.swapchain().nextBackbuffer();
+            // TODO: Check if we got a valid backbuffer
+            assignBackbufferToRPDesc(renderPassDescriptor, *backbuffer);
+        }
+        MetalCommandQueue& mtlCommandQueue =
+            dynamic_cast<MetalCommandQueue&>(window.commandQueue());
+        id<MTLCommandBuffer> commandBuffer =
+            [mtlCommandQueue.queue commandBuffer];
+        id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer
+            renderCommandEncoderWithDescriptor:renderPassDescriptor];
+        [renderEncoder pushDebugGroup:@"Dear ImGui rendering"];
+        ImGui_ImplMetal_RenderDrawData(drawData, commandBuffer, renderEncoder);
+        [renderEncoder popDebugGroup];
+        [renderEncoder endEncoding];
 
-    id <MTLCommandBuffer> commandBuffer = [data->CommandQueue commandBuffer];
-    id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-    ImGui_ImplMetal_RenderDrawData(viewport->DrawData, commandBuffer, renderEncoder);
-    [renderEncoder endEncoding];
-    [commandBuffer presentDrawable:drawable];
-    [commandBuffer commit];
-#endif
-}
+        // Present
+        auto& mtlBackbuffer = dynamic_cast<MetalBackbuffer&>(*backbuffer);
+        [commandBuffer presentDrawable:mtlBackbuffer.drawable];
+        [commandBuffer commit];
+    }
+};
 
 void poppy::ImGuiContext::drawFramePlatform() {
     BL_PROFILE_FUNCTION();
-    if (!mEditor->mainWindow()) {
-        return;
-    }
-    drawMainWindow(*mEditor->mainWindow());
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-    for (int i = 1; i < platform_io.Viewports.Size; i++) {
-        ImGuiViewport* viewport = platform_io.Viewports[i];
-        if (viewport->Flags & ImGuiViewportFlags_IsMinimized) continue;
-        // drawSecondaryWindow((ImGuiViewportP*)viewport);
-        ImGui_ImplMetal_RenderWindow(viewport, nullptr);
+    MTLRenderPassDescriptor* renderPassDescriptor =
+        [[MTLRenderPassDescriptor alloc] init];
+    for (int i = 0; i < platform_io.Viewports.Size; i++) {
+        auto* viewport = (ImGuiViewportP*)platform_io.Viewports[i];
+        if (viewport->Flags & ImGuiViewportFlags_IsMinimized) {
+            continue;
+        }
+        BackendImpl::drawWindow(*this, *(Window*)viewport->PlatformHandle,
+                                viewport, renderPassDescriptor, i);
     }
 }
 

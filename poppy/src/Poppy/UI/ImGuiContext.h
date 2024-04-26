@@ -50,6 +50,8 @@ public:
     void onTextInput(unsigned int);
 
 private:
+    struct BackendImpl;
+
     void initPlatform();
     void shutdownPlatform();
     void newFramePlatform();

@@ -7,7 +7,7 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/ViewRegistry.h"
-#include "Poppy/Views/AssetBrowser.h"
+#include "Poppy/Views/AssetDragDrop.h"
 
 using namespace bloom;
 using namespace poppy;

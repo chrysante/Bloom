@@ -1,61 +1,84 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #define UTL_DEFER_MACROS
 
-#include <iostream>
+#include <filesystem>
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <utl/common.hpp>
 #include <utl/filesystem_ext.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Application/Application.h"
 #include "Bloom/Application/ResourceUtil.h"
+#include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Components/Script.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/Toolbar.h"
+#include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
-#include "Poppy/Views/AssetBrowser.h"
+#include "Poppy/Views/AssetDragDrop.h"
+#include "Poppy/Views/DirectoryView.h"
 #include "Poppy/Views/MaterialInstanceViewer.h"
 
 using namespace bloom;
 using namespace vml::short_types;
 using namespace poppy;
 
-static std::string toDragDropType(AssetType type) {
-    return utl::strcat("DD-Asset-", type);
-}
+namespace {
 
-std::optional<AssetHandle> poppy::acceptAssetDragDrop(
-    std::span<AssetType const> types) {
-    if (!ImGui::BeginDragDropTarget()) {
-        return std::nullopt;
-    }
-    utl::scope_guard endTarget = [] { ImGui::EndDragDropTarget(); };
-    for (auto type: types) {
-        auto* payload =
-            ImGui::AcceptDragDropPayload(toDragDropType(type).data());
-        if (!payload) {
-            continue;
-        }
-        if (payload->IsDelivery()) {
-            AssetHandle receivedAsset;
-            std::memcpy(&receivedAsset, payload->Data, sizeof receivedAsset);
-            return receivedAsset;
-        }
-    }
-    return std::nullopt;
-}
+struct AssetBrowserData {
+    std::filesystem::path projectDir; // absolute path
+    std::filesystem::path currentDir; // absolute path
+};
 
-std::optional<AssetHandle> poppy::acceptAssetDragDrop(
-    std::initializer_list<AssetType> types) {
-    return acceptAssetDragDrop(std::span(types));
-}
+class AssetBrowser: public View {
+public:
+    AssetBrowser();
+
+    void openAsset(bloom::AssetHandle);
+
+private:
+    void init() override;
+    void displayToolbar() override;
+    void display() override;
+    void onInput(bloom::InputEvent& event) override { dirView.onInput(event); }
+
+    YAML::Node serialize() const override;
+    void deserialize(YAML::Node) override;
+
+    void newAssetPopup();
+    void displayNoOpenProject();
+
+    void importAsset(std::filesystem::path);
+
+    void openProject(std::filesystem::path const&);
+    void openSubdirectory(std::filesystem::path const&);
+    void refreshFilesystem();
+
+    /// The applications asset manager, will be set by ???
+    bloom::AssetManager* assetManager = nullptr;
+
+    /// The current directory relative to the project directory
+    std::filesystem::path currentDir;
+
+    AssetBrowserData data;
+
+    DirectoryView dirView;
+};
+
+} // namespace
 
 POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser");
+
+BLOOM_MAKE_TEXT_SERIALIZER(AssetBrowserData, projectDir, currentDir);
 
 static AssetHandle getHandle(DirectoryEntry const& entry) {
     auto* handle = std::any_cast<AssetHandle>(&entry.userData);

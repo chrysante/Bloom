@@ -18,7 +18,7 @@
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
-#include "Poppy/Views/AssetBrowser.h"
+#include "Poppy/Views/AssetDragDrop.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/Viewport/Gizmo.h"
 #include "Poppy/Views/Viewport/ViewportCameraController.h"

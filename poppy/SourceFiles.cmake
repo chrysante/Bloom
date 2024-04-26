@@ -50,7 +50,8 @@ set(poppy_sources
   src/Poppy/UI/ViewRegistry.h
 
   src/Poppy/Views/AssetBrowser.cpp
-  src/Poppy/Views/AssetBrowser.h
+  src/Poppy/Views/AssetDragDrop.cpp
+  src/Poppy/Views/AssetDragDrop.h
   src/Poppy/Views/BasicSceneInspector.cpp
   src/Poppy/Views/BasicSceneInspector.h
   src/Poppy/Views/ConsoleView.cpp
@@ -59,18 +60,13 @@ set(poppy_sources
   src/Poppy/Views/DirectoryView.cpp
   src/Poppy/Views/DirectoryView.h
   src/Poppy/Views/EntityInspector.cpp
-  src/Poppy/Views/EntityInspector.h
   src/Poppy/Views/NodeEditor.cpp
   src/Poppy/Views/NodeEditor.h
   src/Poppy/Views/MaterialInstanceViewer.cpp
   src/Poppy/Views/MaterialInstanceViewer.h
   src/Poppy/Views/RendererDebuggerView.cpp
-  src/Poppy/Views/RendererDebuggerView.h
   src/Poppy/Views/RenderGraphEditorView.cpp
-  src/Poppy/Views/RendererSettingsView.cpp
-  src/Poppy/Views/RendererSettingsView.h
   src/Poppy/Views/SceneOutliner.cpp
-  src/Poppy/Views/SceneOutliner.h
   src/Poppy/Views/Viewport2.cpp
   src/Poppy/Views/Viewport/Gizmo.cpp
   src/Poppy/Views/Viewport/Gizmo.h

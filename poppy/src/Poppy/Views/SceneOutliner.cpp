@@ -1,30 +1,68 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #define UTL_DEFER_MACROS
 
-#include "Poppy/Views/SceneOutliner.h"
+#include <optional>
+#include <span>
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <utl/hashset.hpp>
 #include <utl/scope_guard.hpp>
 #include <utl/stack.hpp>
 #include <utl/utility.hpp>
 #include <utl/vector.hpp>
 
 #include "Bloom/Runtime/SceneSystem.h"
+#include "Bloom/Scene/Entity.h"
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/SelectionContext.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
+#include "Poppy/Views/BasicSceneInspector.h"
 
 using namespace bloom;
 using namespace vml::short_types;
 using namespace poppy;
 
-POPPY_REGISTER_VIEW(SceneOutliner, "Scene Outliner");
+namespace {
 
-SceneOutliner::SceneOutliner(): BasicSceneInspector(this) {}
+class SceneOutliner: public View, public BasicSceneInspector {
+public:
+    SceneOutliner(): BasicSceneInspector(this) {}
+
+private:
+    void display() override;
+    void onInput(bloom::InputEvent&) override;
+
+    struct TreeNodeDescription {
+        std::size_t id = 0;
+        bool selected = false;
+        bool expanded = false;
+        bool isLeaf = true;
+        std::string_view name;
+    };
+    void treeNode(TreeNodeDescription const&, auto&& block);
+    void displayEntity(bloom::EntityHandle);
+    void displayScene(bloom::Scene&);
+
+    void dragDropSource(bloom::EntityHandle child);
+    void dragDropTarget(bloom::EntityHandle parent);
+
+    bool expanded(bloom::Scene const*) const;
+    bool expanded(bloom::ConstEntityHandle) const;
+    void setExpanded(bloom::Scene const*, bool);
+    void setExpanded(bloom::ConstEntityHandle, bool);
+
+private:
+    utl::hashset<bloom::ConstEntityHandle> mExpanded;
+};
+
+} // namespace
+
+POPPY_REGISTER_VIEW(SceneOutliner, "Scene Outliner");
 
 void SceneOutliner::display() {
     if (scenes().empty()) {

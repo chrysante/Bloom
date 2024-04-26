@@ -1,7 +1,5 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "Poppy/Views/EntityInspector.h"
-
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <range/v3/view.hpp>
@@ -12,24 +10,79 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Graphics/Lights.h"
 #include "Bloom/Runtime/ScriptSystem.h"
+#include "Bloom/Scene/Components/AllComponents.h"
+#include "Bloom/Scene/Entity.h"
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/SelectionContext.h"
 #include "Poppy/UI/Appearance.h"
+#include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/PropertiesView.h"
+#include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
-#include "Poppy/Views/AssetBrowser.h"
+#include "Poppy/Views/AssetDragDrop.h"
+#include "Poppy/Views/BasicSceneInspector.h"
 
 using namespace vml::short_types;
 using namespace ranges::views;
 using namespace bloom;
 using namespace poppy;
 
-POPPY_REGISTER_VIEW(EntityInspector, "Entity Inspector");
+namespace {
 
-EntityInspector::EntityInspector(): BasicSceneInspector(this) {}
+class EntityInspector: public View, public BasicSceneInspector {
+public:
+    EntityInspector(): BasicSceneInspector(this) {}
+
+private:
+    void display() override;
+
+    // Component Inspectors
+    void inspectTag(bloom::EntityHandle);
+    template <typename... Components>
+    void addComponentButton(char const* name, bloom::EntityHandle entity,
+                            bool forceDisable = false);
+
+    void inspectTransform(bloom::EntityHandle);
+
+    void inspectMesh(bloom::EntityHandle);
+    void receiveMeshDragDrop(bloom::EntityHandle);
+    void receiveMaterialDragDrop(bloom::EntityHandle);
+
+    void inspectLight(bloom::EntityHandle);
+    void inspectLightType(LightType&, bloom::EntityHandle);
+
+    void inspectLightCommon(bloom::LightCommon&, LightType type);
+    void inspectPointLight(bloom::PointLight&);
+    void inspectSpotLight(bloom::SpotLight&);
+    void inspectDirectionalLight(bloom::DirectionalLight&);
+    void inspectSkyLight(bloom::SkyLight&);
+
+    void inspectScript(bloom::EntityHandle);
+
+    // Helpers
+    bool beginComponentSection(std::string_view name);
+    template <typename>
+    bool beginComponentSection(std::string_view name, bloom::EntityHandle);
+    bool beginSubSection(std::string_view name);
+
+    bool beginGenericSection(std::string_view name, FontDesc const&,
+                             utl::function<void()> deleter);
+
+    void endSection();
+    void endSubSection();
+
+    int editingNameState = 0;
+    bool transformScaleLinked = false;
+};
+
+} // namespace
+
+POPPY_REGISTER_VIEW(EntityInspector, "Entity Inspector");
 
 void EntityInspector::display() {
     if (scenes().empty()) {

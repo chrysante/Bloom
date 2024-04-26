@@ -19,7 +19,7 @@
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/ViewRegistry.h"
-#include "Poppy/Views/AssetBrowser.h"
+#include "Poppy/Views/AssetDragDrop.h"
 
 using namespace vml::short_types;
 using namespace bloom;

@@ -1,19 +1,46 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "Poppy/Views/RendererDebuggerView.h"
+#include <memory>
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include "Bloom/Graphics/Renderer/ForwardRenderer.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/PropertiesView.h"
+#include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/Viewport/Viewport.h"
 
 using namespace bloom;
 using namespace vml::short_types;
 using namespace poppy;
+
+namespace {
+
+class RendererDebuggerView: public View {
+public:
+    void init() override;
+    void display() override;
+
+private:
+    bloom::ForwardRenderer* findRenderer() const;
+    std::shared_ptr<bloom::ForwardRendererFramebuffer> findFramebuffer() const;
+
+private:
+    bloom::ForwardRenderer* mRenderer = nullptr;
+    std::weak_ptr<bloom::ForwardRendererFramebuffer> mFramebuffer;
+    std::shared_ptr<bloom::ForwardRendererFramebuffer> currentFramebuffer;
+
+private:
+    struct BloomVeilParams {
+        int downsampleMipmapLevel = 0;
+        int upsampleMipmapLevel = 0;
+    } veil;
+};
+
+} // namespace
 
 POPPY_REGISTER_VIEW(RendererDebuggerView, "Renderer Debugger");
 

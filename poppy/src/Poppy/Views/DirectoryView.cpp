@@ -12,7 +12,6 @@
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/ImGuiContext.h"
 #include "Poppy/UI/ImGuiHelpers.h"
-#include "Poppy/Views/AssetBrowser.h"
 
 using namespace bloom;
 using namespace vml::short_types;

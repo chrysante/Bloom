@@ -52,6 +52,7 @@ private:
     void initImGui();
     void shutdown() override;
     void frame() override;
+    void render() override;
 
     void menuBar();
     bool onInput(bloom::InputEvent event) override;

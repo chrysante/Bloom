@@ -188,5 +188,5 @@ FunctionProfiler::FunctionProfiler(char const* function, char const* file):
 FunctionProfiler::~FunctionProfiler() {
     (void)file;
     auto elapsed = std::chrono::high_resolution_clock::now() - start;
-    Logger::Trace(function, ": ", utl::format_duration(elapsed));
+    Logger::Trace(function, ": ", utl::format_duration<1>(elapsed));
 }

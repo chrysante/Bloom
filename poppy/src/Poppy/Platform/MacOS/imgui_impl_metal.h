@@ -43,6 +43,7 @@ IMGUI_IMPL_API void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPass
 IMGUI_IMPL_API void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData,
                                                    id<MTLCommandBuffer> commandBuffer,
                                                    id<MTLRenderCommandEncoder> commandEncoder);
+IMGUI_IMPL_API void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*);
 
 // Called by Init/NewFrame/Shutdown
 IMGUI_IMPL_API bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device);

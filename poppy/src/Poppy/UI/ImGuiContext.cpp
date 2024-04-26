@@ -262,7 +262,7 @@ void poppy::ImGuiContext::init(Editor& editor,
     io.ConfigViewportsNoDefaultParent = true;
 #endif
     io.IniFilename = desc.iniFilePath.c_str();
-    doInitPlatform();
+    initPlatform();
     uploadCurrentFontAtlas(device);
 
     listen([this](ReloadedFontAtlasCommand cmd) {
@@ -275,13 +275,19 @@ void poppy::ImGuiContext::init(Editor& editor,
 }
 
 void poppy::ImGuiContext::shutdown() {
+    std::lock_guard lock(drawMutex);
     ImGui::SetCurrentContext(context);
-    doShutdownPlatform();
+    shutdownPlatform();
     ImGui::DestroyContext(context);
     context = nullptr;
 }
 
 void poppy::ImGuiContext::newFrame() {
+    while (wantRender) {
+        continue;
+    }
+    std::lock_guard lock(drawMutex);
+    Logger::Trace("New Frame");
     if (!mEditor->mainWindow()) {
         return;
     }
@@ -290,17 +296,22 @@ void poppy::ImGuiContext::newFrame() {
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = (vml::float2)window.size();
     io.DisplayFramebufferScale = window.contentScaleFactor();
-    doNewFramePlatform();
+    newFramePlatform();
     ImGui::NewFrame();
 }
 
-void poppy::ImGuiContext::drawFrame() {
+void poppy::ImGuiContext::endFrame() {
     ImGui::SetCurrentContext(context);
-    doDrawFramePlatform();
-#if USE_VIEWORTS
+    ImGui::Render();
     ImGui::UpdatePlatformWindows();
-    ImGui::RenderPlatformWindowsDefault();
-#endif
+}
+
+/// This is called asynchronously on the render thread
+void poppy::ImGuiContext::drawFrame() {
+    std::lock_guard lock(drawMutex);
+    wantRender = false;
+    ImGui::SetCurrentContext(context);
+    drawFramePlatform();
 }
 
 void poppy::ImGuiContext::onInput(InputEvent e) {
@@ -366,17 +377,17 @@ void poppy::ImGuiContext::onTextInput(unsigned int code) {
 
 /// On Apple platform these are defined in Platform/MacOS/ImGuiContext.mm
 
-void poppy::ImGuiContext::doInitPlatform(HardwareDevice& device,
-                                         ImGuiContextDescription const& d) {}
+void poppy::ImGuiContext::initPlatform(HardwareDevice& device,
+                                       ImGuiContextDescription const& d) {}
 
 void poppy::ImGuiContext::createFontAtlas(HardwareDevice&) {}
 
-void poppy::ImGuiContext::doNewFramePlatform(Window& window) {}
+void poppy::ImGuiContext::newFramePlatform(Window& window) {}
 
-void poppy::ImGuiContext::doDrawFramePlatform(HardwareDevice& device,
-                                              Window& window) {}
+void poppy::ImGuiContext::drawFramePlatform(HardwareDevice& device,
+                                            Window& window) {}
 
-void poppy::ImGuiContext::doShutdownPlatform() {}
+void poppy::ImGuiContext::shutdownPlatform() {}
 
 void poppy::ImGuiContext::createFontAtlasPlatform(ImFontAtlas* atlas,
                                                   HardwareDevice&) {}

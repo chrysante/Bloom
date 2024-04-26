@@ -213,8 +213,12 @@ void Editor::frame() {
     dockspace.display(window);
     viewManager.display();
     debugViews.display();
-    imguiCtx.drawFrame();
+    imguiCtx.endFrame();
+    imguiCtx.requestRender();
+    requestRender();
 }
+
+void Editor::render() { imguiCtx.drawFrame(); }
 
 void Editor::menuBar() {
     if (ImGui::BeginMenu("File")) {

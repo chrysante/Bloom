@@ -5,6 +5,7 @@
 #include <range/v3/algorithm.hpp>
 
 #include "Bloom/Application/InputInternal.h"
+#include "Bloom/Application/RenderThread.h"
 #include "Bloom/Application/Window.h"
 #include "Bloom/Core/Autorelease.h"
 #include "Bloom/Core/Debug.h"
@@ -41,6 +42,7 @@ struct Application::Impl {
     };
 
     int inputCallbackID = 0;
+    RenderThread renderThread;
 };
 
 Application::Application(): mCoreSystems(this), impl(std::make_unique<Impl>()) {
@@ -74,6 +76,12 @@ void Application::destroyWindow(Window* window) {
     auto itr =
         ranges::remove_if(mWindows, [&](auto& w) { return w.get() == window; });
     mWindows.erase(itr, mWindows.end());
+}
+
+void Application::setRunLoopMode(RunLoopMode mode) { mRunLoopMode = mode; }
+
+void Application::requestRender() {
+    impl->renderThread.submit([this] { render(); });
 }
 
 static void handleEvents(RunLoopMode mode) {
@@ -143,5 +151,3 @@ void Application::clearClosingWindows() {
         }
     }
 }
-
-void Application::setRunLoopMode(RunLoopMode mode) { mRunLoopMode = mode; }

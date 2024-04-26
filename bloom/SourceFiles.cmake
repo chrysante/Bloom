@@ -14,6 +14,8 @@ set(bloom_sources
   src/Bloom/Application/InputEvent.h
   src/Bloom/Application/MessageSystem.cpp
   src/Bloom/Application/MessageSystem.h
+  src/Bloom/Application/RenderThread.cpp
+  src/Bloom/Application/RenderThread.h
   src/Bloom/Application/ResourceUtil.cpp
   src/Bloom/Application/ResourceUtil.h
   src/Bloom/Application/Window.cpp

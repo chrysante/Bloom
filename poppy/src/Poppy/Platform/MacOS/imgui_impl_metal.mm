@@ -465,7 +465,7 @@ static void ImGui_ImplMetal_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     data->MetalLayer.drawableSize = MakeScaledSize(CGSizeMake(size.x, size.y), viewport->DpiScale);
 }
 
-static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
+void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
 

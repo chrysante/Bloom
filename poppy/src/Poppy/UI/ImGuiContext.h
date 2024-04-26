@@ -1,8 +1,10 @@
 #ifndef POPPY_UI_IMGUICONTEXT_H
 #define POPPY_UI_IMGUICONTEXT_H
 
+#include <atomic>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 
 #include <imgui.h>
 #include <utl/hashmap.hpp>
@@ -31,24 +33,34 @@ struct ImGuiContextDescription {
 class ImGuiContext: bloom::Receiver {
 public:
     ~ImGuiContext();
+    ///
     void init(Editor&, ImGuiContextDescription const&);
+    ///
     void shutdown();
+    /// Must be called at the start of each new frame
     void newFrame();
+    /// Must be called at the end of each new frame
+    void endFrame();
+    /// Renders the last drawn frame. Calling this is optional
     void drawFrame();
+
+    void requestRender() { wantRender = true; }
 
     void onInput(bloom::InputEvent);
     void onTextInput(unsigned int);
 
 private:
-    void doInitPlatform();
-    void doShutdownPlatform();
-    void doNewFramePlatform();
-    void doDrawFramePlatform();
+    void initPlatform();
+    void shutdownPlatform();
+    void newFramePlatform();
+    void drawFramePlatform();
     void uploadCurrentFontAtlas(bloom::HardwareDevice& device);
 
     Editor* mEditor = nullptr;
     ::ImGuiContext* context = nullptr;
     ImGuiContextDescription desc;
+    std::mutex drawMutex;
+    std::atomic_bool wantRender;
 };
 
 } // namespace poppy

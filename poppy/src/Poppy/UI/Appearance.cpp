@@ -70,6 +70,7 @@ static void applyStyle(poppy::StyleDescription const& style) {
     imguiStyle.ChildRounding = style.vars.childWindowRounding;
     imguiStyle.PopupRounding = style.vars.popupRounding;
     imguiStyle.FrameRounding = style.vars.frameRounding;
+    imguiStyle.SelectableRounding = style.vars.selectableRounding;
     imguiStyle.TabRounding = style.vars.tabRounding;
     imguiStyle.GrabMinSize = style.vars.grabMinSize;
     imguiStyle.GrabRounding = style.vars.grabRounding;
@@ -118,7 +119,7 @@ static StyleDescription makeStyle(SystemAppearance s) {
         .popupRounding = 0,
         .frameRounding = 6,
         .tabRounding = 0,
-        .selectableRounding = {},
+        .selectableRounding = 5,
         .grabMinSize = 12,
         .grabRounding = 6,
         .scrollbarSize = 10,

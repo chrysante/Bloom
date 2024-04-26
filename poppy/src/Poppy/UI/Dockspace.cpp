@@ -82,6 +82,7 @@ static ImGuiID submitDockspace() {
     ImGuiDockNodeFlags flags = 0;
     flags |= ImGuiDockNodeFlags_NoWindowMenuButton;
     flags |= ImGuiDockNodeFlags_NoCloseButton;
+    flags |= ImGuiDockNodeFlags_AutoHideTabBar;
     ImGuiID ID = ImGui::GetID(MainDockspaceID);
     ImGui::DockSpace(ID, /* size = */ {}, flags);
     return ID;

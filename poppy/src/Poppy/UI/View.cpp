@@ -116,22 +116,13 @@ static bool isDocked(ImGuiWindow* window) {
 
 void View::doFrame() {
     auto* imguiWindow = (ImGuiWindow*)data.imguiWindow;
-    if (isDocked(imguiWindow)) {
-        data.isMoveable = true;
-    }
-    else if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        data.isMoveable = false;
-    }
-    if (imguiWindow) {
-        imguiWindow->UserPointer = this;
-    }
-    ImGuiWindowFlags flags = 0;
+    ImGuiWindowFlags flags = data.nextFrameFlags;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoResize;
     if (_toolbar) {
         flags |= ImGuiWindowFlags_NoTitleBar;
     }
-    if (!data.isMoveable) {
+    if (!isDocked(imguiWindow)) {
         flags |= ImGuiWindowFlags_NoMove;
     }
     // Begin block
@@ -163,8 +154,10 @@ void View::doFrame() {
     if (data.maximized) {
         displayTitle += "_FS";
     }
-    bool* beginOpenFlag = isDocked(imguiWindow) ? &data.open : nullptr;
+    bool docked = isDocked(imguiWindow);
+    bool* beginOpenFlag = docked ? &data.open : nullptr;
     bool open = ImGui::Begin(displayTitle.data(), beginOpenFlag, flags);
+    data.nextFrameFlags = 0;
     if (data.bgColor) {
         ImGui::PopStyleColor();
     }
@@ -174,10 +167,11 @@ void View::doFrame() {
     }
     if (open) {
         auto* imguiWindow = ImGui::GetCurrentWindow();
+        imguiWindow->UserPointer = this;
         data.imguiWindow = imguiWindow;
         data.position = imguiWindow->Pos;
         data.size = imguiWindow->Size;
-        data.docked = imguiWindow->DockNode != nullptr;
+        data.docked = docked;
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
         data.window = (Window*)viewport->PlatformHandle;
         if (data.window && GImGui->CurrentViewport->Window == imguiWindow) {
@@ -198,6 +192,21 @@ static float computeLeftInset(Window const& window) {
     return titleButtonsArea.lower_bound().x + titleButtonsArea.upper_bound().x;
 }
 
+static void dockTitlebarBehaviour(ImGuiWindow* imWindow, ImRect toolbarBB,
+                                  ImGuiWindowFlags& nextFrameFlags) {
+    auto& g = *GImGui;
+    bool windowDragging =
+        ImGui::IsWindowFocused() &&
+        toolbarBB.Contains(g.IO.MouseClickedPos[ImGuiMouseButton_Left]) &&
+        !ImGui::IsAnyItemHovered() &&
+        ImGui::IsMouseDragging(ImGuiMouseButton_Left);
+    if (windowDragging) {
+        g.MovingWindow = imWindow;
+        g.ActiveId = imWindow->MoveId;
+        nextFrameFlags |= ImGuiWindowFlags_NoDocking;
+    }
+}
+
 void View::displayToolbar() {
     if (!_toolbar) {
         return;
@@ -206,19 +215,31 @@ void View::displayToolbar() {
     _toolbar->setPadding(padding);
     float posx = 0;
     ImGuiWindow* imWindow = (ImGuiWindow*)data.imguiWindow;
-    if (!isDocked(imWindow) && data.window) {
+    BL_ASSERT(imWindow, "This should not be called if we don't have a window");
+    /// We tread the case where we are not docked but don't have a window as if
+    /// we are docked, but that should not happen anyways. We could probably
+    /// assert that.
+    bool docked = data.docked || !data.window;
+    if (docked) {
+        _toolbar->setHeight(26);
+    }
+    else {
         posx += computeLeftInset(window());
         float titlebarHeight = window().titlebarHeight();
         _toolbar->setHeight(titlebarHeight - 2 * padding.y);
         window().setMovable(!ImGui::IsAnyItemHovered());
     }
-    else {
-        _toolbar->setHeight(26);
-    }
     ImGui::SetCursorPosX(posx);
     float posy = ImGui::GetCursorPosY();
     _toolbar->display();
     ImGui::SetCursorPos({ 0, posy + _toolbar->getHeight() + 1 });
+    if (docked) {
+        float2 pos = ImGui::GetWindowPos();
+        ImRect toolbarRect(pos, pos + float2(ImGui::GetWindowWidth(),
+                                             _toolbar->getHeight()));
+        dockTitlebarBehaviour(imWindow, toolbarRect,
+                              (ImGuiWindowFlags&)data.nextFrameFlags);
+    }
 }
 
 void View::doOnInput(bloom::InputEvent& event) {

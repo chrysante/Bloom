@@ -161,8 +161,10 @@ private:
         vml::vector<std::optional<float>, 2> padding;
         std::optional<vml::float4> bgColor;
         bool maximized = false;
-        bool isMoveable = true;
         bool open = true;
+        /// `ImGuiWindowFlags` to use on the next frame. This is reset after the
+        /// call to `Begin()`
+        int nextFrameFlags = 0;
     };
     Data data;
     CommandPalette cmdPalette;

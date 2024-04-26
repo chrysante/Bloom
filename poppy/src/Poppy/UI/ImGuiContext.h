@@ -44,8 +44,6 @@ public:
     /// Renders the last drawn frame. Calling this is optional
     void drawFrame();
 
-    void requestRender() { wantRender = true; }
-
     void onInput(bloom::InputEvent);
     void onTextInput(unsigned int);
 
@@ -62,7 +60,8 @@ private:
     ::ImGuiContext* context = nullptr;
     ImGuiContextDescription desc;
     std::mutex drawMutex;
-    std::atomic_bool wantRender;
+    bool drawDataValid = false;
+    std::atomic_bool didRender;
 };
 
 } // namespace poppy

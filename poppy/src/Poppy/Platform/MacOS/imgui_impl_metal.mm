@@ -71,6 +71,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 @property (nonatomic, assign) MTLPixelFormat depthPixelFormat;
 @property (nonatomic, assign) MTLPixelFormat stencilPixelFormat;
 - (instancetype)initWithRenderPassDescriptor:(MTLRenderPassDescriptor*)renderPassDescriptor;
+- (instancetype)initWithSwapchainDesc:(bloom::SwapchainDescription const&)desc;
 @end
 
 // A singleton that stores long-lived objects that are needed by the Metal
@@ -179,6 +180,16 @@ void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     IM_ASSERT(bd->SharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init() ?");
     bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
+
+    if (bd->SharedMetalContext.depthStencilState == nil)
+        ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
+}
+
+void ImGui_ImplMetal_NewFrame(bloom::SwapchainDescription const& desc)
+{
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    IM_ASSERT(bd->SharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init() ?");
+    bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithSwapchainDesc:desc];
 
     if (bd->SharedMetalContext.depthStencilState == nil)
         ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
@@ -565,6 +576,18 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
         _colorPixelFormat = renderPassDescriptor.colorAttachments[0].texture.pixelFormat;
         _depthPixelFormat = renderPassDescriptor.depthAttachment.texture.pixelFormat;
         _stencilPixelFormat = renderPassDescriptor.stencilAttachment.texture.pixelFormat;
+    }
+    return self;
+}
+
+- (instancetype)initWithSwapchainDesc:(bloom::SwapchainDescription const&)desc
+{
+    if ((self = [super init]))
+    {
+        _sampleCount = 1;
+        _colorPixelFormat = (MTLPixelFormat)desc.pixelFormat;
+        _depthPixelFormat = MTLPixelFormatInvalid;
+        _stencilPixelFormat = MTLPixelFormatInvalid;
     }
     return self;
 }

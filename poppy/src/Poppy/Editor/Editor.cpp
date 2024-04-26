@@ -214,7 +214,6 @@ void Editor::frame() {
     viewManager.display();
     debugViews.display();
     imguiCtx.endFrame();
-    imguiCtx.requestRender();
     requestRender();
 }
 

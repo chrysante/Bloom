@@ -19,8 +19,10 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
-#include "imgui.h"      // IMGUI_IMPL_API
+#include <imgui.h>      // IMGUI_IMPL_API
+#include "Bloom/GPU/Swapchain.h"
 #ifndef IMGUI_DISABLE
+
 
 namespace poppy {
 
@@ -40,6 +42,7 @@ class Editor;
 IMGUI_IMPL_API bool ImGui_ImplMetal_Init(poppy::Editor& editor);
 IMGUI_IMPL_API void ImGui_ImplMetal_Shutdown();
 IMGUI_IMPL_API void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor);
+IMGUI_IMPL_API void ImGui_ImplMetal_NewFrame(bloom::SwapchainDescription const& desc);
 IMGUI_IMPL_API void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData,
                                                    id<MTLCommandBuffer> commandBuffer,
                                                    id<MTLRenderCommandEncoder> commandEncoder);

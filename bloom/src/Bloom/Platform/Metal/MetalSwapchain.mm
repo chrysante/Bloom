@@ -22,6 +22,7 @@ MetalSwapchain::MetalSwapchain(id<MTLDevice> device,
     layer.drawableSize = CGSize{ (CGFloat)desc.size.x, (CGFloat)desc.size.y };
     layer.maximumDrawableCount = desc.backBufferCount;
     layer.displaySyncEnabled = desc.displaySync;
+    layer.framebufferOnly = true;
     this->desc = desc;
 }
 

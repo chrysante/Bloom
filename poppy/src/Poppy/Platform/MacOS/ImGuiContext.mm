@@ -40,27 +40,24 @@ static void assignBackbufferToRPDesc(MTLRenderPassDescriptor* desc,
 }
 
 struct poppy::ImGuiContext::BackendImpl {
-    static void drawWindow(poppy::ImGuiContext& ctx, Window& window,
+    static bool drawWindow(poppy::ImGuiContext& ctx, Window& window,
                            ImGuiViewport* viewport,
                            MTLRenderPassDescriptor* renderPassDescriptor,
                            int index) {
-        // If this is the first window we need to get the backbuffer early
-        // because the imgui backend derives pixel format and other data from
-        // the texture in ImGui_ImplMetal_NewFrame()
-        std::unique_ptr<Backbuffer> backbuffer;
         if (index == 0) {
-            backbuffer = window.swapchain().nextBackbuffer();
-            assignBackbufferToRPDesc(renderPassDescriptor, *backbuffer);
-            ImGui_ImplMetal_NewFrame(renderPassDescriptor);
+            ImGui_ImplMetal_NewFrame(window.swapchain().description());
         }
 
         // Render
-        ImDrawData* drawData = viewport->DrawData;
-        if (!backbuffer) {
-            backbuffer = window.swapchain().nextBackbuffer();
-            // TODO: Check if we got a valid backbuffer
-            assignBackbufferToRPDesc(renderPassDescriptor, *backbuffer);
+        std::unique_lock lock(ctx.drawMutex);
+        if (!ctx.drawDataValid) {
+            Logger::Debug("Dropping Frame");
+            return false;
         }
+        ImDrawData* drawData = viewport->DrawData;
+        auto backbuffer = window.swapchain().nextBackbuffer();
+        // TODO: Check if we got a valid backbuffer
+        assignBackbufferToRPDesc(renderPassDescriptor, *backbuffer);
         MetalCommandQueue& mtlCommandQueue =
             dynamic_cast<MetalCommandQueue&>(window.commandQueue());
         id<MTLCommandBuffer> commandBuffer =
@@ -71,27 +68,37 @@ struct poppy::ImGuiContext::BackendImpl {
         ImGui_ImplMetal_RenderDrawData(drawData, commandBuffer, renderEncoder);
         [renderEncoder popDebugGroup];
         [renderEncoder endEncoding];
+        lock.unlock();
 
         // Present
         auto& mtlBackbuffer = dynamic_cast<MetalBackbuffer&>(*backbuffer);
         [commandBuffer presentDrawable:mtlBackbuffer.drawable];
         [commandBuffer commit];
+        return true;
     }
 };
 
 void poppy::ImGuiContext::drawFramePlatform() {
-    BL_PROFILE_FUNCTION();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     MTLRenderPassDescriptor* renderPassDescriptor =
         [[MTLRenderPassDescriptor alloc] init];
+    bool frameDropped = false;
     for (int i = 0; i < platform_io.Viewports.Size; i++) {
         auto* viewport = (ImGuiViewportP*)platform_io.Viewports[i];
         if (viewport->Flags & ImGuiViewportFlags_IsMinimized) {
             continue;
         }
-        BackendImpl::drawWindow(*this, *(Window*)viewport->PlatformHandle,
-                                viewport, renderPassDescriptor, i);
+        if (!BackendImpl::drawWindow(*this, *(Window*)viewport->PlatformHandle,
+                                     viewport, renderPassDescriptor, i))
+        {
+            frameDropped = true;
+            break;
+        }
     }
+    if (!frameDropped) {
+        Logger::Debug("No Frame Dropped");
+    }
+    didRender = true;
 }
 
 void poppy::ImGuiContext::shutdownPlatform() {

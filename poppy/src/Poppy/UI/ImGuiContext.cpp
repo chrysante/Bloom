@@ -283,13 +283,11 @@ void poppy::ImGuiContext::shutdown() {
 }
 
 void poppy::ImGuiContext::newFrame() {
-    while (wantRender) {
-        continue;
-    }
-    std::lock_guard lock(drawMutex);
-    Logger::Trace("New Frame");
-    if (!mEditor->mainWindow()) {
-        return;
+    utl::timed_busy_wait(std::chrono::milliseconds{ 16 },
+                         std::bind_front(&ImGuiContext::didRender, this));
+    {
+        std::lock_guard lock(drawMutex);
+        drawDataValid = false;
     }
     auto& window = *mEditor->mainWindow();
     ImGui::SetCurrentContext(context);
@@ -304,12 +302,13 @@ void poppy::ImGuiContext::endFrame() {
     ImGui::SetCurrentContext(context);
     ImGui::Render();
     ImGui::UpdatePlatformWindows();
+    std::lock_guard lock(drawMutex);
+    drawDataValid = true;
+    didRender = false;
 }
 
 /// This is called asynchronously on the render thread
 void poppy::ImGuiContext::drawFrame() {
-    std::lock_guard lock(drawMutex);
-    wantRender = false;
     ImGui::SetCurrentContext(context);
     drawFramePlatform();
 }

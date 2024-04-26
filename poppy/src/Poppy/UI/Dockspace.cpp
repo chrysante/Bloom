@@ -70,6 +70,14 @@ void Dockspace::setRightToolbar(Toolbar tb) {
     toolbars[2] = std::move(tb);
 }
 
+void Dockspace::takeFocus() {
+    if (mainImGuiWindow) {
+        ImGui::FocusWindow((ImGuiWindow*)mainImGuiWindow,
+                           ImGuiFocusRequestFlags_RestoreFocusedChild |
+                               ImGuiFocusRequestFlags_UnlessBelowModal);
+    }
+}
+
 static ImGuiID submitDockspace() {
     ImGuiDockNodeFlags flags = 0;
     flags |= ImGuiDockNodeFlags_NoWindowMenuButton;
@@ -90,7 +98,6 @@ void Dockspace::mainWindow() {
     ImGuiWindowFlags windowFlags = 0;
     windowFlags |= ImGuiWindowFlags_NoTitleBar;
     windowFlags |= ImGuiWindowFlags_NoResize;
-    windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
     windowFlags |= ImGuiWindowFlags_NoDocking;
     windowFlags |= ImGuiWindowFlags_NoCollapse;
     windowFlags |= ImGuiWindowFlags_NoMove;
@@ -103,11 +110,13 @@ void Dockspace::mainWindow() {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, { 0, 0 });
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                         float2(1, 1) * (float2)style.FramePadding);
-    withFont(FontDesc::UIDefault(), [&] {
+    mainImGuiWindow = withFont(FontDesc::UIDefault(), [&] {
         ImGui::Begin(MainWindowID, nullptr, windowFlags);
         withWindowSizeConstraints(minWindowSize,
                                   [&] { mainDockID = submitDockspace(); });
+        auto* window = ImGui::GetCurrentWindowRead();
         ImGui::End();
+        return window;
     });
     ImGui::PopStyleVar(6);
 }

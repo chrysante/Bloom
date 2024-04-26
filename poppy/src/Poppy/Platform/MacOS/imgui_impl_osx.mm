@@ -929,6 +929,10 @@ namespace {
 struct ImGui_ImplOSX_WindowDelegate: bloom::WindowDelegate {
     ImGui_ImplOSX_WindowDelegate(ImGuiViewportP* viewport): viewport(viewport) {}
     
+    void onFocus() override {
+        ImGui::FocusWindow(viewport->Window);
+    }
+    
     void onResize(int2 newSize) override {
         viewport->Pos = (float2)window()->position();
         viewport->Size = (float2)newSize;

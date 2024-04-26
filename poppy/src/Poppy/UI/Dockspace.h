@@ -69,6 +69,9 @@ public:
     /// Assigns the right toolbar
     void setRightToolbar(Toolbar toolbar);
 
+    /// Focuses the last focused child window in the dockspace
+    void takeFocus();
+
 private:
     void mainWindow();
 
@@ -77,6 +80,7 @@ private:
     vml::float2 minWindowSize = { 250, 100 };
     std::array<Toolbar, 3> toolbars;
 
+    void* mainImGuiWindow = nullptr;
     size_t spacingCount = 0;
     unsigned mainDockID = 0;
 };

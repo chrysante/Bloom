@@ -164,6 +164,8 @@ struct Editor::Impl {
 
         void onClose() override { editor->saveConfigToDisk(); }
 
+        void onFocus() override { editor->dockspace.takeFocus(); }
+
         Editor* editor;
     };
 };

@@ -5,6 +5,8 @@
 
 #import <Appkit/Appkit.h>
 
+#include "Bloom/Platform/MacOS/ObjCCommon.h"
+
 using namespace bloom;
 
 std::filesystem::path bloom::resourceDir() {

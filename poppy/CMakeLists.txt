@@ -4,10 +4,6 @@ include(SourceFiles.cmake)
 add_executable(poppy)
 set_target_properties(poppy PROPERTIES LINKER_LANGUAGE CXX)
 BLSetCompilerOptions(poppy)
-#target_compile_options(poppy PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
-#set_target_properties(poppy PROPERTIES
-#  XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
-#)
 
 target_include_directories(poppy
     PUBLIC

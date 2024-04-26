@@ -4,8 +4,8 @@ function(BLSetCompilerOptions target)
     return()
   endif()
 
-  if (WIN32)
-    if (MSVC)
+  if(WIN32)
+    if(MSVC)
       target_compile_options(${target} PRIVATE "/W3")
       target_compile_options(${target} PRIVATE "/WX")
       target_compile_options(${target} PRIVATE "/D_CRT_SECURE_NO_WARNINGS")
@@ -24,6 +24,14 @@ function(BLSetCompilerOptions target)
   endif()
 
   target_compile_definitions(${target} PRIVATE BUILD_CONFIG=$<CONFIG>)
+
+  if(APPLE)
+    # Enable ARC in Objective-C
+    set_target_properties(${target} PROPERTIES
+      XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+    )
+  endif()
+
 endfunction()
 
 if(BLOOM_DEV_MODE)

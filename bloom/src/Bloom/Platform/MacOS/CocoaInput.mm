@@ -9,6 +9,7 @@
 #include "Bloom/Application/InputInternal.h"
 #include "Bloom/Application/Window.h"
 #include "Bloom/Platform/MacOS/CocoaImpl.h"
+#include "Bloom/Platform/MacOS/ObjCCommon.h"
 
 using namespace bloom;
 using namespace vml::short_types;

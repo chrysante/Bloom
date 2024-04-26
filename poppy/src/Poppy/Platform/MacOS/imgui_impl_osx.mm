@@ -440,7 +440,7 @@ bool ImGui_ImplOSX_Init(poppy::Editor& editor)
     bd->Window = editor.mainWindow();
     bd->editor = &editor;
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (__bridge_retained void*)bd->Window;
+    main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)bd->Window;
     ImGui_ImplOSX_UpdateMonitors();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplOSX_InitPlatformInterface();
@@ -984,7 +984,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     data->WindowOwned = true;
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = window;
-    viewport->PlatformHandleRaw = (__bridge_retained void*)window->nativeHandle();
+    viewport->PlatformHandleRaw = window->nativeHandle();
     window->addDelegate(std::make_unique<ImGui_ImplOSX_WindowDelegate>(viewport));
 }
 

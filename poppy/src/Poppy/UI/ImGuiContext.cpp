@@ -263,14 +263,9 @@ void poppy::ImGuiContext::init(Editor& editor,
 #endif
     io.IniFilename = desc.iniFilePath.c_str();
     initPlatform();
-    uploadCurrentFontAtlas(device);
 
     listen([this](ReloadedFontAtlasCommand cmd) {
-        BL_ASSERT(cmd.fontManager == FontManager::getGlobalInstance(),
-                  "For now...");
-        context->IO.Fonts = cmd.fontManager->getAtlas();
-        uploadCurrentFontAtlas(mEditor->device());
-        context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
+        newFontAtlas = cmd.fontManager->getAtlas();
     });
 }
 
@@ -288,6 +283,12 @@ void poppy::ImGuiContext::newFrame() {
     {
         std::lock_guard lock(drawMutex);
         drawDataValid = false;
+        if (newFontAtlas) {
+            context->IO.Fonts = newFontAtlas;
+            uploadCurrentFontAtlas(mEditor->device());
+            context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
+            newFontAtlas = nullptr;
+        }
     }
     auto& window = *mEditor->mainWindow();
     ImGui::SetCurrentContext(context);

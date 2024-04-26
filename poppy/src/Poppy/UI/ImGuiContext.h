@@ -62,6 +62,7 @@ private:
     std::mutex drawMutex;
     bool drawDataValid = false;
     std::atomic_bool didRender;
+    ImFontAtlas* newFontAtlas = nullptr;
 };
 
 } // namespace poppy

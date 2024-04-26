@@ -24,7 +24,11 @@ void poppy::ImGuiContext::initPlatform() {
 }
 
 void poppy::ImGuiContext::newFramePlatform() {
-    ImGui_ImplOSX_NewFrame(*mEditor);
+    @autoreleasepool {
+        ImGui_ImplOSX_NewFrame(*mEditor);
+        ImGui_ImplMetal_NewFrame(
+            mEditor->mainWindow()->swapchain()->description());
+    }
 }
 
 static void assignBackbufferToRPDesc(MTLRenderPassDescriptor* desc,
@@ -42,12 +46,7 @@ static void assignBackbufferToRPDesc(MTLRenderPassDescriptor* desc,
 struct poppy::ImGuiContext::BackendImpl {
     static bool drawWindow(poppy::ImGuiContext& ctx, Window& window,
                            ImGuiViewport* viewport,
-                           MTLRenderPassDescriptor* renderPassDescriptor,
-                           int index) {
-        if (index == 0) {
-            ImGui_ImplMetal_NewFrame(window.swapchain()->description());
-        }
-
+                           MTLRenderPassDescriptor* renderPassDescriptor) {
         // Render
         std::unique_lock lock(ctx.drawMutex);
         if (!ctx.drawDataValid) {
@@ -78,31 +77,38 @@ struct poppy::ImGuiContext::BackendImpl {
 };
 
 void poppy::ImGuiContext::drawFramePlatform() {
-    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-    MTLRenderPassDescriptor* renderPassDescriptor =
-        [[MTLRenderPassDescriptor alloc] init];
-    for (int i = 0; i < platform_io.Viewports.Size; i++) {
-        auto* viewport = (ImGuiViewportP*)platform_io.Viewports[i];
-        if (viewport->Flags & ImGuiViewportFlags_IsMinimized) {
-            continue;
+    @autoreleasepool {
+        ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+        MTLRenderPassDescriptor* renderPassDescriptor =
+            [[MTLRenderPassDescriptor alloc] init];
+        for (int i = 0; i < platform_io.Viewports.Size; i++) {
+            auto* viewport = (ImGuiViewportP*)platform_io.Viewports[i];
+            if (viewport->Flags & ImGuiViewportFlags_IsMinimized) {
+                continue;
+            }
+            if (!BackendImpl::drawWindow(*this,
+                                         *(Window*)viewport->PlatformHandle,
+                                         viewport, renderPassDescriptor))
+            {
+                break;
+            }
         }
-        if (!BackendImpl::drawWindow(*this, *(Window*)viewport->PlatformHandle,
-                                     viewport, renderPassDescriptor, i))
-        {
-            break;
-        }
+        didRender = true;
     }
-    didRender = true;
 }
 
 void poppy::ImGuiContext::shutdownPlatform() {
-    ImGui_ImplOSX_Shutdown();
-    ImGui_ImplMetal_Shutdown();
+    @autoreleasepool {
+        ImGui_ImplOSX_Shutdown();
+        ImGui_ImplMetal_Shutdown();
+    }
 }
 
 void poppy::ImGuiContext::uploadCurrentFontAtlas(HardwareDevice& device) {
-    MetalDevice& mtlDevice = dynamic_cast<MetalDevice&>(device);
-    ImGui_ImplMetal_CreateFontsTexture(mtlDevice.device);
+    @autoreleasepool {
+        MetalDevice& mtlDevice = dynamic_cast<MetalDevice&>(device);
+        ImGui_ImplMetal_CreateFontsTexture(mtlDevice.device);
+    }
 }
 
 /// TODO: Move this to other file

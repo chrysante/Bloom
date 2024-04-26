@@ -122,6 +122,7 @@ set(bloom_sources
   src/Bloom/Platform/MacOS/CocoaInput.mm
   src/Bloom/Platform/MacOS/CocoaWindow.mm
   src/Bloom/Platform/MacOS/ResourceUtil.mm
+  src/Bloom/Platform/MacOS/ObjCCommon.h
 
   src/Bloom/Platform/Metal/MetalBlitContext.h
   src/Bloom/Platform/Metal/MetalBlitContext.mm

@@ -11,6 +11,7 @@ namespace bloom {
 class BLOOM_API MetalBackbuffer: public Backbuffer {
 public:
     MetalBackbuffer(id<CAMetalDrawable>);
+
     TextureHandle texture() override;
 
     id<CAMetalDrawable> drawable;

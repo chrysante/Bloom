@@ -4,6 +4,8 @@ set(poppy_sources
   src/Poppy/Core/Common.h
   src/Poppy/Core/Profile.cpp
   src/Poppy/Core/Profile.h
+  src/Poppy/Core/Timestamp.h
+  src/Poppy/Core/Timestamp.cpp
 
   src/Poppy/Editor/Editor.cpp
   src/Poppy/Editor/Editor.h

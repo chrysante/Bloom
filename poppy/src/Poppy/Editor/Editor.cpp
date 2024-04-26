@@ -13,6 +13,7 @@
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Poppy/Core/Debug.h"
+#include "Poppy/Core/Timestamp.h"
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/ImGuiHelpers.h"
@@ -37,8 +38,8 @@ namespace {
 #define STRINGIFY(x)      STRINGIFY_IMPL(x)
 
 struct ToolbarBuildTimeStamp: ToolbarItem {
-    static constexpr auto BuildConfig = STRINGIFY(BUILD_CONFIG);
-    static constexpr auto Timestamp = __DATE__ " " __TIME__;
+    char const* BuildConfig = STRINGIFY(BUILD_CONFIG);
+    char const* Timestamp = buildTimestamp();
 
     virtual void display(ToolbarStyle const& style) override {
         float2 pos = ImGui::GetCursorPos();

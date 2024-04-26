@@ -43,3 +43,8 @@ set_target_properties(poppy
     XCODE_ATTRIBUTE_MTL_HEADER_SEARCH_PATHS
       "${PROJECT_SOURCE_DIR}/Poppy/src ${PROJECT_SOURCE_DIR}/Bloom/src/ ${utility_SOURCE_DIR}/include"
 )
+
+add_custom_target(touch_timestamp
+    touch ${CMAKE_CURRENT_SOURCE_DIR}/src/Poppy/Core/Timestamp.cpp
+)
+add_dependencies(poppy touch_timestamp)

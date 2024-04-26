@@ -232,20 +232,42 @@ void FontManager::reloadAsync() {
     /// We start the async operation next frame because when a new view opens
     /// that uses multiple unavailable fonts, we want to gather all fonts we
     /// need to load and then start the reload operation
-    dispatch(DispatchToken::NextFrame, [this] {
-        haveSignaledReload = false;
-        std::thread([this, scaleFactor = scaleFactor,
-                     sortedGlyphMap = makeSortedGlyphMap(glyphMap),
-                     data = imguiData]() mutable {
-            BL_PROFILE_FUNCTION("Font Reloading");
-            data.atlas = IM_NEW(ImFontAtlas);
-            loadAll(data, scaleFactor, sortedGlyphMap);
-            postEmptySystemEvent();
-            dispatch(DispatchToken::NextFrame, [this, data = std::move(data)] {
-                IM_FREE(imguiData.atlas);
-                imguiData = std::move(data);
-                dispatch(DispatchToken::Now, ReloadedFontAtlasCommand{ this });
-            });
-        }).detach();
-    });
+    dispatch(DispatchToken::NextFrame, [this] { startReloadThread(); });
+}
+
+void FontManager::startReloadThread() {
+    if (isReloading) {
+        return;
+    }
+    haveSignaledReload = false;
+    isReloading = true;
+    std::thread([this, scaleFactor = scaleFactor,
+                 sortedGlyphMap = makeSortedGlyphMap(glyphMap),
+                 data = imguiData]() mutable {
+        BL_PROFILE_FUNCTION("Font Reloading");
+        data.atlas = IM_NEW(ImFontAtlas);
+        loadAll(data, scaleFactor, sortedGlyphMap);
+        postEmptySystemEvent();
+        dispatch(DispatchToken::NextFrame, [this, data = std::move(data)] {
+            completeReloadingSync(std::move(data));
+        });
+    }).detach();
+}
+
+static void amendMap(utl::hashmap<FontKey, ImFont*>& dest,
+                     utl::hashmap<FontKey, ImFont*> const& source) {
+    dest.insert(source.begin(), source.end());
+}
+
+void FontManager::completeReloadingSync(ImGuiData data) {
+    isReloading = false;
+    IM_FREE(imguiData.atlas);
+    imguiData.atlas = data.atlas;
+    /// We amend the new map with all entries that were added during the built
+    amendMap(data.map, imguiData.map);
+    imguiData.map = std::move(data.map);
+    dispatch(DispatchToken::Now, ReloadedFontAtlasCommand{ this });
+    if (haveSignaledReload) {
+        startReloadThread();
+    }
 }

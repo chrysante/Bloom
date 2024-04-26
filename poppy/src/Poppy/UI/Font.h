@@ -161,14 +161,17 @@ private:
     std::string getUnicodeStrImpl(IconSize size, std::string_view name);
 
     void reloadAsync();
+    void startReloadThread();
+    void completeReloadingSync(ImGuiData data);
 
     /// Maps CSS icon names to unicode representation. This lists all icons
     /// available in the resource files
     utl::hashmap<std::string, uint16_t> allIconCodes;
     utl::hashmap<IconSize, utl::hashset<uint16_t>> glyphMap;
-    float scaleFactor = 1;
     ImGuiData imguiData;
+    float scaleFactor = 1;
     bool haveSignaledReload = false;
+    bool isReloading = false;
 };
 
 struct ReloadedFontAtlasCommand {

@@ -248,7 +248,6 @@ static void displayEmptyImpl(std::string_view reason, FontDesc font,
     float2 stashedCursorPos = ImGui::GetCursorPos();
     withFont(font, [&] {
         float2 textSize = ImGui::CalcTextSize(reason.data());
-        ImGui::SetCursorPos({});
         ImGui::SetCursorPos(
             ((float2)ImGui::GetContentRegionAvail() - textSize) / 2);
         ImGui::PushStyleColor(ImGuiCol_Text, color);

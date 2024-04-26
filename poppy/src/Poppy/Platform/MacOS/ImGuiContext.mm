@@ -45,7 +45,7 @@ struct poppy::ImGuiContext::BackendImpl {
                            MTLRenderPassDescriptor* renderPassDescriptor,
                            int index) {
         if (index == 0) {
-            ImGui_ImplMetal_NewFrame(window.swapchain().description());
+            ImGui_ImplMetal_NewFrame(window.swapchain()->description());
         }
 
         // Render
@@ -55,11 +55,11 @@ struct poppy::ImGuiContext::BackendImpl {
             return false;
         }
         ImDrawData* drawData = viewport->DrawData;
-        auto backbuffer = window.swapchain().nextBackbuffer();
+        auto backbuffer = window.swapchain()->nextBackbuffer();
         // TODO: Check if we got a valid backbuffer
         assignBackbufferToRPDesc(renderPassDescriptor, *backbuffer);
         MetalCommandQueue& mtlCommandQueue =
-            dynamic_cast<MetalCommandQueue&>(window.commandQueue());
+            dynamic_cast<MetalCommandQueue&>(*window.commandQueue());
         id<MTLCommandBuffer> commandBuffer =
             [mtlCommandQueue.queue commandBuffer];
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer

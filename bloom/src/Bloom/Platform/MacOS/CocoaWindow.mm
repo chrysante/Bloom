@@ -25,8 +25,7 @@ void* Window::nativeHandle() {
 
 void Window::setSwapchain(std::unique_ptr<Swapchain> swapchain) {
     _swapchain = std::move(swapchain);
-    MetalSwapchain& mtlSwapchain =
-        dynamic_cast<MetalSwapchain&>(this->swapchain());
+    MetalSwapchain& mtlSwapchain = dynamic_cast<MetalSwapchain&>(*_swapchain);
     NSWindow* window = getNative(this);
     window.contentView.wantsLayer = true;
     [window.contentView setLayer:mtlSwapchain.layer];

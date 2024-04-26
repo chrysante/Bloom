@@ -316,8 +316,8 @@ void Window::setCallbacks() {
 }
 
 void Window::resizeSwapchain(vml::int2 newSize) {
-    if (_swapchain) {
-        swapchain().resize(newSize * contentScaleFactor());
+    if (swapchain()) {
+        swapchain()->resize(newSize * contentScaleFactor());
     }
 }
 

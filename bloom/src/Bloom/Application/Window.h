@@ -153,10 +153,10 @@ public:
     WindowDelegate* addDelegate(std::unique_ptr<WindowDelegate> delegate);
 
     /// \Returns the window's swapchain
-    Swapchain& swapchain() { return *_swapchain; }
+    Swapchain* swapchain() { return _swapchain.get(); }
 
     /// \Returns the window's command queue
-    CommandQueue& commandQueue() { return *_commandQueue; }
+    CommandQueue* commandQueue() { return _commandQueue.get(); }
 
     /// \Returns the window's descriptor of the current state
     WindowDescription const& getDescription() const { return desc; }

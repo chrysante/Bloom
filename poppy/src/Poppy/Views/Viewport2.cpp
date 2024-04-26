@@ -140,7 +140,7 @@ void Viewport2::displayScenes() {
         renderer.submit(*scene);
     }
     lock.unlock();
-    renderer.draw(windows.front()->commandQueue());
+    renderer.draw(*windows.front()->commandQueue());
     if (renderGraph->sources().empty()) {
         displayEmptyWithError("Render Graph Has No Outputs");
         return;

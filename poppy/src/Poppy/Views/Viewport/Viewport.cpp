@@ -219,11 +219,12 @@ void Viewport::drawScene() {
     sceneSystem.applyTransformHierarchy();
     sceneRenderer.submitScenes(sceneSystem.scenes(), camera.camera());
     lock.unlock();
-    sceneRenderer.renderer().draw(*framebuffer, window().commandQueue());
+    sceneRenderer.renderer().draw(*framebuffer, *window().commandQueue());
     if (!gameView) {
         OverlayDrawDescription desc;
         sceneRenderer.drawOverlays(editor().selection(), desc, *framebuffer,
-                                   *editorFramebuffer, window().commandQueue());
+                                   *editorFramebuffer,
+                                   *window().commandQueue());
     }
 }
 

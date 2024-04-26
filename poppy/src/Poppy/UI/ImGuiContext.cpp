@@ -234,7 +234,6 @@ poppy::ImGuiContext::~ImGuiContext() = default;
 void poppy::ImGuiContext::init(Editor& editor,
                                ImGuiContextDescription const& ds) {
     mEditor = &editor;
-    auto& device = editor.device();
     desc = ds;
     assignReceiver(editor.makeReceiver());
     IMGUI_CHECKVERSION();
@@ -279,7 +278,7 @@ void poppy::ImGuiContext::shutdown() {
 
 void poppy::ImGuiContext::newFrame() {
     utl::timed_busy_wait(std::chrono::milliseconds{ 16 },
-                         std::bind_front(&ImGuiContext::didRender, this));
+                         [&] { return numRenderTasks == 0; });
     {
         std::lock_guard lock(drawMutex);
         drawDataValid = false;
@@ -305,7 +304,6 @@ void poppy::ImGuiContext::endFrame() {
     ImGui::UpdatePlatformWindows();
     std::lock_guard lock(drawMutex);
     drawDataValid = true;
-    didRender = false;
 }
 
 /// This is called asynchronously on the render thread

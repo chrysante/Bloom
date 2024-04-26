@@ -24,7 +24,7 @@ void* Window::nativeHandle() {
     return (__bridge void*)glfwGetCocoaWindow((GLFWwindow*)windowPtr.get());
 }
 
-void Window::setSwapchain(std::unique_ptr<Swapchain> swapchain) {
+void Window::setSwapchain(Reference<Swapchain> swapchain) {
     _swapchain = std::move(swapchain);
     MetalSwapchain& mtlSwapchain = dynamic_cast<MetalSwapchain&>(*_swapchain);
     NSWindow* window = getNative(this);

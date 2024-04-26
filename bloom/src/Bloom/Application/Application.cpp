@@ -80,8 +80,8 @@ void Application::destroyWindow(Window* window) {
 
 void Application::setRunLoopMode(RunLoopMode mode) { mRunLoopMode = mode; }
 
-void Application::requestRender() {
-    impl->renderThread.submit([this] { render(); });
+void Application::onRenderThread(std::function<void()> callback) {
+    impl->renderThread.submit(std::move(callback));
 }
 
 static void handleEvents(RunLoopMode mode) {
@@ -101,9 +101,7 @@ static void handleEvents(RunLoopMode mode) {
 void Application::run() {
     doInit();
     while (!mWindows.empty()) {
-        handleEvents(mRunLoopMode);
         doFrame();
-        clearClosingWindows();
     }
     doShutdown();
 }
@@ -130,12 +128,14 @@ void Application::doShutdown() {
 }
 
 void Application::doFrame() {
-    messageSystem->flush();
     BLOOM_AUTORELEASE_BEGIN
+    handleEvents(mRunLoopMode);
+    messageSystem->flush();
     this->frame();
-    BLOOM_AUTORELEASE_END
     inputEndFrame(mInput);
+    clearClosingWindows();
     mTimer.update();
+    BLOOM_AUTORELEASE_END
 }
 
 void Application::clearClosingWindows() {

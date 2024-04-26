@@ -61,7 +61,7 @@ void Window::createDefaultSwapchain(HardwareDevice& device,
     setSwapchain(device.createSwapchain(swapchainDesc));
 }
 
-void Window::setCommandQueue(std::unique_ptr<CommandQueue> queue) {
+void Window::setCommandQueue(Reference<CommandQueue> queue) {
     _commandQueue = std::move(queue);
 }
 
@@ -316,8 +316,8 @@ void Window::setCallbacks() {
 }
 
 void Window::resizeSwapchain(vml::int2 newSize) {
-    if (swapchain()) {
-        swapchain()->resize(newSize * contentScaleFactor());
+    if (_swapchain) {
+        _swapchain->resize(newSize * contentScaleFactor());
     }
 }
 

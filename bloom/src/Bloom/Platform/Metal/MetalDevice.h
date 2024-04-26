@@ -21,9 +21,8 @@ class BLOOM_API MetalDevice: public HardwareDevice {
 public:
     MetalDevice();
 
-    std::unique_ptr<Swapchain> createSwapchain(
-        SwapchainDescription const&) override;
-    std::unique_ptr<CommandQueue> createCommandQueue() override;
+    Reference<Swapchain> createSwapchain(SwapchainDescription const&) override;
+    Reference<CommandQueue> createCommandQueue() override;
 
     BufferHandle createBuffer(BufferDescription const&) override;
     TextureHandle createTexture(TextureDescription const&) override;

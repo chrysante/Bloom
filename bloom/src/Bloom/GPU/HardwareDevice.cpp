@@ -4,7 +4,7 @@
 
 using namespace bloom;
 
-std::unique_ptr<HardwareDevice> HardwareDevice::create(RenderAPI api) {
+Reference<HardwareDevice> HardwareDevice::create(RenderAPI api) {
     switch (api) {
     case RenderAPI::Metal:
         return createMetalDevice();

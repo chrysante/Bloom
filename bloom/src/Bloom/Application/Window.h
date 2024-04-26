@@ -13,6 +13,7 @@
 
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Core/Base.h"
+#include "Bloom/Core/Reference.h"
 #include "Bloom/GPU/CommandQueue.h"
 #include "Bloom/GPU/Swapchain.h"
 
@@ -143,20 +144,20 @@ public:
                                 std::size_t backbufferCount = 3);
 
     /// Sets \p swapchain as this windows swapchain
-    void setSwapchain(std::unique_ptr<Swapchain> swapchain);
+    void setSwapchain(Reference<Swapchain> swapchain);
 
     /// Sets \p commandQueue as this windows command queue
-    void setCommandQueue(std::unique_ptr<CommandQueue> commandQueue);
+    void setCommandQueue(Reference<CommandQueue> commandQueue);
 
     /// Adds the window delegate \p delegate to this window.
     /// \Returns a pointer to \p delegate
     WindowDelegate* addDelegate(std::unique_ptr<WindowDelegate> delegate);
 
     /// \Returns the window's swapchain
-    Swapchain* swapchain() { return _swapchain.get(); }
+    Reference<Swapchain> swapchain() { return _swapchain; }
 
     /// \Returns the window's command queue
-    CommandQueue* commandQueue() { return _commandQueue.get(); }
+    Reference<CommandQueue> commandQueue() { return _commandQueue; }
 
     /// \Returns the window's descriptor of the current state
     WindowDescription const& getDescription() const { return desc; }
@@ -280,8 +281,8 @@ private:
 
     WindowDescPrivate desc;
     std::unique_ptr<void, Deleter> windowPtr;
-    std::unique_ptr<Swapchain> _swapchain;
-    std::unique_ptr<CommandQueue> _commandQueue;
+    Reference<Swapchain> _swapchain;
+    Reference<CommandQueue> _commandQueue;
     std::vector<std::unique_ptr<WindowDelegate>> delegates;
 };
 

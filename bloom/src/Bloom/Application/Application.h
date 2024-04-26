@@ -76,6 +76,9 @@ public:
     /// \Returns the application global input reference
     Input const& input() const { return mInput; }
 
+    /// Executes \p callback on the render thread
+    void onRenderThread(std::function<void()> callback);
+
 protected:
     ///
     Application();
@@ -83,10 +86,6 @@ protected:
     /// Sets the run loop mode of this application. See `RunLoopMode` for more
     /// details Defaults to `RunLoopMode::Realtime`
     void setRunLoopMode(RunLoopMode mode);
-
-    /// Instructs the render thread to render a frame by calling `render()`.
-    /// This should usually be called at the end of each update
-    void requestRender();
 
 private:
     struct Impl;
@@ -101,9 +100,6 @@ private:
     /// Called every frame after the message system has been flushed and before
     /// the frame delegates of the open windows are called
     virtual void frame() {}
-
-    /// Called on the render thread whenever `requestRender()` is called
-    virtual void render() {}
 
     /// Called for every input event that occurs in any window
     /// \Returns `true` if the event has been handled

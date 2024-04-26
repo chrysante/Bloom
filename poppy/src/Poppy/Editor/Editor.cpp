@@ -178,6 +178,7 @@ void Editor::createMainWindow() {
     window.addDelegate(std::make_unique<Impl::EditorWindowDelegate>(this));
     window.createDefaultSwapchain(device());
     window.setCommandQueue(device().createCommandQueue());
+    window.setMinSize({ 600, 400 });
     _mainWindow = &window;
 }
 
@@ -216,10 +217,8 @@ void Editor::frame() {
     viewManager.display();
     debugViews.display();
     imguiCtx.endFrame();
-    requestRender();
+    imguiCtx.drawFrame();
 }
-
-void Editor::render() { imguiCtx.drawFrame(); }
 
 void Editor::menuBar() {
     if (ImGui::BeginMenu("File")) {

@@ -33,13 +33,13 @@ MetalDevice::MetalDevice() {
     shaderLib = [device newDefaultLibrary];
 }
 
-std::unique_ptr<Swapchain> MetalDevice::createSwapchain(
+Reference<Swapchain> MetalDevice::createSwapchain(
     SwapchainDescription const& desc) {
-    return std::make_unique<MetalSwapchain>(device, desc);
+    return allocateRef<MetalSwapchain>(device, desc);
 }
 
-std::unique_ptr<CommandQueue> MetalDevice::createCommandQueue() {
-    return std::make_unique<MetalCommandQueue>([device newCommandQueue]);
+Reference<CommandQueue> MetalDevice::createCommandQueue() {
+    return allocateRef<MetalCommandQueue>([device newCommandQueue]);
 }
 
 BufferHandle MetalDevice::createBuffer(BufferDescription const& desc) {

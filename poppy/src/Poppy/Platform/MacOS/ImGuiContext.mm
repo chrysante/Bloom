@@ -44,22 +44,19 @@ static void assignBackbufferToRPDesc(MTLRenderPassDescriptor* desc,
 }
 
 struct poppy::ImGuiContext::BackendImpl {
-    static bool drawWindow(poppy::ImGuiContext& ctx, Window& window,
-                           ImGuiViewport* viewport,
+    static void drawWindow(poppy::ImGuiContext& ctx, ImDrawData* drawData,
+                           MetalSwapchain& swapchain,
+                           MetalCommandQueue& commandQueue,
                            MTLRenderPassDescriptor* renderPassDescriptor) {
         // Render
         std::unique_lock lock(ctx.drawMutex);
         if (!ctx.drawDataValid) {
-            return false;
+            return;
         }
-        ImDrawData* drawData = viewport->DrawData;
-        auto backbuffer = window.swapchain()->nextBackbuffer();
+        auto backbuffer = swapchain.nextBackbuffer();
         // TODO: Check if we got a valid backbuffer
         assignBackbufferToRPDesc(renderPassDescriptor, *backbuffer);
-        MetalCommandQueue& mtlCommandQueue =
-            dynamic_cast<MetalCommandQueue&>(*window.commandQueue());
-        id<MTLCommandBuffer> commandBuffer =
-            [mtlCommandQueue.queue commandBuffer];
+        id<MTLCommandBuffer> commandBuffer = [commandQueue.queue commandBuffer];
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer
             renderCommandEncoderWithDescriptor:renderPassDescriptor];
         [renderEncoder pushDebugGroup:@"Dear ImGui rendering"];
@@ -72,28 +69,32 @@ struct poppy::ImGuiContext::BackendImpl {
         auto& mtlBackbuffer = dynamic_cast<MetalBackbuffer&>(*backbuffer);
         [commandBuffer presentDrawable:mtlBackbuffer.drawable];
         [commandBuffer commit];
-        return true;
     }
 };
 
 void poppy::ImGuiContext::drawFramePlatform() {
-    @autoreleasepool {
-        ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-        MTLRenderPassDescriptor* renderPassDescriptor =
-            [[MTLRenderPassDescriptor alloc] init];
-        for (int i = 0; i < platform_io.Viewports.Size; i++) {
-            auto* viewport = (ImGuiViewportP*)platform_io.Viewports[i];
-            if (viewport->Flags & ImGuiViewportFlags_IsMinimized) {
-                continue;
-            }
-            if (!BackendImpl::drawWindow(*this,
-                                         *(Window*)viewport->PlatformHandle,
-                                         viewport, renderPassDescriptor))
-            {
-                break;
-            }
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    MTLRenderPassDescriptor* renderPassDescriptor =
+        [[MTLRenderPassDescriptor alloc] init];
+    for (int i = 0; i < platform_io.Viewports.Size; i++) {
+        auto* viewport = (ImGuiViewportP*)platform_io.Viewports[i];
+        if (!viewport || viewport->Flags & ImGuiViewportFlags_IsMinimized) {
+            continue;
         }
-        didRender = true;
+        auto& window = *(Window*)viewport->PlatformHandle;
+        ++numRenderTasks;
+        mEditor->onRenderThread([=, this, swapchain = window.swapchain(),
+                                 commandQueue = window.commandQueue()] {
+            @autoreleasepool {
+                BackendImpl::drawWindow(*this, viewport->DrawData,
+                                        dynamic_cast<MetalSwapchain&>(
+                                            *swapchain),
+                                        dynamic_cast<MetalCommandQueue&>(
+                                            *commandQueue),
+                                        renderPassDescriptor);
+            }
+            --numRenderTasks;
+        });
     }
 }
 

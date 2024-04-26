@@ -61,7 +61,7 @@ private:
     ImGuiContextDescription desc;
     std::mutex drawMutex;
     bool drawDataValid = false;
-    std::atomic_bool didRender;
+    std::atomic_int numRenderTasks;
     ImFontAtlas* newFontAtlas = nullptr;
 };
 

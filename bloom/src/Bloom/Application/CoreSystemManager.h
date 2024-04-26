@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "Bloom/Core/Core.h"
+#include "Bloom/Core/Reference.h"
 
 namespace bloom {
 
@@ -79,7 +80,7 @@ private:
     std::unique_ptr<SystemType> makeCoreSystem(auto&&...);
 
     Application* mApp = nullptr;
-    std::unique_ptr<HardwareDevice> mDevice;
+    Reference<HardwareDevice> mDevice;
     std::unique_ptr<Renderer> mRenderer;
     std::unique_ptr<AssetManager> mAssetManager;
     std::unique_ptr<CoreRuntime> mRuntime;

@@ -1,10 +1,10 @@
 #ifndef BLOOM_GPU_HARDWAREDEVICE_H
 #define BLOOM_GPU_HARDWAREDEVICE_H
 
-#include "Bloom/Core/Base.h"
-
 #include <memory>
 
+#include "Bloom/Core/Base.h"
+#include "Bloom/Core/Reference.h"
 #include "Bloom/GPU/CommandQueue.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/GPU/RenderContext.h"
@@ -23,14 +23,14 @@ public:
 
     /// Creates a device with the render API \p API
     /// For now only Metal is supported
-    static std::unique_ptr<HardwareDevice> create(RenderAPI API);
+    static Reference<HardwareDevice> create(RenderAPI API);
 
     /// Creates a new swapchain created with description \p desc
-    virtual std::unique_ptr<Swapchain> createSwapchain(
+    virtual Reference<Swapchain> createSwapchain(
         SwapchainDescription const& desc) = 0;
 
     /// Creates a new command queue
-    virtual std::unique_ptr<CommandQueue> createCommandQueue() = 0;
+    virtual Reference<CommandQueue> createCommandQueue() = 0;
 
     /// Creates a buffer with description \p desc
     virtual BufferHandle createBuffer(BufferDescription const& desc) = 0;

@@ -49,6 +49,7 @@ public:
 
 private:
     struct BackendImpl;
+    friend class Editor;
 
     void initPlatform();
     void shutdownPlatform();

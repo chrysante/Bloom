@@ -70,8 +70,8 @@ public:
     /// delegate \p delegate
     Window& createWindow(WindowDescription const& desc);
 
-    /// Closes and destroys the window \p window
-    void destroyWindow(Window* window);
+    /// Sets the close flag on all windows
+    void closeAllWindows();
 
     /// \Returns the application global input reference
     Input const& input() const { return mInput; }

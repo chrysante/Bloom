@@ -96,8 +96,12 @@ public:
     /// Called when the window loses focus
     virtual void onFocusLoss() {}
 
-    /// Called when the user closes the window
+    /// Called when the user requests to close the window, e.g. by clicking the
+    /// close button
     virtual void onClose() {}
+
+    /// Called just before the window is destroyed
+    virtual void onDestroy() {}
 
     /// Called when the content scale factor changes
     virtual void onContentScaleChange(
@@ -225,6 +229,7 @@ public:
     void addToolbarArea();
     void removeToolbarArea();
     void setFocused();
+    void setShouldClose(bool value = true);
     void show();
     void hide();
     void maximize();

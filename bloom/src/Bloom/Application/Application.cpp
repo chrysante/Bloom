@@ -72,10 +72,10 @@ Window& Application::createWindow(WindowDescription const& desc) {
     return *mWindows.back();
 }
 
-void Application::destroyWindow(Window* window) {
-    auto itr =
-        ranges::remove_if(mWindows, [&](auto& w) { return w.get() == window; });
-    mWindows.erase(itr, mWindows.end());
+void Application::closeAllWindows() {
+    for (auto& window: mWindows) {
+        window->setShouldClose();
+    }
 }
 
 void Application::setRunLoopMode(RunLoopMode mode) { mRunLoopMode = mode; }

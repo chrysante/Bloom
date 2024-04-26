@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <range/v3/view.hpp>
 
 #include "Bloom/Application/ResourceUtil.h"
@@ -162,7 +163,17 @@ struct Editor::Impl {
 
         void onResize(int2) override { editor->invalidateView(); }
 
-        void onClose() override { editor->saveConfigToDisk(); }
+        void onClose() override {
+            editor->saveConfigToDisk();
+            editor->closeAllWindows();
+            editor->_mainWindow = nullptr;
+            editor->imguiCtx.context->Viewports[0]->PlatformHandle = nullptr;
+        }
+
+        void onDestroy() override {
+            editor->_mainWindow = nullptr;
+            editor->imguiCtx.context->Viewports[0]->PlatformHandle = nullptr;
+        }
 
         void onFocus() override { editor->dockspace.takeFocus(); }
 
@@ -174,6 +185,7 @@ void Editor::createMainWindow() {
     BL_PROFILE_FUNCTION();
     auto desc = loadWindowConfig();
     desc.hasToolbarArea = true;
+    desc.autoResizeSwapchain = true;
     auto& window = createWindow(desc);
     window.addDelegate(std::make_unique<Impl::EditorWindowDelegate>(this));
     window.createDefaultSwapchain(device());

@@ -950,6 +950,11 @@ struct ImGui_ImplOSX_WindowDelegate: bloom::WindowDelegate {
     void onClose() override {
         poppy::View::BackendImpl::setClosing(viewport);
     }
+    
+    void onDestroy() override {
+        viewport->PlatformHandle = nullptr;
+        viewport->PlatformHandleRaw = nullptr;
+    }
 
     ImGuiViewportP* viewport;
 };
@@ -992,12 +997,9 @@ static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
 {
     assert(viewport);
     bloom::Window* window = (bloom::Window*)viewport->PlatformHandle;
-    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
-    if (!window) {
-        return;
+    if (window) {
+        window->setShouldClose();
     }
-    assert(bd);
-    bd->editor->destroyWindow(window);
     if (ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData)
     {
         data->Window = nullptr;

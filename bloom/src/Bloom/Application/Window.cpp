@@ -50,7 +50,7 @@ Window::Window(WindowDescription const& d) {
     setCallbacks();
 }
 
-Window::~Window() = default;
+Window::~Window() { invokeDelegates(&WindowDelegate::onDestroy); }
 
 void Window::createDefaultSwapchain(HardwareDevice& device,
                                     std::size_t backbufferCount) {
@@ -124,6 +124,10 @@ void Window::setMaxSize(vml::int2 size) {
 }
 
 void Window::setFocused() { glfwFocusWindow(GLFW_WND); }
+
+void Window::setShouldClose(bool value) {
+    glfwSetWindowShouldClose(GLFW_WND, value);
+}
 
 void Window::show() { glfwShowWindow(GLFW_WND); }
 

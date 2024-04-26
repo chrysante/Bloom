@@ -51,7 +51,6 @@ struct poppy::ImGuiContext::BackendImpl {
         // Render
         std::unique_lock lock(ctx.drawMutex);
         if (!ctx.drawDataValid) {
-            Logger::Debug("Dropping Frame");
             return false;
         }
         ImDrawData* drawData = viewport->DrawData;
@@ -82,7 +81,6 @@ void poppy::ImGuiContext::drawFramePlatform() {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     MTLRenderPassDescriptor* renderPassDescriptor =
         [[MTLRenderPassDescriptor alloc] init];
-    bool frameDropped = false;
     for (int i = 0; i < platform_io.Viewports.Size; i++) {
         auto* viewport = (ImGuiViewportP*)platform_io.Viewports[i];
         if (viewport->Flags & ImGuiViewportFlags_IsMinimized) {
@@ -91,12 +89,8 @@ void poppy::ImGuiContext::drawFramePlatform() {
         if (!BackendImpl::drawWindow(*this, *(Window*)viewport->PlatformHandle,
                                      viewport, renderPassDescriptor, i))
         {
-            frameDropped = true;
             break;
         }
-    }
-    if (!frameDropped) {
-        Logger::Debug("No Frame Dropped");
     }
     didRender = true;
 }

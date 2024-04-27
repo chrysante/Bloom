@@ -146,8 +146,5 @@ void Application::clearClosingWindows() {
             continue;
         }
         itr = mWindows.erase(itr);
-        if (!mWindows.empty()) {
-            mWindows.front()->setFocused();
-        }
     }
 }

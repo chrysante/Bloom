@@ -31,7 +31,7 @@ DirectoryView::DirectoryView(CommandPalette& cmd,
 }
 
 void DirectoryView::display() {
-    if (!ImGui::BeginChild("Asset Browser DirView")) {
+    if (!ImGui::BeginChild("Directory View")) {
         ImGui::EndChild();
         return;
     }
@@ -100,19 +100,22 @@ static auto withButtonStyle(bool selected, auto f) {
     }
     ImGui::PushStyleColor(ImGuiCol_ButtonActive,
                           ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+    ImGui::PushStyleColor(ImGuiCol_Text, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
     auto result = f();
     ImGui::PopStyleVar();
-    ImGui::PopStyleColor(3);
+    ImGui::PopStyleColor(4);
     return result;
 }
 
-static EntryButtonState displayEntryButton(float2 position, float2 size,
+static EntryButtonState displayEntryButton(std::string_view entryName,
+                                           float2 position, float2 size,
                                            int index,
                                            InteractionData const& interaction) {
     bool pressed = withButtonStyle(interaction.selectedIndex == index, [&] {
-        auto ID = generateUniqueID("entry-button", index,
-                                   /* prependDoubleHash = */ true);
+        /// We can directly use the entry name to generate IDs because file
+        /// system directory entries are guaranteed to be unique
+        auto ID = utl::strcat("###", entryName);
         ImGuiButtonFlags flags = ImGuiButtonFlags_PressedOnClick;
         ImGui::SetCursorPos(position);
         ImGui::SetNextItemAllowOverlap();
@@ -227,8 +230,8 @@ void DirectoryView::displayEntry(Cursor const& cursor, EntryEx const& entry) {
     auto buttonPos = cursor.position + style.itemSpacing;
     auto iconSize = IconSize::_32;
     /// We handle all interaction first
-    switch (displayEntryButton(buttonPos, style.itemSize, cursor.index,
-                               interaction))
+    switch (displayEntryButton(entry.label, buttonPos, style.itemSize,
+                               cursor.index, interaction))
     {
     case EntryButtonState::None:
         break;

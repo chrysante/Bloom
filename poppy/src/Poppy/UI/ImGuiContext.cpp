@@ -2,11 +2,6 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
-#ifdef IMGUI_ENABLE_TEST_ENGINE
-#include <imgui_te_context.h> // TODO: This only needed to register tests
-#include <imgui_te_engine.h>
-#include <imgui_te_ui.h>
-#endif
 #include <utl/strcat.hpp>
 
 #include "Bloom/Application.h"
@@ -15,6 +10,13 @@
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Font.h"
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+#include <imgui_te_engine.h>
+#include <imgui_te_ui.h>
+
+#include "Poppy/UI/TestRegistry.h"
+#endif
 
 using namespace bloom;
 using namespace poppy;
@@ -302,9 +304,12 @@ void poppy::ImGuiContext::newFrame() {
     newFramePlatform();
     ImGui::NewFrame();
 
-    // TODO: Remove this from here
-    // Optionally: show test engine UI to browse/run test from the UI
-    ImGuiTestEngine_ShowTestEngineWindows(testEngine, nullptr);
+    if (showTestUI) {
+        ImGuiTestEngine_ShowTestEngineWindows(testEngine, &showTestUI);
+    }
+    if (ImGuiTestEngine_IsUsingSimulatedInputs(testEngine)) {
+        mEditor->invalidateView();
+    }
 }
 
 void poppy::ImGuiContext::endFrame() {
@@ -382,11 +387,37 @@ void poppy::ImGuiContext::onTextInput(unsigned int code) {
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
 static void registerTests(ImGuiTestEngine* engine) {
+    /// Dummy test. We will remove this later
     ImGuiTest* test = IM_REGISTER_TEST(engine, "MyTests", "Test 1");
-    test->TestFunc = [](ImGuiTestContext* ctx) {
-        ctx->SetRef("Viewport");
-        ctx->ItemClick("Click Me");
+    test->GuiFunc = [](ImGuiTestContext*) {
+        ImGui::SetNextWindowSize({ 500, 500 });
+        ImGui::Begin("Test Window##1", NULL, ImGuiWindowFlags_NoSavedSettings);
+        ImGui::BeginChild("Child");
+        ImGui::Text("Hello, automation world");
+        ImGui::Button("Click Me");
+        if (ImGui::TreeNode("Node")) {
+            static bool b = false;
+            ImGui::Checkbox("Checkbox", &b);
+            ImGui::TreePop();
+        }
+        ImGui::EndChild();
+        ImGui::End();
     };
+    test->TestFunc = [](ImGuiTestContext* ctx) {
+        auto child = ctx->WindowInfo("Test Window##1/Child").ID;
+        ctx->SetRef(child);
+        ctx->ItemClick("Click Me");
+        ctx->ItemCheck("Node/Checkbox");
+        ctx->ItemUncheck("Node/Checkbox");
+    };
+    /// Register all statically registered tests
+    for (auto& entry: getRegisteredTests()) {
+        ImGuiTest* test = ImGuiTestEngine_RegisterTest(engine,
+                                                       entry.category.c_str(),
+                                                       entry.name.c_str(),
+                                                       entry.file, entry.line);
+        test->TestFunc = entry.testFunction;
+    }
 }
 #endif
 
@@ -400,6 +431,10 @@ void poppy::ImGuiContext::initTestEngine() {
     registerTests(testEngine);
     ImGuiTestEngine_Start(testEngine, context);
     ImGuiTestEngine_InstallDefaultCrashHandler();
+
+    mEditor->cmd.add("Show Test UI",
+                     { Key::T, ModFlags::Control | ModFlags::Shift },
+                     [this] { showTestUI ^= true; });
 #endif
 }
 

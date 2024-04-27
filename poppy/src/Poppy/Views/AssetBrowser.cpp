@@ -21,6 +21,7 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/TestRegistry.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
@@ -39,13 +40,11 @@ struct AssetBrowserData {
     std::filesystem::path currentDir; // absolute path
 };
 
-class AssetBrowser: public View {
-public:
+struct AssetBrowser: View {
     AssetBrowser();
 
     void openAsset(bloom::AssetHandle);
 
-private:
     void init() override;
     void displayToolbar() override;
     void display() override;
@@ -63,14 +62,11 @@ private:
     void openSubdirectory(std::filesystem::path const&);
     void refreshFilesystem();
 
-    /// The applications asset manager, will be set by ???
+    /// The applications asset manager
     bloom::AssetManager* assetManager = nullptr;
-
     /// The current directory relative to the project directory
     std::filesystem::path currentDir;
-
     AssetBrowserData data;
-
     DirectoryView dirView;
 };
 
@@ -243,9 +239,8 @@ void AssetBrowser::newAssetPopup() {
 }
 
 void AssetBrowser::displayNoOpenProject() {
-    char const* const text = "Choose Working Directory...";
-
-    bool const pressed =
+    char const* text = "Choose Working Directory...";
+    bool pressed =
         withFont(FontDesc::UIDefault().setWeight(FontWeight::Semibold), [&] {
         auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
@@ -253,15 +248,12 @@ void AssetBrowser::displayNoOpenProject() {
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,
                             2 * style.FrameRounding);
         utl_defer { ImGui::PopStyleVar(2); };
-        auto const buttonSize = (float2)ImGui::CalcTextSize(text) +
-                                2 * (float2)ImGui::GetStyle().FramePadding;
-        auto const cursor =
-            ((float2)ImGui::GetContentRegionAvail() - buttonSize) / 2;
+        auto buttonSize = (float2)ImGui::CalcTextSize(text) +
+                          2 * (float2)ImGui::GetStyle().FramePadding;
+        auto cursor = ((float2)ImGui::GetContentRegionAvail() - buttonSize) / 2;
         ImGui::SetCursorPos(cursor);
-
         return ImGui::Button(text);
     });
-
     if (pressed) {
         OpenPanelDescription desc;
         desc.canChooseFiles = false;
@@ -361,3 +353,8 @@ void AssetBrowser::refreshFilesystem() {
     assetManager->refreshProject();
     dirView.openDirectory(data.currentDir);
 }
+
+UI_TEST("Content Browser", "Open Scene", ImGuiTestContext* ctx) {
+    ctx->SetRef(ctx->WindowInfo("//Content Browser##2/Directory View").ID);
+    ctx->ItemDoubleClick("###MyScene");
+};

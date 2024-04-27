@@ -149,8 +149,7 @@ void View::doFrame() {
     if (data.bgColor) {
         ImGui::PushStyleColor(ImGuiCol_WindowBg, *data.bgColor);
     }
-    std::string displayTitle =
-        utl::strcat(title(), "##", data.staticName, "_", data.ID);
+    std::string displayTitle = utl::strcat(title(), "##", data.ID);
     if (data.maximized) {
         displayTitle += "_FS";
     }

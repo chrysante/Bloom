@@ -45,6 +45,8 @@ public:
 
 private:
     struct Impl;
+    friend class poppy::ImGuiContext; /// To access the command palette for the
+                                      /// open test UI command
 
     void init() override;
     void initRenderer();

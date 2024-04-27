@@ -16,6 +16,6 @@ TestRegistryEntry& internal::registerUITest(std::string name,
     return gTestRegistry.back();
 }
 
-std::span<TestRegistryEntry const> poppy::getRegisteredTests() {
+std::span<TestRegistryEntry> poppy::getRegisteredTests() {
     return gTestRegistry;
 }

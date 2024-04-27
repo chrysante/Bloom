@@ -354,7 +354,11 @@ void AssetBrowser::refreshFilesystem() {
     dirView.openDirectory(data.currentDir);
 }
 
-UI_TEST("Content Browser", "Open Scene", ImGuiTestContext* ctx) {
-    ctx->SetRef(ctx->WindowInfo("//Content Browser##2/Directory View").ID);
+UI_TEST("Content Browser", "Open Scene", ImGuiTestContext* ctx,
+        Emitter& emitter) {
+    emitter.dispatch(DispatchToken::Now,
+                     ViewManager::OpenCommand{ "Content Browser" });
+    ctx->Yield();
+    ctx->SetRef(ctx->WindowInfo("//Content Browser/Directory View").ID);
     ctx->ItemDoubleClick("###MyScene");
 };

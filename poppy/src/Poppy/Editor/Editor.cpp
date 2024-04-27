@@ -72,7 +72,8 @@ struct ToolbarBuildTimeStamp: ToolbarItem {
 
 } // namespace
 
-Editor::Editor(): viewManager(this), mSelection(makeReceiver()) {
+Editor::Editor():
+    viewManager(this, makeReceiver()), mSelection(makeReceiver()) {
     setRunLoopMode(RunLoopMode::EventDriven);
     cmd.add("Save", { Key::S, ModFlags::Control }, [this] { saveAll(); });
     cmd.add("Simulate", { Key::R, ModFlags::Control },
@@ -83,8 +84,6 @@ Editor::Editor(): viewManager(this), mSelection(makeReceiver()) {
             [this] { stopSimulation(); }, [this] { return isSimulating(); });
     // clang-format off
     dockspace.setLeftToolbar({
-        /// Very annoying hack to prevent the toolbar from rendering under the
-        /// window buttons on MacOS
         ToolbarDropdownMenu()
             .icon([] { return "menu"; })
             .content([this] {
@@ -162,7 +161,7 @@ struct Editor::Impl {
             editor->imguiCtx.onTextInput(code);
         }
 
-        void onResize(int2) override { editor->invalidateView(); }
+        void onResize(int2) override { editor->invalidateUI(); }
 
         void onClose() override {
             editor->saveConfigToDisk();
@@ -217,7 +216,7 @@ void Editor::frame() {
     }
     /// If we simulate we want to render continuously
     if (isSimulating()) {
-        invalidateView();
+        invalidateUI();
     }
     autoConfigSave();
     Appearance::staticInstance().update();
@@ -261,7 +260,7 @@ void Editor::menuBar() {
 }
 
 bool Editor::onInput(InputEvent e) {
-    invalidateView();
+    invalidateUI();
     imguiCtx.onInput(e);
     if (viewManager.onInput(e)) {
         return true;
@@ -336,7 +335,7 @@ void Editor::autoConfigSave() {
 
 void Editor::saveAll() { coreSystems().assetManager().saveAll(); }
 
-void Editor::invalidateView() {
+void Editor::invalidateUI() {
     trickleEmptyEventCount = 3;
     postEmptySystemEvent();
 }

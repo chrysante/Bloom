@@ -75,6 +75,7 @@ private:
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiTestEngine* testEngine;
     bool showTestUI = false;
+    bloom::Emitter testEmitter;
 #endif
 };
 

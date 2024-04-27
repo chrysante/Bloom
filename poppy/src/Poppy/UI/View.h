@@ -56,6 +56,9 @@ public:
     /// \Returns the title of this view
     std::string_view title() const { return data.title; }
 
+    /// \Returns the static name of this view
+    std::string_view staticName() const { return data.staticName; }
+
     /// \Returns the editor instance
     Editor& editor() const { return *data.editor; }
 

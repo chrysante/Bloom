@@ -18,7 +18,11 @@ struct ViewManager::Impl {
     }
 };
 
-ViewManager::ViewManager(Editor* editor): editor(editor) {}
+ViewManager::ViewManager(Editor* editor, Receiver receiver):
+    Receiver(std::move(receiver)), editor(editor) {
+    listen([this](OpenCommand const& cmd) { openView(cmd.name); });
+    listen([this](CloseAllCommand const&) { closeAll(); });
+}
 
 ViewManager::~ViewManager() = default;
 
@@ -31,12 +35,24 @@ View* ViewManager::openView(ViewRegistryEntry const& regEntry) {
 }
 
 View* ViewManager::openView(std::string_view name) {
+    if (auto* view = findByStaticName(name)) {
+        return view;
+    }
     auto regEntry = ViewRegistry::get(name);
     if (!regEntry) {
-        Logger::Error("Failed to create View: ", name);
+        Logger::Error("Failed to create View (does not exist): ", name);
     }
     return openView(*regEntry);
 }
+
+View* ViewManager::findByStaticName(std::string_view name) {
+    auto itr = ranges::find_if(views, [&](auto& view) {
+        return view->staticName() == name;
+    });
+    return itr != views.end() ? itr->get() : nullptr;
+}
+
+void ViewManager::closeAll() { views.clear(); }
 
 void ViewManager::display() {
     /// Clear closing views

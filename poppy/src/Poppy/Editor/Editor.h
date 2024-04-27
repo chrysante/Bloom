@@ -37,8 +37,8 @@ public:
     /// \Returns `true` if the game is currently simulated
     bool isSimulating() const;
 
-    /// Request the view to be redrawn. Can be called asynchronously
-    void invalidateView();
+    /// Request the UI to be redrawn. Can be called asynchronously
+    void invalidateUI();
 
     /// ImGui expects one window to be the "main" window so we have this here
     bloom::Window* mainWindow() const { return _mainWindow; }

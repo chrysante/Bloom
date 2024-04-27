@@ -308,7 +308,7 @@ void poppy::ImGuiContext::newFrame() {
         ImGuiTestEngine_ShowTestEngineWindows(testEngine, &showTestUI);
     }
     if (ImGuiTestEngine_IsUsingSimulatedInputs(testEngine)) {
-        mEditor->invalidateView();
+        mEditor->invalidateUI();
     }
 }
 
@@ -386,7 +386,7 @@ void poppy::ImGuiContext::onTextInput(unsigned int code) {
 }
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-static void registerTests(ImGuiTestEngine* engine) {
+static void registerTests(ImGuiTestEngine* engine, Emitter& emitter) {
     /// Dummy test. We will remove this later
     ImGuiTest* test = IM_REGISTER_TEST(engine, "MyTests", "Test 1");
     test->GuiFunc = [](ImGuiTestContext*) {
@@ -416,7 +416,12 @@ static void registerTests(ImGuiTestEngine* engine) {
                                                        entry.category.c_str(),
                                                        entry.name.c_str(),
                                                        entry.file, entry.line);
-        test->TestFunc = entry.testFunction;
+        entry.emitter = &emitter;
+        test->UserData = &entry;
+        test->TestFunc = [](ImGuiTestContext* ctx) {
+            auto& entry = *(TestRegistryEntry*)ctx->Test->UserData;
+            entry.testFunction(ctx, *entry.emitter);
+        };
     }
 }
 #endif
@@ -428,7 +433,8 @@ void poppy::ImGuiContext::initTestEngine() {
     test_io.ConfigVerboseLevel = ImGuiTestVerboseLevel_Info;
     test_io.ConfigVerboseLevelOnError = ImGuiTestVerboseLevel_Debug;
 
-    registerTests(testEngine);
+    testEmitter = mEditor->makeEmitter();
+    registerTests(testEngine, testEmitter);
     ImGuiTestEngine_Start(testEngine, context);
     ImGuiTestEngine_InstallDefaultCrashHandler();
 

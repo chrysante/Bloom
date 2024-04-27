@@ -2,9 +2,11 @@
 #define POPPY_UI_VIEWMANAGER_H
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "Bloom/Application/Fwd.h"
+#include "Bloom/Application/MessageSystem.h"
 #include "Bloom/Core/Yaml.h"
 #include "Poppy/UI/Fwd.h"
 
@@ -13,9 +15,14 @@ namespace poppy {
 class Editor;
 
 /// Creates and destroys all view instances in the application
-class ViewManager {
+class ViewManager: bloom::Receiver {
 public:
-    explicit ViewManager(Editor* editor);
+    struct OpenCommand {
+        std::string name;
+    };
+    struct CloseAllCommand {};
+
+    explicit ViewManager(Editor* editor, Receiver receiver);
     ViewManager(ViewManager const&) = delete;
     ViewManager& operator=(ViewManager const&) = delete;
     ~ViewManager();
@@ -23,8 +30,17 @@ public:
     /// Creates an instance of the view \p entry
     View* openView(ViewRegistryEntry const& entry);
 
-    /// Finds the view registry entry with name \p name and creates the view
+    /// Focuses the existing view with static name \p name or, if nonesuch
+    /// exists, finds the view registry entry with name \p name and creates a
+    /// new view
     View* openView(std::string_view name);
+
+    /// Finds and returns the first open view with static name \p name or null
+    /// if none exists
+    View* findByStaticName(std::string_view name);
+
+    /// Closes all open views
+    void closeAll();
 
     /// Displays all views
     void display();

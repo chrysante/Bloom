@@ -20,25 +20,23 @@ namespace {
 
 class IDFactory {
 public:
-    static int makeUnique(int existing) {
-        if (existing >= 0 && instance.usedIDs.insert(existing).second) {
+    int makeUnique(int existing) {
+        if (existing >= 0 && usedIDs.insert(existing).second) {
             return existing;
         }
-        while (instance.usedIDs.contains(instance.IDCounter)) {
-            ++instance.IDCounter;
+        while (usedIDs.contains(IDCounter)) {
+            ++IDCounter;
         }
-        instance.usedIDs.insert(instance.IDCounter);
-        return instance.IDCounter;
+        usedIDs.insert(IDCounter);
+        return IDCounter;
     }
 
 private:
-    static IDFactory instance;
-
     int IDCounter;
     utl::hashset<int> usedIDs;
 };
 
-IDFactory IDFactory::instance;
+static utl::hashmap<std::string, IDFactory> gIDFactoryMap;
 
 } // namespace
 
@@ -103,7 +101,7 @@ void View::toggleMaximize() {
 }
 
 void View::doInit() {
-    data.ID = IDFactory::makeUnique(data.ID);
+    data.ID = gIDFactoryMap[data.staticName].makeUnique(data.ID);
     if (data.title.empty()) {
         data.title = data.staticName;
     }
@@ -149,7 +147,10 @@ void View::doFrame() {
     if (data.bgColor) {
         ImGui::PushStyleColor(ImGuiCol_WindowBg, *data.bgColor);
     }
-    std::string displayTitle = utl::strcat(title(), "##", data.ID);
+    std::string displayTitle(title());
+    if (data.ID != 0) {
+        displayTitle += utl::strcat("##", data.ID);
+    }
     if (data.maximized) {
         displayTitle += "_FS";
     }

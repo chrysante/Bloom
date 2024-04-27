@@ -2,6 +2,11 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+#include <imgui_te_context.h> // TODO: This only needed to register tests
+#include <imgui_te_engine.h>
+#include <imgui_te_ui.h>
+#endif
 #include <utl/strcat.hpp>
 
 #include "Bloom/Application.h"
@@ -229,8 +234,6 @@ static ImGuiKey toImGuiKeyCode(Key key) {
 
 poppy::ImGuiContext::~ImGuiContext() = default;
 
-#define USE_VIEWORTS 1
-
 void poppy::ImGuiContext::init(Editor& editor,
                                ImGuiContextDescription const& ds) {
     mEditor = &editor;
@@ -254,14 +257,13 @@ void poppy::ImGuiContext::init(Editor& editor,
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
-#if USE_VIEWORTS
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigViewportsNoAutoMerge = true;
     io.ConfigViewportsNoDecoration = false;
     io.ConfigViewportsNoDefaultParent = true;
-#endif
     io.IniFilename = desc.iniFilePath.c_str();
     initPlatform();
+    initTestEngine();
 
     listen([this](ReloadedFontAtlasCommand cmd) {
         newFontAtlas = cmd.fontManager->getAtlas();
@@ -269,14 +271,17 @@ void poppy::ImGuiContext::init(Editor& editor,
 }
 
 void poppy::ImGuiContext::shutdown() {
+    stopTestEngine();
     std::lock_guard lock(drawMutex);
     ImGui::SetCurrentContext(context);
     shutdownPlatform();
     ImGui::DestroyContext(context);
     context = nullptr;
+    shutdownTestEngine();
 }
 
 void poppy::ImGuiContext::newFrame() {
+    // FIXME: This is not pretty
     utl::timed_busy_wait(std::chrono::milliseconds{ 16 },
                          [&] { return numRenderTasks == 0; });
     {
@@ -296,6 +301,10 @@ void poppy::ImGuiContext::newFrame() {
     io.DisplayFramebufferScale = window.contentScaleFactor();
     newFramePlatform();
     ImGui::NewFrame();
+
+    // TODO: Remove this from here
+    // Optionally: show test engine UI to browse/run test from the UI
+    ImGuiTestEngine_ShowTestEngineWindows(testEngine, nullptr);
 }
 
 void poppy::ImGuiContext::endFrame() {
@@ -369,6 +378,41 @@ void poppy::ImGuiContext::onTextInput(unsigned int code) {
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.AddInputCharacter(code);
+}
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+static void registerTests(ImGuiTestEngine* engine) {
+    ImGuiTest* test = IM_REGISTER_TEST(engine, "MyTests", "Test 1");
+    test->TestFunc = [](ImGuiTestContext* ctx) {
+        ctx->SetRef("Viewport");
+        ctx->ItemClick("Click Me");
+    };
+}
+#endif
+
+void poppy::ImGuiContext::initTestEngine() {
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    testEngine = ImGuiTestEngine_CreateContext();
+    ImGuiTestEngineIO& test_io = ImGuiTestEngine_GetIO(testEngine);
+    test_io.ConfigVerboseLevel = ImGuiTestVerboseLevel_Info;
+    test_io.ConfigVerboseLevelOnError = ImGuiTestVerboseLevel_Debug;
+
+    registerTests(testEngine);
+    ImGuiTestEngine_Start(testEngine, context);
+    ImGuiTestEngine_InstallDefaultCrashHandler();
+#endif
+}
+
+void poppy::ImGuiContext::stopTestEngine() {
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiTestEngine_Stop(testEngine);
+#endif
+}
+
+void poppy::ImGuiContext::shutdownTestEngine() {
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiTestEngine_DestroyContext(testEngine);
+#endif
 }
 
 #if !defined(BLOOM_PLATFORM_APPLE)

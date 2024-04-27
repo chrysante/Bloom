@@ -49,6 +49,7 @@ if(BLOOM_BUILD_TESTS)
   CPMAddPackage("gh:catchorg/Catch2@3.4.0")
 endif()
 
+set(IMGUI_TEST_ENGINE ON)
 add_subdirectory(imgui)
 
 # Subprojects

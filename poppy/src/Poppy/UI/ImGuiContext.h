@@ -9,6 +9,9 @@
 #include <imgui.h>
 #include <utl/hashmap.hpp>
 #include <utl/vector.hpp>
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+#include <imgui_te_engine.h>
+#endif
 
 #include "Bloom/Application/InputEvent.h"
 #include "Bloom/Application/MessageSystem.h"
@@ -57,6 +60,10 @@ private:
     void drawFramePlatform();
     void uploadCurrentFontAtlas(bloom::HardwareDevice& device);
 
+    void initTestEngine();
+    void stopTestEngine();
+    void shutdownTestEngine();
+
     Editor* mEditor = nullptr;
     ::ImGuiContext* context = nullptr;
     ImGuiContextDescription desc;
@@ -64,6 +71,10 @@ private:
     bool drawDataValid = false;
     std::atomic_int numRenderTasks;
     ImFontAtlas* newFontAtlas = nullptr;
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiTestEngine* testEngine;
+#endif
 };
 
 } // namespace poppy

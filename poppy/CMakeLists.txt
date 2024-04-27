@@ -19,7 +19,7 @@ target_link_libraries(poppy
     utility
     vml
     yaml-cpp
-    ImGui
+    imgui
     ImGuizmo
     scatha
     "-framework AppKit"

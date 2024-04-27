@@ -386,6 +386,19 @@ void poppy::ImGuiContext::onTextInput(unsigned int code) {
 }
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
+
+struct TestBase::Impl {
+    static void populateTestObject(TestBase& object, ImGuiTestContext* ctx) {
+        object._testCtx = ctx;
+    }
+
+    static void populateTestObject(TestBase& object, Emitter* emitter) {
+        object._emitter = emitter;
+    }
+
+    static void run(TestBase& object) { object.doRun(); }
+};
+
 static void registerTests(ImGuiTestEngine* engine, Emitter& emitter) {
     /// Dummy test. We will remove this later
     ImGuiTest* test = IM_REGISTER_TEST(engine, "MyTests", "Test 1");
@@ -416,11 +429,12 @@ static void registerTests(ImGuiTestEngine* engine, Emitter& emitter) {
                                                        entry.category.c_str(),
                                                        entry.name.c_str(),
                                                        entry.file, entry.line);
-        entry.emitter = &emitter;
-        test->UserData = &entry;
+        test->UserData = entry.testObject;
+        TestBase::Impl::populateTestObject(*entry.testObject, &emitter);
         test->TestFunc = [](ImGuiTestContext* ctx) {
-            auto& entry = *(TestRegistryEntry*)ctx->Test->UserData;
-            entry.testFunction(ctx, *entry.emitter);
+            auto* testObject = (TestBase*)ctx->Test->UserData;
+            TestBase::Impl::populateTestObject(*testObject, ctx);
+            TestBase::Impl::run(*testObject);
         };
     }
 }

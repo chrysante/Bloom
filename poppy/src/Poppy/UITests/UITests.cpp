@@ -4,12 +4,10 @@
 using namespace poppy;
 using namespace bloom;
 
-UI_TEST("General", "Example Test", ImGuiTestContext* ctx, Emitter& emitter) {
-    emitter.dispatch(DispatchToken::Now,
-                     ViewManager::OpenCommand{ "Content Browser" });
-    emitter.dispatch(DispatchToken::Now,
-                     ViewManager::OpenCommand{ "Viewport" });
-    ctx->Yield();
-    ctx->SetRef(ctx->WindowInfo("Content Browser/Directory View").ID);
-    ctx->ItemDoubleClick("###MyScene");
-};
+UI_TEST("General", "Example Test") {
+    openView("Content Browser");
+    openView("Viewport");
+    context().Yield();
+    context().SetRef(context().WindowInfo("Content Browser/Directory View").ID);
+    context().ItemDoubleClick("###MyScene");
+}

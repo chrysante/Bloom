@@ -10,7 +10,7 @@ using namespace bloom;
 using namespace rg;
 using namespace vml;
 
-void Resource::addUser(PassInterfaceBase* user) {
+void Resource::addUser(PassTerminal* user) {
     if (!ranges::contains(_users, user)) {
         _users.push_back(user);
     }
@@ -19,8 +19,8 @@ void Resource::addUser(PassInterfaceBase* user) {
 void Resource::assignUsers() {
     visit(*this, [this]<typename ResourceType>(ResourceType& self) {
         for (auto* user: users()) {
-            if (auto* handle = user->handle<ResourceType::Type>()) {
-                *handle = self.handle();
+            if (auto* handle = user->handle()) {
+                *(typename ResourceType::ViewType*)handle = self.handle();
             }
         }
     });
@@ -48,10 +48,9 @@ void GeometryResource::clear() { objects.clear(); }
 static constexpr auto RenderGeometryOrder = [](Geometry::reference a,
                                                Geometry::reference b) {
     auto& aMatInst = *a.materialInstance;
-    auto* const aMat = aMatInst.material();
+    auto* aMat = aMatInst.material();
     auto& bMatInst = *b.materialInstance;
-    auto* const bMat = bMatInst.material();
-
+    auto* bMat = bMatInst.material();
     if (aMat == bMat) { // Sort by material first
         if (a.materialInstance == b.materialInstance) { // Then by instance
             return a.mesh < b.mesh;                     // Then by mesh

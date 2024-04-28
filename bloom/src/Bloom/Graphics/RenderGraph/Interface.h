@@ -13,25 +13,12 @@
 #include <utl/vector.hpp>
 #include <vml/vml.hpp>
 
+#include "Bloom/Core/Debug.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/SizeDescriptors.h"
 
 namespace bloom::rg {
-
-enum class InterfaceType { Buffer, Texture, Geometry, Lights };
-
-template <InterfaceType Type>
-using InterfaceViewType =
-    std::tuple_element_t<(size_t)Type,
-                         std::tuple<BufferHandle, TextureHandle,
-                                    GeometryResource*, LightsResource*>>;
-
-template <InterfaceType Type>
-using ResourceType =
-    std::tuple_element_t<(size_t)Type,
-                         std::tuple<BufferResource, TextureResource,
-                                    GeometryResource, LightsResource>>;
 
 ///
 enum class InterfaceFlags {
@@ -43,32 +30,106 @@ enum class InterfaceFlags {
 
 UTL_ENUM_OPERATORS(InterfaceFlags)
 
-/// Stub interface descriptor
-template <InterfaceType Type>
-struct InterfaceDesc {
-    bool operator==(InterfaceDesc const&) const = default;
+/// Type erasing wrapper around a member pointer to derived pass classes. This
+/// exists so we don't have to parametrize `Interface` on the derived pass type
+template <typename InterfaceView>
+class InterfaceAccessor {
+    template <typename PassType>
+    using MemPtrType = InterfaceView(PassType::*);
 
-    size_t hashValue() const { return 0; }
+public:
+    InterfaceAccessor(std::nullptr_t = nullptr): fn(nullptr) {}
+
+    template <typename PassType>
+    InterfaceAccessor(MemPtrType<PassType> member): fn(impl<PassType>) {
+        static_assert(sizeof(MemPtrType<PassType>) == sizeof(MemPtrType<Pass>));
+        static_assert(alignof(MemPtrType<PassType>) ==
+                      alignof(MemPtrType<Pass>));
+        std::memcpy(&memptr, &member, sizeof member);
+    }
+
+    InterfaceView* operator()(Pass& pass) const {
+        return fn ? fn(*this, pass) : nullptr;
+    }
+
+    explicit operator bool() const { return fn; }
+
+private:
+    template <typename PassType>
+#if defined(__GNUC__)
+    // See comment on PassImpl::PassImpl()
+    __attribute__((no_sanitize("vptr")))
+#endif
+    static InterfaceView*
+        impl(InterfaceAccessor const& This, Pass& pass) {
+        using MemPtr = InterfaceView(PassType::*);
+        auto member = *reinterpret_cast<MemPtr const*>(This.memptr);
+        return &(static_cast<PassType&>(pass).*member);
+    }
+
+    InterfaceView* (*fn)(InterfaceAccessor const&, Pass&);
+    alignas(MemPtrType<Pass>) char memptr[sizeof(MemPtrType<Pass>)];
 };
 
-using BufferInterfaceDesc = InterfaceDesc<InterfaceType::Buffer>;
-using TextureInterfaceDesc = InterfaceDesc<InterfaceType::Texture>;
+/// Abstract base class of concrete interfaces
+class Interface {
+public:
+    std::string const& name() const { return _name; }
+
+    InterfaceFlags flags() const { return _flags; }
+
+    InterfaceType type() const { return _type; }
+
+    void* accessor(Pass& pass) const;
+
+protected:
+    Interface(InterfaceType type, std::string name, InterfaceFlags flags):
+        _type(type), _name(std::move(name)), _flags(flags) {}
+
+private:
+    friend InterfaceType dyncast_get_type(Interface const& i) {
+        return i.type();
+    }
+
+    InterfaceType _type;
+    std::string _name;
+    InterfaceFlags _flags;
+};
 
 /// Buffer interface descriptor
-template <>
-struct InterfaceDesc<InterfaceType::Buffer> {
+struct BufferInterfaceDescriptor {
     /// The size of the requested buffer
     /// TODO: Make this a class that allows for special values
     size_t size;
 
-    bool operator==(InterfaceDesc const&) const = default;
+    bool operator==(BufferInterfaceDescriptor const&) const = default;
 
     size_t hashValue() const { return std::hash<size_t>{}(size); }
 };
 
+class BufferInterface: public Interface {
+public:
+    using Resource = BufferResource;
+
+    explicit BufferInterface(std::string name,
+                             InterfaceAccessor<BufferHandle> accessor,
+                             BufferInterfaceDescriptor desc,
+                             InterfaceFlags flags = InterfaceFlags::None):
+        Interface(InterfaceType::BufferInterface, std::move(name), flags),
+        _desc(desc),
+        _accessor(accessor) {}
+
+    BufferInterfaceDescriptor const& desc() const { return _desc; }
+
+private:
+    friend class Interface;
+
+    BufferInterfaceDescriptor _desc;
+    InterfaceAccessor<BufferHandle> _accessor;
+};
+
 /// Texture interface descriptor
-template <>
-struct InterfaceDesc<InterfaceType::Texture> {
+struct TextureInterfaceDescriptor {
     ///
     TextureType type = TextureType::Texture2D;
 
@@ -87,7 +148,7 @@ struct InterfaceDesc<InterfaceType::Texture> {
     ///
     size_t arrayLength = 1;
 
-    bool operator==(InterfaceDesc const&) const = default;
+    bool operator==(TextureInterfaceDescriptor const&) const = default;
 
     size_t hashValue() const {
         return utl::hash_combine(type, pixelFormat, size, mipmapLevelCount,
@@ -95,109 +156,151 @@ struct InterfaceDesc<InterfaceType::Texture> {
     }
 };
 
-/// Type erasing wrapper around a member pointer to derived pass classes. This
-/// exists so we don't have to parametrize `Interface` on the derived pass type
-template <InterfaceType Type>
-class InterfaceAccessor {
-    template <typename PassType>
-    using MemPtrType = InterfaceViewType<Type>(PassType::*);
-
+class TextureInterface: public Interface {
 public:
-    template <typename PassType>
-    InterfaceAccessor(InterfaceViewType<Type>(PassType::*member)):
-        fn(impl<PassType>) {
-        static_assert(sizeof(MemPtrType<PassType>) == sizeof(MemPtrType<Pass>));
-        static_assert(alignof(MemPtrType<PassType>) ==
-                      alignof(MemPtrType<Pass>));
-        std::memcpy(&memptr, &member, sizeof member);
+    using Resource = TextureResource;
+
+    explicit TextureInterface(std::string name,
+                              InterfaceAccessor<TextureHandle> accessor,
+                              TextureInterfaceDescriptor desc,
+                              InterfaceFlags flags = InterfaceFlags::None):
+        Interface(InterfaceType::TextureInterface, std::move(name), flags),
+        _desc(desc),
+        _accessor(accessor) {}
+
+    TextureInterfaceDescriptor const& desc() const { return _desc; }
+
+private:
+    friend class Interface;
+
+    TextureInterfaceDescriptor _desc;
+    InterfaceAccessor<TextureHandle> _accessor;
+};
+
+class GeometryInterface: public Interface {
+public:
+    using Resource = GeometryResource;
+
+    explicit GeometryInterface(std::string name,
+                               InterfaceAccessor<GeometryResource*> accessor,
+                               InterfaceFlags flags = InterfaceFlags::None):
+        Interface(InterfaceType::GeometryInterface, std::move(name), flags),
+        _accessor(accessor) {}
+
+private:
+    friend class Interface;
+
+    InterfaceAccessor<GeometryResource*> _accessor;
+};
+
+class LightsInterface: public Interface {
+public:
+    using Resource = LightsResource;
+
+    explicit LightsInterface(std::string name,
+                             InterfaceAccessor<LightsResource*> accessor,
+                             InterfaceFlags flags = InterfaceFlags::None):
+        Interface(InterfaceType::LightsInterface, std::move(name), flags),
+        _accessor(accessor) {}
+
+private:
+    friend class Interface;
+
+    InterfaceAccessor<LightsResource*> _accessor;
+};
+
+union InterfaceUnion {
+    template <typename T>
+    static auto& getImpl(auto* This) {
+        if (false)
+            ;
+#define RG_CONCRETE_RESOURCE_DEF(Name)                                         \
+    else if constexpr (std::same_as<T, Name##Interface>) return This           \
+        ->case##Name;
+#include "Bloom/Graphics/RenderGraph/Resource.def"
+        else
+            ;
     }
 
-    InterfaceViewType<Type>& operator()(Pass& pass) const {
-        return fn(*this, pass);
+public:
+#define RG_CONCRETE_RESOURCE_DEF(Name)                                         \
+    InterfaceUnion(Name##Interface const& impl):                               \
+        case##Name(impl){} InterfaceUnion(Name##Interface && impl):            \
+    case##Name(std::move(impl)){}
+#include "Bloom/Graphics/RenderGraph/Resource.def"
+
+    template <typename F>
+    decltype(auto) visit(F&& f) {
+        return bloom::visit(get(), std::forward<F>(f));
+    }
+
+    template <typename F>
+    decltype(auto) visit(F&& f) const {
+        return bloom::visit(get(), std::forward<F>(f));
+    }
+
+    InterfaceUnion(InterfaceUnion const& rhs) {
+        rhs.visit([this]<typename I>(I const& rhs) {
+            std::construct_at(&getImpl<I>(this), rhs);
+        });
+    }
+
+    InterfaceUnion& operator=(InterfaceUnion const& rhs) {
+        if (this == &rhs) {
+            return *this;
+        }
+        std::destroy_at(this);
+        std::construct_at(this, rhs);
+        return *this;
+    }
+
+    InterfaceUnion(InterfaceUnion&& rhs) {
+        rhs.visit([this]<typename I>(I& rhs) {
+            std::construct_at(&getImpl<I>(this), std::move(rhs));
+        });
+    }
+
+    InterfaceUnion& operator=(InterfaceUnion&& rhs) {
+        if (this == &rhs) {
+            return *this;
+        }
+        std::destroy_at(this);
+        std::construct_at(this, std::move(rhs));
+        return *this;
+    }
+
+    ~InterfaceUnion() {
+        visit([]<typename I>(I const& This) { std::destroy_at(&This); });
+    }
+
+    Interface& get() {
+        return const_cast<Interface&>(
+            static_cast<InterfaceUnion const*>(this)->get());
+    }
+
+    Interface const& get() const {
+        return reinterpret_cast<Interface const&>(*this);
     }
 
 private:
-    template <typename PassType>
-#if defined(__GNUC__)
-    // See comment on PassImpl::PassImpl()
-    __attribute__((no_sanitize("vptr")))
-#endif
-    static InterfaceViewType<Type>&
-        impl(InterfaceAccessor const& This, Pass& pass) {
-        using MemPtr = InterfaceViewType<Type>(PassType::*);
-        auto member = *reinterpret_cast<MemPtr const*>(This.memptr);
-        return static_cast<PassType&>(pass).*member;
-    }
-
-    InterfaceViewType<Type>& (*fn)(InterfaceAccessor const&, Pass&);
-    alignas(MemPtrType<Pass>) char memptr[sizeof(MemPtrType<Pass>)];
+#define RG_CONCRETE_RESOURCE_DEF(Name) Name##Interface case##Name;
+#include "Bloom/Graphics/RenderGraph/Resource.def"
 };
-
-/// Interfaces statically describe the sources and sinks of a pass
-template <InterfaceType Type>
-struct Interface {
-    /// The name of this interface
-    std::string name;
-
-    /// The data member of the pass class that holds the handle of this
-    /// interface
-    InterfaceAccessor<Type> accessor;
-
-    /// The interface descriptor. This is used for type checking and resource
-    /// allocation
-    InterfaceDesc<Type> desc = {};
-
-    /// Additional interface flags
-    InterfaceFlags flags = InterfaceFlags::None;
-};
-
-using BufferInterface = Interface<InterfaceType::Buffer>;
-using TextureInterface = Interface<InterfaceType::Texture>;
-using GeometryInterface = Interface<InterfaceType::Geometry>;
-using LightsInterface = Interface<InterfaceType::Lights>;
-
-using InterfaceVariant = std::variant<BufferInterface, TextureInterface,
-                                      GeometryInterface, LightsInterface>;
 
 /// Base class of `PassSource` and `PassSink`
-class PassInterfaceBase {
-    using DescVariant = std::variant<InterfaceDesc<InterfaceType::Buffer>,
-                                     InterfaceDesc<InterfaceType::Texture>,
-                                     InterfaceDesc<InterfaceType::Geometry>,
-                                     InterfaceDesc<InterfaceType::Lights>>;
-
+class PassTerminal {
 public:
-    virtual ~PassInterfaceBase() = default;
+    virtual ~PassTerminal() = default;
 
-    /// \Returns the underlying `*Interface` variant
-    DescVariant& get() { return _desc; }
+    /// \Returns the interface of this terminal
+    InterfaceUnion const& interface() const { return impl; }
 
-    /// \overload
-    DescVariant const& get() const { return _desc; }
+    /// \Returns the implementation handle of this terminal
+    void* handle() const { return _handle; }
 
-    /// \Returns the underlying `Interface` of type \p T
-    template <InterfaceType Type>
-    auto& get() {
-        return std::get<(size_t)Type>(get());
-    }
-
-    /// \overload
-    template <InterfaceType Type>
-    auto const& get() const {
-        return std::get<(size_t)Type>(get());
-    }
-
-    ///
-    template <InterfaceType Type>
-    InterfaceViewType<Type>* handle() const {
-        return static_cast<InterfaceViewType<Type>*>(_handle);
-    }
-
-    /// \Returns `std::visit(vis, get())`
-    decltype(auto) visit(auto&& vis) const { return std::visit(vis, get()); }
-
-    /// \Returns the name of this interface
-    std::string const& name() const { return _name; }
+    /// \Returns the name of this terminal. Shorthand for
+    /// `interface().get().name()`
+    std::string const& name() const { return interface().get().name(); }
 
     /// \Returns the name qualified with the name of the owning pass
     std::string qualifiedName() const;
@@ -214,40 +317,28 @@ public:
     /// Assigns the backing resource
     void setResource(Resource* resource) { doSetResource(resource); }
 
-    ///
-    InterfaceFlags flags() const { return _flags; }
+    /// \Returns `interface().get().flags()`
+    InterfaceFlags flags() const { return interface().get().flags(); }
 
 protected:
-    template <InterfaceType Type>
-    PassInterfaceBase(Pass* pass, std::string name,
-                      InterfaceViewType<Type>* handle, InterfaceDesc<Type> desc,
-                      InterfaceFlags flags):
-        _name(std::move(name)),
-        _handle(handle),
-        _desc(std::move(desc)),
-        _pass(pass),
-        _flags(flags) {}
+    PassTerminal(InterfaceUnion interface, Pass* pass, void* handle):
+        impl(std::move(interface)), _pass(pass), _handle(handle) {}
 
     /// Allow derived classes to customize this behaviour
     virtual void doSetResource(Resource* resource) { _resource = resource; }
 
 private:
-    std::string _name;
-    void* _handle;
-    DescVariant _desc;
+    InterfaceUnion impl;
     Pass* _pass = nullptr;
+    void* _handle;
     Resource* _resource = nullptr;
-    InterfaceFlags _flags;
 };
 
 /// Resource input of a pass
-class PassSink: public PassInterfaceBase {
+class PassSink: public PassTerminal {
 public:
-    template <InterfaceType Type>
-    explicit PassSink(Pass* pass, std::string name,
-                      InterfaceViewType<Type>* handle,
-                      InterfaceDesc<Type> const& desc, InterfaceFlags flags):
-        PassInterfaceBase(pass, std::move(name), handle, desc, flags) {}
+    explicit PassSink(InterfaceUnion interface, Pass* pass, void* handle):
+        PassTerminal(std::move(interface), pass, handle) {}
 
     /// \Returns the source that is linked to this sink
     /// \Note `addSink` on \p source must be called manually
@@ -268,13 +359,10 @@ private:
 };
 
 /// Resource output of a pass
-class PassSource: public PassInterfaceBase {
+class PassSource: public PassTerminal {
 public:
-    template <InterfaceType Type>
-    explicit PassSource(Pass* pass, std::string name,
-                        InterfaceViewType<Type>* handle,
-                        InterfaceDesc<Type> const& desc, InterfaceFlags flags):
-        PassInterfaceBase(pass, std::move(name), handle, desc, flags) {}
+    explicit PassSource(InterfaceUnion interface, Pass* pass, void* handle):
+        PassTerminal(std::move(interface), pass, handle) {}
 
     /// \Returns the sinks that are linked to this source
     std::span<PassSink* const> sinks() const { return _sinks; }
@@ -293,30 +381,38 @@ private:
     utl::small_vector<PassSink*, 3> _sinks;
 };
 
-// The following classes model sinks and sources of render graphs:
-//
-//                  ┌─ Render Graph ────────────────────────┐
-// RenderGraphSink >>> RenderGraphInternalSource            │
-//   An input into  │    Within the graph the               │
-//   the graph      │    sink is represented by             │
-//                  │    a source                           │
-//                  │                                       │
-//                  │             RenderGraphInternalSink  >>> RenderGraphSource
-//                  │               Within the graph the    │    An output of
-//                  │               output is represented   │    the graph
-//                  │               by a sink               │
-//                  └───────────────────────────────────────┘
+/// The following classes model sinks and sources of render graphs:
+///
+/// ```
+///                   ┌─ Render Graph ────────────────────┐
+/// `RenderGraphSink` >>> `RenderGraphInternalSource`     │
+///    An input into  │      Within the graph the         │
+///    the graph      │      sink is represented by       │
+///                   │      a source                     │
+///                   │                                   │
+///                   │        `RenderGraphInternalSink` >>> `RenderGraphSource`
+///                   │            Within the graph the   │     An output of
+///                   │            output is represented  │     the graph
+///                   │            by a sink              │
+///                   └───────────────────────────────────┘
+/// ```
+///
+/// One thing to note is that `RenderGraphInternal{Sink/Source}::pass()` always
+/// returns null, whereas `RenderGraph{Sink/Source}::pass()` returns the render
+/// graph
 
 /// Models a sink within a render graph that is a source of the render graph
 class RenderGraphInternalSink: public PassSink {
 public:
-    using PassSink::PassSink;
+    explicit RenderGraphInternalSink(InterfaceUnion interface, void* handle):
+        PassSink(std::move(interface), nullptr, handle) {}
 };
 
 /// Models a source within a render graph that is a sink of the render graph
 class RenderGraphInternalSource: public PassSource {
 public:
-    using PassSource::PassSource;
+    explicit RenderGraphInternalSource(InterfaceUnion interface, void* handle):
+        PassSource(std::move(interface), nullptr, handle) {}
 };
 
 /// Resource input of a render graph.
@@ -324,13 +420,9 @@ public:
 /// within the graph
 class RenderGraphSink: public PassSink {
 public:
-    template <InterfaceType Type>
-    explicit RenderGraphSink(Pass* pass, std::string name,
-                             InterfaceViewType<Type>* handle,
-                             InterfaceDesc<Type> const& desc,
-                             InterfaceFlags flags):
-        PassSink(pass, name, handle, desc, flags),
-        src(nullptr, name, handle, desc, flags) {}
+    explicit RenderGraphSink(InterfaceUnion interface, Pass* pass,
+                             void* handle):
+        PassSink(interface, pass, handle), src(interface, handle) {}
 
     /// \Returns the source that makes this sink readable to passes within the
     /// render graph
@@ -353,13 +445,9 @@ private:
 /// the graph
 class RenderGraphSource: public PassSource {
 public:
-    template <InterfaceType Type>
-    explicit RenderGraphSource(Pass* pass, std::string name,
-                               InterfaceViewType<Type>* handle,
-                               InterfaceDesc<Type> const& desc,
-                               InterfaceFlags flags):
-        PassSource(pass, name, handle, desc, flags),
-        snk(nullptr, name, handle, desc, flags) {}
+    explicit RenderGraphSource(InterfaceUnion interface, Pass* pass,
+                               void* handle):
+        PassSource(interface, pass, handle), snk(interface, handle) {}
 
     /// \Returns the sink that makes this source definable by passes within the
     /// render graph
@@ -384,12 +472,5 @@ inline Pass* PassSink::getSourcePass() const {
 }
 
 } // namespace bloom::rg
-
-template <bloom::rg::InterfaceType Type>
-struct std::hash<bloom::rg::InterfaceDesc<Type>> {
-    size_t operator()(bloom::rg::InterfaceDesc<Type> const& desc) const {
-        return desc.hashValue();
-    }
-};
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_INTERFACE_H

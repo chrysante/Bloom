@@ -91,13 +91,11 @@ static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
 }
 
 static void allocateBackingResource(ResourcePool& pool,
-                                    PassInterfaceBase& interface) {
-    auto* resource = interface.visit(
-        [&]<InterfaceType Type>(InterfaceDesc<Type> const& desc) -> Resource* {
-        return pool.allocate(desc);
-    });
-    resource->addUser(&interface);
-    interface.setResource(resource);
+                                    PassTerminal& terminal) {
+    auto* resource = terminal.interface().visit(
+        [&](auto& interface) { return pool.allocate(interface); });
+    resource->addUser(&terminal);
+    terminal.setResource(resource);
 }
 
 static void allocateBackingResources(

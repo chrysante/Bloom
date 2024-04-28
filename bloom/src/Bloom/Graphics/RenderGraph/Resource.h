@@ -28,11 +28,11 @@ public:
     /// \Returns the most derived type of this resource
     ResourceNodeType type() const { return _type; }
 
-    /// \Returns a view over all sinks and sources that use this resource
-    std::span<PassInterfaceBase* const> users() const { return _users; }
+    /// \Returns a view over all terminals that use this resource
+    std::span<PassTerminal* const> users() const { return _users; }
 
-    /// Adds \p interface as a user of this resource
-    void addUser(PassInterfaceBase* interface);
+    /// Adds \p terminal as a user of this resource
+    void addUser(PassTerminal* terminal);
 
     ///
     void assignUsers();
@@ -46,18 +46,16 @@ private:
     }
 
     ResourceNodeType _type;
-    utl::small_vector<PassInterfaceBase*> _users;
+    utl::small_vector<PassTerminal*> _users;
 };
 
 /// Wrapper around a `BufferHandle`
 class BufferResource: public Resource {
 public:
-    static constexpr InterfaceType Type = InterfaceType::Buffer;
-
-    using Desc = InterfaceDesc<Type>;
+    using ViewType = BufferHandle;
 
     ///
-    explicit BufferResource(Desc desc):
+    explicit BufferResource(BufferInterfaceDescriptor desc):
         Resource(ResourceNodeType::BufferResource), _desc(desc) {}
 
     ///
@@ -67,22 +65,20 @@ public:
     BufferHandle const& handle() { return _handle; }
 
     ///
-    Desc const& desc() const { return _desc; }
+    BufferInterfaceDescriptor const& desc() const { return _desc; }
 
 private:
     BufferHandle _handle;
-    Desc _desc;
+    BufferInterfaceDescriptor _desc;
 };
 
 /// Wrapper around a `TextureHandle`
 class TextureResource: public Resource {
 public:
-    static constexpr InterfaceType Type = InterfaceType::Texture;
-
-    using Desc = InterfaceDesc<Type>;
+    using ViewType = TextureHandle;
 
     ///
-    explicit TextureResource(Desc desc):
+    explicit TextureResource(TextureInterfaceDescriptor desc):
         Resource(ResourceNodeType::TextureResource), _desc(desc) {}
 
     ///
@@ -92,11 +88,11 @@ public:
     TextureHandle const& handle() const { return _handle; }
 
     ///
-    Desc const& desc() const { return _desc; }
+    TextureInterfaceDescriptor const& desc() const { return _desc; }
 
 private:
     TextureHandle _handle;
-    Desc _desc;
+    TextureInterfaceDescriptor _desc;
 };
 
 ///
@@ -107,12 +103,9 @@ UTL_SOA_TYPE(Geometry, (Reference<StaticMeshRenderer>, mesh),
 /// Set of visible meshes in a scene. This is rebuild every frame
 class GeometryResource: public Resource {
 public:
-    static constexpr InterfaceType Type = InterfaceType::Geometry;
+    using ViewType = GeometryResource*;
 
-    using Desc = InterfaceDesc<Type>;
-
-    explicit GeometryResource(Desc):
-        Resource(ResourceNodeType::GeometryResource) {}
+    GeometryResource(): Resource(ResourceNodeType::GeometryResource) {}
 
     ///
     GeometryResource* handle() { return this; }
@@ -144,11 +137,9 @@ private:
 /// Set of lights in a scene. This is rebuild every frame
 class LightsResource: public Resource {
 public:
-    static constexpr InterfaceType Type = InterfaceType::Lights;
+    using ViewType = LightsResource*;
 
-    using Desc = InterfaceDesc<Type>;
-
-    explicit LightsResource(Desc): Resource(ResourceNodeType::LightsResource) {}
+    LightsResource(): Resource(ResourceNodeType::LightsResource) {}
 
     ///
     LightsResource* handle() { return this; }

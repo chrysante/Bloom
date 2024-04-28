@@ -8,7 +8,13 @@
 using namespace bloom;
 using namespace rg;
 
-std::string PassInterfaceBase::qualifiedName() const {
+void* Interface::accessor(Pass& pass) const {
+    return visit(*this, [&](auto& interface) -> void* {
+        return interface._accessor(pass);
+    });
+}
+
+std::string PassTerminal::qualifiedName() const {
     return utl::strcat(pass() ? pass()->name() : "?", ".", name());
 }
 

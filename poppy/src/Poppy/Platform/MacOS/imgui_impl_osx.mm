@@ -1080,7 +1080,6 @@ static void ImGui_ImplOSX_SetWindowTitle(ImGuiViewport* viewport, const char* /*
 {
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
-    bloom::Logger::Debug("Not honoring ImGui's set title request");
 }
 
 static void ImGui_ImplOSX_SetWindowAlpha(ImGuiViewport* viewport, float alpha)

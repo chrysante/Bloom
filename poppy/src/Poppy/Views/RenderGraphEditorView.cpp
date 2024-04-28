@@ -121,18 +121,26 @@ struct GlobalInputNodeController: RenderGraphNodeController {
     }
 
     void create(RenderGraph& rg) override {
-        using enum InterfaceType;
         sources.clear();
-        declare<Geometry>(rg, "Geometry", {});
-        declare<Lights>(rg, "Lights", {});
-        declare<Buffer>(rg, "Camera", { .size = sizeof(CameraInput) });
-        declare<Buffer>(rg, "LightSpaceTransforms", { .size = 0 });
-        declare<Buffer>(rg, "ShadowMetadata",
-                        { .size = sizeof(ShadowRenderMetadata) });
-        declare<Buffer>(rg, "BloomParameters",
-                        { .size = sizeof(BloomParameters) });
-        declare<Buffer>(rg, "PostProcessParameters",
-                        { .size = sizeof(PostProcessParameters) });
+        declare(rg, GeometryInterface{ "Geometry", nullptr });
+        declare(rg, LightsInterface{ "Lights", nullptr });
+        declare(rg, BufferInterface{ "Camera",
+                                     nullptr,
+                                     { .size = sizeof(CameraInput) } });
+        declare(rg, BufferInterface{ "LightSpaceTransforms",
+                                     nullptr,
+                                     { .size = 0 } });
+        declare(rg,
+                BufferInterface{ "ShadowMetadata",
+                                 nullptr,
+                                 { .size = sizeof(ShadowRenderMetadata) } });
+        declare(rg, BufferInterface{ "BloomParameters",
+                                     nullptr,
+                                     { .size = sizeof(BloomParameters) } });
+        declare(rg,
+                BufferInterface{ "PostProcessParameters",
+                                 nullptr,
+                                 { .size = sizeof(PostProcessParameters) } });
     }
 
     PassSource* getSource(size_t index) const override {
@@ -148,9 +156,8 @@ struct GlobalInputNodeController: RenderGraphNodeController {
 
     bool alwaysDisplayOutputNames() const override { return true; }
 
-    template <InterfaceType Type>
-    void declare(RenderGraph& rg, std::string name, InterfaceDesc<Type> desc) {
-        RenderGraphSink* sink = rg.declareSink<Type>(std::move(name), desc);
+    void declare(RenderGraph& rg, InterfaceUnion interface) {
+        RenderGraphSink* sink = rg.declareSink(std::move(interface));
         sources.push_back(sink->internalSource());
     }
 
@@ -179,13 +186,14 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
     }
 
     void create(RenderGraph& rg) override {
-        using enum InterfaceType;
         sinks.clear();
-        declare<Texture>(rg, "Color",
-                         {
-                             .pixelFormat = PixelFormat::RGBA8Unorm,
-                             .size = TextureSize::ScreenSize,
-                         });
+        declare(rg,
+                TextureInterface{ "Color",
+                                  nullptr,
+                                  {
+                                      .pixelFormat = PixelFormat::RGBA8Unorm,
+                                      .size = TextureSize::ScreenSize,
+                                  } });
     }
 
     PassSource* getSource([[maybe_unused]] size_t index) const override {
@@ -197,10 +205,8 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
         return sinks[index];
     }
 
-    template <InterfaceType Type>
-    void declare(RenderGraph& rg, std::string name, InterfaceDesc<Type> desc) {
-        RenderGraphSource* source =
-            rg.declareSource<Type>(std::move(name), desc);
+    void declare(RenderGraph& rg, InterfaceUnion interface) {
+        RenderGraphSource* source = rg.declareSource(std::move(interface));
         sinks.push_back(source->internalSink());
     }
 
@@ -215,14 +221,9 @@ static PinFlags translateFlags(InterfaceFlags flags) {
     return result;
 }
 
-static PinDesc interfaceToPinDesc(auto const& interface) {
-    // clang-format off
-    return std::visit([&](auto& interface) {
-        return PinDesc {
-            .name = interface.name,
-            .flags = translateFlags(interface.flags)
-        };
-    }, interface); // clang-format on
+static PinDesc interfaceToPinDesc(InterfaceUnion const& interface) {
+    return PinDesc{ .name = interface.get().name(),
+                    .flags = translateFlags(interface.get().flags()) };
 }
 
 struct PassNodeController: RenderGraphNodeController {

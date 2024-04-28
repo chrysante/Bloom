@@ -30,8 +30,8 @@ struct PassRegistryEntry {
         using FnPtr = std::add_pointer_t<T>;
 
         FnPtr<std::unique_ptr<Pass>(std::string name)> make;
-        FnPtr<std::span<InterfaceVariant const>()> sinks;
-        FnPtr<std::span<InterfaceVariant const>()> sources;
+        FnPtr<std::span<InterfaceUnion const>()> sinks;
+        FnPtr<std::span<InterfaceUnion const>()> sources;
     };
 
     std::string name;

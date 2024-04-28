@@ -58,19 +58,15 @@ public:
     RenderGraphContext& context() const { return *ctx; }
 
     /// Declares a resource sink (input) to this graph
-    template <InterfaceType Type>
-    RenderGraphSink* declareSink(std::string name,
-                                 InterfaceDesc<Type> const& desc) {
-        return Pass::declareSink<RenderGraphSink>(std::move(name), nullptr,
-                                                  desc);
+    RenderGraphSink* declareSink(InterfaceUnion interface) {
+        return Pass::declareSink<RenderGraphSink>(std::move(interface),
+                                                  nullptr);
     }
 
     /// Declares a resource source (output) to this graph
-    template <InterfaceType Type>
-    RenderGraphSource* declareSource(std::string name,
-                                     InterfaceDesc<Type> const& interface) {
-        return Pass::declareSource<RenderGraphSource>(std::move(name), nullptr,
-                                                      interface);
+    RenderGraphSource* declareSource(InterfaceUnion interface) {
+        return Pass::declareSource<RenderGraphSource>(std::move(interface),
+                                                      nullptr);
     }
 
 private:

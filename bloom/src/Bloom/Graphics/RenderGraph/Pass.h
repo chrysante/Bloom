@@ -107,22 +107,18 @@ public:
 
 protected:
     /// Declares a resource sink (input) to this pass
-    template <std::derived_from<PassSink> S = PassSink, InterfaceType Type>
-    S* declareSink(std::string name, InterfaceViewType<Type>* handle,
-                   InterfaceDesc<Type> const& desc,
-                   InterfaceFlags flags = InterfaceFlags::None) {
+    template <std::derived_from<PassSink> S = PassSink>
+    S* declareSink(InterfaceUnion interface, void* handle) {
         _sinks.push_back(
-            std::make_unique<S>(this, std::move(name), handle, desc, flags));
+            std::make_unique<S>(std::move(interface), this, handle));
         return static_cast<S*>(_sinks.back().get());
     }
 
     /// Declares a resource source (output) to this pass
-    template <std::derived_from<PassSource> S = PassSource, InterfaceType Type>
-    S* declareSource(std::string name, InterfaceViewType<Type>* handle,
-                     InterfaceDesc<Type> const& desc,
-                     InterfaceFlags flags = InterfaceFlags::None) {
+    template <std::derived_from<PassSource> S = PassSource>
+    S* declareSource(InterfaceUnion interface, void* handle) {
         _sources.push_back(
-            std::make_unique<S>(this, std::move(name), handle, desc, flags));
+            std::make_unique<S>(std::move(interface), this, handle));
         return static_cast<S*>(_sources.back().get());
     }
 
@@ -176,10 +172,10 @@ template <typename PassType>
 class PassImpl {
 public:
     /// To be defined by the pass author
-    static std::span<InterfaceVariant const> Sinks();
+    static std::span<InterfaceUnion const> Sinks();
 
     /// To be defined by the pass author
-    static std::span<InterfaceVariant const> Sources();
+    static std::span<InterfaceUnion const> Sources();
 
 protected:
     /// Declares the sinks and sources defined in `Sinks` and `Sources` to the
@@ -196,31 +192,18 @@ protected:
             "The pass must publicly derive from the `Pass` base class");
         auto* pass = static_cast<PassType*>(this);
         for (auto const& interface: PassType::Sinks()) {
-            // clang-format off
-            std::visit([&]<InterfaceType Type>(
-                Interface<Type> const& interface) {
-                    pass->declareSink(std::string(interface.name),
-                                      &(interface.accessor(*pass)), interface.desc,
-                                      interface.flags);
-                }, interface); // clang-format on
+            pass->declareSink(interface, interface.get().accessor(*pass));
         }
         for (auto const& interface: PassType::Sources()) {
-            // clang-format off
-            std::visit([&]<InterfaceType Type>(
-                Interface<Type> const& interface) {
-                    pass->declareSource(std::string(interface.name),
-                                        &(interface.accessor(*pass)),
-                                        interface.desc, interface.flags);
-                }, interface); // clang-format on
+            pass->declareSource(interface, interface.get().accessor(*pass));
         }
     }
 };
 
 #define BEGIN_INTERFACE_DECL_IMPL(Name, PassType)                              \
     template <>                                                                \
-    ::std::span<InterfaceVariant const>                                        \
-        bloom::rg::PassImpl<PassType>::Name() {                                \
-        static std::vector<InterfaceVariant> list
+    ::std::span<InterfaceUnion const> bloom::rg::PassImpl<PassType>::Name() {  \
+        static std::vector<InterfaceUnion> list
 
 #define BEGIN_SINK_DECL(PassType) BEGIN_INTERFACE_DECL_IMPL(Sinks, PassType)
 

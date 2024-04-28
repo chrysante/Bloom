@@ -881,18 +881,6 @@ struct ImGuiViewportDataOSX
     bool           WindowOwned;
 };
 
-@interface ImGui_ImplOSX_Window: NSWindow
-@end
-
-@implementation ImGui_ImplOSX_Window
-
-- (BOOL)canBecomeKeyWindow
-{
-    return YES;
-}
-
-@end
-
 static void ConvertNSRect(NSRect* r)
 {
     NSRect firstScreenFrame = NSScreen.screens[0].frame;

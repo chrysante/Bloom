@@ -42,13 +42,15 @@ struct NodeEditorStyleColors {
 };
 
 struct NodeEditorStyleVars {
-    float LinkWidth = 3;
-    float LinkWidthHovered = 5;
+    float LinkWidth = 1.5;
+    float LinkWidthHovered = 3;
     float LinkHoverDist = 7;
     /// The side length of the square that is occupied by a pin. This is the
     /// interaction area, the rendered size is smaller
     float PinAreaSize = 20;
     float PinRadius = 6;
+    float PinConnectIndicatorRadius = 2;
+    float PinConnectIndicatorRadiusHovered = 4;
     float NodeBodyTitleHeight = 20;
     /// Additional bottom padding because it looks better
     float NodeBodyBottomPadding = 3;
@@ -79,7 +81,7 @@ struct NodeEditorStyle {
         light.pinBG = { 0.2, 0.2, 0.2, 1 };
         light.pinOptBG = { 0.4, 0.4, 0.4, 1 };
         light.pinMissingIndicator = { 1, 0, 0.2, 1 };
-        light.link = { 0, 0, 0, 0.6 };
+        light.link = { 0, 0, 0, 0.5 };
         light.pinLinkIndicator = { 1, 1, 1, 0.8 };
         light.backgroundGridline = { 0, 0, 0, 0.2 };
         light.selectionRect = { 0, 0, 0, 0.14 };
@@ -93,7 +95,7 @@ struct NodeEditorStyle {
         dark.pinMissingIndicator = light.pinMissingIndicator;
         dark.link = { 1, 1, 1, 0.8 };
         dark.pinLinkIndicator = dark.link;
-        dark.backgroundGridline = { 0.33, 0.33, 0.33, 1 };
+        dark.backgroundGridline = { 0.33, 0.33, 0.33, 0.5 };
         dark.selectionRect = { 1, 1, 1, 0.3 };
         dark.selectionRectOutline = { 1, 1, 1, 0.3 };
     }
@@ -139,6 +141,8 @@ static void styleEditor(bool* open) {
     ImGui::SliderFloat("LinkHoverDist", &var.LinkHoverDist, 0, 20);
     ImGui::SliderFloat("PinAreaSize", &var.PinAreaSize, 0, 100);
     ImGui::SliderFloat("PinRadius", &var.PinRadius, 0, 100);
+    ImGui::SliderFloat("PinConnectIndicatorRadius", &var.PinConnectIndicatorRadius, 0, var.PinRadius);
+    ImGui::SliderFloat("PinConnectIndicatorRadiusHovered", &var.PinConnectIndicatorRadiusHovered, 0, var.PinRadius);
     ImGui::SliderFloat("NodeBodyTitleHeight", &var.NodeBodyTitleHeight, 0, 100);
     ImGui::SliderFloat("NodeBodyBottomPadding", &var.NodeBodyBottomPadding, 0, 100);
     ImGui::SliderFloat("NodeBodyRounding", &var.NodeBodyRounding, 0, 100);
@@ -845,6 +849,7 @@ struct NodeEditor::Impl {
     void backgroundBehaviour();
     void drawOverlays();
     void displayLinks(Node& node);
+    void displayDraggingLink();
     void pinPopup(Pin& pin, bool show);
     void displayPin(Pin& pin, float2 position, float& maxLabelWith,
                     bool displayLabelInBody);
@@ -1132,12 +1137,12 @@ static void drawPin(float2 position, float zoom, PinDrawOptions options) {
     DL->AddCircleFilled(center, styleVars().PinRadius * zoom,
                         ImGui::ColorConvertFloat4ToU32(options.color));
     if (options.connected || options.missingInput) {
-        float linkWidth = (options.hovered || options.missingInput) ?
-                              styleVars().LinkWidthHovered :
-                              styleVars().LinkWidth;
-        float radius = (linkWidth + 1) / 2;
-        float4 color = options.connected ? styleColors().pinLinkIndicator :
-                                           styleColors().pinMissingIndicator;
+        float radius = (options.hovered || options.missingInput) ?
+                           styleVars().PinConnectIndicatorRadiusHovered :
+                           styleVars().PinConnectIndicatorRadius;
+        float4 color = options.missingInput ?
+                           styleColors().pinMissingIndicator :
+                           styleColors().pinLinkIndicator;
         DL->AddCircleFilled(center, radius * zoom,
                             ImGui::ColorConvertFloat4ToU32(color));
     }
@@ -1311,17 +1316,20 @@ void Impl::displayLinks(Node& node) {
                            computePinPosition(*pin, index) * viewData.zoom);
     }
     ImGui::PopID();
-    // Display dragging link
-    if (viewData.activePin && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        float2 pos = computeScreenPinPosition(viewData, *viewData.activePin) +
-                     styleVars().PinAreaSize * viewData.zoom / 2;
-        bool highlighted = true;
-        if (isa<InputPin>(viewData.activePin)) {
-            drawLink(ImGui::GetMousePos(), pos, highlighted, viewData.zoom);
-        }
-        else {
-            drawLink(pos, ImGui::GetMousePos(), highlighted, viewData.zoom);
-        }
+}
+
+void Impl::displayDraggingLink() {
+    if (!viewData.activePin || !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        return;
+    }
+    float2 pos = computeScreenPinPosition(viewData, *viewData.activePin) +
+                 styleVars().PinAreaSize * viewData.zoom / 2;
+    bool highlighted = true;
+    if (isa<InputPin>(viewData.activePin)) {
+        drawLink(ImGui::GetMousePos(), pos, highlighted, viewData.zoom);
+    }
+    else {
+        drawLink(pos, ImGui::GetMousePos(), highlighted, viewData.zoom);
     }
 }
 
@@ -1434,7 +1442,7 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
         viewData.activePin == &pin;
     drawPin(position, viewData.zoom,
             { .color = selectPinColor(pin),
-              .missingInput = inputMissing(pin),
+              .missingInput = inputMissing(pin) && viewData.activePin != &pin,
               .connected = drawConnected,
               .hovered = drawHovered });
     if (displayLabelInBody) {
@@ -1736,6 +1744,7 @@ void Impl::display() {
     for (auto* node: nodes) {
         displayLinks(*node);
     }
+    displayDraggingLink();
     for (auto* node: nodes) {
         displayNode(*node);
     }

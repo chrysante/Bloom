@@ -15,6 +15,7 @@
 #include "Bloom/Core/EnumCount.h"
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Core/Yaml.h"
+#include "Poppy/Core/SelectionManager.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Font.h"
@@ -685,14 +686,6 @@ static void displayDebugger(ViewData const& viewData,
 #undef ITEM
 }
 
-enum class SelectionMode {
-    Replace, /// Default, existing selection is replaced
-    Add,     /// Additive selection, new selection does not unselect existing
-             /// selection
-    Toggle   /// "Exclusive-or" selection. Items are selected iff not already
-             /// selected
-};
-
 static SelectionMode getSelectionMode() {
     if (ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
         return SelectionMode::Toggle;
@@ -703,127 +696,7 @@ static SelectionMode getSelectionMode() {
     return SelectionMode::Replace;
 }
 
-/// Selection manager
-class Selection {
-public:
-    /// \Returns `true` if \p node is selected
-    bool contains(Node const* node) const {
-        if (!mode) {
-            return _nodes.contains(node);
-        }
-        switch (*mode) {
-        case SelectionMode::Replace:
-            return _candidates.contains(node);
-        case SelectionMode::Add:
-            return _nodes.contains(node) || _candidates.contains(node);
-        case SelectionMode::Toggle:
-            return _nodes.contains(node) != _candidates.contains(node);
-        }
-    }
-
-    /// Calls `set`, `add` or `toggle` depending on the held modifier keys
-    void amend(Node* node) {
-        switch (getSelectionMode()) {
-        case SelectionMode::Replace:
-            set(node);
-            break;
-        case SelectionMode::Add:
-            add(node);
-            break;
-        case SelectionMode::Toggle:
-            toggle(node);
-            break;
-        }
-    }
-
-    /// Adds \p node to the selection
-    void add(Node* node) { _nodes.insert(node); }
-
-    /// \overload for ranges
-    template <typename Itr, typename Sentinel>
-    void add(Itr first, Sentinel last) {
-        _nodes.insert(first, last);
-    }
-
-    /// If \p node is not selection, adds \p node to the selection. Otherwise
-    /// removes \p node from the selection
-    bool toggle(Node* node) {
-        auto itr = _nodes.find(node);
-        if (itr != _nodes.end()) {
-            _nodes.erase(itr);
-            return false;
-        }
-        else {
-            add(node);
-            return true;
-        }
-    }
-
-    /// Clears the selection and selects \p node
-    void set(Node* node) { set(&node, &node + 1); }
-
-    /// \overload for ranges
-    template <typename Itr, typename Sentinel>
-    void set(Itr first, Sentinel last) {
-        clear();
-        add(first, last);
-    }
-
-    /// \overload for ranges
-    void set(ranges::range auto&& rng) {
-        set(ranges::begin(rng), ranges::end(rng));
-    }
-
-    /// Unselectes all nodes
-    void clear() { _nodes.clear(); }
-
-    /// \Returns a view over all selected nodes
-    std::span<Node* const> nodes() const { return _nodes.values(); }
-
-    /// \Returns the number of selected nodes
-    size_t size() const { return _nodes.size(); }
-
-    /// Begin rectangle selection
-    void beginCandidates() { this->mode = getSelectionMode(); }
-
-    /// Update rectangle selection
-    void setCandidates(utl::hashset<Node*> nodes) {
-        _candidates = std::move(nodes);
-    }
-
-    /// Finish rectangle selection
-    void applyCandidates() {
-        if (!mode) {
-            return;
-        }
-        switch (*mode) {
-        case SelectionMode::Replace:
-            _nodes = std::move(_candidates);
-            break;
-        case SelectionMode::Add:
-            _nodes.insert(_candidates.begin(), _candidates.end());
-            _candidates.clear();
-            break;
-        case SelectionMode::Toggle: {
-            for (auto* node: _candidates) {
-                if (_nodes.contains(node)) {
-                    _nodes.erase(node);
-                }
-                else {
-                    _nodes.insert(node);
-                }
-            }
-            break;
-        }
-        }
-        mode = std::nullopt;
-    }
-
-private:
-    utl::hashset<Node*> _nodes;
-    utl::hashset<Node*> _candidates;
-    std::optional<SelectionMode> mode;
-};
+using SelectionManager = BasicSelectionManager<Node*>;
 
 } // namespace
 
@@ -878,7 +751,7 @@ struct NodeEditor::Impl {
     void defer(auto f) { deferList.push_back(f); }
 
     NodeEditorGraph model;
-    Selection selection;
+    SelectionManager selection;
     ViewData viewData;
     std::unique_ptr<NodeEditorDelegate> delegate;
     std::vector<std::function<void()>> deferList;
@@ -1026,7 +899,7 @@ void Impl::backgroundBehaviour() {
             viewData.isSelectionDragging = true;
             viewData.selectionBegin = ImGui::GetMousePos();
             viewData.selectionEnd = ImGui::GetMousePos();
-            selection.beginCandidates();
+            selection.beginCandidates(getSelectionMode());
         }
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
             viewData.beginMoveDragging = true;
@@ -1726,7 +1599,7 @@ void Impl::displayNodeBody(Node& node) {
         ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
         !viewData.isDraggingNode && !viewData.handledSelectionSinceMousePressed)
     {
-        selection.amend(&node);
+        selection.amend(&node, getSelectionMode());
     }
     /// True if ...
     bool haveSecondaryInteraction = viewData.activeNode != &node ||
@@ -1738,7 +1611,7 @@ void Impl::displayNodeBody(Node& node) {
         /// We use this flag so we don't select and immediately unselect when
         /// the mouse is released
         viewData.handledSelectionSinceMousePressed = true;
-        selection.amend(&node);
+        selection.amend(&node, getSelectionMode());
     }
     nodeBodyPopup(node,
                   /* show: */ bgClickedRight && !haveSecondaryInteraction);
@@ -1751,7 +1624,7 @@ void Impl::displayNodeBody(Node& node) {
     if (dragging) {
         viewData.isDraggingNode = true;
         float2 delta = ImGui::GetIO().MouseDelta;
-        for (auto* node: selection.nodes()) {
+        for (auto* node: selection.elements()) {
             node->setPosition(node->position() + delta / viewData.zoom);
         }
     }
@@ -1803,7 +1676,7 @@ void Impl::display() {
     ImGui::EndChild();
 
     if (showDebugger) {
-        displayDebugger(viewData, selection.nodes(), &showDebugger);
+        displayDebugger(viewData, selection.elements(), &showDebugger);
     }
     if (showStyleEditor) {
         styleEditor(&showStyleEditor);

@@ -116,6 +116,20 @@ public:
         return scene().template getComponent<T>(*this);
     }
 
+    /// \Returns the component \p T of this entity if present or null
+    template <ComponentType T>
+    T* tryGet() const
+        requires(!IsConst)
+    {
+        return scene().template tryGetComponent<T>(*this);
+    }
+
+    /// \overload
+    template <ComponentType T>
+    T const* tryGet() const {
+        return scene().template tryGetComponent<T>(*this);
+    }
+
     /// Adds the components \p components to this entity
     /// \pre Components must not be present
     template <ComponentType... T>

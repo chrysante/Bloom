@@ -7,7 +7,7 @@
 
 namespace bloom {
 
-struct BLOOM_API Transform {
+struct Transform {
     BLOOM_REGISTER_COMPONENT("Transform")
 
     vml::float3 position = 0;
@@ -24,19 +24,15 @@ struct BLOOM_API Transform {
     }
 };
 
-struct BLOOM_API TransformMatrixComponent {
+struct TransformMatrixComponent {
     BLOOM_REGISTER_COMPONENT("Transform Matrix")
     vml::float4x4 matrix;
 };
 
 } // namespace bloom
 
-#ifdef BLOOM_CPP
-
 #include "Bloom/Core/Serialize.h"
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::Transform, position, orientation, scale);
-
-#endif
 
 #endif // BLOOM_SCENE_COMPONENTS_TRANSFORM_H

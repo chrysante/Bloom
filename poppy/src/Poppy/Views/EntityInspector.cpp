@@ -41,7 +41,7 @@ public:
 private:
     void display() override;
 
-    // Component Inspectors
+    void inspectVisibility(bloom::EntityHandle);
     void inspectTag(bloom::EntityHandle);
     template <typename... Components>
     void addComponentButton(char const* name, bloom::EntityHandle entity,
@@ -95,6 +95,10 @@ void EntityInspector::display() {
         displayEmptyWithReason("No Entity Selected");
         return;
     }
+    if (entity.has<VisibilityComponent>()) {
+        inspectVisibility(entity);
+        ImGui::SameLine();
+    }
     if (entity.has<TagComponent>()) {
         inspectTag(entity);
         ImGui::Separator();
@@ -117,8 +121,22 @@ void EntityInspector::display() {
     }
 }
 
+void EntityInspector::inspectVisibility(bloom::EntityHandle entity) {
+    auto& vis = entity.get<VisibilityComponent>();
+    ImGui::PushStyleColor(ImGuiCol_Button, 0);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
+    auto icon = FontManager::get({ .size = IconSize::_16 },
+                                 vis.value ? "eye" : "eye-off");
+    withFont(icon.font, [&] {
+        if (ImGui::Button(icon.utf8Rep.c_str())) {
+            vis.value ^= true;
+        }
+    });
+    ImGui::PopStyleColor(3);
+}
+
 void EntityInspector::inspectTag(bloom::EntityHandle entity) {
-    using namespace bloom;
     auto& tag = entity.get<TagComponent>();
     std::string_view name = tag.name;
     float2 framePadding = GImGui->Style.FramePadding;
@@ -127,13 +145,11 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
 
     float2 spacing = GImGui->Style.ItemSpacing;
     withFont(FontWeight::Bold, FontStyle::Roman, [&] {
-        float2 const windowSize = ImGui::GetWindowSize();
-        float2 const addButtonSize =
-            float2(ImGui::CalcTextSize("Add Component")) +
-            float2(4, 2) * framePadding;
-        float2 const nameTextSize = {
-            windowSize.x - addButtonSize.x - spacing.x, windowSize.y
-        };
+        float2 windowSize = ImGui::GetWindowSize();
+        float2 addButtonSize = float2(ImGui::CalcTextSize("Add Component")) +
+                               float2(4, 2) * framePadding;
+        float2 nameTextSize = { windowSize.x - addButtonSize.x - spacing.x,
+                                windowSize.y };
         if (editingNameState && !isSimulating()) {
             char buffer[256]{};
             std::strncpy(buffer, name.data(), 255);
@@ -170,9 +186,9 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                                 float2(2, 1) * framePadding);
             ImGui::SetNextItemWidth(addButtonSize.x);
-            bool const comboOpen =
-                ImGui::BeginCombo("##-add-component", "Add Component",
-                                  ImGuiComboFlags_NoArrowButton);
+            bool comboOpen = ImGui::BeginCombo("##-add-component",
+                                               "Add Component",
+                                               ImGuiComboFlags_NoArrowButton);
             ImGui::PopStyleColor(2);
             ImGui::PopStyleVar();
             if (comboOpen) {

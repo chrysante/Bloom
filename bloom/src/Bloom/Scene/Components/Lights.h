@@ -6,33 +6,31 @@
 
 namespace bloom {
 
-struct BLOOM_API PointLightComponent {
+struct PointLightComponent {
     BLOOM_REGISTER_COMPONENT("Point Light")
 
     PointLight light;
 };
 
-struct BLOOM_API SpotLightComponent {
+struct SpotLightComponent {
     BLOOM_REGISTER_COMPONENT("Spot Light")
 
     SpotLight light;
 };
 
-struct BLOOM_API DirectionalLightComponent {
+struct DirectionalLightComponent {
     BLOOM_REGISTER_COMPONENT("Directional Light")
 
     DirectionalLight light;
 };
 
-struct BLOOM_API SkyLightComponent {
+struct SkyLightComponent {
     BLOOM_REGISTER_COMPONENT("Sky Light")
 
     SkyLight light;
 };
 
 } // namespace bloom
-
-#ifdef BLOOM_CPP
 
 #include "Bloom/Core/Serialize.h"
 
@@ -91,7 +89,5 @@ struct YAML::convert<bloom::SkyLightComponent> {
         return true;
     }
 };
-
-#endif
 
 #endif // BLOOM_SCENE_COMPONENTS_LIGHTS_H

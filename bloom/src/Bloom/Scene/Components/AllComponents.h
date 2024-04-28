@@ -9,6 +9,7 @@
 #include "Bloom/Scene/Components/Script.h"
 #include "Bloom/Scene/Components/Tag.h"
 #include "Bloom/Scene/Components/Transform.h"
+#include "Bloom/Scene/Components/Visibility.h"
 
 namespace bloom {
 
@@ -16,7 +17,8 @@ using ComponentList =
     std::tuple<TagComponent, Transform, TransformMatrixComponent,
                HierarchyComponent, ScriptComponent, ScriptPreservedData,
                MeshRendererComponent, PointLightComponent, SpotLightComponent,
-               DirectionalLightComponent, SkyLightComponent>;
+               DirectionalLightComponent, SkyLightComponent,
+               VisibilityComponent>;
 
 template <typename... T>
 struct Except: std::tuple<T...> {};

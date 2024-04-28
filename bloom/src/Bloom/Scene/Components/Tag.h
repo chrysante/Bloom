@@ -7,7 +7,7 @@
 
 namespace bloom {
 
-struct BLOOM_API TagComponent {
+struct TagComponent {
     BLOOM_REGISTER_COMPONENT("Tag")
 
     std::string name;
@@ -15,12 +15,8 @@ struct BLOOM_API TagComponent {
 
 } // namespace bloom
 
-#ifdef BLOOM_CPP
-
 #include "Bloom/Core/Serialize.h"
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::TagComponent, name);
-
-#endif
 
 #endif // BLOOM_SCENE_COMPONENTS_TAG_H

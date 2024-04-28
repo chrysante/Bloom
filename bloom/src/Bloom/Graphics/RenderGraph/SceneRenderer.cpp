@@ -56,8 +56,13 @@ static void submitLights(rg::LightsResource& lights, Scene const& scene,
                          auto&& lightModifier) {
     auto view =
         scene.view<TransformMatrixComponent const, LightComponent const>();
-    view.each([&](auto /* ID */, TransformMatrixComponent const& transform,
+    view.each([&](EntityID ID, TransformMatrixComponent const& transform,
                   LightComponent light) {
+        if (auto* vis = scene.tryGetComponent<VisibilityComponent>(ID);
+            vis && !vis->value)
+        {
+            return;
+        }
         lightModifier(transform, light);
         lights.add(light.light);
     });
@@ -68,11 +73,16 @@ static void submitLights(rg::LightsResource& lights, Scene const& scene) {
     submitLights<Light>(lights, scene, [](auto&...) {});
 }
 
-static void submitScene(Scene const& scene, rg::GeometryResource& geometry) {
+static void submitGeometry(Scene const& scene, rg::GeometryResource& geometry) {
     auto view = scene.view<TransformMatrixComponent const,
                            MeshRendererComponent const>();
-    view.each([&](auto /* ID */, TransformMatrixComponent const& transform,
+    view.each([&](EntityID ID, TransformMatrixComponent const& transform,
                   MeshRendererComponent const& meshRenderer) {
+        if (auto* vis = scene.tryGetComponent<VisibilityComponent>(ID);
+            vis && !vis->value)
+        {
+            return;
+        }
         if (!meshRenderer.mesh || !meshRenderer.materialInstance ||
             !meshRenderer.materialInstance->material())
         {
@@ -98,7 +108,7 @@ static float4x4 makeDirectionalLightSpaceTransform(Camera const& camera,
 
 void rg::SceneRenderer::submit(Scene const& scene) {
     if (geometry) {
-        submitScene(scene, *geometry);
+        submitGeometry(scene, *geometry);
     }
     if (lights) {
         submitLights<PointLightComponent>(*lights, scene,

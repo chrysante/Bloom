@@ -6,7 +6,7 @@
 
 namespace bloom {
 
-struct BLOOM_API HierarchyComponent {
+struct HierarchyComponent {
     BLOOM_REGISTER_COMPONENT("Hierarchy")
 
     EntityID parent, prevSibling, nextSibling, firstChild, lastChild;
@@ -14,13 +14,9 @@ struct BLOOM_API HierarchyComponent {
 
 } // namespace bloom
 
-#ifdef BLOOM_CPP
-
 #include "Bloom/Core/Serialize.h"
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::HierarchyComponent, parent, prevSibling,
                            nextSibling, firstChild, lastChild);
-
-#endif
 
 #endif // BLOOM_SCENE_COMPONENTS_HIERARCHY_H

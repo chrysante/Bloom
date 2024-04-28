@@ -156,6 +156,7 @@ set(bloom_sources
   src/Bloom/Scene/Components/Script.h
   src/Bloom/Scene/Components/Tag.h
   src/Bloom/Scene/Components/Transform.h
+  src/Bloom/Scene/Components/Visibility.h
 
   src/Bloom/Scene/Entity.cpp
   src/Bloom/Scene/Entity.h

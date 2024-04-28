@@ -36,7 +36,7 @@ public:
         return EntityHandle(entity, this);
     }
 
-    /// \overload for `const`
+    /// \overload
     ConstEntityHandle getHandle(EntityID entity) const {
         return ConstEntityHandle(entity, this);
     }
@@ -57,15 +57,32 @@ public:
     /// \pre \p entity must have a component of type \p T
     template <ComponentType T>
     T& getComponent(EntityID entity) {
-        BL_EXPECT(hasComponent<T>(entity), "ComponentType not present");
-        return _registry.get<T>(entity.value());
+        return const_cast<T&>(
+            static_cast<Scene const*>(this)->getComponent<T>(entity));
     }
 
-    /// \overload for `const`
+    /// \overload
     template <ComponentType T>
     T const& getComponent(EntityID entity) const {
         BL_EXPECT(hasComponent<T>(entity), "ComponentType not present");
         return _registry.get<T>(entity.value());
+    }
+
+    /// \Returns a pointer to the component \p T of entity \p entity if it
+    /// exists or null otherwise
+    template <ComponentType T>
+    T* tryGetComponent(EntityID entity) {
+        return const_cast<T*>(
+            static_cast<Scene const*>(this)->tryGetComponent<T>(entity));
+    }
+
+    /// \overload
+    template <ComponentType T>
+    T const* tryGetComponent(EntityID entity) const {
+        if (hasComponent<T>(entity)) {
+            return &getComponent<T>(entity);
+        }
+        return nullptr;
     }
 
     /// Adds the component \p component to \p entity

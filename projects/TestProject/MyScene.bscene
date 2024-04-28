@@ -39,6 +39,8 @@
     cascadeDistributionExponent: 2
     cascadeTransitionFraction: 0.0500000007
     shadowDistanceFadeoutFraction: 0.0500000007
+  Visibility:
+    value: true
 - EntityID: 10
   Tag:
     name: Directional Light
@@ -80,6 +82,8 @@
     cascadeDistributionExponent: 2
     cascadeTransitionFraction: 0.0500000007
     shadowDistanceFadeoutFraction: 0.0500000007
+  Visibility:
+    value: true
 - EntityID: 9
   Tag:
     name: Point Light
@@ -115,6 +119,8 @@
       - 0
       - 0
     radius: 100
+  Visibility:
+    value: true
 - EntityID: 8
   Tag:
     name: Point Light
@@ -150,6 +156,8 @@
       - 0
       - 0
     radius: 100
+  Visibility:
+    value: true
 - EntityID: 7
   Tag:
     name: Point Light
@@ -185,6 +193,8 @@
       - 0
       - 0
     radius: 100
+  Visibility:
+    value: true
 - EntityID: 6
   Tag:
     name: Point Light
@@ -220,6 +230,8 @@
       - 0
       - 0
     radius: 100
+  Visibility:
+    value: true
 - EntityID: 5
   Tag:
     name: Point Light
@@ -255,6 +267,8 @@
       - 0
       - 0
     radius: 100
+  Visibility:
+    value: true
 - EntityID: 2
   Tag:
     name: Cube
@@ -288,6 +302,8 @@
     Mesh:
       AssetType: StaticMesh
       AssetID: 4493d73d 5336bb5e f7d0b0ad f4d2260b
+  Visibility:
+    value: true
 - EntityID: 1
   Tag:
     name: Directional Light
@@ -329,6 +345,8 @@
     cascadeDistributionExponent: 2
     cascadeTransitionFraction: 0.0500000007
     shadowDistanceFadeoutFraction: 0.0500000007
+  Visibility:
+    value: true
 - EntityID: 0
   Tag:
     name: Floor
@@ -359,6 +377,8 @@
     Mesh:
       AssetType: StaticMesh
       AssetID: b0d777f6 216eb44b 8fcc0438 fc12e91d
+  Visibility:
+    value: true
 - EntityID: 3
   Tag:
     name: Sky Light
@@ -389,6 +409,8 @@
         - 0.749280274
         - 0.778088629
       intensity: 0.0392999984
+  Visibility:
+    value: true
 - EntityID: 4
   Tag:
     name: Torus
@@ -419,3 +441,5 @@
     Mesh:
       AssetType: StaticMesh
       AssetID: 2cee2aa3 57f81268 d88f389f aa81a117
+  Visibility:
+    value: false

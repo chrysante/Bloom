@@ -42,6 +42,8 @@ set(poppy_sources
   src/Poppy/UI/PropertiesView.cpp
   src/Poppy/UI/PropertiesView.h
   src/Poppy/UI/SystemAppearance.h
+  src/Poppy/UI/TestRegistry.cpp
+  src/Poppy/UI/TestRegistry.h
   src/Poppy/UI/Toolbar.cpp
   src/Poppy/UI/Toolbar.h
   src/Poppy/UI/View.cpp
@@ -51,7 +53,7 @@ set(poppy_sources
   src/Poppy/UI/ViewRegistry.cpp
   src/Poppy/UI/ViewRegistry.h
 
-  src/Poppy/UITests/UITests.h
+  src/Poppy/UITests/UITests.cpp
 
   src/Poppy/Views/AssetBrowser.cpp
   src/Poppy/Views/AssetDragDrop.cpp

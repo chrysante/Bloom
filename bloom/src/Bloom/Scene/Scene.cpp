@@ -24,11 +24,12 @@ EntityHandle Scene::createEmptyEntity(EntityID hint) {
 }
 
 EntityHandle Scene::createEntity(std::string_view name) {
-    EntityHandle const entity(_registry.create(), this);
+    EntityHandle entity(_registry.create(), this);
     entity.add(Transform{});
     entity.add(TransformMatrixComponent{});
     entity.add(TagComponent{ std::string(name) });
     entity.add(HierarchyComponent{});
+    entity.add(VisibilityComponent{});
     return { entity, this };
 }
 

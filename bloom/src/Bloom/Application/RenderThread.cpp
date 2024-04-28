@@ -1,9 +1,18 @@
 #include "Bloom/Application/RenderThread.h"
 
+#ifdef __GNUC__
+#include <pthread.h>
+#endif
+
 using namespace bloom;
 
 RenderThread::RenderThread() {
-    t = std::thread([this] { worker(); });
+    t = std::thread([this] {
+#ifdef __GNUC__
+        pthread_setname_np("RenderThread");
+#endif
+        worker();
+    });
 }
 
 RenderThread::~RenderThread() {

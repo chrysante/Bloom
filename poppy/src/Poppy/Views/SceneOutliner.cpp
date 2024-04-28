@@ -213,6 +213,7 @@ void SceneOutliner::dragDropTarget(bloom::EntityHandle parent) {
     }
     auto* payload = ImGui::AcceptDragDropPayload("DD-Entity-Hierarchy-View");
     if (!payload || !payload->IsDelivery()) {
+        ImGui::EndDragDropTarget();
         return;
     }
     EntityHandle child;

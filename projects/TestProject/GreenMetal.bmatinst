@@ -3,10 +3,10 @@ Material:
   AssetID: 1e528bc6 219fdd4f 5f1c504c 41df03ca
 Parameters:
   baseColor:
-    - 0.366803378
-    - 0.858710527
-    - 0.265910149
-  roughness: 0.195999995
+    - 0.700654089
+    - 0.0895215273
+    - 0.907329202
+  roughness: 0.398000002
   metallic: 1
   emissive:
     - -0.372548997

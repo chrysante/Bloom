@@ -1,3 +1,38 @@
+- EntityID: 12
+  Tag:
+    name: Red Cube
+  Transform:
+    position:
+      - 171.044006
+      - 840.177979
+      - 248.550003
+    orientation:
+      - 0.957379162
+      - 0.204745978
+      - 0.202150136
+      - 0.0252892449
+    scale:
+      - 2.45600009
+      - 2.45600009
+      - 2.45600009
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: -1
+    lastChild: -1
+  Script: ~
+  Script Preserved Data:
+    Typename: RotateBehaviour
+  Mesh Renderer:
+    MaterialInstance:
+      AssetType: MaterialInstance
+      AssetID: 4c6c9b9 1818b356 36ce2b98 ea91b2e9
+    Mesh:
+      AssetType: StaticMesh
+      AssetID: a92e67e7 5700752f 86e6d1c8 8111d850
+  Visibility:
+    value: true
 - EntityID: 11
   Tag:
     name: Directional Light
@@ -278,10 +313,10 @@
       - 0
       - 321.168365
     orientation:
-      - 1
-      - 0
-      - 0
-      - 0
+      - 0.695915043
+      - -0.132382348
+      - 0.693142593
+      - 0.13315624
     scale:
       - 2
       - 2
@@ -301,7 +336,7 @@
       AssetID: 94812734 2da111d0 d27f1d2c bcc5fc0
     Mesh:
       AssetType: StaticMesh
-      AssetID: 4493d73d 5336bb5e f7d0b0ad f4d2260b
+      AssetID: 7bbf14ee ab50f97c 860de249 7bbd5e17
   Visibility:
     value: true
 - EntityID: 1
@@ -352,17 +387,17 @@
     name: Floor
   Transform:
     position:
-      - 0
-      - 0
-      - 0
+      - 106.000114
+      - 1.14440918e-05
+      - 25.0001526
     orientation:
       - 1
-      - 0
-      - 0
-      - 0
+      - -2.8951801e-08
+      - 5.91340807e-08
+      - 1.54304161e-08
     scale:
-      - 15.3216629
-      - 15.3861647
+      - 15.3216619
+      - 15.3861628
       - 0.629973471
   Hierarchy:
     parent: -1

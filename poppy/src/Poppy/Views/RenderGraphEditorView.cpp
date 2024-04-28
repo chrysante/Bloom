@@ -373,7 +373,7 @@ RenderGraphEditorView::RenderGraphEditorView():
     cmd.add("Compile", { Key::B, ModFlags::Control }, [this] { compile(); });
     // clang-format off
     setToolbar({
-        ToolbarIconButton(commandPalette().find("Compile"), "play"),
+        ToolbarIconButton(commandPalette().find("Compile"), "ok"),
         ToolbarSpacer(),
         ToolbarTextItem()
             .text([this] { return compStatusMessage(compilationStatus); })

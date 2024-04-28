@@ -25,20 +25,63 @@ Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
 void RenderGraph::addLink(PassSource* source, PassSink* sink) {
     BL_EXPECT(source);
     BL_EXPECT(sink);
-    BL_ASSERT(!sink->source(), "Pass sink is already linked");
+    if (sink->source()) {
+        Logger::Error("Pass sink is already linked: ", sink->qualifiedName());
+        return;
+    }
     source->addSink(sink);
     sink->setSource(source);
+}
+
+static std::string format(InterfaceType type) {
+    using enum InterfaceType;
+    switch (type) {
+    case BufferInterface:
+        return "buffer";
+    case TextureInterface:
+        return "texture";
+    case GeometryInterface:
+        return "geometry";
+    case LightsInterface:
+        return "lights";
+    default:
+        return "invalid type";
+    }
+}
+
+static bool typecheck(PassSource const& source, PassSink const& sink) {
+    auto sinkType = sink.interface().get().type();
+    auto sourceType = source.interface().get().type();
+    if (sinkType != sourceType) {
+        Logger::Error("Type mismatch on sink \"", sink.qualifiedName(), "\". ",
+                      "Have ", format(sourceType), ", expected ",
+                      format(sinkType));
+        return false;
+    }
+    return true;
+}
+
+static bool validateSink(PassSink const& sink) {
+    auto* source = sink.source();
+    if (!source) {
+        if (sink.isOptional()) {
+            return true;
+        }
+        Logger::Error("Sink is not linked: ", sink.qualifiedName());
+        return false;
+    }
+    if (!typecheck(*source, sink)) {
+        return false;
+    }
+    return true;
 }
 
 static bool validate(std::span<Pass* const> passes) {
     bool result = true;
     for (auto* pass: passes) {
         for (auto* sink: pass->sinks()) {
-            if (!sink->isOptional() && !sink->source()) {
-                Logger::Error("Sink is not linked: ", pass->name(), ".",
-                              sink->name());
-                result = false;
-            }
+            BL_ASSERT(sink);
+            result |= validateSink(*sink);
         }
     }
     return result;

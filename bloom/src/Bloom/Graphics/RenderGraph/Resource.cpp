@@ -16,6 +16,12 @@ void Resource::addUser(PassTerminal* user) {
     }
 }
 
+void Resource::reallocate(HardwareDevice& device,
+                          FrameParameters const& params) {
+    visit(*this, [&](auto& r) { r.doReallocate(device, params); });
+    assignUsers();
+}
+
 void Resource::assignUsers() {
     visit(*this, [this]<typename ResourceType>(ResourceType& self) {
         for (auto* user: users()) {
@@ -31,9 +37,39 @@ void BufferResource::assign(BufferHandle buffer) {
     assignUsers();
 }
 
+void BufferResource::doReallocate(HardwareDevice& device,
+                                  FrameParameters const& params) {
+    auto newDesc = idf(params);
+    if (newDesc == desc) {
+        return;
+    }
+    desc = newDesc;
+    _handle = device.createBuffer({
+        .size = desc.size,
+        .storageMode = StorageMode::Managed // For now!
+    });
+}
+
 void TextureResource::assign(TextureHandle texture) {
     _handle = std::move(texture);
     assignUsers();
+}
+
+void TextureResource::doReallocate(HardwareDevice& device,
+                                   FrameParameters const& params) {
+    auto newDesc = idf(params);
+    if (newDesc == desc) {
+        return;
+    }
+    desc = newDesc;
+    _handle = device.createTexture(
+        { .type = desc.type,
+          .pixelFormat = desc.pixelFormat,
+          .size = desc.size,
+          .mipmapLevelCount = desc.mipmapLevelCount,
+          .sampleCount = desc.sampleCount,
+          .arrayLength = desc.arrayLength,
+          .usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget });
 }
 
 void GeometryResource::add(Reference<StaticMeshRenderer> mesh,

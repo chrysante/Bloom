@@ -32,15 +32,12 @@ BEGIN_SINK_DECL(PostProcessPass) {
     TextureInterface{
         "Raw Color",
         &PostProcessPass::rawColor,
-        {
-            .pixelFormat = PixelFormat::RGBA32Float,
-            .size = TextureSize::ScreenSize,
-        }
+        {}
     },
     BufferInterface{
         "Parameters",
         &PostProcessPass::parameterBuffer,
-        { .size = sizeof(PostProcessParameters) }
+        {}
     },
 }
 END_DECL()
@@ -49,9 +46,11 @@ BEGIN_SOURCE_DECL(PostProcessPass) {
     TextureInterface{
         "Output",
         &PostProcessPass::output,
-        {
-            .pixelFormat = PixelFormat::RGBA8Unorm,
-            .size = TextureSize::ScreenSize,
+        [](FrameParameters const& params){
+            return TextureInterfaceDescriptor{
+                .pixelFormat = PixelFormat::RGBA8Unorm,
+                .size = { params.screenSize, 1 }
+            };
         }
     }
 }

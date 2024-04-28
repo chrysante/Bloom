@@ -103,7 +103,6 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/SceneRenderer.cpp
   src/Bloom/Graphics/RenderGraph/SceneRenderer.h
   src/Bloom/Graphics/RenderGraph/ShadowPass.cpp
-  src/Bloom/Graphics/RenderGraph/SizeDescriptors.h
 
   src/Bloom/Graphics/Camera.cpp
   src/Bloom/Graphics/Camera.h

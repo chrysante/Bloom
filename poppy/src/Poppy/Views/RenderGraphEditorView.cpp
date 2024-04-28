@@ -187,13 +187,7 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
 
     void create(RenderGraph& rg) override {
         sinks.clear();
-        declare(rg,
-                TextureInterface{ "Color",
-                                  nullptr,
-                                  {
-                                      .pixelFormat = PixelFormat::RGBA8Unorm,
-                                      .size = TextureSize::ScreenSize,
-                                  } });
+        declare(rg, TextureInterface{ "Color", nullptr, {} });
     }
 
     PassSource* getSource([[maybe_unused]] size_t index) const override {

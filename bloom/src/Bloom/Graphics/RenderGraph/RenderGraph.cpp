@@ -122,9 +122,6 @@ static void allocateBackingResources(
             output->setResource(source->resource());
         }
     }
-    for (auto* resource: pool.resources()) {
-        resource->assignUsers();
-    }
 }
 
 static bool isSinkPass(Pass const* pass) {
@@ -152,45 +149,14 @@ bool RenderGraph::compile() {
     return true;
 }
 
-static void reallocateHardwareResource(HardwareDevice& device,
-                                       BufferResource& resource,
-                                       FrameParameters const&) {
-    resource.assign(device.createBuffer({
-        .size = resource.desc().size,
-        .storageMode = StorageMode::Managed // For now!
-    }));
-}
-
-static void reallocateHardwareResource(HardwareDevice& device,
-                                       TextureResource& resource,
-                                       FrameParameters const& params) {
-    auto const& desc = resource.desc();
-    resource.assign(device.createTexture(
-        { .type = desc.type,
-          .pixelFormat = desc.pixelFormat,
-          .size = desc.size.compute(params.screenSize),
-          .mipmapLevelCount = desc.mipmapLevelCount,
-          .sampleCount = desc.sampleCount,
-          .arrayLength = desc.arrayLength,
-          .usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget }));
-}
-
-static void reallocateHardwareResource(HardwareDevice&, GeometryResource&,
-                                       FrameParameters const&) {}
-
-static void reallocateHardwareResource(HardwareDevice&, LightsResource&,
-                                       FrameParameters const&) {}
-
 static void reallocateHardwareResources(HardwareDevice& device,
                                         ResourcePool& pool,
-                                        std::span<Pass* const> passes,
+                                        std::span<Pass* const> executionOrder,
                                         FrameParameters const& frameParams) {
     for (auto* resource: pool.resources()) {
-        visit(*resource, [&](auto& resource) {
-            reallocateHardwareResource(device, resource, frameParams);
-        });
+        resource->reallocate(device, frameParams);
     }
-    for (auto* pass: passes) {
+    for (auto* pass: executionOrder) {
         pass->allocateResources(frameParams, device);
     }
 }

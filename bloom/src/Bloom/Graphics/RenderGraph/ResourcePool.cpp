@@ -9,9 +9,9 @@ static DynUniquePtr<Resource> allocateResource(I const&) {
 }
 
 template <typename I>
-    requires requires(I const& i) { i.desc(); }
+    requires requires(I const& i) { i.IDF(); }
 static DynUniquePtr<Resource> allocateResource(I const& interface) {
-    return bloom::allocate<typename I::Resource>(interface.desc());
+    return bloom::allocate<typename I::Resource>(interface.IDF());
 }
 
 Resource* ResourcePool::allocate(InterfaceUnion const& interface) {

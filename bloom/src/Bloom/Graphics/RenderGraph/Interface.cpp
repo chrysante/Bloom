@@ -9,9 +9,8 @@ using namespace bloom;
 using namespace rg;
 
 void* Interface::accessor(Pass& pass) const {
-    return visit(*this, [&](auto& interface) -> void* {
-        return interface._accessor(pass);
-    });
+    return visit(*this,
+                 [&](auto& interface) -> void* { return interface.acc(pass); });
 }
 
 std::string PassTerminal::qualifiedName() const {

@@ -16,7 +16,6 @@
 #include "Bloom/Core/Debug.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
-#include "Bloom/Graphics/RenderGraph/SizeDescriptors.h"
 
 namespace bloom::rg {
 
@@ -71,6 +70,32 @@ private:
     alignas(MemPtrType<Pass>) char memptr[sizeof(MemPtrType<Pass>)];
 };
 
+/// Factory type that creates a concrete interface from frame parameters
+///
+/// This is used to dynamically describe interfaces based on frame parameters.
+/// For example many passes expose a texture source with dimensions equal to the
+/// screen size
+template <typename Desc>
+class InterfaceDescriptorFactory {
+public:
+    /// Creates an interface descriptor factory that is independent of the frame
+    /// parameters
+    InterfaceDescriptorFactory(Desc const& desc):
+        impl([=](auto&) { return desc; }) {}
+
+    /// Creates an interface descriptor factory from a callback
+    template <std::invocable<FrameParameters const&> F>
+    InterfaceDescriptorFactory(F&& f): impl(std::forward<F>(f)) {}
+
+    /// Invokes the factory and returns the concrete interface descriptor
+    Desc operator()(FrameParameters const& params) const {
+        return impl(params);
+    }
+
+private:
+    std::function<Desc(FrameParameters const&)> impl;
+};
+
 /// Abstract base class of concrete interfaces
 class Interface {
 public:
@@ -98,9 +123,8 @@ private:
 
 /// Buffer interface descriptor
 struct BufferInterfaceDescriptor {
-    /// The size of the requested buffer
-    /// TODO: Make this a class that allows for special values
-    size_t size;
+    /// The size of the requested buffer in bytes
+    size_t size = 0;
 
     bool operator==(BufferInterfaceDescriptor const&) const = default;
 
@@ -111,41 +135,39 @@ class BufferInterface: public Interface {
 public:
     using Resource = BufferResource;
 
+    explicit BufferInterface(
+        std::string name, InterfaceAccessor<BufferHandle> accessor,
+        InterfaceDescriptorFactory<BufferInterfaceDescriptor> desc,
+        InterfaceFlags flags = InterfaceFlags::None):
+        Interface(InterfaceType::BufferInterface, std::move(name), flags),
+        idf(std::move(desc)),
+        acc(accessor) {}
+
     explicit BufferInterface(std::string name,
                              InterfaceAccessor<BufferHandle> accessor,
                              BufferInterfaceDescriptor desc,
                              InterfaceFlags flags = InterfaceFlags::None):
-        Interface(InterfaceType::BufferInterface, std::move(name), flags),
-        _desc(desc),
-        _accessor(accessor) {}
+        BufferInterface(std::move(name), accessor,
+                        InterfaceDescriptorFactory(desc), flags) {}
 
-    BufferInterfaceDescriptor const& desc() const { return _desc; }
+    InterfaceDescriptorFactory<BufferInterfaceDescriptor> IDF() const {
+        return idf;
+    }
 
 private:
     friend class Interface;
 
-    BufferInterfaceDescriptor _desc;
-    InterfaceAccessor<BufferHandle> _accessor;
+    InterfaceDescriptorFactory<BufferInterfaceDescriptor> idf;
+    InterfaceAccessor<BufferHandle> acc;
 };
 
 /// Texture interface descriptor
 struct TextureInterfaceDescriptor {
-    ///
     TextureType type = TextureType::Texture2D;
-
-    ///
     PixelFormat pixelFormat = PixelFormat::RGBA8Unorm;
-
-    ///
-    TextureSize size;
-
-    ///
+    vml::usize3 size{};
     size_t mipmapLevelCount = 1;
-
-    ///
     size_t sampleCount = 1;
-
-    ///
     size_t arrayLength = 1;
 
     bool operator==(TextureInterfaceDescriptor const&) const = default;
@@ -160,21 +182,30 @@ class TextureInterface: public Interface {
 public:
     using Resource = TextureResource;
 
+    explicit TextureInterface(
+        std::string name, InterfaceAccessor<TextureHandle> accessor,
+        InterfaceDescriptorFactory<TextureInterfaceDescriptor> desc,
+        InterfaceFlags flags = InterfaceFlags::None):
+        Interface(InterfaceType::TextureInterface, std::move(name), flags),
+        idf(std::move(desc)),
+        acc(accessor) {}
+
     explicit TextureInterface(std::string name,
                               InterfaceAccessor<TextureHandle> accessor,
                               TextureInterfaceDescriptor desc,
                               InterfaceFlags flags = InterfaceFlags::None):
-        Interface(InterfaceType::TextureInterface, std::move(name), flags),
-        _desc(desc),
-        _accessor(accessor) {}
+        TextureInterface(std::move(name), accessor,
+                         InterfaceDescriptorFactory(desc), flags) {}
 
-    TextureInterfaceDescriptor const& desc() const { return _desc; }
+    InterfaceDescriptorFactory<TextureInterfaceDescriptor> IDF() const {
+        return idf;
+    }
 
 private:
     friend class Interface;
 
-    TextureInterfaceDescriptor _desc;
-    InterfaceAccessor<TextureHandle> _accessor;
+    InterfaceDescriptorFactory<TextureInterfaceDescriptor> idf;
+    InterfaceAccessor<TextureHandle> acc;
 };
 
 class GeometryInterface: public Interface {
@@ -185,12 +216,12 @@ public:
                                InterfaceAccessor<GeometryResource*> accessor,
                                InterfaceFlags flags = InterfaceFlags::None):
         Interface(InterfaceType::GeometryInterface, std::move(name), flags),
-        _accessor(accessor) {}
+        acc(accessor) {}
 
 private:
     friend class Interface;
 
-    InterfaceAccessor<GeometryResource*> _accessor;
+    InterfaceAccessor<GeometryResource*> acc;
 };
 
 class LightsInterface: public Interface {
@@ -201,12 +232,12 @@ public:
                              InterfaceAccessor<LightsResource*> accessor,
                              InterfaceFlags flags = InterfaceFlags::None):
         Interface(InterfaceType::LightsInterface, std::move(name), flags),
-        _accessor(accessor) {}
+        acc(accessor) {}
 
 private:
     friend class Interface;
 
-    InterfaceAccessor<LightsResource*> _accessor;
+    InterfaceAccessor<LightsResource*> acc;
 };
 
 union InterfaceUnion {

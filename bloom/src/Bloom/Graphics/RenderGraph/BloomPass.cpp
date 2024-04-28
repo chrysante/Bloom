@@ -49,10 +49,7 @@ BEGIN_SINK_DECL(BloomPass) {
     TextureInterface{
         "Raw Color",
         &BloomPass::rawColor,
-        {
-            .pixelFormat = PixelFormat::RGBA32Float,
-            .size = TextureSize::ScreenSize,
-        }
+        {}
     },
     BufferInterface{
         "Parameters",
@@ -66,10 +63,12 @@ BEGIN_SOURCE_DECL(BloomPass) {
     TextureInterface{
         "Raw Color",
         &BloomPass::output,
-        {
-            .type = TextureType::Texture2D,
-            .pixelFormat = PixelFormat::RGBA32Float,
-            .size = TextureSize::ScreenSize
+        [](FrameParameters const& params) {
+            return TextureInterfaceDescriptor{
+                .type = TextureType::Texture2D,
+                .pixelFormat = PixelFormat::RGBA32Float,
+                .size = { params.screenSize, 1 }
+            };
         }
     }
 }

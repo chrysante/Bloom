@@ -9,16 +9,13 @@
 #include <utl/vector.hpp>
 
 #include "Bloom/Core/Debug.h"
+#include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Graphics/Lights.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
 #include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/StaticMesh.h"
-
-namespace bloom {
-class HardwareDevice;
-} // namespace bloom
 
 namespace bloom::rg {
 
@@ -35,12 +32,19 @@ public:
     void addUser(PassTerminal* terminal);
 
     ///
-    void assignUsers();
+    void reallocate(HardwareDevice& device, FrameParameters const& params);
 
 protected:
+    template <typename Desc>
+    using IDF = InterfaceDescriptorFactory<Desc>;
+
     Resource(ResourceNodeType type): _type(type) {}
 
+    void assignUsers();
+
 private:
+    void doReallocate(HardwareDevice&, FrameParameters const&) {}
+
     friend ResourceNodeType dyncast_get_type(Resource const& resource) {
         return resource.type();
     }
@@ -55,21 +59,23 @@ public:
     using ViewType = BufferHandle;
 
     ///
-    explicit BufferResource(BufferInterfaceDescriptor desc):
-        Resource(ResourceNodeType::BufferResource), _desc(desc) {}
-
-    ///
-    void assign(BufferHandle buffer);
+    explicit BufferResource(IDF<BufferInterfaceDescriptor> idf):
+        Resource(ResourceNodeType::BufferResource), idf(std::move(idf)) {}
 
     ///
     BufferHandle const& handle() { return _handle; }
 
-    ///
-    BufferInterfaceDescriptor const& desc() const { return _desc; }
+    /// Assigns the underlying resource and updates all users
+    void assign(BufferHandle buffer);
 
 private:
+    friend class Resource;
+
+    void doReallocate(HardwareDevice& device, FrameParameters const& params);
+
     BufferHandle _handle;
-    BufferInterfaceDescriptor _desc;
+    IDF<BufferInterfaceDescriptor> idf;
+    BufferInterfaceDescriptor desc{};
 };
 
 /// Wrapper around a `TextureHandle`
@@ -78,21 +84,23 @@ public:
     using ViewType = TextureHandle;
 
     ///
-    explicit TextureResource(TextureInterfaceDescriptor desc):
-        Resource(ResourceNodeType::TextureResource), _desc(desc) {}
-
-    ///
-    void assign(TextureHandle texture);
+    explicit TextureResource(IDF<TextureInterfaceDescriptor> idf):
+        Resource(ResourceNodeType::TextureResource), idf(std::move(idf)) {}
 
     ///
     TextureHandle const& handle() const { return _handle; }
 
-    ///
-    TextureInterfaceDescriptor const& desc() const { return _desc; }
+    /// Assigns the underlying resource and updates all users
+    void assign(TextureHandle texture);
 
 private:
+    friend class Resource;
+
+    void doReallocate(HardwareDevice& device, FrameParameters const& params);
+
     TextureHandle _handle;
-    TextureInterfaceDescriptor _desc;
+    IDF<TextureInterfaceDescriptor> idf;
+    TextureInterfaceDescriptor desc{};
 };
 
 ///

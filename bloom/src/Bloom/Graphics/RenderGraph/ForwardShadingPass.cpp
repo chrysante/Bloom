@@ -80,17 +80,21 @@ BEGIN_SOURCE_DECL(ForwardShadingPass) {
     TextureInterface{
         "Raw Color",
         &ForwardShadingPass::rawColor,
-        {
-            .pixelFormat = PixelFormat::RGBA32Float,
-            .size = TextureSize::ScreenSize
+        [](FrameParameters const& params) {
+            return TextureInterfaceDescriptor{
+                .pixelFormat = PixelFormat::RGBA32Float,
+                .size = { params.screenSize, 1 }
+            };
         }
     },
     TextureInterface{
         "Depth",
         &ForwardShadingPass::depth,
-        {
-            .pixelFormat = PixelFormat::Depth32Float,
-            .size = TextureSize::ScreenSize
+        [](FrameParameters const& params) {
+            return TextureInterfaceDescriptor{
+                .pixelFormat = PixelFormat::Depth32Float,
+                .size = { params.screenSize, 1 }
+            };
         }
     }
 }

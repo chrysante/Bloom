@@ -55,7 +55,7 @@ BEGIN_SOURCE_DECL(ShadowPass) {
         {
             .type = TextureType::Texture2DArray,
             .pixelFormat = PixelFormat::Depth32Float,
-            .size = TextureSize::Absolute2D(Resolution),
+            .size = { Resolution, 1 },
             // FIXME: Add dynamic interface descriptors
             // Setting the array length here is a hack to avoid reallocation of
             // the texture array, because the users of the texture (forward

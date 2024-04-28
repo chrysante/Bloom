@@ -9,8 +9,6 @@ using namespace bloom;
 using namespace rg;
 using namespace vml::short_types;
 
-static ulong2 const Resolution = { 512, 512 };
-
 namespace {
 
 struct ShadowPass: RenderPass, PassImpl<ShadowPass> {
@@ -52,15 +50,13 @@ BEGIN_SOURCE_DECL(ShadowPass) {
     TextureInterface{
         "Shadow Maps",
         &ShadowPass::shadowMaps,
-        {
-            .type = TextureType::Texture2DArray,
-            .pixelFormat = PixelFormat::Depth32Float,
-            .size = { Resolution, 1 },
-            // FIXME: Add dynamic interface descriptors
-            // Setting the array length here is a hack to avoid reallocation of
-            // the texture array, because the users of the texture (forward
-            // shading pass) would not be notified
-            .arrayLength = 20
+        [](FrameParameters const& params) {
+            return TextureInterfaceDescriptor{
+                .type = TextureType::Texture2DArray,
+                .pixelFormat = PixelFormat::Depth32Float,
+                .size = { params.shadowMapSize, 1 },
+                .arrayLength = params.numShadowMaps
+            };
         }
     }
 }
@@ -72,33 +68,19 @@ BL_REGISTER_PASS(ShadowPass, "Shadow Pass");
 
 ShadowPass::ShadowPass(std::string name): RenderPass(std::move(name)) {}
 
-static TextureHandle createShadowMaps(HardwareDevice& device,
-                                      size_t totalShadowMaps,
-                                      ulong2 resolution) {
-    TextureDescription desc;
-    desc.type = TextureType::Texture2DArray;
-    desc.size = usize3(resolution, 1);
-    desc.arrayLength = totalShadowMaps;
-    desc.pixelFormat = PixelFormat::Depth32Float;
-    desc.usage = TextureUsage::RenderTarget | TextureUsage::ShaderRead;
-    desc.storageMode = StorageMode::GPUOnly;
-    return device.createTexture(desc);
-}
-
-void ShadowPass::doExecute(FrameParameters const&, RenderContext& ctx) {
-    size_t numCascades = lightSpaceTransforms.size() / sizeof(float4x4);
+void ShadowPass::doExecute(FrameParameters const& frameParams,
+                           RenderContext& ctx) {
+    size_t numCascades = frameParams.numShadowMaps;
     if (numCascades == 0) {
         return;
     }
-    if (numCascades > shadowMaps.description().arrayLength) {
-        shadowMaps = createShadowMaps(device(), numCascades, Resolution);
-    }
+    BL_ASSERT(numCascades == shadowMaps.description().arrayLength);
     RenderPassDescription desc{};
     RenderPassDepthAttachmentDescription dDesc{};
     dDesc.texture = shadowMaps;
     desc.depthAttachment = dDesc;
     desc.renderTargetArrayLength = numCascades;
-    desc.renderTargetSize = Resolution;
+    desc.renderTargetSize = shadowMaps.size().xy;
     ctx.begin(desc);
     ctx.setPipeline(pipeline);
     ctx.setTriangleCullMode(TriangleCullMode::Front); /// TODO: temporary

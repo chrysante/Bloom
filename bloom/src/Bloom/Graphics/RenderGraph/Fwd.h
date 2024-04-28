@@ -70,6 +70,10 @@ struct FrameParameters {
     ///
     vml::int2 screenSize = 0;
 
+    vml::int2 shadowMapSize = 0;
+
+    size_t numShadowMaps = 0;
+
     bool operator==(FrameParameters const&) const = default;
 };
 

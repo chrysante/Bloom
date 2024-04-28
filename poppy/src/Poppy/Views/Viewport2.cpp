@@ -119,12 +119,10 @@ static rg::SceneRenderer& getSceneRenderer(rg::RenderGraph& renderGraph) {
 }
 
 void Viewport2::displayScenes() {
-    auto windows = editor().getWindows();
-    if (windows.empty()) {
-        return;
-    }
-    float2 viewportSize = ImGui::GetContentRegionAvail();
-    rg::FrameParameters frameParams = { .screenSize = viewportSize };
+    float2 viewportSize =
+        (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
+    rg::FrameParameters frameParams = { .screenSize = viewportSize,
+                                        .shadowMapSize = { 1024, 1024 } };
     auto* renderGraph = rg::RenderGraphManager::get();
     if (!renderGraph) {
         displayEmptyWithError("No Render Graph Found");
@@ -140,7 +138,7 @@ void Viewport2::displayScenes() {
         renderer.submit(*scene);
     }
     lock.unlock();
-    renderer.draw(*windows.front()->commandQueue());
+    renderer.draw(*window().commandQueue());
     if (renderGraph->sources().empty()) {
         displayEmptyWithError("Render Graph Has No Outputs");
         return;

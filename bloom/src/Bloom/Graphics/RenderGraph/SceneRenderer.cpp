@@ -131,6 +131,7 @@ void rg::SceneRenderer::submit(Scene const& scene) {
             }
             shadowMetadata.numCascades[shadowMetadata.numShadowCasters++] =
                 light.numCascades;
+            frameParams.numShadowMaps += light.numCascades;
         });
         submitLights<SkyLightComponent>(*lights, scene);
     }

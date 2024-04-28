@@ -169,6 +169,7 @@ struct TextureInterfaceDescriptor {
     size_t mipmapLevelCount = 1;
     size_t sampleCount = 1;
     size_t arrayLength = 1;
+    TextureUsage usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget;
 
     bool operator==(TextureInterfaceDescriptor const&) const = default;
 

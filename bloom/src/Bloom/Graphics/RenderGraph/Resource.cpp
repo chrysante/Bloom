@@ -62,14 +62,13 @@ void TextureResource::doReallocate(HardwareDevice& device,
         return;
     }
     desc = newDesc;
-    _handle = device.createTexture(
-        { .type = desc.type,
-          .pixelFormat = desc.pixelFormat,
-          .size = desc.size,
-          .mipmapLevelCount = desc.mipmapLevelCount,
-          .sampleCount = desc.sampleCount,
-          .arrayLength = desc.arrayLength,
-          .usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget });
+    _handle = device.createTexture({ .type = desc.type,
+                                     .pixelFormat = desc.pixelFormat,
+                                     .size = desc.size,
+                                     .mipmapLevelCount = desc.mipmapLevelCount,
+                                     .sampleCount = desc.sampleCount,
+                                     .arrayLength = desc.arrayLength,
+                                     .usage = desc.usage });
 }
 
 void GeometryResource::add(Reference<StaticMeshRenderer> mesh,

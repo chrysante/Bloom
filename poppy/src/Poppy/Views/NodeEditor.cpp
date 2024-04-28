@@ -30,7 +30,10 @@ using namespace ranges::views;
 struct NodeEditorStyleColors {
     float4 whiteOutline;
     float4 blackOutline;
+    float4 nodeSelectedOutline;
+    float4 nodeBody;
     float4 nodeBodyText;
+    float4 nodeTitleText;
     float4 pinBG;
     float4 pinOptBG;
     float4 pinMissingIndicator;
@@ -52,10 +55,10 @@ struct NodeEditorStyleVars {
     float PinConnectIndicatorRadius = 2;
     float PinConnectIndicatorRadiusHovered = 4;
     float NodeBodyTitleHeight = 20;
-    /// Additional bottom padding because it looks better
-    float NodeBodyBottomPadding = 3;
+    /// Additional bottom padding because it looks better (or not)
+    float NodeBodyBottomPadding = 0;
     float NodeBodyRounding = 10;
-    float NodeBodySelectionOutlineInset = 3;
+    float NodeBodySelectionOutlineInset = 2;
     /// How far the pins are moved into the node. If this is zero the outer edge
     /// of the node aligns with the edge of the pin
     float PinInset = 0;
@@ -77,7 +80,10 @@ struct NodeEditorStyle {
         auto& dark = colors[AppearanceType::Dark];
         light.whiteOutline = { 1, 1, 1, 0.5 };
         light.blackOutline = { 0, 0, 0, 0.7 };
-        light.nodeBodyText = { 1, 1, 1, 1 };
+        light.nodeSelectedOutline = { 0, 0.6, 1, 1 };
+        light.nodeBody = { 1, 1, 1, 1 };
+        light.nodeBodyText = { 0, 0, 0, 1 };
+        light.nodeTitleText = { 1, 1, 1, 1 };
         light.pinBG = { 0.2, 0.2, 0.2, 1 };
         light.pinOptBG = { 0.4, 0.4, 0.4, 1 };
         light.pinMissingIndicator = { 1, 0, 0.2, 1 };
@@ -89,12 +95,15 @@ struct NodeEditorStyle {
 
         dark.whiteOutline = light.whiteOutline;
         dark.blackOutline = light.blackOutline;
-        dark.nodeBodyText = light.nodeBodyText;
-        dark.pinBG = light.pinBG;
-        dark.pinOptBG = light.pinOptBG;
+        dark.nodeSelectedOutline = light.nodeSelectedOutline;
+        dark.nodeBody = { 0.08, 0.08, 0.08, 1 };
+        dark.nodeBodyText = { 1, 1, 1, 1 };
+        dark.nodeTitleText = light.nodeTitleText;
+        dark.pinBG = { 1, 1, 1, 0.667 };
+        dark.pinOptBG = { 1, 1, 1, 0.4 };
         dark.pinMissingIndicator = light.pinMissingIndicator;
         dark.link = { 1, 1, 1, 0.8 };
-        dark.pinLinkIndicator = dark.link;
+        dark.pinLinkIndicator = { 0, 0, 0, 0.8 };
         dark.backgroundGridline = { 0.33, 0.33, 0.33, 0.5 };
         dark.selectionRect = { 1, 1, 1, 0.3 };
         dark.selectionRectOutline = { 1, 1, 1, 0.3 };
@@ -127,6 +136,10 @@ static void styleEditor(bool* open) {
     ImGui::SeparatorText("Style Colors");
     ImGui::ColorEdit4("White Outline", col.whiteOutline.data());
     ImGui::ColorEdit4("Black Outline", col.blackOutline.data());
+    ImGui::ColorEdit4("Node Selection Outline", col.nodeSelectedOutline.data());
+    ImGui::ColorEdit4("Node Body", col.nodeBody.data());
+    ImGui::ColorEdit4("Node Body Text", col.nodeBodyText.data());
+    ImGui::ColorEdit4("Node Title Text", col.nodeTitleText.data());
     ImGui::ColorEdit4("Link", col.link.data());
     ImGui::ColorEdit4("Background Grid Line", col.backgroundGridline.data());
     ImGui::ColorEdit4("Selection Rect", col.selectionRect.data());
@@ -134,7 +147,7 @@ static void styleEditor(bool* open) {
     ImGui::ColorEdit4("Pin Background", col.pinBG.data());
     ImGui::ColorEdit4("Optional Pin Background", col.pinOptBG.data());
     ImGui::ColorEdit4("Missing Pin Indicator", col.pinMissingIndicator.data());
-    ImGui::ColorEdit4("Pin Link Indicator", col.pinMissingIndicator.data());
+    ImGui::ColorEdit4("Pin Link Indicator", col.pinLinkIndicator.data());
     ImGui::SeparatorText("Style Vars");
     ImGui::SliderFloat("LinkWidth", &var.LinkWidth, 0, 10);
     ImGui::SliderFloat("LinkWidthHovered", &var.LinkWidthHovered, 0, 10);
@@ -1089,20 +1102,18 @@ NodeEditorGraph const& NodeEditor::model() const { return impl->model; }
 /// Computes the position of \p pin relative to its parent node
 /// This is the single source of truth of pin positions
 static float2 computePinPosition(Pin const& pin, size_t index) {
+    float titleHeight =
+        2 * NodeBodyPadding().y + styleVars().NodeBodyTitleHeight;
+    float posy = titleHeight + index * styleVars().PinAreaSize;
     // clang-format off
     return visit(pin, utl::overload{
         [&](InputPin const&) {
-            return float2(styleVars().PinInset,
-                          NodeBodyPadding().y + 
-                              styleVars().NodeBodyTitleHeight +
-                              index * styleVars().PinAreaSize);
+            return float2(styleVars().PinInset, posy);
         },
         [&](OutputPin const& pin) {
             return float2(pin.parent().size().x - styleVars().PinInset -
                               styleVars().PinAreaSize,
-                          NodeBodyPadding().y +
-                              styleVars().NodeBodyTitleHeight +
-                              index * styleVars().PinAreaSize);
+                          posy);
         }
     }); // clang-format on
 }
@@ -1468,7 +1479,8 @@ static float2 computeNodeMinSize(Node const& node, float2 bodyPadding) {
     float pinHeight = styleVars().PinAreaSize *
                       std::max(node.inputs().size(), node.outputs().size());
     return vml::max(node.layoutData().minSize,
-                    float2(0, pinHeight + styleVars().NodeBodyTitleHeight)) +
+                    float2(0, pinHeight + styleVars().NodeBodyTitleHeight +
+                                  bodyPadding.y)) +
            2 * bodyPadding + float2(0, styleVars().NodeBodyBottomPadding);
 }
 
@@ -1521,44 +1533,74 @@ void Impl::displayPins(Node& node) {
         (maxInputLabelWidth + maxOutputLabelWidth) / viewData.zoom;
 }
 
-/// \Returns the area in which content can be drawn
-static ImRect drawNodeBody(Node const& node, float zoom, bool selected) {
-    float2 pos = (float2)ImGui::GetWindowPos() + NodeOuterPadding() * zoom;
-    auto* DL = ImGui::GetWindowDrawList();
-    float2 scaledSize = node.size() * zoom;
-    float rounding = styleVars().NodeBodyRounding * zoom;
-    DL->AddRectFilled(pos, pos + scaledSize,
-                      ImGui::ColorConvertFloat4ToU32(node.color()),
-                      rounding - 1 * zoom);
-    if (selected) {
-        float inset = styleVars().NodeBodySelectionOutlineInset * zoom;
-        DL->AddRect(pos + inset, pos + scaledSize - inset,
-                    ImGui::ColorConvertFloat4ToU32(styleColors().whiteOutline),
-                    rounding - inset, ImDrawFlags_None, 2 * inset);
-    }
-    float highlightOutlineInset = 1 * zoom;
-    DL->AddRect(pos + highlightOutlineInset,
-                pos + scaledSize - highlightOutlineInset,
-                ImGui::ColorConvertFloat4ToU32(styleColors().whiteOutline),
-                rounding - highlightOutlineInset, ImDrawFlags_None, 1 * zoom);
-    DL->AddRect(pos, pos + scaledSize,
-                ImGui::ColorConvertFloat4ToU32(styleColors().blackOutline),
-                rounding, ImDrawFlags_None, 1 * zoom);
-    float2 bodyPadding = NodeBodyPadding() * zoom;
-    auto* font =
-        FontManager::get(FontDesc::UIDefault().setWeight(FontWeight::Bold));
-    ImGui::PushFont(font);
-    auto* label = node.name().data();
-    auto* labelEnd = node.name().data() + node.name().size();
+static float2 computeLabelSize(char const* label, char const* labelEnd,
+                               float2 scaledSize, float zoom) {
     float2 desiredLabelSize =
         (float2)ImGui::CalcTextSize(label, labelEnd) * zoom;
     float2 availLabelSize =
         scaledSize -
         float2(2 * (styleVars().NodeBodySelectionOutlineInset + 1), 0) * zoom;
-    float2 labelSize = vml::min(desiredLabelSize, availLabelSize);
+    return vml::min(desiredLabelSize, availLabelSize);
+}
+
+/// \Returns the area in which content can be drawn
+static ImRect drawNodeBody(Node const& node, float zoom, bool selected) {
+    auto* DL = ImGui::GetWindowDrawList();
+    auto* font =
+        FontManager::get(FontDesc::UIDefault().setWeight(FontWeight::Bold));
+    ImGui::PushFont(font);
+    float2 pos = (float2)ImGui::GetWindowPos() + NodeOuterPadding() * zoom;
+    float2 scaledSize = node.size() * zoom;
+    float2 bodyPadding = NodeBodyPadding() * zoom;
+    auto* label = node.name().data();
+    auto* labelEnd = node.name().data() + node.name().size();
+    float2 labelSize = computeLabelSize(label, labelEnd, scaledSize, zoom);
     float2 labelPos =
         pos + float2((scaledSize.x - labelSize.x) / 2, bodyPadding.y);
-    auto labelCol = ImGui::ColorConvertFloat4ToU32(styleColors().nodeBodyText);
+    float rounding = styleVars().NodeBodyRounding * zoom;
+    /// Selection outline
+    if (selected) {
+        float inset = styleVars().NodeBodySelectionOutlineInset * zoom;
+        float inset2 = inset + 1 * zoom;
+        DL->AddRect(pos - inset2, pos + scaledSize + inset2,
+                    IM_COL32(0, 0, 0, 127), rounding + inset2, ImDrawFlags_None,
+                    2 * inset2);
+        DL->AddRect(pos - inset, pos + scaledSize + inset,
+                    ImGui::ColorConvertFloat4ToU32(
+                        styleColors().nodeSelectedOutline),
+                    rounding + inset, ImDrawFlags_None, 2 * inset);
+    }
+    /// Title bar
+    float2 titleBarSize = float2(scaledSize.x, labelSize.y + 2 * bodyPadding.y);
+    DL->AddRectFilled(pos, pos + titleBarSize,
+                      ImGui::ColorConvertFloat4ToU32(node.color()), rounding,
+                      ImDrawFlags_RoundCornersTop);
+    /// Content BG
+    float2 contentPos = pos + float2(0, titleBarSize.y);
+    DL->AddRectFilled(contentPos, pos + scaledSize,
+                      ImGui::ColorConvertFloat4ToU32(styleColors().nodeBody),
+                      rounding, ImDrawFlags_RoundCornersBottom);
+    /// Outlines
+    float highlightOutlineInset = 1 * zoom;
+    DL->AddRect(pos, pos + scaledSize,
+                ImGui::ColorConvertFloat4ToU32(styleColors().blackOutline),
+                rounding, ImDrawFlags_None, 1 * zoom);
+    DL->AddLine(pos + float2(0, titleBarSize.y), pos + titleBarSize,
+                ImGui::ColorConvertFloat4ToU32(styleColors().blackOutline),
+                1 * zoom);
+    DL->AddRect(pos + highlightOutlineInset,
+                pos + titleBarSize - highlightOutlineInset,
+                ImGui::ColorConvertFloat4ToU32(styleColors().whiteOutline),
+                rounding - highlightOutlineInset, ImDrawFlags_RoundCornersTop,
+                1 * zoom);
+    DL->AddRect(contentPos + highlightOutlineInset,
+                pos + scaledSize - highlightOutlineInset,
+                ImGui::ColorConvertFloat4ToU32(styleColors().whiteOutline *
+                                               float4(1, 1, 1, 0.5)),
+                rounding - highlightOutlineInset,
+                ImDrawFlags_RoundCornersBottom, 1 * zoom);
+    /// Label
+    auto labelCol = ImGui::ColorConvertFloat4ToU32(styleColors().nodeTitleText);
     ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
     DL->AddText(nullptr, ImGui::GetFontSize() * zoom, labelPos, labelCol, label,
                 labelEnd);

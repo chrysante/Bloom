@@ -26,12 +26,9 @@ public:
 
 private:
     bloom::ForwardRenderer* findRenderer() const;
-    std::shared_ptr<bloom::ForwardRendererFramebuffer> findFramebuffer() const;
 
 private:
     bloom::ForwardRenderer* mRenderer = nullptr;
-    std::weak_ptr<bloom::ForwardRendererFramebuffer> mFramebuffer;
-    std::shared_ptr<bloom::ForwardRendererFramebuffer> currentFramebuffer;
 
 private:
     struct BloomVeilParams {
@@ -44,27 +41,12 @@ private:
 
 POPPY_REGISTER_VIEW(RendererDebuggerView, "Renderer Debugger");
 
-void RendererDebuggerView::init() {
-    mRenderer = findRenderer();
-    mFramebuffer = findFramebuffer();
-}
+void RendererDebuggerView::init() {}
 
 void RendererDebuggerView::display() {
-    currentFramebuffer.reset();
-    currentFramebuffer = mFramebuffer.lock();
-
     if (!mRenderer && !(mRenderer = findRenderer())) {
         displayEmptyWithReason("No Renderer Found");
         return;
-    }
-
-    if (!currentFramebuffer) {
-        mFramebuffer = findFramebuffer();
-        currentFramebuffer = mFramebuffer.lock();
-        if (!currentFramebuffer) {
-            displayEmptyWithReason("No Compatible Framebuffer Found");
-            return;
-        }
     }
 
     using namespace propertiesView;
@@ -124,57 +106,6 @@ void RendererDebuggerView::display() {
             }
         }
         endSection();
-        header("Downsample Pass", FontDesc::UIDefault());
-        beginSection();
-        beginProperty("Mipmap Level");
-        fullWidth();
-        ImGui::SliderInt("##downsample-mipmap-level",
-                         &veil.downsampleMipmapLevel, 0,
-                         BloomFramebuffer::numDSMipLevels - 1, nullptr,
-                         ImGuiSliderFlags_AlwaysClamp);
-
-        endSection();
-
-        auto displayImage = [](TextureView image, int2 size) {
-            auto& style = ImGui::GetStyle();
-            auto* const window = ImGui::GetCurrentWindow();
-            float2 const cp = window->DC.CursorPos;
-            float const width = ImGui::GetContentRegionAvail().x;
-            float2 const imageSize =
-                float2(width, image.size().y / float(image.size().x) * width);
-            float2 const cursorEnd =
-                (float2)ImGui::GetCursorPos() +
-                float2(0, imageSize.y + style.ItemSpacing.y);
-            window->DrawList->AddImageRounded(image.nativeHandle(), cp,
-                                              cp + imageSize, { 0, 0 },
-                                              { 1, 1 }, 0xFFffFFff,
-                                              style.FrameRounding);
-            window->DrawList->AddRect(cp, cp + imageSize,
-                                      ImGui::GetColorU32(ImGuiCol_Border),
-                                      style.FrameRounding);
-            ImGui::SetCursorPos(ImGui::GetCursorPos() + style.FramePadding);
-            ImGui::Text("%d x %d", size.x, size.y);
-            ImGui::SetCursorPos(cursorEnd);
-        };
-
-        displayImage(currentFramebuffer->bloom
-                         .downsampleMips[veil.downsampleMipmapLevel],
-                     currentFramebuffer->size /
-                         (1 << (veil.downsampleMipmapLevel + 1)));
-
-        header("Upsample Pass", FontDesc::UIDefault());
-        beginSection();
-        beginProperty("Mipmap Level");
-        fullWidth();
-        ImGui::SliderInt("##upsample-mipmap-level", &veil.upsampleMipmapLevel,
-                         0, BloomFramebuffer::numUSMipLevels - 1, nullptr,
-                         ImGuiSliderFlags_AlwaysClamp);
-        endSection();
-
-        displayImage(currentFramebuffer->bloom
-                         .upsampleMips[veil.upsampleMipmapLevel],
-                     currentFramebuffer->size /
-                         (1 << (veil.upsampleMipmapLevel + 1)));
     }
 }
 
@@ -187,24 +118,4 @@ bloom::ForwardRenderer* RendererDebuggerView::findRenderer() const {
     }
     return dynamic_cast<bloom::ForwardRenderer*>(
         &editor().coreSystems().renderer());
-}
-
-std::shared_ptr<bloom::ForwardRendererFramebuffer> RendererDebuggerView::
-    findFramebuffer() const {
-#if 0
-    auto views = editor().getAllViews();
-    for (auto* v: views) {
-        auto* viewport = dynamic_cast<Viewport*>(v);
-        if (!viewport) {
-            continue;
-        }
-        auto const fwFramebuffer =
-            std::dynamic_pointer_cast<bloom::ForwardRendererFramebuffer>(
-                viewport->framebuffer);
-        if (fwFramebuffer) {
-            return fwFramebuffer;
-        }
-    }
-#endif
-    return nullptr;
 }

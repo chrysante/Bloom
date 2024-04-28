@@ -24,7 +24,10 @@ enum class InterfaceFlags {
     None,
 
     /// Indicates that an interface is not required. Only valid for sinks
-    Optional
+    Optional,
+
+    /// Indicates that the owning pass manually allocates the backing resource
+    ManuallyAllocated // Not used yet
 };
 
 UTL_ENUM_OPERATORS(InterfaceFlags)

@@ -138,15 +138,17 @@ void rg::SceneRenderer::submit(Scene const& scene) {
 }
 
 namespace {
+
 struct BloomSettings {
-    bool physicallyCorrect = true;
-    float intensity = 1;
-    float threshold = 1;
-    float knee = 0.1;
-    float clamp = 100;
-    float diffusion = 1;
-    float contribution = 0.1;
+    bool physicallyCorrect;
+    float intensity;
+    float threshold;
+    float knee;
+    float clamp;
+    float diffusion;
+    float contribution;
 };
+
 } // namespace
 
 static BloomParameters makeBloomParams(BloomSettings settings) {
@@ -194,10 +196,12 @@ void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
     }
     if (bloomParams && bloomParams->handle()) {
         BloomParameters values = makeBloomParams({
-            .physicallyCorrect = true,
+            .physicallyCorrect = false,
+            .intensity = 0.7,
+            .threshold = 1,
+            .knee = 0.1,
             .clamp = 100,
             .diffusion = 1,
-            .contribution = 0.1,
         });
         device.fillManagedBuffer(bloomParams->handle(), &values, sizeof values);
     }

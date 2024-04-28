@@ -1,5 +1,5 @@
-#ifndef Visibility_h
-#define Visibility_h
+#ifndef BLOOM_SCENE_COMPONENTS_VISIBILITY_H
+#define BLOOM_SCENE_COMPONENTS_VISIBILITY_H
 
 #include "Bloom/Core/Serialize.h"
 
@@ -15,4 +15,4 @@ struct VisibilityComponent {
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::VisibilityComponent, value);
 
-#endif /* Visibility_h */
+#endif // BLOOM_SCENE_COMPONENTS_VISIBILITY_H

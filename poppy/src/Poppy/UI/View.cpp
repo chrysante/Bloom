@@ -185,6 +185,30 @@ void View::doFrame() {
             displayToolbar();
             display();
         }
+        if (data.window) {
+            ImGui::SetCursorPos({ 0, 40 });
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 255, 255));
+            ImGui::Text("%s", utl::strcat("WindowPos: ", window().position())
+                                  .c_str());
+            ImGui::Text("%s",
+                        utl::strcat("WindowSize: ", window().size()).c_str());
+            ImGui::Text("%s",
+                        utl::strcat("ImWindowPos: ", (float2)imguiWindow->Pos)
+                            .c_str());
+            ImGui::Text("%s",
+                        utl::strcat("ImWindowSize: ", (float2)imguiWindow->Size)
+                            .c_str());
+            ImGui::Text("%s", utl::strcat("ViewportPos: ",
+                                          (float2)imguiWindow->Viewport->Pos)
+                                  .c_str());
+            ImGui::Text("%s", utl::strcat("ViewportSize: ",
+                                          (float2)imguiWindow->Viewport->Size)
+                                  .c_str());
+            ImGui::Text("%s",
+                        utl::strcat("MousePos: ", (float2)ImGui::GetMousePos())
+                            .c_str());
+            ImGui::PopStyleColor();
+        }
     }
     ImGui::End();
 }

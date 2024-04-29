@@ -14,6 +14,7 @@
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/EnumCount.h"
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/Core/Serialize.h"
 #include "Bloom/Core/Yaml.h"
 #include "Poppy/Core/SelectionManager.h"
 #include "Poppy/UI/Appearance.h"
@@ -125,8 +126,13 @@ static float2 NodeBodyPadding() {
     return vml::max(styleVars().MinNodeBodyPadding,
                     float2(styleVars().PinAreaSize + styleVars().PinInset, 0));
 }
+
 static float2 NodeOuterPadding() {
     return vml::max(float2(1), float2(-styleVars().PinInset, 0));
+}
+
+static float PaddedTitleHeight() {
+    return styleVars().NodeBodyTitleHeight + 2 * NodeBodyPadding().y;
 }
 
 static void styleEditor(bool* open) {
@@ -517,14 +523,6 @@ void NodeEditorGraph::orderFront(Node* node) {
 
 namespace {
 
-enum class Axis { Horizontal, Vertical };
-
-struct PersistentViewData {
-    /// Position of the view in surface coordinates
-    vml::float2 position = { 0.0, 0.0 };
-    float zoom = 1.0;
-};
-
 struct Link {
     OutputPin* origin;
     InputPin* dest;
@@ -546,6 +544,20 @@ struct Link {
 };
 
 static void deleteLink(Link link) { link.dest->clearLinks(); }
+
+enum class Axis { Horizontal, Vertical };
+
+struct PersistentViewData {
+    /// Position of the view in surface coordinates
+    vml::float2 position = { 0.0, 0.0 };
+    float zoom = 1.0;
+};
+
+} // namespace
+
+BLOOM_MAKE_TEXT_SERIALIZER(PersistentViewData, position, zoom);
+
+namespace {
 
 /// Data that persists between frames when performing some actions.
 /// This is reset whenever a mouse button is released
@@ -870,19 +882,24 @@ void Impl::linkPopup(bool show, Link link) {
     }
 }
 
+static float2 screenToWorldSpace(float2 position, ViewData const& viewData) {
+    float2 posVS = position - (float2)viewData.clipRect.Min;
+    return (posVS + viewData.position) / viewData.zoom;
+}
+
 void Impl::backgroundPopup(bool show) {
     static constexpr auto name = "Background_Popup";
     if (show) {
         ImGui::OpenPopup(name);
     }
-    float2 windowPos = ImGui::GetWindowPos();
     if (ImGui::BeginPopup(name)) {
         showDebugger |= ImGui::MenuItem("Show Debugger");
         showStyleEditor |= ImGui::MenuItem("Show Style Editor");
         ImGui::Separator();
         if (delegate) {
             float2 position =
-                (float2)ImGui::GetWindowPos() - windowPos - viewData.position;
+                screenToWorldSpace(ImGui::GetMousePos(), viewData) -
+                float2(PaddedTitleHeight() / 2);
             delegate->backgroundPopupMenu(position);
         }
         ImGui::EndPopup();
@@ -953,13 +970,12 @@ void Impl::onInput(InputEvent& event) {
     });
     event.dispatch<Magnify>([&](MagnificationEvent event) {
         float zoom = viewData.zoom;
-        float2 mouseLocVS =
-            event.locationOnScreen - (float2)viewData.clipRect.Min;
-        float2 mouseLocWS = (mouseLocVS + viewData.position) / 1;
+        float2 mouseLocWS =
+            screenToWorldSpace(event.locationOnScreen, viewData);
         float newZoom = std::clamp(zoom * (1 + (float)event.offset),
                                    styleVars().MinZoom, styleVars().MaxZoom);
         float effectiveOffset = newZoom - zoom;
-        viewData.position += mouseLocWS / zoom * effectiveOffset;
+        viewData.position += mouseLocWS * effectiveOffset;
         viewData.zoom = newZoom;
         return true;
     });
@@ -972,12 +988,27 @@ void NodeEditor::addNode(NodeDesc desc) {
 
 NodeEditorGraph const& NodeEditor::model() const { return impl->model; }
 
+YAML::Node NodeEditor::serialize() const {
+    YAML::Node root;
+    root["ViewData"] = static_cast<PersistentViewData const&>(impl->viewData);
+    return root;
+}
+
+void NodeEditor::deserialize(YAML::Node const& node) const {
+    try {
+        (PersistentViewData&)impl->viewData =
+            node["ViewData"].as<PersistentViewData>();
+    }
+    catch (YAML::Exception const& err) {
+        Logger::Error("Failed to deserialize node editor view data: ",
+                      err.what());
+    }
+}
+
 /// Computes the position of \p pin relative to its parent node
 /// This is the single source of truth of pin positions
 static float2 computePinPosition(Pin const& pin, size_t index) {
-    float titleHeight =
-        2 * NodeBodyPadding().y + styleVars().NodeBodyTitleHeight;
-    float posy = titleHeight + index * styleVars().PinAreaSize;
+    float posy = PaddedTitleHeight() + index * styleVars().PinAreaSize;
     // clang-format off
     return visit(pin, utl::overload{
         [&](InputPin const&) {
@@ -1591,7 +1622,7 @@ void Impl::displayNodeBody(Node& node) {
     }
     displayNodeResizeGrip(viewData, node);
     if (bgClickedLeft || bgClickedRight) {
-        orderFront(&node);
+        defer([this, node = &node] { orderFront(node); });
         viewData.activeNode = &node;
     }
     /// Selected nodes change selection state when mouse is released
@@ -1653,14 +1684,11 @@ void Impl::display() {
     viewData.windowHovered =
         ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow) &&
         ImGui::GetCurrentWindow()->Rect().Contains(ImGui::GetMousePos());
-    /// We make a copy here because we may reorder the nodes during traversal.
-    /// This may seem wasteful but I'm sure it's fine
-    auto nodes = model.nodes() | ranges::to<std::vector>;
-    for (auto* node: nodes) {
+    for (auto* node: model.nodes()) {
         displayLinks(*node);
     }
     displayDraggingLink();
-    for (auto* node: nodes) {
+    for (auto* node: model.nodes()) {
         displayNode(*node);
     }
     backgroundBehaviour();
@@ -1733,4 +1761,5 @@ void Impl::orderFront(Node* node) { model.orderFront(node); }
 void Impl::deleteSelected() {
     auto pred = [&](Node const& node) { return selection.contains(&node); };
     model.deleteIf(pred);
+    selection.clear();
 }

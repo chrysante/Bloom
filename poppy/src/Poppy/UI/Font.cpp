@@ -153,8 +153,8 @@ FontDesc FontDesc::UIDefault() {
 
 FontManager::FontManager(float scaleFactor):
     allIconCodes(loadAllIconCodes()),
-    scaleFactor(scaleFactor),
-    imguiData{ .atlas = IM_NEW(ImFontAtlas) } {
+    imguiData{ .atlas = IM_NEW(ImFontAtlas) },
+    scaleFactor(scaleFactor) {
     imguiData.map.insert({ FontDesc::UIDefault(), nullptr });
 }
 

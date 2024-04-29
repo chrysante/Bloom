@@ -44,6 +44,10 @@ set_target_properties(poppy
       "${PROJECT_SOURCE_DIR}/Poppy/src ${PROJECT_SOURCE_DIR}/Bloom/src/ ${utility_SOURCE_DIR}/include"
 )
 
+add_custom_command(TARGET poppy POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_CURRENT_SOURCE_DIR}/resource $<TARGET_FILE_DIR:poppy>/resource)
+
 add_custom_target(touch_timestamp
     touch ${CMAKE_CURRENT_SOURCE_DIR}/src/Poppy/Core/Timestamp.cpp
 )

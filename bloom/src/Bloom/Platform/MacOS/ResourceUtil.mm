@@ -14,7 +14,8 @@ std::filesystem::path bloom::resourceDir() {
         return dir;
     }
     return std::filesystem::path(
-        [NSBundle mainBundle].resourceURL.path.UTF8String);
+               [NSBundle mainBundle].resourceURL.path.UTF8String) /
+           "resource";
 }
 
 std::filesystem::path bloom::libraryDir() {

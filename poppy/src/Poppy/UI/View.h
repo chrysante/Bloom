@@ -172,7 +172,12 @@ private:
         /// call to `Begin()`
         int nextFrameFlags = 0;
     };
+    struct InputState {
+        bool hovered = false;
+        bool capture = false;
+    };
     Data data;
+    InputState inputState;
     CommandPalette cmdPalette;
     std::optional<Toolbar> _toolbar;
 };

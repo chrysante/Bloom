@@ -185,6 +185,8 @@ void View::doFrame() {
             displayToolbar();
             display();
         }
+        inputState.hovered =
+            ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
     }
     ImGui::End();
 }
@@ -246,11 +248,22 @@ void View::displayToolbar() {
 }
 
 void View::doOnInput(bloom::InputEvent& event) {
-    if (focused()) {
-        cmdPalette.onInput(event);
-        if (event.handled()) {
-            return;
-        }
+    using enum InputEventMask;
+    event.dispatch<MouseDown>(
+        [&](MouseEvent const&) { inputState.capture = inputState.hovered; });
+    event.dispatch<MouseUp>(
+        [&](MouseEvent const&) { inputState.capture = false; });
+    if (test(event.type() & (MouseDragged | ScrollWheel | Magnify)) &&
+        !(inputState.hovered || inputState.capture))
+    {
+        return;
+    }
+    if (test(event.type() & Key) && !focused()) {
+        return;
+    }
+    cmdPalette.onInput(event);
+    if (event.handled()) {
+        return;
     }
     onInput(event);
 }

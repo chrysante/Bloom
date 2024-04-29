@@ -81,7 +81,7 @@ static bool validate(std::span<Pass* const> passes) {
     for (auto* pass: passes) {
         for (auto* sink: pass->sinks()) {
             BL_ASSERT(sink);
-            result |= validateSink(*sink);
+            result &= validateSink(*sink);
         }
     }
     return result;

@@ -149,8 +149,8 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
                 menuBar();
             }),
         ToolbarSpacer(),
-        ToolbarIconButton(simCmd, "stop"),
-        ToolbarIconButton(stopSimCmd, "play")
+        ToolbarIconButton(simCmd, "play"),
+        ToolbarIconButton(stopSimCmd, "stop")
     });
     impl->dockspace.setCenterToolbar({
         ToolbarIconButton("bank")

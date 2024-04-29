@@ -242,25 +242,27 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
             beginProperty("Orientation");
             float3 euler = vml::to_euler(transform.orientation) * 180;
             ImGui::SetNextItemWidth(width);
-            if (dragFloat3Pretty("##orientation", euler.data())) {
+            if (dragFloat3Pretty("##orientation", euler.data(), 1, 0, 0,
+                                 "%.3f°"))
+            {
                 transform.orientation = vml::to_quaternion(euler / 180);
             }
             beginProperty("Scale");
             ImGui::SetNextItemWidth(width);
-            auto const oldScale = transform.scale;
-            if (dragFloat3Pretty("##scale", transform.scale.data(), 0.02) &&
+            float3 scale = transform.scale;
+            if (dragFloat3Pretty("##scale", scale.data(), 0.02) &&
                 transformScaleLinked)
             {
-                bool3 const edited =
-                    vml::map(transform.scale, oldScale, utl::unequals);
+                float3 scaleOffset = transform.scale / scale;
+                bool3 edited = vml::map(scale, transform.scale, utl::unequals);
                 if (edited.x) {
-                    transform.scale = transform.scale.x;
+                    transform.scale = scale * scaleOffset.x;
                 }
                 else if (edited.y) {
-                    transform.scale = transform.scale.y;
+                    transform.scale = scale * scaleOffset.y;
                 }
                 else {
-                    transform.scale = transform.scale.z;
+                    transform.scale = scale * scaleOffset.z;
                 }
             }
             ImGui::SameLine();
@@ -268,7 +270,7 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
                 FontManager::get({ IconSize::_16 },
                                  transformScaleLinked ? "link" : "unlink");
             ImGui::PushFont(iconFont);
-            bool const tsLinked = transformScaleLinked;
+            bool tsLinked = transformScaleLinked;
             if (tsLinked) {
                 ImGui::PushStyleColor(ImGuiCol_Button,
                                       Appearance::get()

@@ -390,18 +390,22 @@ void RenderGraphEditorView::onInput(InputEvent& event) {
 void RenderGraphEditorView::display() { nodeEditor.display(); }
 
 YAML::Node RenderGraphEditorView::serialize() const {
+    YAML::Node root;
+    root["NodeEditor"] = nodeEditor.serialize();
     /// We use these functions to serialize our graph for now. This is not
     /// really correct, these functions should only serialize view related data,
     /// we will change this in the future
-    return nodeEditor.model().serialize();
+    root["Model"] = nodeEditor.model().serialize();
+    return root;
 }
 
 void RenderGraphEditorView::deserialize(YAML::Node root) {
     if (!root) {
         return;
     }
+    nodeEditor.deserialize(root["NodeEditor"]);
     NodeEditorGraph graph;
-    graph.deserialize(root, RenderGraphNodeController::deserialize);
+    graph.deserialize(root["Model"], RenderGraphNodeController::deserialize);
     nodeEditor.setGraph(std::move(graph));
 }
 

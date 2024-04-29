@@ -382,6 +382,12 @@ public:
     /// \Returns the underlying graph
     NodeEditorGraph const& model() const;
 
+    /// Serializes view data. This does not serialize the current model
+    YAML::Node serialize() const;
+
+    /// Deserializes view data
+    void deserialize(YAML::Node const& node) const;
+
     struct Impl;
 
 private:

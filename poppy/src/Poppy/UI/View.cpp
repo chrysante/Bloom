@@ -123,6 +123,9 @@ void View::doFrame() {
     if (!isDocked(imguiWindow)) {
         flags |= ImGuiWindowFlags_NoMove;
     }
+    if (toolbar()) {
+        flags |= ImGuiWindowFlags_NoDockingTabIndicator;
+    }
     // Begin block
     if (!imguiWindow && !data.maximized && !data.docked) {
         ImGui::SetNextWindowPos(data.position);

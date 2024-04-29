@@ -63,6 +63,18 @@ public:
         _elems.insert(first, last);
     }
 
+    /// Erases \p elem from the selection
+    /// \Returns `true` if the element was selected
+    template <typename U>
+    bool erase(U const& elem) {
+        return _elems.erase(elem);
+    }
+
+    /// \overload for ranges
+    void add(ranges::range auto&& rng) {
+        add(ranges::begin(rng), ranges::end(rng));
+    }
+
     /// If \p elem is not selected, adds \p elem to the selection. Otherwise
     /// removes \p elem from the selection
     bool toggle(T const& elem) {
@@ -100,6 +112,9 @@ public:
 
     /// \Returns the number of selected elements
     size_t size() const { return _elems.size(); }
+
+    /// \Returns `true` if no elements are selected
+    bool empty() const { return _elems.empty(); }
 
     /// Begin multi selection with selection mode \p mode
     void beginCandidates(SelectionMode mode) { this->_candidateMode = mode; }

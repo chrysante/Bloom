@@ -6,7 +6,7 @@
 #include "Bloom/Application/Input.h"
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Scene/Scene.h"
-#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 
 namespace poppy {
 
@@ -31,7 +31,7 @@ public:
     bool isHovered() const { return _hovered; }
     bool isUsing() const { return _using; }
 
-    void display(bloom::Camera const&, SelectionContext&);
+    void display(bloom::Camera const&, EntitySelectionManager&);
 
 private:
     struct ImGuizmoCtx;

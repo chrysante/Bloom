@@ -9,6 +9,7 @@
 #include "Bloom/GPU.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Font.h"
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
@@ -452,9 +453,9 @@ void poppy::ImGuiContext::initTestEngine() {
     ImGuiTestEngine_Start(testEngine, context);
     ImGuiTestEngine_InstallDefaultCrashHandler();
 
-    mEditor->cmd.add("Show Test UI",
-                     { Key::T, ModFlags::Control | ModFlags::Shift },
-                     [this] { showTestUI ^= true; });
+    mEditor->addCommand({ "Show Test UI",
+                          { Key::T, ModFlags::Control | ModFlags::Shift },
+                          [this] { showTestUI ^= true; } });
 #endif
 }
 

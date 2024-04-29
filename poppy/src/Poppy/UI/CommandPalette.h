@@ -23,14 +23,18 @@ struct KeyCombination {
 /// Element type of the command palette. A command is a named action
 class Command {
 public:
-    Command(std::string name, std::function<void()> fn,
-            std::function<bool()> enabled):
+    Command(std::string name, KeyCombination keyComb, std::function<void()> fn,
+            std::function<bool()> enabled = {}):
         _name(std::move(name)),
+        keyComb(keyComb),
         fn(std::move(fn)),
         _enabled(std::move(enabled)) {}
 
     /// \Returns the name of this command
     std::string const& name() const { return _name; }
+
+    /// \Returns the associated key combination
+    KeyCombination keyCombination() const { return keyComb; }
 
     /// Performs the command
     /// \Pre `enabled()` must return `true`
@@ -40,7 +44,10 @@ public:
     bool enabled() const { return !_enabled || _enabled(); }
 
 private:
+    friend class CommandPalette;
+
     std::string _name;
+    KeyCombination keyComb;
     std::function<void()> fn;
     std::function<bool()> _enabled;
 };
@@ -52,8 +59,14 @@ public:
     ///
     /// \p keyComb is canonicalized depending on the OS. This means that on
     /// Apple systems the control modifier is mapped to cmd
-    void add(std::string name, KeyCombination keyComb,
-             std::function<void()> action, std::function<bool()> enabled = {});
+    ///
+    /// \Returns a pointer to the added command
+    Command const* add(std::string name, KeyCombination keyComb,
+                       std::function<void()> action,
+                       std::function<bool()> enabled = {});
+
+    /// \overload
+    Command const* add(Command command);
 
     /// Executes the command \p name if a matching command exists
     void doCommand(std::string_view name) const;

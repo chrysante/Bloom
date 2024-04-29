@@ -17,7 +17,7 @@
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"

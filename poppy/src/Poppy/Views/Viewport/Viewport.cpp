@@ -15,7 +15,7 @@
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Core/Profile.h"
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/ViewRegistry.h"
@@ -246,12 +246,12 @@ void Viewport::onInput(InputEvent& event) {
             return false;
         }
         auto locationInView = screenSpaceToViewSpace(e.locationOnScreen);
-        if (auto const entity = overlays.hitTest(locationInView)) {
-            selection().select(entity);
+        if (auto entity = overlays.hitTest(locationInView)) {
+            selection().set(entity);
             return true;
         }
         if (auto const entity = readEntityID(locationInView)) {
-            selection().select(entity);
+            selection().set(entity);
             return true;
         }
         selection().clear();

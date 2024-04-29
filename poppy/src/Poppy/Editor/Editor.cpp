@@ -14,10 +14,16 @@
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Core/Timestamp.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 #include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/Appearance.h"
+#include "Poppy/UI/CommandPalette.h"
+#include "Poppy/UI/Dockspace.h"
+#include "Poppy/UI/ImGuiContext.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/ViewManager.h"
 #include "Poppy/UI/ViewRegistry.h"
+#include "Poppy/Views/DebugViews.h"
 
 using namespace poppy;
 using namespace bloom;
@@ -31,6 +37,50 @@ static float saveConfigInterval() { return 5; }
 std::unique_ptr<Application> bloom::createApplication() {
     return std::make_unique<poppy::Editor>();
 }
+
+struct Editor::Impl {
+    bloom::Window* mainWindow = nullptr;
+    ImGuiContext imguiCtx;
+    Dockspace dockspace;
+    ViewManager viewManager;
+    CommandPalette cmd;
+    DebugViews debugViews;
+    EntitySelectionManager selection;
+    float autoConfigSaveTimer = 0;
+    std::atomic<int> trickleEmptyEventCount = 0;
+
+    Impl(Editor* editor):
+        viewManager(editor, editor->makeReceiver()),
+        selection(editor->makeReceiver()) {}
+
+    struct EditorWindowDelegate;
+};
+
+struct Editor::Impl::EditorWindowDelegate: WindowDelegate {
+    EditorWindowDelegate(Editor* editor): editor(editor) {}
+
+    void onTextInput(unsigned code) override {
+        editor->impl->imguiCtx.onTextInput(code);
+    }
+
+    void onResize(int2) override { editor->invalidateUI(); }
+
+    void onClose() override {
+        editor->saveConfigToDisk();
+        editor->closeAllWindows();
+        editor->impl->mainWindow = nullptr;
+        editor->impl->imguiCtx.context->Viewports[0]->PlatformHandle = nullptr;
+    }
+
+    void onDestroy() override {
+        editor->impl->mainWindow = nullptr;
+        editor->impl->imguiCtx.context->Viewports[0]->PlatformHandle = nullptr;
+    }
+
+    void onFocus() override { editor->impl->dockspace.takeFocus(); }
+
+    Editor* editor;
+};
 
 namespace {
 
@@ -72,28 +122,37 @@ struct ToolbarBuildTimeStamp: ToolbarItem {
 
 } // namespace
 
-Editor::Editor():
-    viewManager(this, makeReceiver()), mSelection(makeReceiver()) {
+Editor::Editor(): impl(std::make_unique<Impl>(this)) {
     setRunLoopMode(RunLoopMode::EventDriven);
-    cmd.add("Save", { Key::S, ModFlags::Control }, [this] { saveAll(); });
-    cmd.add("Simulate", { Key::R, ModFlags::Control },
-            [this] { startSimulation(); }, [this] {
-        return !coreSystems().sceneSystem().scenes().empty() && !isSimulating();
-    });
-    cmd.add("Stop Simulation", { Key::Period, ModFlags::Control },
-            [this] { stopSimulation(); }, [this] { return isSimulating(); });
     // clang-format off
-    dockspace.setLeftToolbar({
+    addCommand({
+        "Save", { Key::S, ModFlags::Control }, [this] { saveAll(); }
+    });
+    auto* simCmd = addCommand({
+        "Simulate",
+        { Key::R, ModFlags::Control }, [this] { startSimulation(); },
+        [this] {
+            return !coreSystems().sceneSystem().scenes().empty() && 
+                   !isSimulating();
+        }
+    });
+    auto* stopSimCmd = addCommand({
+        "Stop Simulation",
+        { Key::Period, ModFlags::Control },
+        [this] { stopSimulation(); },
+        [this] { return isSimulating(); }
+    });
+    impl->dockspace.setLeftToolbar({
         ToolbarDropdownMenu()
             .icon([] { return "menu"; })
             .content([this] {
                 menuBar();
             }),
         ToolbarSpacer(),
-        ToolbarIconButton(cmd.find("Stop Simulation"), "stop"),
-        ToolbarIconButton(cmd.find("Simulate"), "play")
+        ToolbarIconButton(simCmd, "stop"),
+        ToolbarIconButton(stopSimCmd, "play")
     });
-    dockspace.setCenterToolbar({
+    impl->dockspace.setCenterToolbar({
         ToolbarIconButton("bank")
             .onClick([] {
                 Logger::Trace("Some Button Pressed");
@@ -105,7 +164,7 @@ Editor::Editor():
             })
             .tooltip("Reload Shaders")
     });
-    dockspace.setRightToolbar({
+    impl->dockspace.setRightToolbar({
         ToolbarIconButton("attention-circled")
             .onClick([]{ Logger::Trace("Some Button Clicked"); }),
         ToolbarSpacer{},
@@ -119,9 +178,13 @@ Editor::Editor():
     // clang-format on
 }
 
+Editor::~Editor() = default;
+
+EntitySelectionManager& Editor::selection() { return impl->selection; }
+
 void Editor::openView(std::string name, std::function<void(View&)> completion) {
     dispatch(DispatchToken::NextFrame, [=, this] {
-        auto* view = viewManager.openView(name);
+        auto* view = impl->viewManager.openView(name);
         if (view && completion) {
             completion(*view);
         }
@@ -135,6 +198,13 @@ void Editor::stopSimulation() { coreSystems().runtime().stop(); }
 bool Editor::isSimulating() const {
     return coreSystems().runtime().state() == RuntimeState::Running;
 }
+
+void Editor::invalidateUI() {
+    impl->trickleEmptyEventCount = 3;
+    postEmptySystemEvent();
+}
+
+bloom::Window* Editor::mainWindow() const { return impl->mainWindow; }
 
 void Editor::init() {
     BL_PROFILE_FUNCTION();
@@ -153,34 +223,6 @@ void Editor::initRenderer() {
     coreSystems().setRenderer(std::move(editorRenderer));
 }
 
-struct Editor::Impl {
-    struct EditorWindowDelegate: WindowDelegate {
-        EditorWindowDelegate(Editor* editor): editor(editor) {}
-
-        void onTextInput(unsigned code) override {
-            editor->imguiCtx.onTextInput(code);
-        }
-
-        void onResize(int2) override { editor->invalidateUI(); }
-
-        void onClose() override {
-            editor->saveConfigToDisk();
-            editor->closeAllWindows();
-            editor->_mainWindow = nullptr;
-            editor->imguiCtx.context->Viewports[0]->PlatformHandle = nullptr;
-        }
-
-        void onDestroy() override {
-            editor->_mainWindow = nullptr;
-            editor->imguiCtx.context->Viewports[0]->PlatformHandle = nullptr;
-        }
-
-        void onFocus() override { editor->dockspace.takeFocus(); }
-
-        Editor* editor;
-    };
-};
-
 void Editor::createMainWindow() {
     BL_PROFILE_FUNCTION();
     auto desc = loadWindowConfig();
@@ -191,19 +233,19 @@ void Editor::createMainWindow() {
     window.createDefaultSwapchain(device());
     window.setCommandQueue(device().createCommandQueue());
     window.setMinSize({ 600, 400 });
-    _mainWindow = &window;
+    impl->mainWindow = &window;
 }
 
 void Editor::initImGui() {
     BL_PROFILE_FUNCTION();
     ImGuiContextDescription desc;
     desc.iniFilePath = libraryDir() / "imgui.ini";
-    imguiCtx.init(*this, desc);
+    impl->imguiCtx.init(*this, desc);
 }
 
 void Editor::shutdown() {
     saveConfigToDisk();
-    imguiCtx.shutdown();
+    impl->imguiCtx.shutdown();
 }
 
 void Editor::frame() {
@@ -211,7 +253,7 @@ void Editor::frame() {
     /// the next frame is being rendered. Because ImGui relies on continuous
     /// renderering we need to draw a few frames after every interaction to make
     /// sure views really appear etc.
-    if (trickleEmptyEventCount-- > 0) {
+    if (impl->trickleEmptyEventCount-- > 0) {
         postEmptySystemEvent();
     }
     /// If we simulate we want to render continuously
@@ -224,12 +266,12 @@ void Editor::frame() {
         return;
     }
     auto& window = *mainWindow();
-    imguiCtx.newFrame();
-    dockspace.display(window);
-    viewManager.display();
-    debugViews.display();
-    imguiCtx.endFrame();
-    imguiCtx.drawFrame();
+    impl->imguiCtx.newFrame();
+    impl->dockspace.display(window);
+    impl->viewManager.display();
+    impl->debugViews.display();
+    impl->imguiCtx.endFrame();
+    impl->imguiCtx.drawFrame();
 }
 
 void Editor::menuBar() {
@@ -245,12 +287,12 @@ void Editor::menuBar() {
     if (ImGui::BeginMenu("Views")) {
         for (auto& entry: ViewRegistry::entries()) {
             if (ImGui::MenuItem(entry.name().c_str())) {
-                viewManager.openView(entry);
+                impl->viewManager.openView(entry);
             }
         }
         ImGui::EndMenu();
     }
-    debugViews.menubar();
+    impl->debugViews.menubar();
     if (ImGui::BeginMenu("Profile")) {
         if (ImGui::MenuItem("Profiler")) {
             Logger::Debug("Profiler view not implemented");
@@ -261,12 +303,12 @@ void Editor::menuBar() {
 
 bool Editor::onInput(InputEvent e) {
     invalidateUI();
-    imguiCtx.onInput(e);
-    if (viewManager.onInput(e)) {
+    impl->imguiCtx.onInput(e);
+    if (impl->viewManager.onInput(e)) {
         return true;
     }
     /// Give to ourself
-    cmd.onInput(e);
+    impl->cmd.onInput(e);
     return e.handled();
 }
 
@@ -292,7 +334,7 @@ void Editor::saveConfigToDisk() {
     if (!windows.empty()) {
         root["Window"] = windows.front()->getDescription();
     }
-    root["Views"] = viewManager.serialize();
+    root["Views"] = impl->viewManager.serialize();
     YAML::Emitter out;
     out << root;
     auto filename = configFile();
@@ -309,7 +351,7 @@ void Editor::restoreConfigFromDisk() {
     YAML::Node root = getStoredConfig();
     Logger::Warn("Resetting style colors on startup");
     ImGui::StyleColorsDark();
-    viewManager.deserialize(root["Views"]);
+    impl->viewManager.deserialize(root["Views"]);
 }
 
 WindowDescription Editor::loadWindowConfig() {
@@ -326,16 +368,15 @@ WindowDescription Editor::loadWindowConfig() {
 }
 
 void Editor::autoConfigSave() {
-    autoConfigSaveTimer -= time().delta;
-    if (autoConfigSaveTimer <= 0) {
+    impl->autoConfigSaveTimer -= time().delta;
+    if (impl->autoConfigSaveTimer <= 0) {
         saveConfigToDisk();
-        autoConfigSaveTimer = saveConfigInterval();
+        impl->autoConfigSaveTimer = saveConfigInterval();
     }
 }
 
-void Editor::saveAll() { coreSystems().assetManager().saveAll(); }
-
-void Editor::invalidateUI() {
-    trickleEmptyEventCount = 3;
-    postEmptySystemEvent();
+Command const* Editor::addCommand(Command command) {
+    return impl->cmd.add(std::move(command));
 }
+
+void Editor::saveAll() { coreSystems().assetManager().saveAll(); }

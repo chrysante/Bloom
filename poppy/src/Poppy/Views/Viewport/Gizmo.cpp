@@ -8,7 +8,7 @@
 
 #include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Scene.h"
-#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 
 using namespace bloom;
 using namespace vml::short_types;
@@ -74,7 +74,8 @@ static std::pair<bool, vml::float4x4> manipulateGizmo(
     return { false, 0 };
 }
 
-void Gizmo::display(bloom::Camera const& camera, SelectionContext& selection) {
+void Gizmo::display(bloom::Camera const& camera,
+                    EntitySelectionManager& selection) {
     if (selection.empty()) {
         return;
     }
@@ -110,7 +111,7 @@ void Gizmo::display(bloom::Camera const& camera, SelectionContext& selection) {
 
     if (!usedLastFrame && _input && _input->keyDown(Key::LeftShift)) {
         entity = scene.cloneEntity(entity);
-        selection.select(entity);
+        selection.set(entity);
     }
 
     auto const newLocalTransform =

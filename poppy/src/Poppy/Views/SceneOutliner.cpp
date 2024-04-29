@@ -17,7 +17,7 @@
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
@@ -158,7 +158,7 @@ void SceneOutliner::displayEntity(bloom::EntityHandle e) {
     assert(!!e);
     TreeNodeDescription desc;
     desc.id = e.raw();
-    desc.selected = selection().isSelected(e);
+    desc.selected = selection().contains(e);
     desc.expanded = expanded(e);
     desc.isLeaf = e.scene().isLeaf(e);
     desc.name = e.get<bloom::TagComponent>().name;
@@ -175,7 +175,7 @@ void SceneOutliner::displayEntity(bloom::EntityHandle e) {
                 if (ImGui::MenuItem("Delete Entity")) {
                     dispatch(DispatchToken::NextFrame, [this, e] {
                         e.scene().deleteEntity(e);
-                        selection().deselect(e);
+                        selection().erase(e);
                     });
 
                     ImGui::CloseCurrentPopup();
@@ -186,7 +186,7 @@ void SceneOutliner::displayEntity(bloom::EntityHandle e) {
         dragDropSource(e);
         dragDropTarget(e);
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-            selection().select(e);
+            selection().set(e);
         }
         if (isExpanded) {
             auto const children = e.scene().gatherChildren(e);

@@ -19,7 +19,7 @@ std::span<Scene* const> BasicSceneInspector::scenes() const {
     return view->editor().coreSystems().sceneSystem().scenes();
 }
 
-SelectionContext& BasicSceneInspector::selection() const {
+EntitySelectionManager& BasicSceneInspector::selection() const {
     return view->editor().selection();
 }
 

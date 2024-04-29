@@ -9,21 +9,21 @@ namespace poppy {
 
 class EditorRenderer;
 struct EditorFramebuffer;
-class SelectionContext;
+class EntitySelectionManager;
 
 class EditorSceneRenderer: public bloom::SceneRenderer {
 public:
     using bloom::SceneRenderer::SceneRenderer;
 
-    void drawOverlays(SelectionContext const&, OverlayDrawDescription const&,
-                      bloom::Framebuffer&, EditorFramebuffer&,
-                      bloom::CommandQueue&);
+    void drawOverlays(EntitySelectionManager const&,
+                      OverlayDrawDescription const&, bloom::Framebuffer&,
+                      EditorFramebuffer&, bloom::CommandQueue&);
 
 private:
     void submitExtra() override;
 
 private:
-    SelectionContext const* mSelection = nullptr;
+    EntitySelectionManager const* mSelection = nullptr;
     OverlayDrawDescription mDrawDesc;
 };
 

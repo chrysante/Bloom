@@ -7,7 +7,7 @@
 #include "Bloom/Scene/Components/AllComponents.h"
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 #include "Poppy/Views/Viewport/Viewport.h"
 
 using namespace bloom;
@@ -92,7 +92,7 @@ void ViewportOverlays::drawLightOverlays() {
                 viewport->viewSpaceToScreenSpace(positionVS.xy);
             auto const entity = scene->getHandle(id);
             drawOneLightOverlay(entity, positionOnScreen,
-                                selection.isSelected(entity),
+                                selection.contains(entity),
                                 Transform::fromMatrix(transform.matrix),
                                 light.light);
         });

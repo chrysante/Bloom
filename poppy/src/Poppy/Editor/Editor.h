@@ -1,33 +1,30 @@
 #ifndef POPPY_EDITOR_EDITOR_H
 #define POPPY_EDITOR_EDITOR_H
 
-#include "Poppy/Editor/SelectionContext.h"
-
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
-#include <utl/messenger.hpp>
-
 #include "Bloom/Application/Application.h"
-#include "Bloom/Application/Window.h"
-#include "Poppy/UI/CommandPalette.h"
-#include "Poppy/UI/Dockspace.h"
-#include "Poppy/UI/ImGuiContext.h"
-#include "Poppy/UI/ViewManager.h"
-#include "Poppy/Views/BasicSceneInspector.h"
-#include "Poppy/Views/DebugViews.h"
+#include "Bloom/Application/Fwd.h"
+#include "Poppy/UI/Fwd.h"
 
 namespace poppy {
+
+class EntitySelectionManager;
+class ImGuiContext;
 
 class Editor: public bloom::Application {
 public:
     Editor();
 
-    /// The entity selection context. This is owned by the editor because
-    /// several views edit and read this
-    SelectionContext& selection() { return mSelection; }
+    ~Editor();
+
+    /// The entity selection manager. This is owned by the editor and shared
+    /// between views
+    EntitySelectionManager& selection();
 
     /// Opens the view with \p name on the next frame. \p completion will be run
     /// after opening the view
@@ -41,7 +38,7 @@ public:
     void invalidateUI();
 
     /// ImGui expects one window to be the "main" window so we have this here
-    bloom::Window* mainWindow() const { return _mainWindow; }
+    bloom::Window* mainWindow() const;
 
 private:
     struct Impl;
@@ -57,6 +54,7 @@ private:
 
     void menuBar();
     bool onInput(bloom::InputEvent event) override;
+    Command const* addCommand(Command command);
 
     /// # Config serialization
     /// @{
@@ -80,15 +78,7 @@ private:
     /// Stops a running simulation
     void stopSimulation();
 
-    bloom::Window* _mainWindow = nullptr;
-    ImGuiContext imguiCtx;
-    Dockspace dockspace;
-    ViewManager viewManager;
-    CommandPalette cmd;
-    DebugViews debugViews;
-    SelectionContext mSelection;
-    float autoConfigSaveTimer = 0;
-    std::atomic<int> trickleEmptyEventCount = 0;
+    std::unique_ptr<Impl> impl;
 };
 
 /// Hack to make ImGui happy, described in the source file

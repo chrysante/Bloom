@@ -22,7 +22,7 @@ namespace poppy {
 
 class Editor;
 class View;
-class SelectionContext;
+class EntitySelectionManager;
 
 enum struct LightType {
     none = -1,
@@ -58,7 +58,7 @@ protected:
 public:
     std::span<bloom::Scene* const> scenes() const;
 
-    SelectionContext& selection() const;
+    EntitySelectionManager& selection() const;
 
     bloom::AssetManager& assetManager() const;
 

@@ -4,7 +4,7 @@
 #include "Bloom/Scene/Components/MeshRenderer.h"
 #include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Scene.h"
-#include "Poppy/Editor/SelectionContext.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 #include "Poppy/Renderer/EditorRenderer.h"
 
 using namespace bloom;
@@ -34,7 +34,7 @@ void EditorSceneRenderer::submitExtra() {
     }
 }
 
-void EditorSceneRenderer::drawOverlays(SelectionContext const& selection,
+void EditorSceneRenderer::drawOverlays(EntitySelectionManager const& selection,
                                        OverlayDrawDescription const& drawDesc,
                                        Framebuffer& framebuffer,
                                        EditorFramebuffer& editorFramebuffer,

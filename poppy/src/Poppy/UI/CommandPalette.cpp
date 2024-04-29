@@ -25,15 +25,21 @@ static ModFlags canonicalize(ModFlags mods) {
     return mods;
 }
 
-void CommandPalette::add(std::string name, KeyCombination keyComb,
-                         std::function<void()> fn,
-                         std::function<bool()> enabled) {
-    Command command = { name, std::move(fn), std::move(enabled) };
-    nameMap.insert({ name, command });
-    auto& list = keyMap[keyComb.key];
+Command const* CommandPalette::add(std::string name, KeyCombination keyComb,
+                                   std::function<void()> fn,
+                                   std::function<bool()> enabled) {
+    return add({ std::move(name), keyComb, std::move(fn), std::move(enabled) });
+}
+
+Command const* CommandPalette::add(Command cmd) {
+    cmd.keyComb.modFlags = canonicalize(cmd.keyComb.modFlags);
+    auto* result = &nameMap.insert({ cmd.name(), cmd }).first->second;
+    auto keyComb = cmd.keyCombination();
     if (keyComb.key != Key::None) {
-        list.push_back({ canonicalize(keyComb.modFlags), command });
+        auto& list = keyMap[keyComb.key];
+        list.push_back({ canonicalize(keyComb.modFlags), cmd });
     }
+    return result;
 }
 
 void CommandPalette::doCommand(std::string_view name) const {

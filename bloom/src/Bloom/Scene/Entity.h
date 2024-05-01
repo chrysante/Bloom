@@ -15,6 +15,8 @@
 
 namespace bloom {
 
+struct HierarchyComponent;
+
 /// Unique entity identifier
 struct BLOOM_API EntityID {
 public:
@@ -172,6 +174,22 @@ public:
 
     /// \Returns `true` if this handle refers to a valid entity
     explicit operator bool() const { return bool(ID()); }
+
+    /// \Returns the parent entity if this entity has a parent
+    EntityHandleEx getParent() const {
+        auto* hierarchy = tryGet<HierarchyComponent>();
+        if (!hierarchy) {
+            return {};
+        }
+        return scene().getHandle(hierarchy->parent);
+    }
+
+    ///
+    void unparent() const
+        requires(!IsConst)
+    {
+        scene().unparent(ID());
+    }
 
 private:
     SceneT* _scene = nullptr;

@@ -6,6 +6,7 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <utl/function_view.hpp>
 #include <utl/hashset.hpp>
 #include <utl/scope_guard.hpp>
 #include <utl/stack.hpp>
@@ -35,29 +36,31 @@ public:
 
 private:
     void display() override;
-    void onInput(bloom::InputEvent&) override;
+    void onInput(InputEvent&) override;
 
     struct TreeNodeDescription {
-        std::size_t id = 0;
+        size_t id = 0;
         bool selected = false;
         bool expanded = false;
         bool isLeaf = true;
         std::string_view name;
     };
-    void treeNode(TreeNodeDescription const&, auto&& block);
-    void displayEntity(bloom::EntityHandle);
-    void displayScene(bloom::Scene&);
+    bool treeNode(TreeNodeDescription const& desc);
+    void displayScene(Scene& scene);
+    void sceneContextMenu(Scene& scene);
+    void displayEntity(EntityHandle entity);
+    void entityContextMenu(EntityHandle entity);
 
-    void dragDropSource(bloom::EntityHandle child);
-    void dragDropTarget(bloom::EntityHandle parent);
+    void dragDropSource(EntityHandle child);
+    void dragDropTarget(EntityHandle parent);
 
-    bool expanded(bloom::Scene const*) const;
-    bool expanded(bloom::ConstEntityHandle) const;
-    void setExpanded(bloom::Scene const*, bool);
-    void setExpanded(bloom::ConstEntityHandle, bool);
+    bool expanded(Scene const*) const;
+    bool expanded(ConstEntityHandle) const;
+    void setExpanded(Scene const*, bool);
+    void setExpanded(ConstEntityHandle, bool);
 
 private:
-    utl::hashset<bloom::ConstEntityHandle> mExpanded;
+    utl::hashset<ConstEntityHandle> mExpanded;
 };
 
 } // namespace
@@ -69,19 +72,41 @@ void SceneOutliner::display() {
         displayEmptyWithReason("No Active Scene");
         return;
     }
+    if (isSimulating()) {
+        displayEmptyWithReason("Simulation Running");
+        return;
+    }
     for (auto scene: scenes()) {
         displayScene(*scene);
     }
 }
 
-void SceneOutliner::onInput(bloom::InputEvent&) {}
+void SceneOutliner::onInput(InputEvent&) {}
 
-void SceneOutliner::treeNode(TreeNodeDescription const& desc, auto&& block) {
+[[maybe_unused]] static void eyeButton() {
+    auto& style = ImGui::GetStyle();
+    ImGui::SetCursorPosX(style.WindowPadding.x + style.FramePadding.x);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, float2());
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, float2());
+    auto icon = FontManager::get({ IconSize::_16 }, "eye");
+    ImGui::PushFont(icon.font);
+    ImGui::PushStyleColor(ImGuiCol_Button, 0);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
+    ImGui::PushStyleColor(ImGuiCol_Border, 0);
+    ImGui::Button(icon.utf8Rep.c_str());
+    ImGui::PopStyleColor(4);
+    ImGui::PopFont();
+    ImGui::PopStyleVar(2);
+}
+
+bool SceneOutliner::treeNode(TreeNodeDescription const& desc) {
     ImGuiTreeNodeFlags flags = 0;
     flags |= ImGuiTreeNodeFlags_OpenOnArrow;
     flags |= ImGuiTreeNodeFlags_OpenOnDoubleClick;
     flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
     flags |= ImGuiTreeNodeFlags_SpanFullWidth;
+    flags |= ImGuiTreeNodeFlags_FramePadding;
     if (desc.selected) {
         flags |= ImGuiTreeNodeFlags_Selected;
     }
@@ -91,113 +116,113 @@ void SceneOutliner::treeNode(TreeNodeDescription const& desc, auto&& block) {
     if (desc.isLeaf) {
         flags |= ImGuiTreeNodeFlags_Leaf;
     }
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 0, 0 });
     bool nodeExpanded =
         ImGui::TreeNodeEx((void*)desc.id, flags, "%s", desc.name.data());
-    block(nodeExpanded);
+    ImGui::PopStyleVar();
+    return nodeExpanded;
 }
 
-void SceneOutliner::displayScene(bloom::Scene& scene) {
-    TreeNodeDescription desc;
-    desc.id = (size_t)&scene;
-    desc.selected = false;
-    desc.expanded = expanded(&scene);
-    desc.isLeaf = false;
-    desc.name = scene.name();
-    treeNode(desc, [&](bool isExpanded) {
-        utl_defer {
-            if (isExpanded) ImGui::TreePop();
-        };
-        /* Context Menu */ {
-            ImGui::PushID(utl::narrow_cast<int>(desc.id));
-            utl_defer { ImGui::PopID(); };
-            ImGui::OpenPopupOnItemClick("Context Menu");
-            if (ImGui::BeginPopup("Context Menu")) {
-                utl_defer { ImGui::EndPopup(); };
-                if (ImGui::BeginMenu("New Entity")) {
-                    if (ImGui::MenuItem("Mesh Renderer")) {
-                        auto entity = scene.createEntity("Mesh Renderer");
-                        entity.add(MeshRendererComponent{});
-                    }
-                    ImGui::Separator();
-                    if (ImGui::MenuItem("Point Light")) {
-                        auto entity = scene.createEntity("Point Light");
-                        entity.add(PointLightComponent{});
-                    }
-                    if (ImGui::MenuItem("Spotlight")) {
-                        auto entity = scene.createEntity("Spotlight");
-                        entity.add(SpotLightComponent{});
-                    }
-                    if (ImGui::MenuItem("Directional Light")) {
-                        auto entity = scene.createEntity("Directional Light");
-                        entity.add(DirectionalLightComponent{});
-                    }
-                    if (ImGui::MenuItem("Sky Light")) {
-                        auto entity = scene.createEntity("Sky Light");
-                        entity.add(SkyLightComponent{});
-                    }
-                    ImGui::EndMenu();
-                }
-                if (ImGui::MenuItem("Unload")) {
-                    editor().coreSystems().sceneSystem().unloadScene(
-                        scene.handle().ID());
-                    return;
-                }
-            }
+void SceneOutliner::displayScene(Scene& scene) {
+    bool isExpanded = treeNode({ .name = scene.name(),
+                                 .id = scene.hashID(),
+                                 .selected = false,
+                                 .expanded = expanded(&scene),
+                                 .isLeaf = false });
+    sceneContextMenu(scene);
+    setExpanded(&scene, isExpanded);
+    dragDropTarget(EntityHandle(EntityID{}, &scene));
+    if (isExpanded) {
+        for (auto id: scene.gatherRoots()) {
+            displayEntity(scene.getHandle(id));
         }
-        setExpanded(&scene, isExpanded);
-        dragDropTarget(EntityHandle(EntityID{}, &scene));
-        if (isExpanded) {
-            for (auto id: scene.gatherRoots()) {
-                displayEntity(scene.getHandle(id));
-            }
-        }
-    });
+        ImGui::TreePop();
+    }
 }
 
-void SceneOutliner::displayEntity(bloom::EntityHandle e) {
-    assert(!!e);
-    TreeNodeDescription desc;
-    desc.id = e.raw();
-    desc.selected = selection().contains(e);
-    desc.expanded = expanded(e);
-    desc.isLeaf = e.scene().isLeaf(e);
-    desc.name = e.get<bloom::TagComponent>().name;
-    treeNode(desc, [&](bool isExpanded) {
-        utl_defer {
-            if (isExpanded) ImGui::TreePop();
-        };
-        /* Context Menu */ {
-            ImGui::PushID(utl::narrow_cast<int>(desc.id));
-            utl_defer { ImGui::PopID(); };
-            ImGui::OpenPopupOnItemClick("Context Menu");
-            if (ImGui::BeginPopup("Context Menu")) {
-                utl_defer { ImGui::EndPopup(); };
-                if (ImGui::MenuItem("Delete Entity")) {
-                    dispatch(DispatchToken::NextFrame, [this, e] {
-                        e.scene().deleteEntity(e);
-                        selection().erase(e);
-                    });
-
-                    ImGui::CloseCurrentPopup();
-                }
-            }
+void SceneOutliner::sceneContextMenu(Scene& scene) {
+    ImGui::PushID((void*)scene.hashID());
+    utl_defer { ImGui::PopID(); };
+    ImGui::OpenPopupOnItemClick("Context Menu");
+    if (!ImGui::BeginPopup("Context Menu")) {
+        return;
+    }
+    utl_defer { ImGui::EndPopup(); };
+    if (ImGui::BeginMenu("New Entity")) {
+        if (ImGui::MenuItem("Mesh Renderer")) {
+            auto entity = scene.createEntity("Mesh Renderer");
+            entity.add(MeshRendererComponent{});
         }
-        setExpanded(e, isExpanded);
-        dragDropSource(e);
-        dragDropTarget(e);
-        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-            selection().set(e);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Point Light")) {
+            auto entity = scene.createEntity("Point Light");
+            entity.add(PointLightComponent{});
         }
-        if (isExpanded) {
-            auto const children = e.scene().gatherChildren(e);
-            for (auto c: children) {
-                displayEntity(e.scene().getHandle(c));
-            }
+        if (ImGui::MenuItem("Spotlight")) {
+            auto entity = scene.createEntity("Spotlight");
+            entity.add(SpotLightComponent{});
         }
-    });
+        if (ImGui::MenuItem("Directional Light")) {
+            auto entity = scene.createEntity("Directional Light");
+            entity.add(DirectionalLightComponent{});
+        }
+        if (ImGui::MenuItem("Sky Light")) {
+            auto entity = scene.createEntity("Sky Light");
+            entity.add(SkyLightComponent{});
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Empty Entity")) {
+            scene.createEntity("Entity");
+        }
+        ImGui::EndMenu();
+    }
+    if (ImGui::MenuItem("Unload")) {
+        editor().coreSystems().sceneSystem().unloadScene(scene.handle().ID());
+        return;
+    }
 }
 
-void SceneOutliner::dragDropSource(bloom::EntityHandle child) {
+void SceneOutliner::displayEntity(EntityHandle entity) {
+    BL_ASSERT(entity);
+    bool isExpanded = treeNode({ .name = entity.get<TagComponent>().name,
+                                 .id = entity.raw(),
+                                 .selected = selection().contains(entity),
+                                 .expanded = expanded(entity),
+                                 .isLeaf = entity.scene().isLeaf(entity) });
+    entityContextMenu(entity);
+    setExpanded(entity, isExpanded);
+    dragDropSource(entity);
+    dragDropTarget(entity);
+    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+        selection().set(entity);
+    }
+    if (isExpanded) {
+        for (auto c: entity.scene().gatherChildren(entity)) {
+            displayEntity(entity.scene().getHandle(c));
+        }
+        ImGui::TreePop();
+    }
+}
+
+void SceneOutliner::entityContextMenu(EntityHandle entity) {
+    ImGui::PushID((int)entity.raw());
+    utl_defer { ImGui::PopID(); };
+    ImGui::OpenPopupOnItemClick("Context Menu");
+    if (ImGui::BeginPopup("Context Menu")) {
+        utl_defer { ImGui::EndPopup(); };
+        if (ImGui::MenuItem("Delete Entity")) {
+            dispatch(DispatchToken::NextFrame, [this, entity] {
+                entity.scene().deleteEntity(entity);
+                selection().erase(entity);
+            });
+        }
+        if (entity.getParent() && ImGui::MenuItem("Unparent")) {
+            dispatch(DispatchToken::NextFrame, [entity] { entity.unparent(); });
+        }
+    }
+}
+
+void SceneOutliner::dragDropSource(EntityHandle child) {
     if (ImGui::BeginDragDropSource()) {
         ImGui::SetDragDropPayload("DD-Entity-Hierarchy-View", &child,
                                   sizeof child);
@@ -206,7 +231,7 @@ void SceneOutliner::dragDropSource(bloom::EntityHandle child) {
     }
 }
 
-void SceneOutliner::dragDropTarget(bloom::EntityHandle parent) {
+void SceneOutliner::dragDropTarget(EntityHandle parent) {
     using namespace bloom;
     if (!ImGui::BeginDragDropTarget()) {
         return;
@@ -230,7 +255,7 @@ void SceneOutliner::dragDropTarget(bloom::EntityHandle parent) {
             Logger::Warn("Hierarchy Error");
             return;
         }
-        scene.unparent(child);
+        child.unparent();
         if (parent) {
             scene.parent(child, parent);
             setExpanded(parent, true);

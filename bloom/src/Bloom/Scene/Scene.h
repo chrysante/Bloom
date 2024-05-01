@@ -137,6 +137,9 @@ public:
             [&](entt::entity ID) { std::invoke(callback, EntityID(ID)); });
     }
 
+    /// \Returns `std::hash<>{}(handle().ID())`
+    size_t hashID() const;
+
     /// \Returns a copy of \p scene
     Reference<Scene> clone();
 

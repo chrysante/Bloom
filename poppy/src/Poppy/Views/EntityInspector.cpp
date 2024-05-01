@@ -184,13 +184,14 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
                                   Appearance::get()
                                       .style()
                                       .colors.highlightControlFrameHovered);
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xFFffFFff);
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                                 float2(2, 1) * framePadding);
             ImGui::SetNextItemWidth(addButtonSize.x);
             bool comboOpen = ImGui::BeginCombo("##-add-component",
                                                "Add Component",
                                                ImGuiComboFlags_NoArrowButton);
-            ImGui::PopStyleColor(2);
+            ImGui::PopStyleColor(3);
             ImGui::PopStyleVar();
             if (comboOpen) {
                 withFont(FontDesc::UIDefault(), [&] {
@@ -506,15 +507,15 @@ void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
     fullWidth();
     ImGui::SliderInt("num-cascades", &nc, 1, 10);
     light.numCascades = nc;
-    beginProperty("Cascade Distribution Exponent");
+    beginProperty("Distribution Exponent");
     fullWidth();
     ImGui::SliderFloat("cascade-distribution-exponent",
                        &light.cascadeDistributionExponent, 1, 4);
-    beginProperty("Cascade Transition Fraction");
+    beginProperty("Transition");
     fullWidth();
     ImGui::SliderFloat("cascade-transition-fraction",
                        &light.cascadeTransitionFraction, 0, 1);
-    beginProperty("Distance Fadeout Fraction");
+    beginProperty("Fadeout");
     fullWidth();
     ImGui::SliderFloat("shadow-distance-fadeout-fraction",
                        &light.shadowDistanceFadeoutFraction, 0, 1);

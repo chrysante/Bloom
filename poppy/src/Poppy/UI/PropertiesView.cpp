@@ -18,25 +18,26 @@ void propertiesView::header(std::string_view name, FontDesc const& font) {
         float4 color = GImGui->Style.Colors[ImGuiCol_Text];
         color.a *= 0.85;
         ImGui::PushStyleColor(ImGuiCol_Text, color);
-        ImGui::Text("%s", name.data());
+        ImGui::TextEx(name.data());
         ImGui::PopStyleColor();
     });
 }
 
 bool propertiesView::beginSection() {
-    bool const open =
+    bool open =
         ImGui::BeginTable("Property Table", 2,
                           ImGuiTableFlags_Resizable |
                               ImGuiTableFlags_NoBordersInBodyUntilResize);
-    if (open) {
-        ImGui::TableSetupColumn(
-            "Label",
-            ImGuiTableColumnFlags_WidthStretch); // Default to 100.0f
-        ImGui::TableSetupColumn(
-            "Property",
-            ImGuiTableColumnFlags_WidthStretch); // Default to 200.0f
+    if (!open) {
+        return false;
     }
-    return open;
+    ImGui::TableSetupColumn("Label",
+                            ImGuiTableColumnFlags_WidthStretch); // Default to
+                                                                 // 100.0f
+    ImGui::TableSetupColumn("Property",
+                            ImGuiTableColumnFlags_WidthStretch); // Default to
+                                                                 // 200.0f
+    return true;
 }
 
 bool propertiesView::beginSection(std::string_view name, FontDesc const& font) {

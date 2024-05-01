@@ -68,7 +68,8 @@ Reference<Scene> Scene::clone() {
     return result;
 }
 
-/// MARK: Serialize
+size_t Scene::hashID() const { return std::hash<utl::uuid>{}(handle().ID()); }
+
 template <typename T>
 static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
                                utl::tag<T>) {

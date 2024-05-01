@@ -46,139 +46,70 @@ bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
     }
     ImGuiContext& g = *GImGui;
     auto& style = ImGui::GetStyle();
-    bool value_changed = false;
+    bool valueChanged = false;
     float height = ImGui::GetFontSize() + 2 * style.FramePadding.y;
     ImGui::BeginGroup();
     ImGui::PushID(label);
-    constexpr std::array colors = { ImU32(0xFF1111FFu), ImU32(0xFF00CC00u),
-                                    ImU32(0xFFFF2222u) };
+    constexpr std::array colors = { IM_COL32(255, 17, 17, 255),
+                                    IM_COL32(0, 204, 0, 255),
+                                    IM_COL32(34, 127, 255, 255) };
     constexpr std::array labels = { "X", "Y", "Z" };
-    ImVec2 labelButtonSize = { height * 1.5f, height };
-    float fullWidth = ImGui::CalcItemWidth();
+    constexpr std::array itemLabels = { "###X", "###Y", "###Z" };
+    /// We display labels if each component is at least 90 pixels in width
+    float fullWidth = 3 * ImFloor(ImGui::CalcItemWidth() / 3);
     bool haveLabelButtons = fullWidth / components >= 90;
-    float itemWidth =
-        fullWidth / components - (haveLabelButtons ? labelButtonSize.x : 0);
-    auto beginCursor = window->DC.CursorPos;
+    float2 labelButtonSize = float2(haveLabelButtons ? height : 0.0f);
+    float itemWidth = fullWidth / components - labelButtonSize.x;
+    float2 beginCursor = window->DC.CursorPos;
     auto* DL = ImGui::GetWindowDrawList();
+    float rounding = style.FrameRounding;
+    float2 min = beginCursor;
+    float2 max = beginCursor + float2(fullWidth, height);
+    DL->AddRect(min + float2(1, 1), max + float2(1, 1),
+                ImGui::GetColorU32(ImGuiCol_BorderShadow), rounding, 0, 1);
+    ImGui::PushStyleColor(ImGuiCol_BorderShadow, 0);
+    ImGui::PushStyleColor(ImGuiCol_Border, 0);
     for (int i = 0; i < components; i++) {
-        ImGui::PushID(i);
-        if (i > 0) {
-            ImGui::SameLine(0, 0);
-        }
-        if (haveLabelButtons) {
-            auto cursorPos = window->DC.CursorPos;
-            if (i == 0) {
-                float rounding = style.FrameRounding;
-                DL->PathLineTo(
-                    ImVec2(cursorPos.x + labelButtonSize.x, cursorPos.y));
-                DL->PathLineTo(ImVec2(cursorPos.x + labelButtonSize.x,
-                                      cursorPos.y + labelButtonSize.y));
-                DL->PathArcToFast(ImVec2(cursorPos.x + rounding,
-                                         cursorPos.y + labelButtonSize.y -
-                                             rounding),
-                                  rounding, 3, 6);
-                DL->PathArcToFast(ImVec2(cursorPos.x + rounding,
-                                         cursorPos.y + rounding),
-                                  rounding, 6, 9);
-                DL->PathFillConvex(colors[i]);
-            }
-            else {
-                DL->AddRectFilled(cursorPos, cursorPos + labelButtonSize,
-                                  colors[i]);
-            }
-            auto cp = ImGui::GetCursorPos();
-            auto label = labels[i];
+        float2 cursorPos =
+            beginCursor +
+            float2(i * (itemWidth + labelButtonSize.x) + labelButtonSize.x, 0);
+        ImGui::SetCursorScreenPos(cursorPos);
+        ImGui::SetNextItemWidth(itemWidth);
+        ImDrawFlags drawFlags = i == 0 ? (haveLabelButtons ?
+                                              ImDrawFlags_RoundCornersNone :
+                                              ImDrawFlags_RoundCornersLeft) :
+                                i == 1 ? ImDrawFlags_RoundCornersNone :
+                                         ImDrawFlags_RoundCornersRight;
+        valueChanged |= ImGui::DragFloat(itemLabels[i], &v[i], v_speed, v_min,
+                                         v_max, format, flags, drawFlags);
+    }
+    ImGui::PopStyleColor(2);
+    if (haveLabelButtons) {
+        for (int i = 0; i < components; i++) {
+            ImDrawFlags drawFlags = i == 0 ? ImDrawFlags_RoundCornersLeft :
+                                             ImDrawFlags_RoundCornersNone;
+            float2 cursorPos = beginCursor + float2(i * fullWidth / 3, 0);
+            float2 pMin = cursorPos - float2(1, 0);
+            float2 pMax = cursorPos + labelButtonSize + float2(1, 0);
+            DL->AddRectFilled(pMin, pMax, colors[i], rounding, drawFlags);
+            char const* label = labels[i];
             withFont(FontDesc::UIDefault().setWeight(FontWeight::Black), [&] {
                 auto textSize = ImGui::CalcTextSize(label);
-                ImGui::SetCursorPos(
-                    cp +
-                    ImVec2((labelButtonSize.x - textSize.x) / 2,
-                           i == 0 ? (labelButtonSize.y - textSize.y) / 2 : 0));
-                ImGui::PushStyleColor(ImGuiCol_Text, 0xFFffFFff);
-                ImGui::Text("%s", labels[i]);
-                ImGui::PopStyleColor();
-                ImGui::SetCursorPos(cp + ImVec2(labelButtonSize.x, 0));
+                float2 pos = cursorPos + (labelButtonSize - textSize) / 2;
+                DL->AddText(pos, 0xFFffFFff, labels[i]);
             });
         }
-        auto cursorPos = window->DC.CursorPos;
-        ImGui::SetNextItemWidth(itemWidth);
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, 0x0);
-        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, 0x0);
-        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, 0x0);
-        ImGui::PushStyleColor(ImGuiCol_Border, 0x0);
-        value_changed |=
-            ImGui::DragFloat("", &v[i], v_speed, v_min, v_max, format, flags);
-        ImGui::PopStyleColor(4);
-        auto [hovered, active] =
-            std::tuple{ ImGui::IsItemHovered(), ImGui::IsItemActive() };
-        ImU32 col = ImGui::GetColorU32(active  ? ImGuiCol_FrameBgActive :
-                                       hovered ? ImGuiCol_FrameBgHovered :
-                                                 ImGuiCol_FrameBg);
-        if (i == 0 && !haveLabelButtons) {
-            float rounding = style.FrameRounding;
-            DL->PathLineTo(ImVec2(cursorPos.x + itemWidth, cursorPos.y));
-            DL->PathLineTo(ImVec2(cursorPos.x + itemWidth,
-                                  cursorPos.y + labelButtonSize.y));
-            DL->PathArcToFast(ImVec2(cursorPos.x + rounding,
-                                     cursorPos.y + height - rounding),
-                              rounding, 3, 6);
-            DL->PathArcToFast(ImVec2(cursorPos.x + rounding,
-                                     cursorPos.y + rounding),
-                              rounding, 6, 9);
-            DL->PathFillConvex(col);
-        }
-        else if (i < components - 1) {
-            DL->AddRectFilled(cursorPos, cursorPos + ImVec2(itemWidth, height),
-                              col);
-        }
-        else {
-            float rounding = style.FrameRounding;
-            DL->PathLineTo(cursorPos);
-            DL->PathArcToFast(ImVec2(cursorPos.x + itemWidth - rounding,
-                                     cursorPos.y + rounding),
-                              rounding, 9, 12);
-            DL->PathArcToFast(ImVec2(cursorPos.x + itemWidth - rounding,
-                                     cursorPos.y + height - rounding),
-                              rounding, 0, 3);
-            DL->PathLineTo(ImVec2(cursorPos.x, cursorPos.y + height));
-            DL->PathFillConvex(col);
-        }
-        ImGui::PopID();
     }
-    ImGui::PopID();
-    /// Draw border
-    if (style.FrameBorderSize > 0) {
-        auto const col = ImGui::GetColorU32(ImGuiCol_Border);
-        DL->AddRect(beginCursor, beginCursor + ImVec2(fullWidth, height), col,
-                    style.FrameRounding);
-        for (int i = 0; i < components; ++i) {
-            /// Left
-            if (i > 0) {
-                DL->PathLineTo(beginCursor + ImVec2(i * (fullWidth / 3), 0));
-                DL->PathLineTo(beginCursor +
-                               ImVec2(i * (fullWidth / 3), height));
-                DL->PathStroke(col);
-            }
-            if (!haveLabelButtons) {
-                continue;
-            }
-            /// Right
-            DL->PathLineTo(
-                beginCursor +
-                ImVec2(i * ImFloor(fullWidth / 3) + labelButtonSize.x, 0));
-            DL->PathLineTo(
-                beginCursor +
-                ImVec2(i * ImFloor(fullWidth / 3) + labelButtonSize.x, height));
-            DL->PathStroke(col);
-        }
-    }
-    char const* label_end = ImGui::FindRenderedTextEnd(label);
-    if (label != label_end) {
+    DL->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_Border), rounding, 0,
+                style.FrameBorderSize);
+    ImGui::PopID(); /// Label
+    char const* labelEnd = ImGui::FindRenderedTextEnd(label);
+    if (label != labelEnd) {
         ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
-        ImGui::TextEx(label, label_end);
+        ImGui::TextEx(label, labelEnd);
     }
     ImGui::EndGroup();
-    return value_changed;
+    return valueChanged;
 }
 
 std::array<char, 64> poppy::generateUniqueID(std::string_view name, int id,

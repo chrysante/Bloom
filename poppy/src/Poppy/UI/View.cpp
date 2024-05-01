@@ -79,7 +79,12 @@ float2 View::viewSpaceToScreenSpace(float2 position) const {
     return position + data.position;
 }
 
-void View::setFocused() { ImGui::FocusWindow((ImGuiWindow*)data.imguiWindow); }
+void View::setFocused() {
+    ImGui::FocusWindow((ImGuiWindow*)data.imguiWindow);
+    if (data.window) {
+        data.window->setFocused();
+    }
+}
 
 void View::maximize() {
     data.maximized = true;
@@ -150,12 +155,12 @@ void View::doFrame() {
     if (data.bgColor) {
         ImGui::PushStyleColor(ImGuiCol_WindowBg, *data.bgColor);
     }
-    std::string displayTitle(title());
-    if (data.ID != 0) {
-        displayTitle += utl::strcat("##", data.ID);
-    }
+    std::string displayTitle = utl::strcat(title(), "###", staticName());
     if (data.maximized) {
         displayTitle += "_FS";
+    }
+    if (data.ID != 0) {
+        displayTitle += utl::strcat("_", data.ID);
     }
     bool docked = isDocked(imguiWindow);
     bool* beginOpenFlag = docked ? &data.open : nullptr;

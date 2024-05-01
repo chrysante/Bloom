@@ -36,6 +36,7 @@ View* ViewManager::openView(ViewRegistryEntry const& regEntry) {
 
 View* ViewManager::openView(std::string_view name) {
     if (auto* view = findByStaticName(name)) {
+        view->setFocused();
         return view;
     }
     auto regEntry = ViewRegistry::get(name);

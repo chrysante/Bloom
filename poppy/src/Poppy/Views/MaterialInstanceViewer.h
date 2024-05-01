@@ -14,6 +14,8 @@ namespace poppy {
 
 class MaterialInstanceViewer: public View {
 public:
+    MaterialInstanceViewer();
+
     void display() override;
 
     void setMaterialInstance(bloom::Reference<bloom::MaterialInstance>);

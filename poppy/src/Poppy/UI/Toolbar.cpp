@@ -190,15 +190,11 @@ float ToolbarSpacer::calcWidth([[maybe_unused]] float height) const {
 }
 
 void ToolbarTextItem::display(ToolbarStyle const&) {
-    withFont(getFontDesc(), [&] {
-        float textHeight = ImGui::CalcTextSize(getText()).y;
-        float defaultHeight = (float)FontDesc::UIDefault().size;
-        // This offset calculation seems to be correct but I don't understand
-        // why. I would expect we need to divide by 2, but this look better
-        float yOffset = defaultHeight - textHeight;
-        ImGui::SetCursorPos((float2)ImGui::GetCursorPos() + float2(0, yOffset));
-        ImGui::Text("%s", getText());
-    });
+    auto* font = FontManager::get(getFontDesc());
+    auto* DL = ImGui::GetWindowDrawList();
+    float2 pos = (float2)ImGui::GetCursorScreenPos() -
+                 float2(0, ImGui::GetStyle().ItemSpacing.y);
+    DL->AddText(font, 0.0f, pos, ImGui::GetColorU32(ImGuiCol_Text), getText());
 }
 
 float ToolbarTextItem::calcWidth([[maybe_unused]] float height) const {
@@ -258,7 +254,9 @@ void Toolbar::display(std::optional<float> width) noexcept {
         float2 from = pos + float2(0, heightWithPadding);
         float2 to = from + float2(ImGui::GetWindowWidth(), 0);
         auto* DL = ImGui::GetWindowDrawList();
+        DL->PushClipRect(window->Rect().Min, window->Rect().Max);
         DL->AddLine(from, to, ImGui::GetColorU32(ImGuiCol_Separator), 1);
+        DL->PopClipRect();
     }
 }
 

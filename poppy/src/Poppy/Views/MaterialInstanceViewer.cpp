@@ -14,6 +14,16 @@ using namespace poppy;
 
 POPPY_REGISTER_VIEW(MaterialInstanceViewer, "Material Instance Viewer");
 
+MaterialInstanceViewer::MaterialInstanceViewer() {
+    // clang-format off
+    setToolbar({
+        ToolbarTextItem()
+            .text([this] { return inst ? inst->name().c_str() : ""; })
+            .font(FontDesc::UIDefault().setWeight(FontWeight::Semibold))
+    });
+    // clang-format on
+}
+
 void MaterialInstanceViewer::display() {
     if (!inst) {
         displayEmptyWithReason("No Material Instance Open");
@@ -78,5 +88,4 @@ void MaterialInstanceViewer::setMaterialInstance(
         .assetManager()
         .makeAvailable(inst->handle(),
                        AssetRepresentation::CPU | AssetRepresentation::GPU);
-    setTitle(std::string(inst->name()));
 }

@@ -70,7 +70,7 @@ public:
     EntityHandleEx() = default;
 
     ///
-    EntityHandleEx(EntityID id, SceneT* scene): EntityID(id), _scene(scene) {}
+    EntityHandleEx(EntityID ID, SceneT* scene): EntityID(ID), _scene(scene) {}
 
     /// Implicit `EntityHandle -> ConstEntityHandle` conversion
     EntityHandleEx(EntityHandleEx<std::remove_const_t<SceneT>> rhs)
@@ -107,13 +107,13 @@ public:
     T& get() const
         requires(!IsConst)
     {
-        return scene().template getComponent<T>(*this);
+        return scene().template getComponent<T>(ID());
     }
 
     /// \overload
     template <ComponentType T>
     T const& get() const {
-        return scene().template getComponent<T>(*this);
+        return scene().template getComponent<T>(ID());
     }
 
     /// \Returns the component \p T of this entity if present or null
@@ -121,22 +121,31 @@ public:
     T* tryGet() const
         requires(!IsConst)
     {
-        return scene().template tryGetComponent<T>(*this);
+        return scene().template tryGetComponent<T>(ID());
     }
 
     /// \overload
     template <ComponentType T>
     T const* tryGet() const {
-        return scene().template tryGetComponent<T>(*this);
+        return scene().template tryGetComponent<T>(ID());
+    }
+
+    /// Adds the component \p component to this entity
+    /// \pre The component must not be present
+    template <ComponentType T>
+    std::remove_cvref_t<T>& add(T&& component) const
+        requires(!IsConst)
+    {
+        return scene().addComponent(ID(), std::forward<T>(component));
     }
 
     /// Adds the components \p components to this entity
-    /// \pre Components must not be present
+    /// \pre The components must not be present
     template <ComponentType... T>
     void add(T&&... components) const
         requires(!IsConst)
     {
-        scene().template addComponents(*this, std::forward<T>(components)...);
+        scene().addComponents(ID(), std::forward<T>(components)...);
     }
 
     /// Adds the components \p components to this entity if not already present
@@ -147,8 +156,8 @@ public:
         auto& s = scene();
         ([&] {
             using DT = std::decay_t<T>;
-            if (!s.template hasComponent<DT>(*this)) {
-                s.template addComponents(*this, std::forward<T>(components));
+            if (!s.template hasComponent<DT>(ID())) {
+                s.addComponents(ID(), std::forward<T>(components));
             }
         }(), ...);
     }
@@ -158,7 +167,7 @@ public:
     void remove() const
         requires(!IsConst)
     {
-        scene().template removeComponents<T...>(*this);
+        scene().template removeComponents<T...>(ID());
     }
 
     /// \Returns `true` if this handle refers to a valid entity
@@ -178,8 +187,8 @@ using ConstEntityHandle = EntityHandleEx<Scene const>;
 
 template <>
 struct std::hash<bloom::EntityID> {
-    std::size_t operator()(bloom::EntityID id) const {
-        return std::hash<decltype(id.raw())>{}(id.raw());
+    std::size_t operator()(bloom::EntityID ID) const {
+        return std::hash<decltype(ID.raw())>{}(ID.raw());
     }
 };
 
@@ -194,12 +203,12 @@ template <>
 struct YAML::convert<bloom::EntityID> {
     static Node encode(bloom::EntityID const& e) {
         Node node;
-        node = static_cast<std::int32_t>(e.raw());
+        node = static_cast<int32_t>(e.raw());
         return node;
     }
 
     static bool decode(Node const& node, bloom::EntityID& e) {
-        e = bloom::EntityID((bloom::EntityID::RawType)node.as<std::int32_t>());
+        e = bloom::EntityID((bloom::EntityID::RawType)node.as<int32_t>());
         return true;
     }
 };

@@ -1,7 +1,9 @@
 #ifndef POPPY_VIEWS_BASICSCENEINSPECTOR_H
 #define POPPY_VIEWS_BASICSCENEINSPECTOR_H
 
+#include <optional>
 #include <span>
+#include <string>
 
 #include <utl/vector.hpp>
 
@@ -25,26 +27,25 @@ class View;
 class EntitySelectionManager;
 
 enum struct LightType {
-    none = -1,
-    pointlight = 0,
-    spotlight = 1,
-    directional = 2,
-    skylight = 3,
-    _count
+    PointLight = 0,
+    SpotLight = 1,
+    DirectionalLight = 2,
+    SkyLight = 3,
+    LAST = SkyLight
 };
 
-std::string_view toString(LightType);
+std::string toString(LightType type);
 
-auto dispatchLightComponent(LightType type, auto&& f) {
+decltype(auto) dispatchLightComponent(LightType type, auto&& f) {
     using namespace bloom;
     switch (type) {
-    case LightType::pointlight:
+    case LightType::PointLight:
         return f(utl::tag<PointLightComponent>{});
-    case LightType::spotlight:
+    case LightType::SpotLight:
         return f(utl::tag<SpotLightComponent>{});
-    case LightType::directional:
+    case LightType::DirectionalLight:
         return f(utl::tag<DirectionalLightComponent>{});
-    case LightType::skylight:
+    case LightType::SkyLight:
         return f(utl::tag<SkyLightComponent>{});
     default:
         BL_UNREACHABLE();
@@ -66,7 +67,7 @@ public:
 
     bool hasLightComponent(bloom::EntityHandle) const;
 
-    LightType getLightType(bloom::EntityHandle) const;
+    std::optional<LightType> getLightType(bloom::EntityHandle) const;
 
     bloom::LightCommon getLightCommon(LightType, bloom::EntityHandle) const;
 

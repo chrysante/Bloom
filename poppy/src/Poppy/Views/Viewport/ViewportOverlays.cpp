@@ -93,13 +93,11 @@ void ViewportOverlays::drawLightOverlays() {
             auto const entity = scene->getHandle(id);
             drawOneLightOverlay(entity, positionOnScreen,
                                 selection.contains(entity),
-                                Transform::fromMatrix(transform.matrix),
-                                light.light);
+                                Transform::fromMatrix(transform.matrix), light);
         });
     }
 }
 
-template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
                                            vml::float2 positionOnScreen,
                                            bool selected, Transform const&,
@@ -107,7 +105,6 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
     drawPointLightIcon(positionOnScreen, light.common.color, selected);
 }
 
-template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
                                            vml::float2 positionOnScreen,
                                            bool selected, Transform const&,
@@ -120,7 +117,6 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
     }
 }
 
-template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
                                            vml::float2 positionOnScreen,
                                            bool /* selected */,
@@ -130,7 +126,6 @@ void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
     drawDirectionalLightIcon(positionOnScreen, lightDirWS, light.common.color);
 }
 
-template <>
 void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
                                            vml::float2 positionOnScreen,
                                            bool /* selected */,

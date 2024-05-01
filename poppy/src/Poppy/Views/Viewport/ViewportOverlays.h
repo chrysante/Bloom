@@ -20,10 +20,19 @@ public:
 private:
     template <typename>
     void drawLightOverlays();
-    template <typename Light>
+
     void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionOnScreen,
                              bool selected, bloom::Transform const&,
-                             Light const&);
+                             bloom::PointLight const&);
+    void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionOnScreen,
+                             bool selected, bloom::Transform const&,
+                             bloom::SpotLight const&);
+    void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionOnScreen,
+                             bool selected, bloom::Transform const&,
+                             bloom::DirectionalLight const&);
+    void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionOnScreen,
+                             bool selected, bloom::Transform const&,
+                             bloom::SkyLight const&);
 
     void drawPointLightIcon(vml::float2 position, vml::float3 color,
                             bool selected);

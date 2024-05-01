@@ -64,7 +64,7 @@ static void submitLights(rg::LightsResource& lights, Scene const& scene,
             return;
         }
         lightModifier(transform, light);
-        lights.add(light.light);
+        lights.add(light);
     });
 }
 
@@ -113,20 +113,19 @@ void rg::SceneRenderer::submit(Scene const& scene) {
     if (lights) {
         submitLights<PointLightComponent>(*lights, scene,
                                           [](auto& transform, auto& light) {
-            light.light.position = transform.matrix.column(3).xyz;
+            light.position = transform.matrix.column(3).xyz;
         });
         submitLights<SpotLightComponent>(*lights, scene,
                                          [](auto& transform, auto& light) {
-            light.light.position = transform.matrix.column(3).xyz;
-            light.light.direction = vml::normalize(
+            light.position = transform.matrix.column(3).xyz;
+            light.direction = vml::normalize(
                 (transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
         });
         shadowMetadata.numShadowCasters = 0;
         submitLights<DirectionalLightComponent>(
             *lights, scene,
             [&](TransformMatrixComponent const& transform,
-                DirectionalLightComponent& comp) {
-            auto& light = comp.light;
+                DirectionalLightComponent& light) {
             light.direction = vml::normalize(
                 (transform.matrix * vml::float4{ 0, 0, 1, 0 }).xyz);
             float distance = light.shadowDistance;

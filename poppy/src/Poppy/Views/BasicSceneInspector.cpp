@@ -10,9 +10,9 @@
 using namespace bloom;
 using namespace poppy;
 
-std::string_view poppy::toString(LightType type) {
+std::string poppy::toString(LightType type) {
     return std::array{ "Point Light", "Spotlight", "Directional Light",
-                       "Sky Light" }[(std::size_t)type];
+                       "Sky Light" }[(size_t)type];
 }
 
 std::span<Scene* const> BasicSceneInspector::scenes() const {
@@ -28,33 +28,34 @@ bloom::AssetManager& BasicSceneInspector::assetManager() const {
 }
 
 bool BasicSceneInspector::hasLightComponent(bloom::EntityHandle entity) const {
-    return getLightType(entity) != LightType::none;
+    return getLightType(entity).has_value();
 }
 
 bool BasicSceneInspector::isSimulating() const {
     return view->editor().isSimulating();
 }
 
-LightType BasicSceneInspector::getLightType(bloom::EntityHandle entity) const {
+std::optional<LightType> BasicSceneInspector::getLightType(
+    bloom::EntityHandle entity) const {
     if (entity.has<PointLightComponent>()) {
-        return LightType::pointlight;
+        return LightType::PointLight;
     }
     if (entity.has<SpotLightComponent>()) {
-        return LightType::spotlight;
+        return LightType::SpotLight;
     }
     if (entity.has<DirectionalLightComponent>()) {
-        return LightType::directional;
+        return LightType::DirectionalLight;
     }
     if (entity.has<SkyLightComponent>()) {
-        return LightType::skylight;
+        return LightType::SkyLight;
     }
-    return LightType::none;
+    return std::nullopt;
 }
 
 bloom::LightCommon BasicSceneInspector::getLightCommon(
     LightType type, bloom::EntityHandle entity) const {
     return dispatchLightComponent(type, [&]<typename T>(utl::tag<T>) {
-        auto const result = entity.get<T>().light.common;
+        auto const result = entity.get<T>().common;
         return result;
     });
 }

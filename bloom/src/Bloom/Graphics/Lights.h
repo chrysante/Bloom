@@ -14,6 +14,8 @@ struct PointLight {
     LightCommon common;
     metal::float3 position;
     float radius;
+
+    static PointLight Default();
 };
 
 struct SpotLight {
@@ -23,25 +25,29 @@ struct SpotLight {
     float innerCutoff;
     float outerCutoff;
     float radius;
+
+    static SpotLight Default();
 };
 
 struct DirectionalLight {
     LightCommon common; // 16 bytes
 
-    metal::packed_float3 direction; //
-    bool castsShadows;              //
-    int16_t numCascades = 1;        // 16 bytes
+    metal::packed_float3 direction;      //
+    bool castsShadows;                   //
+    int16_t numCascades;                 // 16 bytes
+    float shadowDistance;                //
+    float shadowDistanceZ;               //
+    float cascadeDistributionExponent;   //
+    float cascadeTransitionFraction;     // 16 bytes
+    float shadowDistanceFadeoutFraction; //
 
-    float shadowDistance = 500; // dedim
-
-    float shadowDistanceZ = 10'000;             //
-    float cascadeDistributionExponent = 2;      //
-    float cascadeTransitionFraction = 0.05;     //
-    float shadowDistanceFadeoutFraction = 0.05; // 16 bytes
+    static DirectionalLight Default();
 };
 
 struct SkyLight {
     LightCommon common;
+
+    static SkyLight Default();
 };
 
 } // namespace bloom

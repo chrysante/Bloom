@@ -6,28 +6,24 @@
 
 namespace bloom {
 
-struct PointLightComponent {
+struct PointLightComponent: PointLight {
     BLOOM_REGISTER_COMPONENT("Point Light")
-
-    PointLight light;
+    using Light = PointLight;
 };
 
-struct SpotLightComponent {
+struct SpotLightComponent: SpotLight {
     BLOOM_REGISTER_COMPONENT("Spot Light")
-
-    SpotLight light;
+    using Light = SpotLight;
 };
 
-struct DirectionalLightComponent {
+struct DirectionalLightComponent: DirectionalLight {
     BLOOM_REGISTER_COMPONENT("Directional Light")
-
-    DirectionalLight light;
+    using Light = DirectionalLight;
 };
 
-struct SkyLightComponent {
+struct SkyLightComponent: SkyLight {
     BLOOM_REGISTER_COMPONENT("Sky Light")
-
-    SkyLight light;
+    using Light = SkyLight;
 };
 
 } // namespace bloom
@@ -38,12 +34,12 @@ template <>
 struct YAML::convert<bloom::PointLightComponent> {
     static Node encode(bloom::PointLightComponent const& l) {
         Node node;
-        node = l.light;
+        node = (bloom::PointLight const&)l;
         return node;
     }
 
     static bool decode(Node const& node, bloom::PointLightComponent& m) {
-        m.light = node.as<bloom::PointLight>();
+        (bloom::PointLight&)m = node.as<bloom::PointLight>();
         return true;
     }
 };
@@ -52,12 +48,12 @@ template <>
 struct YAML::convert<bloom::SpotLightComponent> {
     static Node encode(bloom::SpotLightComponent const& l) {
         Node node;
-        node = l.light;
+        node = (bloom::SpotLight const&)l;
         return node;
     }
 
     static bool decode(Node const& node, bloom::SpotLightComponent& m) {
-        m.light = node.as<bloom::SpotLight>();
+        (bloom::SpotLight&)m = node.as<bloom::SpotLight>();
         return true;
     }
 };
@@ -66,12 +62,12 @@ template <>
 struct YAML::convert<bloom::DirectionalLightComponent> {
     static Node encode(bloom::DirectionalLightComponent const& l) {
         Node node;
-        node = l.light;
+        node = (bloom::DirectionalLight const&)l;
         return node;
     }
 
     static bool decode(Node const& node, bloom::DirectionalLightComponent& m) {
-        m.light = node.as<bloom::DirectionalLight>();
+        (bloom::DirectionalLight&)m = node.as<bloom::DirectionalLight>();
         return true;
     }
 };
@@ -80,12 +76,12 @@ template <>
 struct YAML::convert<bloom::SkyLightComponent> {
     static Node encode(bloom::SkyLightComponent const& l) {
         Node node;
-        node = l.light;
+        node = (bloom::SkyLight const&)l;
         return node;
     }
 
     static bool decode(Node const& node, bloom::SkyLightComponent& m) {
-        m.light = node.as<bloom::SkyLight>();
+        (bloom::SkyLight&)m = node.as<bloom::SkyLight>();
         return true;
     }
 };

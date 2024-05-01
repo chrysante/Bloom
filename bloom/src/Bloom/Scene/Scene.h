@@ -88,11 +88,11 @@ public:
     /// Adds the component \p component to \p entity
     /// \pre \p entity must not have a component of type \p T
     template <ComponentType T>
-    void addComponent(EntityID entity, T&& component) {
+    std::remove_cvref_t<T>& addComponent(EntityID entity, T&& component) {
         BL_EXPECT(!hasComponent<std::decay_t<T>>(entity),
                   "ComponentType already present");
-        _registry.emplace<std::decay_t<T>>(entity.value(),
-                                           std::forward<T>(component));
+        return _registry.emplace<std::decay_t<T>>(entity.value(),
+                                                  std::forward<T>(component));
     }
 
     ///

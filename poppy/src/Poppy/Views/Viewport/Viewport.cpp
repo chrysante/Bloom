@@ -360,7 +360,7 @@ void Viewport::dropdownMenu() {
                 for (auto&& [entity, light]:
                      scene->view<DirectionalLightComponent const>().each())
                 {
-                    if (light.light.castsShadows) {
+                    if (light.castsShadows) {
                         drawOptions.lightVizEntity = scene->getHandle(entity);
                         break;
                     }
@@ -371,9 +371,9 @@ void Viewport::dropdownMenu() {
             auto lightEntity = drawOptions.lightVizEntity;
             auto* scene = lightEntity ? &lightEntity.scene() : nullptr;
             char const* preview = nullptr;
-            if (!lightEntity || getLightType(lightEntity) == LightType::none ||
+            if (!lightEntity || !hasLightComponent(lightEntity) ||
                 !scene->getComponent<DirectionalLightComponent>(lightEntity)
-                     .light.castsShadows)
+                     .castsShadows)
             {
                 preview = "Select Shadow Caster";
             }
@@ -393,7 +393,7 @@ void Viewport::dropdownMenu() {
                                     TagComponent const>()
                              .each())
                     {
-                        if (light.light.castsShadows &&
+                        if (light.castsShadows &&
                             ImGui::Selectable(tag.name.data()))
                         {
                             drawOptions.lightVizEntity =

@@ -30,7 +30,7 @@ static void submitLights(Renderer& renderer, Scene const& scene,
     view.each([&](auto /* ID */, TransformMatrixComponent const& transform,
                   LightComponent light) {
         lightModifier(transform, light);
-        renderer.submit(light.light);
+        renderer.submit(light);
     });
 }
 
@@ -56,17 +56,17 @@ void SceneRenderer::submitScene(Scene const& scene) {
     }
     submitLights<PointLightComponent>(renderer(), scene,
                                       [](auto& transform, auto& light) {
-        light.light.position = transform.matrix.column(3).xyz;
+        light.position = transform.matrix.column(3).xyz;
     });
     submitLights<SpotLightComponent>(renderer(), scene,
                                      [](auto& transform, auto& light) {
-        light.light.position = transform.matrix.column(3).xyz;
-        light.light.direction =
+        light.position = transform.matrix.column(3).xyz;
+        light.direction =
             vml::normalize((transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
     });
     submitLights<DirectionalLightComponent>(renderer(), scene,
                                             [](auto& transform, auto& light) {
-        light.light.direction =
+        light.direction =
             vml::normalize((transform.matrix * vml::float4{ 0, 0, 1, 0 }).xyz);
     });
     submitLights<SkyLightComponent>(renderer(), scene);

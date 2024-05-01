@@ -2,6 +2,7 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 #include <scatha/Common/Ranges.h>
 #include <scatha/Sema/Entity.h>
@@ -367,16 +368,16 @@ void EntityInspector::receiveMaterialDragDrop(bloom::EntityHandle entity) {
 
 void EntityInspector::inspectLight(bloom::EntityHandle entity) {
     using namespace bloom;
-    auto type = getLightType(entity);
+    auto type = getLightType(entity).value();
     auto deleter = [&] {
         switch (type) {
-        case LightType::pointlight:
+        case LightType::PointLight:
             entity.remove<PointLightComponent>();
             break;
-        case LightType::spotlight:
+        case LightType::SpotLight:
             entity.remove<SpotLightComponent>();
             break;
-        case LightType::directional:
+        case LightType::DirectionalLight:
             entity.remove<DirectionalLightComponent>();
             break;
         default:
@@ -390,18 +391,17 @@ void EntityInspector::inspectLight(bloom::EntityHandle entity) {
     disabledIf(isSimulating(), [&] {
         inspectLightType(type, entity);
         switch (type) {
-        case LightType::pointlight:
-            inspectPointLight(entity.get<PointLightComponent>().light);
+        case LightType::PointLight:
+            inspectPointLight(entity.get<PointLightComponent>());
             break;
-        case LightType::spotlight:
-            inspectSpotLight(entity.get<SpotLightComponent>().light);
+        case LightType::SpotLight:
+            inspectSpotLight(entity.get<SpotLightComponent>());
             break;
-        case LightType::directional:
-            inspectDirectionalLight(
-                entity.get<DirectionalLightComponent>().light);
+        case LightType::DirectionalLight:
+            inspectDirectionalLight(entity.get<DirectionalLightComponent>());
             break;
-        case LightType::skylight:
-            inspectSkyLight(entity.get<SkyLightComponent>().light);
+        case LightType::SkyLight:
+            inspectSkyLight(entity.get<SkyLightComponent>());
             break;
         default:
             break;
@@ -417,11 +417,11 @@ void EntityInspector::inspectLightType(LightType& type,
     auto newType = type;
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     if (ImGui::BeginCombo("##Light Type", toString(newType).data())) {
-        for (size_t j = 0; j < (size_t)LightType::_count; ++j) {
-            LightType const i = (LightType)j;
-            bool const selected = newType == i;
-            if (ImGui::Selectable(toString(i).data(), selected)) {
-                newType = i;
+        for (size_t j = 0; j < EnumCount<LightType>; ++j) {
+            LightType t = (LightType)j;
+            bool selected = newType == t;
+            if (ImGui::Selectable(toString(t).data(), selected)) {
+                newType = t;
             }
             if (selected) {
                 ImGui::SetItemDefaultFocus();
@@ -430,11 +430,12 @@ void EntityInspector::inspectLightType(LightType& type,
         ImGui::EndCombo();
     }
     if (newType != type) {
-        auto const common = getLightCommon(type, entity);
-        removeLightComponent(type, entity);
-        dispatchLightComponent(newType, [&]<typename T>(utl::tag<T>) {
-            entity.add(T{ common });
+        auto color = getLightCommon(type, entity).color;
+        dispatchLightComponent(newType, [&]<typename C>(utl::tag<C>) {
+            auto& c = entity.add(C{ C::Light::Default() });
+            c.common.color = color;
         });
+        removeLightComponent(type, entity);
     }
     type = newType;
 }
@@ -450,16 +451,16 @@ void EntityInspector::inspectLightCommon(bloom::LightCommon& light,
                           ImGuiColorEditFlags_NoAlpha |
                           ImGuiColorEditFlags_PickerHueWheel);
     beginProperty("Intensity");
-    float speed = type == LightType::directional ? 0.01 :
-                  type == LightType::skylight    ? 0.0001 :
-                                                   100;
+    float speed = type == LightType::DirectionalLight ? 0.01 :
+                  type == LightType::SkyLight         ? 0.0001 :
+                                                        100;
     fullWidth();
     ImGui::DragFloat("intensity", &light.intensity, speed, 0, FLT_MAX, "%f");
 }
 
 void EntityInspector::inspectPointLight(bloom::PointLight& light) {
     using namespace propertiesView;
-    inspectLightCommon(light.common, LightType::pointlight);
+    inspectLightCommon(light.common, LightType::PointLight);
     beginProperty("Radius");
     fullWidth();
     ImGui::SliderFloat("radius", &light.radius, 0, 100);
@@ -467,7 +468,7 @@ void EntityInspector::inspectPointLight(bloom::PointLight& light) {
 
 void EntityInspector::inspectSpotLight(bloom::SpotLight& light) {
     using namespace propertiesView;
-    inspectLightCommon(light.common, LightType::spotlight);
+    inspectLightCommon(light.common, LightType::SpotLight);
     beginProperty("Radius");
     fullWidth();
     ImGui::SliderFloat("radius", &light.radius, 0, 100);
@@ -487,7 +488,7 @@ void EntityInspector::inspectSpotLight(bloom::SpotLight& light) {
 
 void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
     using namespace propertiesView;
-    inspectLightCommon(light.common, LightType::directional);
+    inspectLightCommon(light.common, LightType::DirectionalLight);
     beginProperty("Casts Shadow");
     ImGui::Checkbox("##-casts-shadow", &light.castsShadows);
     if (!light.castsShadows) {
@@ -520,7 +521,7 @@ void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
 }
 
 void EntityInspector::inspectSkyLight(bloom::SkyLight& light) {
-    inspectLightCommon(light.common, LightType::skylight);
+    inspectLightCommon(light.common, LightType::SkyLight);
 }
 
 void EntityInspector::inspectScript(bloom::EntityHandle entity) {

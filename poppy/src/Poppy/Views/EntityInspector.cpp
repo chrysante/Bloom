@@ -249,20 +249,18 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
             }
             beginProperty("Scale");
             ImGui::SetNextItemWidth(width);
-            float3 scale = transform.scale;
-            if (dragFloat3Pretty("##scale", scale.data(), 0.02) &&
-                transformScaleLinked)
-            {
-                float3 scaleOffset = transform.scale / scale;
-                bool3 edited = vml::map(scale, transform.scale, utl::unequals);
-                if (edited.x) {
-                    transform.scale = scale * scaleOffset.x;
-                }
-                else if (edited.y) {
-                    transform.scale = scale * scaleOffset.y;
+            float3 newScale = transform.scale;
+            if (dragFloat3Pretty("##scale", newScale.data(), 0.02)) {
+                if (transformScaleLinked) {
+                    float3 scaleOffset = newScale / transform.scale;
+                    float offset =
+                        *ranges::find_if(scaleOffset, [](float offset) {
+                        return offset != 1.0f;
+                    });
+                    transform.scale *= offset;
                 }
                 else {
-                    transform.scale = scale * scaleOffset.z;
+                    transform.scale = newScale;
                 }
             }
             ImGui::SameLine();

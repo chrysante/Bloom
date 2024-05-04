@@ -25,9 +25,6 @@ class Pass {
     friend class PassImpl;
 
 public:
-    explicit Pass(std::string name, HardwareDevice* device = nullptr):
-        _device(device), _name(std::move(name)) {}
-
     Pass(Pass const&) = delete;
 
     virtual ~Pass();
@@ -106,6 +103,9 @@ public:
     void execute(FrameParameters const& params, CommandQueue& queue);
 
 protected:
+    explicit Pass(std::string name, HardwareDevice* device = nullptr):
+        _device(device), _name(std::move(name)) {}
+
     /// Declares a resource sink (input) to this pass
     template <std::derived_from<PassSink> S = PassSink>
     S* declareSink(InterfaceUnion interface, void* handle) {
@@ -138,25 +138,21 @@ private:
 
 /// Base class for all passes that use the GPUs render pipeline
 class RenderPass: public Pass {
-public:
-    using Pass::Pass;
-
 protected:
+    using Pass::Pass;
     explicit RenderPass(std::string name): Pass(std::move(name)) {}
 
 private:
-    virtual void doExecute(FrameParameters const& params,
-                           CommandQueue& queue) final;
+    void doExecute(FrameParameters const& params, CommandQueue& queue) final;
     virtual void doExecute(FrameParameters const& params,
                            RenderContext& ctx) = 0;
 };
 
 /// Base class for all passes that use the GPUs compute pipeline
 class ComputePass: public Pass {
-public:
+protected:
     using Pass::Pass;
 
-protected:
     explicit ComputePass(std::string name): Pass(std::move(name)) {}
 
 private:

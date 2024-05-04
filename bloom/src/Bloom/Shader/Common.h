@@ -8,10 +8,11 @@
 #include <metal_stdlib>
 #define BLOOM_SHADER_CONSTANT constant
 
+namespace vml = metal;
+
 #else
 
 #include <vml/vml.hpp>
-namespace metal = vml;
 #define BLOOM_SHADER_CONSTANT constexpr
 
 #endif

@@ -7,14 +7,14 @@ namespace bloom {
 
 ///
 struct CameraInput {
-    metal::float4x4 camera;
-    metal::float3 cameraPosition;
+    vml::float4x4 camera;
+    vml::float3 cameraPosition;
 };
 
 BLOOM_SHADER_CONSTANT int NumMaxShadowCasters = 32;
 
 /// Describes the layout of the shadow map texture array
-struct alignas(metal::float4x4) ShadowRenderMetadata {
+struct alignas(vml::float4x4) ShadowRenderMetadata {
     /// The number of lights that cast shadows
     int numShadowCasters;
 
@@ -28,7 +28,7 @@ enum class ToneMappingFunction { ACES, reinhard };
 /// Parameter structure for the bloom shaders
 struct BloomParameters {
     bool physicallyCorrect = true;
-    metal::float3 curve;
+    vml::float3 curve;
     float contribution;
     float intensity;
     float scale;

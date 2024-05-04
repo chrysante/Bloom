@@ -6,10 +6,10 @@
 namespace bloom {
 
 struct BLOOM_API MaterialParameters {
-    metal::float3 baseColor;
+    vml::float3 baseColor;
     float roughness;
     float metallic;
-    metal::float3 emissive;
+    vml::float3 emissive;
     float emissiveIntensity;
 };
 

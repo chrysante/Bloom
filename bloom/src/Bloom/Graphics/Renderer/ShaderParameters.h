@@ -21,10 +21,10 @@ struct LightBufferContents {
 };
 
 struct SceneRenderParameters {
-    metal::float4x4 camera;
-    metal::float3 cameraPosition;
-    metal::float2 screenSize;
-    metal::float2 screenResolution;
+    vml::float4x4 camera;
+    vml::float3 cameraPosition;
+    vml::float2 screenSize;
+    vml::float2 screenResolution;
 
     LightBufferContents lights;
 };
@@ -32,7 +32,7 @@ struct SceneRenderParameters {
 BLOOM_SHADER_CONSTANT int maxShadowCascades = 10; // do we need this?
 BLOOM_SHADER_CONSTANT int maxShadowCasters = 32;
 
-struct alignas(metal::float4x4) ShadowRenderData {
+struct alignas(vml::float4x4) ShadowRenderData {
     int numShadowCasters;
     int numCascades[maxShadowCasters];
 };
@@ -40,7 +40,7 @@ struct alignas(metal::float4x4) ShadowRenderData {
 struct BloomParameters_Depr {
     bool enabled = true;
     bool physicallyCorrect = true;
-    metal::float3 curve;
+    vml::float3 curve;
     float contribution;
     float intensity;
     float scale;
@@ -58,7 +58,7 @@ struct PostProcessParameters_Depr {
 struct DebugDrawData {
     float selectionLineWidth;
     bool visualizeShadowCascades;
-    metal::float4x4 shadowCascadeVizTransforms[10];
+    vml::float4x4 shadowCascadeVizTransforms[10];
     uint shadowCascadeVizCount;
 };
 

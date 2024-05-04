@@ -42,6 +42,12 @@ public:
     ///
     void draw(CommandQueue& commandQueue);
 
+    ///
+    FrameParameters const& getFrameParams() const { return frameParams; }
+
+    ///
+    Camera const& getCamera() const { return camera; }
+
 private:
     RenderGraph* mRenderGraph = nullptr;
     rg::GeometryResource* geometry = nullptr;

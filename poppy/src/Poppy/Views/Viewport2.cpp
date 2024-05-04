@@ -14,6 +14,7 @@
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/Renderer/EditorSceneRenderer2.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
@@ -72,6 +73,8 @@ struct Viewport2: View, BasicSceneInspector {
     Toolbar makeToolbar();
     void dropdownMenu();
 
+    bool showSelection = false;
+
     Gizmo gizmo;
     Parameters params;
     DebugDrawOptions drawOptions;
@@ -108,12 +111,12 @@ void Viewport2::display() {
     ImGui::EndChild();
 }
 
-static rg::SceneRenderer& getSceneRenderer(rg::RenderGraph& renderGraph) {
+static EditorSceneRenderer2& getSceneRenderer(rg::RenderGraph& renderGraph) {
     static rg::RenderGraph const* graph = nullptr;
-    static std::unique_ptr<rg::SceneRenderer> instance;
+    static std::unique_ptr<EditorSceneRenderer2> instance;
     if (graph != &renderGraph) {
         graph = &renderGraph;
-        instance = std::make_unique<rg::SceneRenderer>(&renderGraph);
+        instance = std::make_unique<EditorSceneRenderer2>(&renderGraph);
     }
     return *instance;
 }
@@ -135,7 +138,7 @@ void Viewport2::displayScenes() {
     std::unique_lock lock = sceneSystem.lock();
     sceneSystem.applyTransformHierarchy();
     for (auto* scene: sceneSystem.scenes()) {
-        renderer.submit(*scene);
+        renderer.submit(*scene, selection());
     }
     lock.unlock();
     renderer.draw(*window().commandQueue());
@@ -143,14 +146,20 @@ void Viewport2::displayScenes() {
         displayEmptyWithError("Render Graph Has No Outputs");
         return;
     }
-    auto* output =
-        dyncast<rg::TextureResource*>(renderGraph->source(0)->resource());
-    if (!output) {
-        displayEmptyWithError("Render Graph Output Is Null");
-        return;
+    if (!showSelection) {
+        auto* output =
+            dyncast<rg::TextureResource*>(renderGraph->source(0)->resource());
+        if (!output) {
+            displayEmptyWithError("Render Graph Output Is Null");
+            return;
+        }
+        ImGui::Image(output->handle().nativeHandle(),
+                     ImGui::GetContentRegionAvail());
     }
-    ImGui::Image(output->handle().nativeHandle(),
-                 ImGui::GetContentRegionAvail());
+    else {
+        ImGui::Image(renderer.finalColor().nativeHandle(),
+                     ImGui::GetContentRegionAvail());
+    }
 }
 
 void Viewport2::displayToolbarWithBackground() {
@@ -313,4 +322,8 @@ Toolbar Viewport2::makeToolbar() {
     return toolbar;
 }
 
-void Viewport2::dropdownMenu() {}
+void Viewport2::dropdownMenu() {
+    if (ImGui::Button("Show Selection Map")) {
+        showSelection ^= true;
+    }
+}

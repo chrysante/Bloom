@@ -3,6 +3,7 @@
 #include "Bloom/Graphics/MaterialProperties.h"
 #include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/Vertex.h"
+#include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Renderer/EditorDrawData.h"
 #include "Poppy/Shaders/Lights.h"
 #include "Poppy/Shaders/PostProcess.h"
@@ -24,6 +25,18 @@ vertex float4 selectionPassVS(SceneRenderParameters device const& scene
 }
 
 fragment float selectionPassFS() { return 1; }
+
+vertex float4 rgSelectionPassVS(CameraInput device const& camera [[buffer(0)]],
+                                Vertex3D device const* vertices [[buffer(1)]],
+                                float4x4 device const& transform [[buffer(2)]],
+                                uint vertexID [[vertex_id]])
+{
+    float4 vertexPositionMS = float4(vertices[vertexID].position, 1);
+    float4 vertexPositionWS = transform * vertexPositionMS;
+    return camera.camera * vertexPositionWS;
+}
+
+fragment float rgSelectionPassFS() { return 1; }
 
 namespace {
 struct EdgeDetectResult {

@@ -356,6 +356,9 @@ public:
     InterfaceFlags flags() const { return interface().get().flags(); }
 
 protected:
+    friend class RenderGraphInternalSink;
+    friend class RenderGraphInternalSource;
+
     PassTerminal(InterfaceUnion interface, Pass* pass, void* handle):
         impl(std::move(interface)), _pass(pass), _handle(handle) {}
 
@@ -419,17 +422,17 @@ private:
 /// The following classes model sinks and sources of render graphs:
 ///
 /// ```
-///                   ┌─ Render Graph ────────────────────┐
+///                    ┌─ Render Graph ───────────────────┐
 /// `RenderGraphSink` >>> `RenderGraphInternalSource`     │
-///    An input into  │      Within the graph the         │
-///    the graph      │      sink is represented by       │
-///                   │      a source                     │
-///                   │                                   │
-///                   │        `RenderGraphInternalSink` >>> `RenderGraphSource`
-///                   │            Within the graph the   │     An output of
-///                   │            output is represented  │     the graph
-///                   │            by a sink              │
-///                   └───────────────────────────────────┘
+///    An input into   │     Within the graph the         │
+///    the graph       │     sink is represented by       │
+///                    │     a source                     │
+///                    │                                  │
+///                    │       `RenderGraphInternalSink` >>> `RenderGraphSource`
+///                    │           Within the graph the   │     An output of
+///                    │           output is represented  │     the graph
+///                    │           by a sink              │
+///                    └──────────────────────────────────┘
 /// ```
 ///
 /// One thing to note is that `RenderGraphInternal{Sink/Source}::pass()` always
@@ -439,15 +442,35 @@ private:
 /// Models a sink within a render graph that is a source of the render graph
 class RenderGraphInternalSink: public PassSink {
 public:
-    explicit RenderGraphInternalSink(InterfaceUnion interface, void* handle):
-        PassSink(std::move(interface), nullptr, handle) {}
+    explicit RenderGraphInternalSink(PassSource* owningSource,
+                                     InterfaceUnion interface, void* handle):
+        PassSink(std::move(interface), nullptr, handle),
+        owningSource(owningSource) {}
+
+private:
+    void doSetResource(Resource* resource) override {
+        PassSink::doSetResource(resource);
+        owningSource->PassSource::doSetResource(resource);
+    }
+
+    PassSource* owningSource;
 };
 
 /// Models a source within a render graph that is a sink of the render graph
 class RenderGraphInternalSource: public PassSource {
 public:
-    explicit RenderGraphInternalSource(InterfaceUnion interface, void* handle):
-        PassSource(std::move(interface), nullptr, handle) {}
+    explicit RenderGraphInternalSource(PassSink* owningSink,
+                                       InterfaceUnion interface, void* handle):
+        PassSource(std::move(interface), nullptr, handle),
+        owningSink(owningSink) {}
+
+private:
+    void doSetResource(Resource* resource) override {
+        PassSource::doSetResource(resource);
+        owningSink->PassSink::doSetResource(resource);
+    }
+
+    PassSink* owningSink;
 };
 
 /// Resource input of a render graph.
@@ -457,7 +480,7 @@ class RenderGraphSink: public PassSink {
 public:
     explicit RenderGraphSink(InterfaceUnion interface, Pass* pass,
                              void* handle):
-        PassSink(interface, pass, handle), src(interface, handle) {}
+        PassSink(interface, pass, handle), src(this, interface, handle) {}
 
     /// \Returns the source that makes this sink readable to passes within the
     /// render graph
@@ -482,7 +505,7 @@ class RenderGraphSource: public PassSource {
 public:
     explicit RenderGraphSource(InterfaceUnion interface, Pass* pass,
                                void* handle):
-        PassSource(interface, pass, handle), snk(interface, handle) {}
+        PassSource(interface, pass, handle), snk(this, interface, handle) {}
 
     /// \Returns the sink that makes this source definable by passes within the
     /// render graph

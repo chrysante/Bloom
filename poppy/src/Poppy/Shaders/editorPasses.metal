@@ -155,6 +155,27 @@ fragment float4 editorCompositionFS(
     return float4(result, 1);
 }
 
+kernel void rgEditorComposition(
+    texture2d<float, access::write> dest [[texture(0)]],
+    texture2d<float, access::read> sceneColor [[texture(1)]],
+    texture2d<float, access::sample> sceneDepth [[texture(2)]],
+    texture2d<float, access::sample> selectionMap [[texture(3)]],
+    texture2d<float, access::sample> selectionDepth [[texture(4)]],
+    uint2 position [[thread_position_in_grid]])
+{
+    float3 color = sceneColor.read(position).rgb;
+    constexpr sampler texSampler(mag_filter::linear, min_filter::linear);
+    float2 screenSize = { (float)dest.get_width(), (float)dest.get_height() };
+    float2 UV = (float2)position / screenSize;
+    auto edgeResult = edgeDetect(selectionMap, sceneDepth, selectionDepth,
+                                 texSampler, UV,
+                                 /* selectionLineWidth: */ 4, screenSize);
+    float edge = edgeResult.occluded ? edgeResult.edge / 3 : edgeResult.edge;
+    float3 selectionLineColor = { 1, 0.5, 0 };
+    float3 result = mix(color, selectionLineColor, edge);
+    dest.write(float4(result, 1), position);
+}
+
 struct EditorPassData {
     float4 positionCS [[position]];
     float3 normalWS;

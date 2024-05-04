@@ -37,23 +37,36 @@ struct SelectionPass: RenderPass, PassImpl<SelectionPass> {
 
 } // namespace
 
+// clang-format off
+
 BEGIN_SINK_DECL(SelectionPass) {
-    GeometryInterface{ "Selected Geometry", &SelectionPass::geometry },
-        BufferInterface {
-        "Camera", &SelectionPass::cameraBuffer, { .size = sizeof(CameraInput) }
+    GeometryInterface{
+        "Selected Geometry",
+        &SelectionPass::geometry
+    },
+    BufferInterface {
+        "Camera", 
+        &SelectionPass::cameraBuffer,
+        {}
     }
 }
 END_DECL()
 
 BEGIN_SOURCE_DECL(SelectionPass) {
-    TextureInterface{ "Selection Map", &SelectionPass::selectionMap,
-                      [](FrameParameters const& params) {
-        return TextureInterfaceDescriptor{ .pixelFormat = PixelFormat::R8Unorm,
-                                           .size = { params.screenSize, 1 } };
-    } },
-        TextureInterface {
-        "Selection Depth", &SelectionPass::selectionDepth,
-            [](FrameParameters const& params) {
+    TextureInterface{
+        "Selection Map",
+        &SelectionPass::selectionMap,
+        [](FrameParameters const& params) {
+            return TextureInterfaceDescriptor{
+                .pixelFormat = PixelFormat::R8Unorm,
+                .size = { params.screenSize, 1 }
+            };
+        }
+    },
+    TextureInterface {
+        "Selection Depth",
+        &SelectionPass::selectionDepth,
+        [](FrameParameters const& params) {
             return TextureInterfaceDescriptor{
                 .pixelFormat = PixelFormat::Depth32Float,
                 .size = { params.screenSize, 1 }
@@ -62,6 +75,8 @@ BEGIN_SOURCE_DECL(SelectionPass) {
     }
 }
 END_DECL()
+
+// clang-format on
 
 std::unique_ptr<Pass> poppy::makeSelectionPass() {
     return std::make_unique<SelectionPass>();

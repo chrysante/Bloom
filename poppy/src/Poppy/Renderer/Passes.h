@@ -6,6 +6,7 @@
 namespace poppy {
 
 std::unique_ptr<bloom::rg::Pass> makeSelectionPass();
+std::unique_ptr<bloom::rg::Pass> makeCompositionPass();
 
 } // namespace poppy
 

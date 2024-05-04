@@ -30,6 +30,7 @@ set(poppy_sources
   src/Poppy/Renderer/EditorSceneRenderer2.h
   src/Poppy/Renderer/Passes.h
   src/Poppy/Renderer/SelectionPass.h
+  src/Poppy/Renderer/CompositionPass.h
 
   src/Poppy/UI/Appearance.cpp
   src/Poppy/UI/Appearance.h

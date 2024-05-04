@@ -698,16 +698,6 @@ static void displayDebugger(ViewData const& viewData,
 #undef ITEM
 }
 
-static SelectionMode getSelectionMode() {
-    if (ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
-        return SelectionMode::Toggle;
-    }
-    if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
-        return SelectionMode::Add;
-    }
-    return SelectionMode::Replace;
-}
-
 using SelectionManager = BasicSelectionManager<Node*>;
 
 } // namespace

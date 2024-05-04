@@ -194,7 +194,7 @@ void SceneOutliner::displayEntity(EntityHandle entity) {
     dragDropSource(entity);
     dragDropTarget(entity);
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-        selection().set(entity);
+        selection().amend(entity, getSelectionMode());
     }
     if (isExpanded) {
         for (auto c: entity.scene().gatherChildren(entity)) {

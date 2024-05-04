@@ -18,6 +18,10 @@ enum class SelectionMode {
              /// selected
 };
 
+/// Determines the current selection mode based on held modifier keys. Must be
+/// called within an ImGui frame
+SelectionMode getSelectionMode();
+
 /// Generic selection manager that supports replace-, add-, toggle- and multiple
 /// seletion
 template <typename T>

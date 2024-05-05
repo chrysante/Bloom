@@ -17,6 +17,18 @@ std::string PassTerminal::qualifiedName() const {
     return utl::strcat(pass() ? pass()->name() : "?", ".", name());
 }
 
+size_t PassSink::doIndexInParent() const {
+    BL_EXPECT(pass());
+    auto sinks = pass()->sinks();
+    return ranges::find(sinks, this) - sinks.begin();
+}
+
+size_t PassSource::doIndexInParent() const {
+    BL_EXPECT(pass());
+    auto sources = pass()->sources();
+    return ranges::find(sources, this) - sources.begin();
+}
+
 void PassSource::addSink(PassSink* sink) {
     if (!ranges::contains(_sinks, sink)) {
         _sinks.push_back(sink);

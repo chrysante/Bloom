@@ -355,6 +355,9 @@ public:
     /// \Returns `interface().get().flags()`
     InterfaceFlags flags() const { return interface().get().flags(); }
 
+    ///
+    size_t indexInParent() const { return doIndexInParent(); }
+
 protected:
     friend class RenderGraphInternalSink;
     friend class RenderGraphInternalSource;
@@ -364,6 +367,8 @@ protected:
 
     /// Allow derived classes to customize this behaviour
     virtual void doSetResource(Resource* resource) { _resource = resource; }
+
+    virtual size_t doIndexInParent() const = 0;
 
 private:
     InterfaceUnion impl;
@@ -393,6 +398,8 @@ public:
     bool isOptional() const { return test(flags() & InterfaceFlags::Optional); }
 
 private:
+    size_t doIndexInParent() const final;
+
     PassSource* _source = nullptr;
 };
 
@@ -416,6 +423,8 @@ public:
     void addSink(PassSink* sink);
 
 private:
+    size_t doIndexInParent() const final;
+
     utl::small_vector<PassSink*, 3> _sinks;
 };
 

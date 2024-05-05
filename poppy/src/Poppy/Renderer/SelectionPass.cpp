@@ -20,6 +20,8 @@ struct SelectionPass: PassImpl<SelectionPass, RenderPass> {
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
 
+    using PassImpl::PassImpl;
+
     SelectionPass(): PassImpl("Selection Pass") {}
 
     // Sinks

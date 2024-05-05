@@ -36,8 +36,8 @@ public:
     RenderGraph* parent() const { return _parent; }
 
     /// \Returns the associated device.
-    /// \Pre This pass must be part of a render graph
-    HardwareDevice& device() { return *_device; }
+    /// \Pre This pass must be a render graph or part of a render graph
+    HardwareDevice& device() const { return *_device; }
 
     /// \Returns the resource sink (input) with name \p name
     PassSink* findSink(std::string_view name);
@@ -102,9 +102,6 @@ public:
     /// Executes this pass
     void execute(FrameParameters const& params, CommandQueue& queue);
 
-    ///
-    std::unique_ptr<Pass> clone() const { return doClone(); }
-
 protected:
     explicit Pass(std::string name, HardwareDevice* device = nullptr):
         _device(device), _name(std::move(name)) {}
@@ -128,12 +125,17 @@ protected:
 private:
     friend class RenderGraph; // To set parent and device
 
+    std::unique_ptr<Pass> clone(RenderGraphContext& context) const {
+        return doClone(context);
+    }
+
     virtual void doExecute(FrameParameters const& params,
                            CommandQueue& queue) = 0;
 
     virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
 
-    virtual std::unique_ptr<Pass> doClone() const { return nullptr; }
+    virtual std::unique_ptr<Pass> doClone(
+        RenderGraphContext& context) const = 0;
 
     RenderGraph* _parent = nullptr;
     HardwareDevice* _device = nullptr;
@@ -172,6 +174,8 @@ private:
 /// This class exists to simplify defining pass interfaces in code
 template <typename PassType, std::derived_from<Pass> Base>
 class PassImpl<PassType, Base>: public Base {
+    enum class CloneTag;
+
 public:
     using BasePass = Base;
 
@@ -180,6 +184,10 @@ public:
 
     /// To be defined by the pass author
     static std::span<InterfaceUnion const> Sources();
+
+    template <typename... Args>
+    explicit PassImpl(CloneTag, Args&&... args):
+        PassImpl(std::forward<Args>(args)...) {}
 
 protected:
     /// Declares the sinks and sources defined in `Sinks` and `Sources` to the
@@ -206,11 +214,9 @@ protected:
     }
 
 private:
-#if 0
-    std::unique_ptr<Pass> doClone() const override {
-        return std::make_unique<PassType>(CloneToken{});
+    std::unique_ptr<Pass> doClone(RenderGraphContext&) const override {
+        return std::make_unique<PassType>(CloneTag{}, this->name());
     }
-#endif
 };
 
 #define BEGIN_INTERFACE_DECL_IMPL(Name, PassType)                              \

@@ -13,6 +13,8 @@ using namespace vml::short_types;
 namespace {
 
 struct CompositionPass: PassImpl<CompositionPass, ComputePass> {
+    using PassImpl::PassImpl;
+
     CompositionPass(): PassImpl("Composition") {}
 
     void doExecute(FrameParameters const& params, ComputeContext& ctx) override;

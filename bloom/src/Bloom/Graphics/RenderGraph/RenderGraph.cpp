@@ -247,13 +247,45 @@ void RenderGraph::doAllocateResources(FrameParameters const& params,
     lastFrameParams = params;
 }
 
-std::unique_ptr<RenderGraph> RenderGraph::clone() const {
-    auto p = Pass::clone();
+std::unique_ptr<RenderGraph> RenderGraph::clone(
+    RenderGraphContext& context) const {
+    auto p = Pass::clone(context);
     return std::unique_ptr<RenderGraph>(
         dynamic_cast<RenderGraph*>(p.release()));
 }
 
-std::unique_ptr<Pass> RenderGraph::doClone() const { return nullptr; }
+Pass* get(auto& map, Pass const* pass) {
+    auto itr = map.find(pass);
+    BL_ASSERT(itr != map.end());
+    return itr->second;
+}
+
+std::unique_ptr<Pass> RenderGraph::doClone(RenderGraphContext& context) const {
+    auto clone = std::make_unique<RenderGraph>(name(), context, device());
+    utl::hashmap<Pass const*, Pass*> map;
+    for (auto& pass: passes) {
+        auto* clonedPass = clone->addPass(pass->clone(context));
+        clonedPass->_device = &device();
+        clonedPass->_parent = clone.get();
+        map[pass.get()] = clonedPass;
+    }
+    for (auto& pass: passes) {
+        auto* clonedPass = get(map, pass.get());
+        for (auto [index, sink]: pass->sinks() | enumerate) {
+            auto* source = sink->source();
+            if (!source) {
+                continue;
+            }
+            auto* sourcePass = get(map, source->pass());
+            clone->addLink(sourcePass->source(source->indexInParent()),
+                           clonedPass->sink(index));
+        }
+    }
+    clone->executionOrder = executionOrder | transform([&](auto* pass) {
+        return get(map, pass);
+    }) | ranges::to<std::vector>;
+    return clone;
+}
 
 static std::unique_ptr<RenderGraph> gRenderGraph;
 static RenderGraphContext gRenderGraphCtx;

@@ -14,6 +14,8 @@ using namespace vml::short_types;
 namespace {
 
 struct IDPass: PassImpl<IDPass, RenderPass> {
+    using PassImpl::PassImpl;
+
     IDPass(): PassImpl("ID Pass") {}
 
     void doExecute(FrameParameters const& params, RenderContext& ctx) override;

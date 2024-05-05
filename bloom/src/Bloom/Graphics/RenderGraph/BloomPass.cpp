@@ -17,6 +17,8 @@ static constexpr size_t NumUpsampleMips = NumDownsampleMips - 1;
 namespace {
 
 struct BloomPass: PassImpl<BloomPass, ComputePass> {
+    using PassImpl::PassImpl;
+
     explicit BloomPass(std::string name);
 
     void doExecute(FrameParameters const& params, ComputeContext& ctx) override;

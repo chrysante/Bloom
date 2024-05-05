@@ -12,6 +12,8 @@ using namespace vml::short_types;
 namespace {
 
 struct PostProcessPass: PassImpl<PostProcessPass, ComputePass> {
+    using PassImpl::PassImpl;
+
     PostProcessPass(std::string name);
 
     void doExecute(FrameParameters const& params, ComputeContext& ctx) override;

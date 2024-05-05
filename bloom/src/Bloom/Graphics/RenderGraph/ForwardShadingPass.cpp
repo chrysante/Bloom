@@ -18,6 +18,8 @@ using namespace vml;
 namespace {
 
 struct ForwardShadingPass: PassImpl<ForwardShadingPass, RenderPass> {
+    using PassImpl::PassImpl;
+
     explicit ForwardShadingPass(std::string name);
 
     void doExecute(FrameParameters const& params, RenderContext& ctx) override;

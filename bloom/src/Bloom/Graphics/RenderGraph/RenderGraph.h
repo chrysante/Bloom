@@ -80,11 +80,16 @@ public:
                                                       nullptr);
     }
 
+    ///
+    std::unique_ptr<RenderGraph> clone() const;
+
 private:
     void doExecute(FrameParameters const& params, CommandQueue& queue) override;
 
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
+
+    std::unique_ptr<Pass> doClone() const override;
 
     RenderGraphContext* ctx;
     std::vector<std::unique_ptr<Pass>> passes;

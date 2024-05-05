@@ -1,6 +1,8 @@
 #ifndef POPPY_RENDERER_EDITORSCENERENDERER2_H
 #define POPPY_RENDERER_EDITORSCENERENDERER2_H
 
+#include <memory>
+
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/SceneRenderer.h"
 #include "Poppy/Editor/EntitySelectionManager.h"

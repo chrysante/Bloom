@@ -247,6 +247,14 @@ void RenderGraph::doAllocateResources(FrameParameters const& params,
     lastFrameParams = params;
 }
 
+std::unique_ptr<RenderGraph> RenderGraph::clone() const {
+    auto p = Pass::clone();
+    return std::unique_ptr<RenderGraph>(
+        dynamic_cast<RenderGraph*>(p.release()));
+}
+
+std::unique_ptr<Pass> RenderGraph::doClone() const { return nullptr; }
+
 static std::unique_ptr<RenderGraph> gRenderGraph;
 static RenderGraphContext gRenderGraphCtx;
 

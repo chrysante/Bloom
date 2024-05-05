@@ -15,7 +15,6 @@ vertex float4 selectionPassVS(SceneRenderParameters device const& scene
                               [[buffer(0)]],
                               Vertex3D device const* vertices [[buffer(1)]],
                               float4x4 device const& transform [[buffer(2)]],
-
                               uint const vertexID [[vertex_id]])
 {
     Vertex3D v = vertices[vertexID];
@@ -37,6 +36,11 @@ vertex float4 rgSelectionPassVS(CameraInput device const& camera [[buffer(0)]],
 }
 
 fragment float rgSelectionPassFS() { return 1; }
+
+fragment uint32_t rgIDPassFS(uint32_t device const& ID [[buffer(0)]])
+{
+    return ID;
+}
 
 namespace {
 struct EdgeDetectResult {

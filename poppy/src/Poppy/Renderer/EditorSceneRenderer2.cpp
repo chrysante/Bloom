@@ -29,18 +29,38 @@ static R* findSource(RenderGraph* renderGraph, std::string_view name) {
     return dyncast<R*>(source->resource());
 }
 
+static void wrapRenderGraph(RenderGraph& outer,
+                            std::unique_ptr<RenderGraph> inner_) {
+    auto& inner = *outer.addPass(std::move(inner_));
+    for (auto* sink: inner.sinks()) {
+        auto* outerSink = outer.declareSink(sink->interface());
+        outer.addLink(outerSink->internalSource(), sink);
+    }
+    for (auto* source: inner.sources()) {
+        auto* outerSource = outer.declareSource(source->interface());
+        outer.addLink(source, outerSource->internalSink());
+    }
+}
+
 EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* sceneRenderGraph) {
+    //    auto* sceneRenderGraph = sceneRenderGraphOwner.get();
     mRenderGraph = std::make_unique<RenderGraph>("Editor Render Graph",
                                                  sceneRenderGraph->context(),
                                                  sceneRenderGraph->device());
     auto* selPass = mRenderGraph->addPass(makeSelectionPass());
+    //    auto* idPass = mRenderGraph->addPass(makeIDPass());
     auto* compPass = mRenderGraph->addPass(makeCompositionPass());
+
     auto* selGeo = mRenderGraph->declareSink(
         GeometryInterface{ "Selected Geometry", nullptr });
     auto* camera = mRenderGraph->declareSink(
         BufferInterface{ "Camera Buffer", nullptr, { sizeof(CameraInput) } });
+
     auto* compositeColor = mRenderGraph->declareSource(
         TextureInterface{ "Final Color", nullptr, {} });
+
+    //    auto* idMap = mRenderGraph->declareSource(
+    //        TextureInterface{ "ID Map", nullptr, {} });
     auto* sceneColor = sceneRenderGraph->findSource("Color");
     mRenderGraph->addLink(selGeo->internalSource(),
                           selPass->findSink("Selected Geometry"));
@@ -56,6 +76,8 @@ EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* sceneRenderGraph) {
                           compPass->findSink("Scene Depth"));
     mRenderGraph->addLink(compPass->findSource("Final Color"),
                           compositeColor->internalSink());
+    //    mRenderGraph->addLink(idPass->findSource("ID Map"),
+    //                          idMap->internalSink());
     if (!mRenderGraph->compile()) {
         return;
     }

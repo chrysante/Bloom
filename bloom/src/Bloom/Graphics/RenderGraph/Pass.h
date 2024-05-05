@@ -102,6 +102,9 @@ public:
     /// Executes this pass
     void execute(FrameParameters const& params, CommandQueue& queue);
 
+    ///
+    std::unique_ptr<Pass> clone() const { return doClone(); }
+
 protected:
     explicit Pass(std::string name, HardwareDevice* device = nullptr):
         _device(device), _name(std::move(name)) {}
@@ -127,7 +130,10 @@ private:
 
     virtual void doExecute(FrameParameters const& params,
                            CommandQueue& queue) = 0;
+
     virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
+
+    virtual std::unique_ptr<Pass> doClone() const { return nullptr; }
 
     RenderGraph* _parent = nullptr;
     HardwareDevice* _device = nullptr;
@@ -194,6 +200,13 @@ protected:
             pass->declareSource(interface, interface.get().accessor(*pass));
         }
     }
+
+private:
+#if 0
+    std::unique_ptr<Pass> doClone() const override {
+        return std::make_unique<PassType>(CloneToken{});
+    }
+#endif
 };
 
 #define BEGIN_INTERFACE_DECL_IMPL(Name, PassType)                              \

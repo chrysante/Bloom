@@ -29,6 +29,8 @@ using namespace poppy;
 using namespace bloom;
 using namespace vml::short_types;
 
+static void displayRenderGraphDebugger(rg::RenderGraph const& rg, bool* open);
+
 namespace {
 
 struct Parameters {
@@ -78,6 +80,7 @@ struct Viewport2: View, BasicSceneInspector {
     DebugDrawOptions drawOptions;
     ViewportCameraController cameraController;
     MouseState mouseState;
+    bool showRenderGraphDebugger = false;
 };
 
 } // namespace
@@ -107,6 +110,10 @@ void Viewport2::display() {
     readInput();
     acceptDragDrop();
     ImGui::EndChild();
+    if (showRenderGraphDebugger && rg::RenderGraphManager::get()) {
+        displayRenderGraphDebugger(*rg::RenderGraphManager::get(),
+                                   &showRenderGraphDebugger);
+    }
 }
 
 static EditorSceneRenderer2& getSceneRenderer(rg::RenderGraph& renderGraph) {
@@ -312,4 +319,32 @@ Toolbar Viewport2::makeToolbar() {
     return toolbar;
 }
 
-void Viewport2::dropdownMenu() {}
+void Viewport2::dropdownMenu() {
+    ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);
+}
+
+static void displayRenderGraphDebugger(rg::RenderGraph const& rg, bool* open) {
+    ImGui::Begin("Render Graph Debugger", open);
+    if (ImGui::CollapsingHeader("Resource Pool",
+                                ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        auto& pool = rg.context().resourcePool;
+        for (auto* resource: pool.resources()) {
+            if (ImGui::TreeNodeEx((void*)resource,
+                                  ImGuiTreeNodeFlags_DefaultOpen, "Resource"))
+            {
+                ImGui::TextEx(utl::strcat(resource->type()).c_str());
+                if (ImGui::TreeNodeEx((void*)resource,
+                                      ImGuiTreeNodeFlags_DefaultOpen, "Users"))
+                {
+                    for (auto* user: resource->users()) {
+                        ImGui::TextEx(user->qualifiedName().c_str());
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::TreePop();
+            }
+        }
+    }
+    ImGui::End();
+}

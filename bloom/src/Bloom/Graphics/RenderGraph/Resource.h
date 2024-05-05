@@ -106,7 +106,7 @@ private:
 ///
 UTL_SOA_TYPE(Geometry, (Reference<StaticMeshRenderer>, mesh),
              (Reference<MaterialInstance>, materialInstance),
-             (vml::float4x4, transform));
+             (vml::float4x4, transform), (uint32_t, entityID));
 
 /// Set of visible meshes in a scene. This is rebuild every frame
 class GeometryResource: public Resource {
@@ -121,7 +121,7 @@ public:
     /// Adds an object to the resource
     void add(Reference<StaticMeshRenderer> mesh,
              Reference<MaterialInstance> material,
-             vml::float4x4 const& transform);
+             vml::float4x4 const& transform, uint32_t entityID);
 
     /// Must be called when starting a new frame
     void clear();
@@ -137,9 +137,13 @@ public:
     ///
     BufferHandle const& transformBuffer() const { return transforms; }
 
+    ///
+    BufferHandle const& IDBuffer() const { return IDs; }
+
 private:
     utl::structure_of_arrays<Geometry> objects;
     BufferHandle transforms;
+    BufferHandle IDs;
 };
 
 /// Set of lights in a scene. This is rebuild every frame

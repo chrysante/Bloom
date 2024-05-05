@@ -219,9 +219,10 @@ void Viewport2::handleEntitySelection() {
     {
         return;
     }
+    float2 mousePos = window().contentScaleFactor() *
+                      screenSpaceToViewSpace(ImGui::GetMousePos());
     EntityHandle entity =
-        renderer->readEntityIDMap(*window().commandQueue(), scenes(),
-                                  screenSpaceToViewSpace(ImGui::GetMousePos()));
+        renderer->readEntityIDMap(*window().commandQueue(), scenes(), mousePos);
     auto mode = getSelectionMode();
     if (entity) {
         selection().amend(entity, mode);

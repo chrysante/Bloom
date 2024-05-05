@@ -37,6 +37,7 @@ struct ForwardShadingPass: PassImpl<ForwardShadingPass, RenderPass> {
     // Sources
     TextureHandle rawColor;
     TextureHandle depth;
+    TextureHandle idMap;
 
     // Internal resources
     SamplerHandle shadowMapSampler;
@@ -98,6 +99,17 @@ BEGIN_SOURCE_DECL(ForwardShadingPass) {
                 .size = { params.screenSize, 1 }
             };
         }
+    },
+    TextureInterface{
+        "EntityID Map",
+        &ForwardShadingPass::idMap,
+        [](FrameParameters const& params) {
+            return TextureInterfaceDescriptor{
+                .pixelFormat = PixelFormat::R32Uint,
+                .size = { params.screenSize, 1 },
+                .storageMode = StorageMode::Managed
+            };
+        }
     }
 }
 END_DECL()
@@ -111,14 +123,19 @@ ForwardShadingPass::ForwardShadingPass(std::string name):
 
 void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     RenderPassDescription desc{};
-    RenderPassColorAttachmentDescription caDesc{};
-    caDesc.texture = rawColor;
-    caDesc.clearColor = vml::colors<>::black;
-    caDesc.loadAction = LoadAction::Clear;
-    desc.colorAttachments.push_back(caDesc);
-    RenderPassDepthAttachmentDescription dDesc{};
-    dDesc.texture = depth;
-    desc.depthAttachment = dDesc;
+    desc.colorAttachments = {
+        {
+            .texture = rawColor,
+            .clearColor = vml::colors<>::black,
+            .loadAction = LoadAction::Clear,
+        },
+        {
+            .texture = idMap,
+            .clearColor = { UINT_MAX, 0, 0, 1 },
+            .loadAction = LoadAction::Clear,
+        },
+    };
+    desc.depthAttachment = { .texture = depth };
     ctx.begin(desc);
     ctx.setVertexBuffer(cameraBuffer, 0);
     ctx.setVertexBuffer(geometry->transformBuffer(), 2);
@@ -126,6 +143,7 @@ void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     ctx.setFragmentBuffer(lights->lightBuffer(), 1);
     ctx.setFragmentBuffer(lightSpaceTransforms, 2);
     ctx.setFragmentBuffer(shadowMetadata, 3);
+    ctx.setFragmentBuffer(geometry->IDBuffer(), 5);
     ctx.setFragmentTexture(shadowMaps, 0);
     ctx.setFragmentSampler(shadowMapSampler, 0);
     Material const* currentMaterial = nullptr;
@@ -148,8 +166,10 @@ void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
             ctx.setVertexBuffer(object.mesh->vertexBuffer(), 1);
             currentMesh = object.mesh.get();
         }
-        // object transform
+        // Object transform
         ctx.setVertexBufferOffset(2, index * sizeof(float4x4));
+        // Entity ID
+        ctx.setFragmentBufferOffset(5, index * sizeof(uint32_t));
         BufferView indexBuffer = object.mesh->indexBuffer();
         DrawDescription desc{};
         desc.indexCount = indexBuffer.size() / 4;

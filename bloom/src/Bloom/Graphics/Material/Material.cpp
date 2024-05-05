@@ -6,10 +6,9 @@ using namespace bloom;
 
 void Material::makeDefault(HardwareDevice& device) {
     RenderPipelineDescription desc;
-    ColorAttachmentDescription ca;
     // Main Pass
-    ca.pixelFormat = PixelFormat::RGBA32Float;
-    desc.colorAttachments.push_back(ca);
+    desc.colorAttachments = { { .pixelFormat = PixelFormat::RGBA32Float },
+                              { .pixelFormat = PixelFormat::R32Uint } };
     desc.vertexFunction = device.createFunction("mainPassVS");
     desc.fragmentFunction = device.createFunction("mainPassFS");
     desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;

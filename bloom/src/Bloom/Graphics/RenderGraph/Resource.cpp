@@ -74,9 +74,9 @@ void TextureResource::doReallocate(HardwareDevice& device,
 
 void GeometryResource::add(Reference<StaticMeshRenderer> mesh,
                            Reference<MaterialInstance> material,
-                           vml::float4x4 const& transform) {
+                           vml::float4x4 const& transform, uint32_t entityID) {
     objects.emplace_back(std::move(mesh), std::move(material),
-                         vml::transpose(transform));
+                         vml::transpose(transform), entityID);
 }
 
 void GeometryResource::clear() { objects.clear(); }
@@ -102,6 +102,7 @@ void GeometryResource::prepare(HardwareDevice& device) {
     if (transformBufferSize == 0) {
         return;
     }
+    size_t idBufferSize = objects.size() * sizeof(uint32_t);
     if (transforms.size() < transformBufferSize) {
         transforms =
             device.createBuffer({ .size = transformBufferSize,
@@ -109,6 +110,11 @@ void GeometryResource::prepare(HardwareDevice& device) {
     }
     device.fillManagedBuffer(transforms, objects.data().transform,
                              transformBufferSize);
+    if (IDs.size() < idBufferSize) {
+        IDs = device.createBuffer(
+            { .size = idBufferSize, .storageMode = StorageMode::Managed });
+    }
+    device.fillManagedBuffer(IDs, objects.data().entityID, idBufferSize);
 }
 
 void LightsResource::add(PointLight const& light) {

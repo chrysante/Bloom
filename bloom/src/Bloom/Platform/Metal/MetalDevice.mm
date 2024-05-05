@@ -199,10 +199,12 @@ RenderPipelineHandle MetalDevice::createRenderPipeline(
                                    desc.vertexFunction.nativeHandle()];
     [mtlDesc setFragmentFunction:(__bridge id<MTLFunction>)
                                      desc.fragmentFunction.nativeHandle()];
+    NSError* error;
     id<MTLRenderPipelineState> pipelineState =
-        [device newRenderPipelineStateWithDescriptor:mtlDesc error:nil];
+        [device newRenderPipelineStateWithDescriptor:mtlDesc error:&error];
     if (!pipelineState) {
-        Logger::Error("Failed to create Pipeline State");
+        Logger::Error("Failed to create Pipeline State: ",
+                      [error localizedDescription].UTF8String);
         return RenderPipelineHandle();
     }
     return RenderPipelineHandle(bloom_retain(pipelineState), bloom_release);
@@ -210,12 +212,14 @@ RenderPipelineHandle MetalDevice::createRenderPipeline(
 
 ComputePipelineHandle MetalDevice::createComputePipeline(
     ComputePipelineDescription const& desc) {
+    NSError* error;
     id<MTLComputePipelineState> pipelineState = [device
         newComputePipelineStateWithFunction:(__bridge id<MTLFunction>)desc
                                                 .computeFunction.nativeHandle()
-                                      error:nil];
+                                      error:&error];
     if (!pipelineState) {
-        Logger::Error("Failed to create Pipeline State");
+        Logger::Error("Failed to create Pipeline State: ",
+                      [error localizedDescription].UTF8String);
         return ComputePipelineHandle();
     }
     auto result =

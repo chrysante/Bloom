@@ -41,6 +41,7 @@ vertex MainPassData mainPassVS(SceneRenderParameters device const& scene
 
 struct MainPassFragmentData {
     float4 color [[color(0)]];
+    uint32_t entityID [[color(1)]];
 };
 
 static float3 computePointLights(PBRData pbr, float3 N, float3 V,
@@ -210,6 +211,7 @@ fragment MainPassFragmentData rgMainPassFS(
     float4x4 device const* lightSpaceTransforms [[buffer(2)]],
     ShadowRenderMetadata device const& shadowMetadata [[buffer(3)]],
     MaterialParameters device const& materialParams [[buffer(4)]],
+    uint32_t device const& entityID [[buffer(5)]],
     texture2d_array<float> shadowMaps [[texture(0)]],
     sampler shadowMapSampler [[sampler(0)]])
 {
@@ -231,5 +233,6 @@ fragment MainPassFragmentData rgMainPassFS(
                                   shadowMapSampler, shadowMaps);
     lightAcc += computeSkyLights(pbr, lights.numSkyLights, lights.skyLights);
     lightAcc += computeEmissive(materialParams);
-    return MainPassFragmentData{ .color = float4(lightAcc, 1) };
+    return MainPassFragmentData{ .color = float4(lightAcc, 1),
+                                 .entityID = entityID };
 }

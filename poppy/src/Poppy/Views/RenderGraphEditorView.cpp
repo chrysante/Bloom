@@ -172,7 +172,9 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
     }
 
     std::vector<PinDesc> makeInputDescriptors() override {
-        return { { .name = "Color" }, { .name = "Depth" } };
+        return { { .name = "Color" },
+                 { .name = "Depth" },
+                 { .name = "ID Map" } };
     }
 
     float4 nodeColor() override { return OutputNodeColor; }
@@ -187,6 +189,7 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
         sinks.clear();
         declareSource(rg, TextureInterface{ "Color", nullptr, {} });
         declareSource(rg, TextureInterface{ "Depth", nullptr, {} });
+        declareSource(rg, TextureInterface{ "ID Map", nullptr, {} });
     }
 
     PassSource* getSource([[maybe_unused]] size_t index) const override {

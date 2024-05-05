@@ -33,9 +33,6 @@ private:
     std::unique_ptr<bloom::rg::SceneRenderer> mRenderer;
     std::unique_ptr<bloom::rg::RenderGraph> mRenderGraph;
     bloom::rg::GeometryResource* selectedGeometry = nullptr;
-    size_t sceneIndex = 0;
-    std::vector<uint32_t> idBufContents;
-    bloom::rg::BufferResource* idBuffer = nullptr;
     bloom::rg::TextureResource* idMap = nullptr;
     bloom::rg::TextureResource* mCompositeColor = nullptr;
     bloom::rg::TextureResource* mSceneColor = nullptr;

@@ -31,7 +31,6 @@ set(poppy_sources
   src/Poppy/Renderer/Passes.h
   src/Poppy/Renderer/SelectionPass.cpp
   src/Poppy/Renderer/CompositionPass.cpp
-  src/Poppy/Renderer/IDPass.cpp
 
   src/Poppy/UI/Appearance.cpp
   src/Poppy/UI/Appearance.h

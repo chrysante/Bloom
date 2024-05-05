@@ -122,13 +122,12 @@ void EditorSceneRenderer2::submit(
 }
 
 void EditorSceneRenderer2::draw(bloom::CommandQueue& commandQueue) {
-    mRenderer->draw(commandQueue);
     mRenderGraph->allocateResources(mRenderer->getFrameParams(),
                                     mRenderGraph->device());
     if (selectedGeometry) {
         selectedGeometry->prepare(mRenderGraph->device());
     }
-    mRenderGraph->execute(mRenderer->getFrameParams(), commandQueue);
+    mRenderer->draw(commandQueue);
 }
 
 bloom::TextureView EditorSceneRenderer2::sceneColor() const {

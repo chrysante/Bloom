@@ -29,8 +29,8 @@ set(poppy_sources
   src/Poppy/Renderer/EditorSceneRenderer2.cpp
   src/Poppy/Renderer/EditorSceneRenderer2.h
   src/Poppy/Renderer/Passes.h
-  src/Poppy/Renderer/SelectionPass.h
-  src/Poppy/Renderer/CompositionPass.h
+  src/Poppy/Renderer/SelectionPass.cpp
+  src/Poppy/Renderer/CompositionPass.cpp
 
   src/Poppy/UI/Appearance.cpp
   src/Poppy/UI/Appearance.h
@@ -81,8 +81,8 @@ set(poppy_sources
   src/Poppy/Views/RenderGraphEditorView.cpp
   src/Poppy/Views/SceneOutliner.cpp
   src/Poppy/Views/Viewport2.cpp
-  src/Poppy/Views/Viewport/Gizmo.cpp
-  src/Poppy/Views/Viewport/Gizmo.h
+  src/Poppy/Views/Gizmo.cpp
+  src/Poppy/Views/Gizmo.h
   src/Poppy/Views/Viewport/Viewport.cpp
   src/Poppy/Views/Viewport/Viewport.h
   src/Poppy/Views/Viewport/ViewportCameraController.cpp

@@ -21,7 +21,7 @@
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetDragDrop.h"
 #include "Poppy/Views/BasicSceneInspector.h"
-#include "Poppy/Views/Viewport/Gizmo.h"
+#include "Poppy/Views/Gizmo.h"
 #include "Poppy/Views/Viewport/ViewportCameraController.h"
 #include "Poppy/Views/Viewport/ViewportOverlays.h"
 
@@ -64,6 +64,7 @@ struct Viewport2: View, BasicSceneInspector {
     void init() override;
     void display() override;
     void displayScenes();
+    void displayGizmo();
     void displayToolbar() override {}
     void displayToolbarWithBackground();
     void readInput();
@@ -94,20 +95,19 @@ Viewport2::Viewport2(): BasicSceneInspector(this) {
 void Viewport2::init() {
     setPadding({ 0, 0 });
     setToolbar(makeToolbar());
-
-    gizmo.setInput(editor().input());
 }
 
 void Viewport2::display() {
     ImGui::BeginChild("Child");
     if (!scenes().empty()) {
+        readInput();
         displayScenes();
+        displayGizmo();
     }
     else {
         displayEmptyWithReason("No Active Scene");
     }
     displayToolbarWithBackground();
-    readInput();
     acceptDragDrop();
     ImGui::EndChild();
     if (showRenderGraphDebugger && rg::RenderGraphManager::get()) {
@@ -157,6 +157,24 @@ void Viewport2::displayScenes() {
         return;
     }
     ImGui::Image(finalColor.nativeHandle(), ImGui::GetContentRegionAvail());
+}
+
+void Viewport2::displayGizmo() {
+    if (selection().empty()) {
+        return;
+    }
+    EntityHandle entity = *selection().entities().begin();
+    Transform transformComponent = entity.get<Transform>();
+    EntityID parent = entity.getParent();
+    auto& scene = entity.scene();
+    auto localTransform = transformComponent.calculate();
+    auto parentTransform = scene.calculateTransformRelativeToWorld(parent);
+    auto entityWSTransform = parentTransform * localTransform;
+    if (!gizmo.display(cameraController.camera(), entityWSTransform)) {
+        return;
+    }
+    auto newLocalTransform = vml::inverse(parentTransform) * entityWSTransform;
+    entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
 }
 
 void Viewport2::displayToolbarWithBackground() {

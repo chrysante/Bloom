@@ -9,7 +9,7 @@
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/Views/BasicSceneInspector.h"
-#include "Poppy/Views/Viewport/Gizmo.h"
+#include "Poppy/Views/Gizmo.h"
 #include "Poppy/Views/Viewport/ViewportCameraController.h"
 #include "Poppy/Views/Viewport/ViewportOverlays.h"
 
@@ -50,6 +50,8 @@ public:
     /// We override this with an empty function because we want to control when
     /// the toolbar is being displayed
     void displayToolbar() override {}
+
+    void displayGizmo();
 
     //	public:
     struct Parameters {

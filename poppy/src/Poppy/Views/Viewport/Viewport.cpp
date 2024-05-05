@@ -107,7 +107,6 @@ Viewport::Viewport(): BasicSceneInspector(this) {
 void Viewport::init() {
     setPadding({ 0, 0 });
     sceneRenderer.setRenderer(&editor().coreSystems().renderer());
-    gizmo.setInput(editor().input());
     overlays.init(this);
 }
 
@@ -204,8 +203,26 @@ void Viewport::displayScene() {
     if (!gameView) {
         auto lock = editor().coreSystems().sceneSystem().lock();
         overlays.display();
-        gizmo.display(camera.camera(), selection());
+        displayGizmo();
     }
+}
+
+void Viewport::displayGizmo() {
+    if (selection().empty()) {
+        return;
+    }
+    EntityHandle entity = *selection().entities().begin();
+    Transform transformComponent = entity.get<Transform>();
+    EntityID parent = entity.getParent();
+    auto& scene = entity.scene();
+    auto localTransform = transformComponent.calculate();
+    auto parentTransform = scene.calculateTransformRelativeToWorld(parent);
+    auto entityWSTransform = parentTransform * localTransform;
+    if (!gizmo.display(camera.camera(), entityWSTransform)) {
+        return;
+    }
+    auto newLocalTransform = vml::inverse(parentTransform) * entityWSTransform;
+    entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
 }
 
 void Viewport::drawScene() {
@@ -263,13 +280,13 @@ void Viewport::onInput(InputEvent& event) {
             gizmo.cycleSpace();
             break;
         case Key::Num1:
-            gizmo.setOperation(Gizmo::Operation::Translate);
+            gizmo.setOperation(GizmoOperation::Translate);
             break;
         case Key::Num2:
-            gizmo.setOperation(Gizmo::Operation::Rotate);
+            gizmo.setOperation(GizmoOperation::Rotate);
             break;
         case Key::Num3:
-            gizmo.setOperation(Gizmo::Operation::Scale);
+            gizmo.setOperation(GizmoOperation::Scale);
             break;
         case Key::Escape:
             restore();

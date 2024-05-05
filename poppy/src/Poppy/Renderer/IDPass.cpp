@@ -66,7 +66,8 @@ BEGIN_SOURCE_DECL(IDPass) {
         [](FrameParameters const& params) {
             return TextureInterfaceDescriptor{
                 .pixelFormat = PixelFormat::R32Uint,
-                .size = { params.screenSize / 2, 1 }
+                .size = { params.screenSize / 2, 1 },
+                .storageMode = StorageMode::Managed
             };
         }
     },
@@ -91,7 +92,7 @@ void IDPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     RenderPassDescription desc{};
     RenderPassColorAttachmentDescription caDesc{};
     caDesc.texture = idMap;
-    caDesc.clearColor = { 0, 0, 0, 1 };
+    caDesc.clearColor = { UINT_MAX, 1, 1, 1 };
     caDesc.loadAction = LoadAction::Clear;
     desc.colorAttachments.push_back(caDesc);
     RenderPassDepthAttachmentDescription dDesc{};

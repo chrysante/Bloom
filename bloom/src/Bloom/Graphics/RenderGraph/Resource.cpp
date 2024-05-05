@@ -68,6 +68,7 @@ void TextureResource::doReallocate(HardwareDevice& device,
                                      .mipmapLevelCount = desc.mipmapLevelCount,
                                      .sampleCount = desc.sampleCount,
                                      .arrayLength = desc.arrayLength,
+                                     .storageMode = desc.storageMode,
                                      .usage = desc.usage });
 }
 

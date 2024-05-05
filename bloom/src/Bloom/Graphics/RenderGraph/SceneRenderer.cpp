@@ -78,12 +78,8 @@ static void submitGeometry(Scene const& scene, rg::GeometryResource& geometry) {
                            MeshRendererComponent const>();
     view.each([&](EntityID ID, TransformMatrixComponent const& transform,
                   MeshRendererComponent const& meshRenderer) {
-        if (auto* vis = scene.tryGetComponent<VisibilityComponent>(ID);
-            vis && !vis->value)
-        {
-            return;
-        }
-        if (!meshRenderer.mesh || !meshRenderer.materialInstance ||
+        if (!scene.getHandle(ID).isVisible() || !meshRenderer.mesh ||
+            !meshRenderer.materialInstance ||
             !meshRenderer.materialInstance->material())
         {
             return;

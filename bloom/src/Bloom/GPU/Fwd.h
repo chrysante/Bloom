@@ -3,6 +3,9 @@
 
 namespace bloom {
 
+/// List of supported render APIs
+enum class RenderAPI { Metal };
+
 class HardwareDevice;
 class CommandQueue;
 class Swapchain;

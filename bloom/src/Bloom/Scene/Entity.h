@@ -16,6 +16,7 @@
 namespace bloom {
 
 struct HierarchyComponent;
+struct VisibilityComponent;
 
 /// Unique entity identifier
 struct BLOOM_API EntityID {
@@ -23,7 +24,6 @@ public:
     friend class Scene;
     using RawType = std::underlying_type_t<entt::entity>;
 
-public:
     ///
     EntityID() = default;
 
@@ -174,6 +174,13 @@ public:
 
     /// \Returns `true` if this handle refers to a valid entity
     explicit operator bool() const { return bool(ID()); }
+
+    /// \Returns `true` if this entity has no visibility component or if the
+    /// visibility component is set to visible
+    bool isVisible() const {
+        auto* vis = tryGet<VisibilityComponent>();
+        return !vis || vis->value;
+    }
 
     /// \Returns the parent entity if this entity has a parent
     EntityHandleEx getParent() const {

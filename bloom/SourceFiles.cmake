@@ -59,6 +59,7 @@ set(bloom_sources
   src/Bloom/GPU/ComputeContext.h
   src/Bloom/GPU/HardwareDevice.cpp
   src/Bloom/GPU/HardwareDevice.h
+  src/Bloom/GPU/HardwarePrimitives.cpp
   src/Bloom/GPU/HardwarePrimitives.h
   src/Bloom/GPU/HardwareResourceHandle.h
   src/Bloom/GPU/RenderContext.h
@@ -131,6 +132,8 @@ set(bloom_sources
   src/Bloom/Platform/Metal/MetalComputeContext.mm
   src/Bloom/Platform/Metal/MetalDevice.h
   src/Bloom/Platform/Metal/MetalDevice.mm
+  src/Bloom/Platform/Metal/MetalPrimitives.h
+  src/Bloom/Platform/Metal/MetalPrimitives.mm
   src/Bloom/Platform/Metal/MetalRenderContext.h
   src/Bloom/Platform/Metal/MetalRenderContext.mm
   src/Bloom/Platform/Metal/MetalSwapchain.h

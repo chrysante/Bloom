@@ -64,9 +64,11 @@ struct MouseState {
 struct Viewport2: View, BasicSceneInspector {
     Viewport2();
     void init() override;
+
     void display() override;
     void drawScenes();
     void displayGizmo();
+    void handleEntitySelection();
 
     void displayToolbar() override {}
     void displayToolbarWithBackground();
@@ -89,6 +91,7 @@ struct Viewport2: View, BasicSceneInspector {
     DebugDrawOptions drawOptions;
     ViewportCameraController cameraController;
     MouseState mouseState;
+    EditorSceneRenderer2* renderer = nullptr;
     bool showRenderGraphDebugger = false;
     bool gameView = false;
 };
@@ -115,16 +118,35 @@ void Viewport2::init() {
     setToolbar(makeToolbar());
 }
 
+static EditorSceneRenderer2& getSceneRenderer(rg::RenderGraph* renderGraph) {
+    static rg::RenderGraph const* current = nullptr;
+    static std::unique_ptr<EditorSceneRenderer2> instance;
+    static RenderGraphContext context;
+    if (current != renderGraph) {
+        current = renderGraph;
+        context.resourcePool.clear();
+        instance =
+            std::make_unique<EditorSceneRenderer2>(renderGraph->clone(context));
+    }
+    return *instance;
+}
+
 void Viewport2::display() {
     ImGui::BeginChild("Child");
     if (!scenes().empty()) {
         readInput();
         drawScenes();
         if (!gameView) {
-            displayLightOverlays(scenes(), selection(), [&](float3 WS) {
+            bool selectedAny = false;
+            auto WStoSS = [&](float3 WS) {
                 return worldSpaceToScreenSpace(WS);
-            });
+            };
+            selectedAny |= displayLightOverlays(scenes(), selection(), WStoSS);
             displayGizmo();
+            selectedAny |= gizmo.isUsing() || gizmo.isHovered();
+            if (!selectedAny) {
+                handleEntitySelection();
+            }
         }
     }
     else {
@@ -139,19 +161,6 @@ void Viewport2::display() {
     }
 }
 
-static EditorSceneRenderer2& getSceneRenderer(rg::RenderGraph* renderGraph) {
-    static rg::RenderGraph const* current = nullptr;
-    static std::unique_ptr<EditorSceneRenderer2> instance;
-    static RenderGraphContext context;
-    if (current != renderGraph) {
-        current = renderGraph;
-        context.resourcePool.clear();
-        instance =
-            std::make_unique<EditorSceneRenderer2>(renderGraph->clone(context));
-    }
-    return *instance;
-}
-
 void Viewport2::drawScenes() {
     float2 viewportSize =
         (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
@@ -162,23 +171,23 @@ void Viewport2::drawScenes() {
         displayEmptyWithError("No Render Graph Found");
         return;
     }
-    auto& renderer = getSceneRenderer(renderGraph);
+    renderer = &getSceneRenderer(renderGraph);
     cameraController.applyProjection(viewportSize);
-    renderer.begin(frameParams, cameraController.camera());
+    renderer->begin(frameParams, cameraController.camera());
     auto& sceneSystem = editor().coreSystems().sceneSystem();
     std::unique_lock lock = sceneSystem.lock();
     sceneSystem.applyTransformHierarchy();
     for (auto* scene: sceneSystem.scenes()) {
-        renderer.submit(*scene, selection());
+        renderer->submit(*scene, selection());
     }
     lock.unlock();
-    renderer.draw(*window().commandQueue());
+    renderer->draw(*window().commandQueue());
     if (renderGraph->sources().empty()) {
         displayEmptyWithError("Render Graph Has No Outputs");
         return;
     }
-    auto finalColor = gameView ? renderer.sceneColor() :
-                                 renderer.sceneColorWithOverlays();
+    auto finalColor = gameView ? renderer->sceneColor() :
+                                 renderer->sceneColorWithOverlays();
     if (!finalColor) {
         displayEmptyWithError("Render Graph Output Is Null");
         return;
@@ -202,6 +211,24 @@ void Viewport2::displayGizmo() {
     }
     auto newLocalTransform = inverse(parentTransform) * entityWSTransform;
     entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
+}
+
+void Viewport2::handleEntitySelection() {
+    if (!renderer || !ImGui::IsWindowHovered() ||
+        !ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+    {
+        return;
+    }
+    EntityHandle entity =
+        renderer->readEntityIDMap(*window().commandQueue(), scenes(),
+                                  screenSpaceToViewSpace(ImGui::GetMousePos()));
+    auto mode = getSelectionMode();
+    if (entity) {
+        selection().amend(entity, mode);
+    }
+    else if (mode == SelectionMode::Replace) {
+        selection().clear();
+    }
 }
 
 void Viewport2::displayToolbarWithBackground() {

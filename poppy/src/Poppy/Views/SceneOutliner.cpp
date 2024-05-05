@@ -189,6 +189,9 @@ void SceneOutliner::displayEntity(EntityHandle entity) {
                                  .selected = selection().contains(entity),
                                  .expanded = expanded(entity),
                                  .isLeaf = entity.scene().isLeaf(entity) });
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
+        ImGui::SetTooltip("ID: %d", entity.raw());
+    }
     entityContextMenu(entity);
     setExpanded(entity, isExpanded);
     dragDropSource(entity);

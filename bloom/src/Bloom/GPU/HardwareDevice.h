@@ -6,14 +6,12 @@
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Reference.h"
 #include "Bloom/GPU/CommandQueue.h"
+#include "Bloom/GPU/Fwd.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/GPU/RenderContext.h"
 #include "Bloom/GPU/Swapchain.h"
 
 namespace bloom {
-
-/// List of supported render APIs
-enum class RenderAPI { Metal };
 
 /// Represents a GPU
 class BLOOM_API HardwareDevice {

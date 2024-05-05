@@ -9,7 +9,7 @@ namespace bloom {
 
 std::unique_ptr<HardwareDevice> createMetalDevice();
 
-}
+} // namespace bloom
 
 #ifdef __OBJC__
 

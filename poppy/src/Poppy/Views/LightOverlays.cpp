@@ -207,7 +207,7 @@ struct Draw {
 
 } // namespace
 
-void poppy::displayLightOverlays(std::span<Scene* const> scenes,
+bool poppy::displayLightOverlays(std::span<Scene* const> scenes,
                                  EntitySelectionManager& selection,
                                  utl::function_view<float3(float3)> WStoSS) {
     auto draw = Draw{ WStoSS };
@@ -223,4 +223,5 @@ void poppy::displayLightOverlays(std::span<Scene* const> scenes,
     if (clicked) {
         selection.amend(clicked, getSelectionMode());
     }
+    return !!clicked;
 }

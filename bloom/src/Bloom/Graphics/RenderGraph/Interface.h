@@ -173,12 +173,13 @@ struct TextureInterfaceDescriptor {
     size_t sampleCount = 1;
     size_t arrayLength = 1;
     TextureUsage usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget;
+    StorageMode storageMode = StorageMode::GPUOnly;
 
     bool operator==(TextureInterfaceDescriptor const&) const = default;
 
     size_t hashValue() const {
         return utl::hash_combine(type, pixelFormat, size, mipmapLevelCount,
-                                 sampleCount, arrayLength);
+                                 sampleCount, arrayLength, usage, storageMode);
     }
 };
 

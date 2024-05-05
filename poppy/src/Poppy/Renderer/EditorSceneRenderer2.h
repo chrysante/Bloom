@@ -2,6 +2,9 @@
 #define POPPY_RENDERER_EDITORSCENERENDERER2_H
 
 #include <memory>
+#include <vector>
+
+#include <vml/vml.hpp>
 
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/SceneRenderer.h"
@@ -22,11 +25,18 @@ public:
     bloom::TextureView sceneColor() const;
     bloom::TextureView sceneColorWithOverlays() const;
 
+    bloom::EntityHandle readEntityIDMap(bloom::CommandQueue& commandQueue,
+                                        std::span<bloom::Scene* const> scenes,
+                                        vml::float2 position) const;
+
 private:
     std::unique_ptr<bloom::rg::SceneRenderer> mRenderer;
     std::unique_ptr<bloom::rg::RenderGraph> mRenderGraph;
     bloom::rg::GeometryResource* selectedGeometry = nullptr;
-    bloom::rg::BufferResource* cameraBuffer = nullptr;
+    size_t sceneIndex = 0;
+    std::vector<uint32_t> idBufContents;
+    bloom::rg::BufferResource* idBuffer = nullptr;
+    bloom::rg::TextureResource* idMap = nullptr;
     bloom::rg::TextureResource* mCompositeColor = nullptr;
     bloom::rg::TextureResource* mSceneColor = nullptr;
 };

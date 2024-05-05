@@ -149,7 +149,7 @@ void Viewport2::displayScenes() {
     if (!showSelection) {
         auto* output =
             dyncast<rg::TextureResource*>(renderGraph->source(0)->resource());
-        if (!output) {
+        if (!output || !output->handle()) {
             displayEmptyWithError("Render Graph Output Is Null");
             return;
         }

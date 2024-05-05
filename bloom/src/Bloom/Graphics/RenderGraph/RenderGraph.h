@@ -81,7 +81,7 @@ private:
 
 /// Temporary render graph manager until we figure out where to store them
 struct RenderGraphManager {
-    /// \Returns the global render graph instance. This takes a device to
+    /// \Returns the global render graph instance
     static RenderGraph* get();
 
     /// Sets the global render graph

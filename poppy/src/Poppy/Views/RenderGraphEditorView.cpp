@@ -122,25 +122,23 @@ struct GlobalInputNodeController: RenderGraphNodeController {
 
     void create(RenderGraph& rg) override {
         sources.clear();
-        declare(rg, GeometryInterface{ "Geometry", nullptr });
-        declare(rg, LightsInterface{ "Lights", nullptr });
-        declare(rg, BufferInterface{ "Camera",
-                                     nullptr,
-                                     { .size = sizeof(CameraInput) } });
-        declare(rg, BufferInterface{ "LightSpaceTransforms",
-                                     nullptr,
-                                     { .size = 0 } });
-        declare(rg,
-                BufferInterface{ "ShadowMetadata",
-                                 nullptr,
-                                 { .size = sizeof(ShadowRenderMetadata) } });
-        declare(rg, BufferInterface{ "BloomParameters",
-                                     nullptr,
-                                     { .size = sizeof(BloomParameters) } });
-        declare(rg,
-                BufferInterface{ "PostProcessParameters",
-                                 nullptr,
-                                 { .size = sizeof(PostProcessParameters) } });
+        declareSink(rg, GeometryInterface{ "Geometry", nullptr });
+        declareSink(rg, LightsInterface{ "Lights", nullptr });
+        declareSink(rg, BufferInterface{ "Camera",
+                                         nullptr,
+                                         { .size = sizeof(CameraInput) } });
+        declareSink(rg, BufferInterface{ "LightSpaceTransforms", nullptr, {} });
+        declareSink(rg, BufferInterface{
+                            "ShadowMetadata",
+                            nullptr,
+                            { .size = sizeof(ShadowRenderMetadata) } });
+        declareSink(rg, BufferInterface{ "BloomParameters",
+                                         nullptr,
+                                         { .size = sizeof(BloomParameters) } });
+        declareSink(rg, BufferInterface{
+                            "PostProcessParameters",
+                            nullptr,
+                            { .size = sizeof(PostProcessParameters) } });
     }
 
     PassSource* getSource(size_t index) const override {
@@ -156,7 +154,7 @@ struct GlobalInputNodeController: RenderGraphNodeController {
 
     bool alwaysDisplayOutputNames() const override { return true; }
 
-    void declare(RenderGraph& rg, InterfaceUnion interface) {
+    void declareSink(RenderGraph& rg, InterfaceUnion interface) {
         RenderGraphSink* sink = rg.declareSink(std::move(interface));
         sources.push_back(sink->internalSource());
     }
@@ -174,7 +172,7 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
     }
 
     std::vector<PinDesc> makeInputDescriptors() override {
-        return { { .name = "Color" } };
+        return { { .name = "Color" }, { .name = "Depth" } };
     }
 
     float4 nodeColor() override { return OutputNodeColor; }
@@ -187,7 +185,8 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
 
     void create(RenderGraph& rg) override {
         sinks.clear();
-        declare(rg, TextureInterface{ "Color", nullptr, {} });
+        declareSource(rg, TextureInterface{ "Color", nullptr, {} });
+        declareSource(rg, TextureInterface{ "Depth", nullptr, {} });
     }
 
     PassSource* getSource([[maybe_unused]] size_t index) const override {
@@ -199,7 +198,7 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
         return sinks[index];
     }
 
-    void declare(RenderGraph& rg, InterfaceUnion interface) {
+    void declareSource(RenderGraph& rg, InterfaceUnion interface) {
         RenderGraphSource* source = rg.declareSource(std::move(interface));
         sinks.push_back(source->internalSink());
     }

@@ -35,6 +35,7 @@ EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* renderGraph):
                                                  renderGraph->context(),
                                                  renderGraph->device());
     auto* selPass = mRenderGraph->addPass(makeSelectionPass());
+    auto* compPass = mRenderGraph->addPass(makeCompositionPass());
     auto* selGeo = mRenderGraph->declareSink(
         GeometryInterface{ "Selected Geometry", nullptr });
     auto* camera = mRenderGraph->declareSink(
@@ -45,8 +46,23 @@ EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* renderGraph):
                           selPass->findSink("Selected Geometry"));
     mRenderGraph->addLink(camera->internalSource(),
                           selPass->findSink("Camera"));
+
+#if 0
+    mRenderGraph->addLink(selPass->findSource("Selection Map"),
+                          compPass->findSink("Selection Map"));
+    mRenderGraph->addLink(selPass->findSource("Selection Depth"),
+                          compPass->findSink("Selection Depth"));
+    mRenderGraph->addLink(renderGraph->findSource("Color"),
+                          compPass->findSink("Scene Color"));
+    mRenderGraph->addLink(renderGraph->findSource("Depth"),
+                          compPass->findSink("Scene Depth"));
+    mRenderGraph->addLink(compPass->findSource("Final Color"),
+                          finalColor->internalSink());
+#endif
+
     mRenderGraph->addLink(selPass->findSource("Selection Map"),
                           finalColor->internalSink());
+
     if (!mRenderGraph->compile()) {
         return;
     }

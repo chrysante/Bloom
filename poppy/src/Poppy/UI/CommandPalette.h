@@ -17,7 +17,7 @@ struct KeyCombination {
     bloom::Key key;
 
     ///
-    bloom::ModFlags modFlags;
+    bloom::ModFlags modFlags = bloom::ModFlags::None;
 };
 
 /// Element type of the command palette. A command is a named action

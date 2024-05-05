@@ -64,7 +64,7 @@ struct Viewport2: View, BasicSceneInspector {
     Viewport2();
     void init() override;
     void display() override;
-    void displayScenes();
+    void drawScenes();
     void displayGizmo();
 
     void displayToolbar() override {}
@@ -89,6 +89,7 @@ struct Viewport2: View, BasicSceneInspector {
     ViewportCameraController cameraController;
     MouseState mouseState;
     bool showRenderGraphDebugger = false;
+    bool gameView = false;
 };
 
 } // namespace
@@ -97,6 +98,15 @@ POPPY_REGISTER_VIEW(Viewport2, "Viewport2");
 
 Viewport2::Viewport2(): BasicSceneInspector(this) {
     cameraController.setFieldOfView(60);
+    auto& cmd = commandPaletteWrite();
+    cmd.add("Game View", { Key::G }, [this] { gameView ^= true; });
+    cmd.add("Cycle Gizmo", { Key::Tab }, [this] { gizmo.cycleSpace(); });
+    cmd.add("Translate", { Key::Num1 },
+            [this] { gizmo.setOperation(GizmoOperation::Translate); });
+    cmd.add("Rotate", { Key::Num2 },
+            [this] { gizmo.setOperation(GizmoOperation::Rotate); });
+    cmd.add("Scale", { Key::Num3 },
+            [this] { gizmo.setOperation(GizmoOperation::Scale); });
 }
 
 void Viewport2::init() {
@@ -108,11 +118,13 @@ void Viewport2::display() {
     ImGui::BeginChild("Child");
     if (!scenes().empty()) {
         readInput();
-        displayScenes();
-        displayLightOverlays(scenes(), selection(), [&](float3 WS) {
-            return worldSpaceToScreenSpace(WS);
-        });
-        displayGizmo();
+        drawScenes();
+        if (!gameView) {
+            displayLightOverlays(scenes(), selection(), [&](float3 WS) {
+                return worldSpaceToScreenSpace(WS);
+            });
+            displayGizmo();
+        }
     }
     else {
         displayEmptyWithReason("No Active Scene");
@@ -136,7 +148,7 @@ static EditorSceneRenderer2& getSceneRenderer(rg::RenderGraph& renderGraph) {
     return *instance;
 }
 
-void Viewport2::displayScenes() {
+void Viewport2::drawScenes() {
     float2 viewportSize =
         (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
     rg::FrameParameters frameParams = { .screenSize = viewportSize,
@@ -161,7 +173,8 @@ void Viewport2::displayScenes() {
         displayEmptyWithError("Render Graph Has No Outputs");
         return;
     }
-    auto finalColor = renderer.finalColor();
+    auto finalColor = gameView ? renderer.sceneColor() :
+                                 renderer.sceneColorWithOverlays();
     if (!finalColor) {
         displayEmptyWithError("Render Graph Output Is Null");
         return;
@@ -348,6 +361,29 @@ Toolbar Viewport2::makeToolbar() {
 }
 
 void Viewport2::dropdownMenu() {
+    using namespace propertiesView;
+    ImGui::SetWindowSize({ ImGui::GetWindowSize().x,
+                           std::min(ImGui::GetWindowSize().y, 250.0f) });
+    header("Viewport Settings");
+    if (beginSection()) {
+        beginProperty("Game View");
+        ImGui::Checkbox("###game-view", &gameView);
+        beginProperty("Field Of View");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (float fov = cameraController.fieldOfView();
+            ImGui::SliderFloat("###field-of-view", &fov, 30, 180))
+        {
+            cameraController.setFieldOfView(fov);
+        }
+        beginProperty("Near Clip Plane");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (float clip = cameraController.nearClipPlane();
+            ImGui::SliderFloat("###near-clip-plane", &clip, 0, 1))
+        {
+            cameraController.setNearClipPlane(clip);
+        }
+        endSection();
+    }
     ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);
 }
 

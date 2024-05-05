@@ -39,8 +39,9 @@ EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* sceneRenderGraph) {
         GeometryInterface{ "Selected Geometry", nullptr });
     auto* camera = mRenderGraph->declareSink(
         BufferInterface{ "Camera Buffer", nullptr, { sizeof(CameraInput) } });
-    auto* finalColor = mRenderGraph->declareSource(
+    auto* compositeColor = mRenderGraph->declareSource(
         TextureInterface{ "Final Color", nullptr, {} });
+    auto* sceneColor = sceneRenderGraph->findSource("Color");
     mRenderGraph->addLink(selGeo->internalSource(),
                           selPass->findSink("Selected Geometry"));
     mRenderGraph->addLink(camera->internalSource(),
@@ -54,14 +55,15 @@ EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* sceneRenderGraph) {
     mRenderGraph->addLink(sceneRenderGraph->findSource("Depth"),
                           compPass->findSink("Scene Depth"));
     mRenderGraph->addLink(compPass->findSource("Final Color"),
-                          finalColor->internalSink());
+                          compositeColor->internalSink());
     if (!mRenderGraph->compile()) {
         return;
     }
     mRenderGraph->allocateBackingResources();
     selectedGeometry = dyncast<GeometryResource*>(selGeo->resource());
     cameraBuffer = dyncast<BufferResource*>(camera->resource());
-    mFinalColor = dyncast<TextureResource*>(finalColor->resource());
+    mCompositeColor = dyncast<TextureResource*>(compositeColor->resource());
+    mSceneColor = dyncast<TextureResource*>(sceneColor->resource());
     mRenderer = std::make_unique<rg::SceneRenderer>(sceneRenderGraph);
 }
 
@@ -120,6 +122,10 @@ void EditorSceneRenderer2::draw(bloom::CommandQueue& commandQueue) {
     mRenderGraph->execute(mRenderer->getFrameParams(), commandQueue);
 }
 
-bloom::TextureView EditorSceneRenderer2::finalColor() const {
-    return mFinalColor ? mFinalColor->handle() : nullptr;
+bloom::TextureView EditorSceneRenderer2::sceneColor() const {
+    return mSceneColor ? mSceneColor->handle() : nullptr;
+}
+
+bloom::TextureView EditorSceneRenderer2::sceneColorWithOverlays() const {
+    return mCompositeColor ? mCompositeColor->handle() : nullptr;
 }

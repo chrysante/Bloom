@@ -16,14 +16,16 @@ public:
                 EntitySelectionManager const& selectionManager);
     void draw(bloom::CommandQueue& commandQueue);
 
-    bloom::TextureView finalColor() const;
+    bloom::TextureView sceneColor() const;
+    bloom::TextureView sceneColorWithOverlays() const;
 
 private:
     std::unique_ptr<bloom::rg::SceneRenderer> mRenderer;
     std::unique_ptr<bloom::rg::RenderGraph> mRenderGraph;
     bloom::rg::GeometryResource* selectedGeometry = nullptr;
     bloom::rg::BufferResource* cameraBuffer = nullptr;
-    bloom::rg::TextureResource* mFinalColor = nullptr;
+    bloom::rg::TextureResource* mCompositeColor = nullptr;
+    bloom::rg::TextureResource* mSceneColor = nullptr;
 };
 
 } // namespace poppy

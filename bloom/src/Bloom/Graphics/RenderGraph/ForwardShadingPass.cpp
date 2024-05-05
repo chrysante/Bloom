@@ -17,7 +17,7 @@ using namespace vml;
 
 namespace {
 
-struct ForwardShadingPass: RenderPass, PassImpl<ForwardShadingPass> {
+struct ForwardShadingPass: PassImpl<ForwardShadingPass, RenderPass> {
     explicit ForwardShadingPass(std::string name);
 
     void doExecute(FrameParameters const& params, RenderContext& ctx) override;
@@ -105,7 +105,7 @@ END_DECL()
 BL_REGISTER_PASS(ForwardShadingPass, "Forward Shading Pass");
 
 ForwardShadingPass::ForwardShadingPass(std::string name):
-    RenderPass(std::move(name)) {}
+    PassImpl(std::move(name)) {}
 
 void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     RenderPassDescription desc{};

@@ -11,7 +11,7 @@ using namespace vml::short_types;
 
 namespace {
 
-struct ShadowPass: RenderPass, PassImpl<ShadowPass> {
+struct ShadowPass: PassImpl<ShadowPass, RenderPass> {
     ShadowPass(std::string name);
 
     void doExecute(FrameParameters const& params, RenderContext& ctx) override;
@@ -66,7 +66,7 @@ END_DECL()
 
 BL_REGISTER_PASS(ShadowPass, "Shadow Pass");
 
-ShadowPass::ShadowPass(std::string name): RenderPass(std::move(name)) {}
+ShadowPass::ShadowPass(std::string name): PassImpl(std::move(name)) {}
 
 void ShadowPass::doExecute(FrameParameters const& frameParams,
                            RenderContext& ctx) {

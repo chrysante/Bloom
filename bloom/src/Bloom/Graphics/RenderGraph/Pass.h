@@ -16,12 +16,12 @@
 
 namespace bloom::rg {
 
-template <typename>
+template <typename ConcretePass, typename Base = ConcretePass::BasePass>
 class PassImpl;
 
 /// Base class for all render graph pass nodes.
 class Pass {
-    template <typename>
+    template <typename, typename>
     friend class PassImpl;
 
 public:
@@ -170,9 +170,11 @@ private:
 
 /// Mixin base class for special purpose passes.
 /// This class exists to simplify defining pass interfaces in code
-template <typename PassType>
-class PassImpl {
+template <typename PassType, std::derived_from<Pass> Base>
+class PassImpl<PassType, Base>: public Base {
 public:
+    using BasePass = Base;
+
     /// To be defined by the pass author
     static std::span<InterfaceUnion const> Sinks();
 
@@ -182,13 +184,15 @@ public:
 protected:
     /// Declares the sinks and sources defined in `Sinks` and `Sources` to the
     /// pass base class
+    template <typename... Args>
 #if defined(__GNUC__)
     // UBSan flags an issue with the static_cast<PassType*>(this). This seems to
     // be a false positive of UBSan because casting to a derived class under
     // construction should be well defined behaviour
     __attribute__((no_sanitize("vptr")))
 #endif
-    PassImpl() {
+    PassImpl(Args&&... args):
+        Base(std::forward<Args>(args)...) {
         static_assert(
             std::derived_from<PassType, Pass>,
             "The pass must publicly derive from the `Pass` base class");

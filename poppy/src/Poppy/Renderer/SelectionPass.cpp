@@ -14,13 +14,13 @@ using namespace vml::short_types;
 
 namespace {
 
-struct SelectionPass: RenderPass, PassImpl<SelectionPass> {
+struct SelectionPass: PassImpl<SelectionPass, RenderPass> {
     void doExecute(FrameParameters const& params, RenderContext& ctx) override;
 
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
 
-    SelectionPass(): RenderPass("Selection Pass") {}
+    SelectionPass(): PassImpl("Selection Pass") {}
 
     // Sinks
     GeometryResource* geometry;

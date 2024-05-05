@@ -19,7 +19,7 @@ public:
     bloom::TextureView finalColor() const;
 
 private:
-    bloom::rg::SceneRenderer mRenderer;
+    std::unique_ptr<bloom::rg::SceneRenderer> mRenderer;
     std::unique_ptr<bloom::rg::RenderGraph> mRenderGraph;
     bloom::rg::GeometryResource* selectedGeometry = nullptr;
     bloom::rg::BufferResource* cameraBuffer = nullptr;

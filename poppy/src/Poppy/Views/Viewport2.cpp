@@ -73,8 +73,6 @@ struct Viewport2: View, BasicSceneInspector {
     Toolbar makeToolbar();
     void dropdownMenu();
 
-    bool showSelection = false;
-
     Gizmo gizmo;
     Parameters params;
     DebugDrawOptions drawOptions;
@@ -146,20 +144,12 @@ void Viewport2::displayScenes() {
         displayEmptyWithError("Render Graph Has No Outputs");
         return;
     }
-    if (!showSelection) {
-        auto* output =
-            dyncast<rg::TextureResource*>(renderGraph->source(0)->resource());
-        if (!output || !output->handle()) {
-            displayEmptyWithError("Render Graph Output Is Null");
-            return;
-        }
-        ImGui::Image(output->handle().nativeHandle(),
-                     ImGui::GetContentRegionAvail());
+    auto finalColor = renderer.finalColor();
+    if (!finalColor) {
+        displayEmptyWithError("Render Graph Output Is Null");
+        return;
     }
-    else {
-        ImGui::Image(renderer.finalColor().nativeHandle(),
-                     ImGui::GetContentRegionAvail());
-    }
+    ImGui::Image(finalColor.nativeHandle(), ImGui::GetContentRegionAvail());
 }
 
 void Viewport2::displayToolbarWithBackground() {
@@ -322,8 +312,4 @@ Toolbar Viewport2::makeToolbar() {
     return toolbar;
 }
 
-void Viewport2::dropdownMenu() {
-    if (ImGui::Button("Show Selection Map")) {
-        showSelection ^= true;
-    }
-}
+void Viewport2::dropdownMenu() {}

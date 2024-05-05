@@ -29,11 +29,10 @@ static R* findSource(RenderGraph* renderGraph, std::string_view name) {
     return dyncast<R*>(source->resource());
 }
 
-EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* renderGraph):
-    mRenderer(renderGraph) {
+EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* sceneRenderGraph) {
     mRenderGraph = std::make_unique<RenderGraph>("Editor Render Graph",
-                                                 renderGraph->context(),
-                                                 renderGraph->device());
+                                                 sceneRenderGraph->context(),
+                                                 sceneRenderGraph->device());
     auto* selPass = mRenderGraph->addPass(makeSelectionPass());
     auto* compPass = mRenderGraph->addPass(makeCompositionPass());
     auto* selGeo = mRenderGraph->declareSink(
@@ -46,34 +45,29 @@ EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* renderGraph):
                           selPass->findSink("Selected Geometry"));
     mRenderGraph->addLink(camera->internalSource(),
                           selPass->findSink("Camera"));
-
-#if 0
     mRenderGraph->addLink(selPass->findSource("Selection Map"),
                           compPass->findSink("Selection Map"));
     mRenderGraph->addLink(selPass->findSource("Selection Depth"),
                           compPass->findSink("Selection Depth"));
-    mRenderGraph->addLink(renderGraph->findSource("Color"),
+    mRenderGraph->addLink(sceneRenderGraph->findSource("Color"),
                           compPass->findSink("Scene Color"));
-    mRenderGraph->addLink(renderGraph->findSource("Depth"),
+    mRenderGraph->addLink(sceneRenderGraph->findSource("Depth"),
                           compPass->findSink("Scene Depth"));
     mRenderGraph->addLink(compPass->findSource("Final Color"),
                           finalColor->internalSink());
-#endif
-
-    mRenderGraph->addLink(selPass->findSource("Selection Map"),
-                          finalColor->internalSink());
-
     if (!mRenderGraph->compile()) {
         return;
     }
+    mRenderGraph->allocateBackingResources();
     selectedGeometry = dyncast<GeometryResource*>(selGeo->resource());
     cameraBuffer = dyncast<BufferResource*>(camera->resource());
     mFinalColor = dyncast<TextureResource*>(finalColor->resource());
+    mRenderer = std::make_unique<rg::SceneRenderer>(sceneRenderGraph);
 }
 
 void EditorSceneRenderer2::begin(bloom::rg::FrameParameters const& frameParams,
                                  bloom::Camera const& camera) {
-    mRenderer.begin(frameParams, camera);
+    mRenderer->begin(frameParams, camera);
     if (selectedGeometry) {
         selectedGeometry->clear();
     }
@@ -101,20 +95,21 @@ static void submitSelectedGeometry(
 
 void EditorSceneRenderer2::submit(
     bloom::Scene const& scene, EntitySelectionManager const& selectionManager) {
-    mRenderer.submit(scene);
+    mRenderer->submit(scene);
     if (selectedGeometry) {
         submitSelectedGeometry(scene, *selectedGeometry, selectionManager);
     }
 }
 
 void EditorSceneRenderer2::draw(bloom::CommandQueue& commandQueue) {
-    mRenderer.draw(commandQueue);
-    mRenderGraph->allocateResources(mRenderer.getFrameParams());
+    mRenderer->draw(commandQueue);
+    mRenderGraph->allocateResources(mRenderer->getFrameParams(),
+                                    mRenderGraph->device());
     if (selectedGeometry) {
         selectedGeometry->prepare(mRenderGraph->device());
     }
     if (cameraBuffer && cameraBuffer->handle()) {
-        auto camera = mRenderer.getCamera();
+        auto camera = mRenderer->getCamera();
         CameraInput value = {
             .camera = vml::transpose(camera.viewProjection()),
             .cameraPosition = camera.position(),
@@ -122,7 +117,7 @@ void EditorSceneRenderer2::draw(bloom::CommandQueue& commandQueue) {
         mRenderGraph->device().fillManagedBuffer(cameraBuffer->handle(), &value,
                                                  sizeof value);
     }
-    mRenderGraph->execute(mRenderer.getFrameParams(), commandQueue);
+    mRenderGraph->execute(mRenderer->getFrameParams(), commandQueue);
 }
 
 bloom::TextureView EditorSceneRenderer2::finalColor() const {

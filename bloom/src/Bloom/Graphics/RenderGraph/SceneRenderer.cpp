@@ -174,8 +174,8 @@ static BloomParameters makeBloomParams(BloomSettings settings) {
 }
 
 void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
-    mRenderGraph->allocateResources(frameParams);
     auto& device = mRenderGraph->device();
+    mRenderGraph->allocateResources(frameParams, device);
     if (geometry) {
         geometry->prepare(mRenderGraph->device());
     }

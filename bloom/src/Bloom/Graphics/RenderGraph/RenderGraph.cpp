@@ -15,6 +15,7 @@ RenderGraph::RenderGraph(std::string name, RenderGraphContext& ctx,
     Pass(std::move(name), &device), ctx(&ctx) {}
 
 Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
+    BL_EXPECT(!isCompiled());
     auto* result = pass.get();
     result->_parent = this;
     result->_device = &device();
@@ -23,6 +24,7 @@ Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
 }
 
 void RenderGraph::addLink(PassSource* source, PassSink* sink) {
+    BL_EXPECT(!isCompiled());
     BL_EXPECT(source);
     BL_EXPECT(sink);
     if (sink->source()) {
@@ -133,50 +135,20 @@ static std::vector<Pass*> topsort(std::span<Pass* const> passes) {
     return order;
 }
 
-static void allocateBackingResource(ResourcePool& pool,
-                                    PassTerminal& terminal) {
-    auto* resource = terminal.interface().visit(
-        [&](auto& interface) { return pool.allocate(interface); });
-    resource->addUser(&terminal);
-    terminal.setResource(resource);
-}
-
-static void allocateBackingResources(
-    ResourcePool& pool, std::span<Pass* const> executionOrder,
-    std::span<RenderGraphSource* const> outputs) {
-    for (auto* pass: executionOrder) {
-        for (auto* sink: pass->activeSinks()) {
-            auto* source = sink->source();
-            /// Here we lazily allocate resources for graph inputs
-            if (!source->resource() && !source->pass()) {
-                allocateBackingResource(pool, *source);
-            }
-            auto* resource = source->resource();
-            BL_ASSERT(resource, "Source has no resource assigned");
-            sink->setResource(resource);
-            resource->addUser(sink);
-        }
-        for (auto* source: pass->sources()) {
-            allocateBackingResource(pool, *source);
-        }
-    }
-    for (auto* output: outputs) {
-        if (auto* source = output->internalSink()->source()) {
-            output->setResource(source->resource());
-        }
-    }
-}
-
+/// \Returns `true` if \p pass is linked to a source of the enclosing render
+/// graph
 static bool isSinkPass(Pass const* pass) {
     auto targets = pass->sources() |
                    transform([](auto* source) { return source->sinks(); }) |
                    join;
-    return ranges::any_of(targets, [](auto* sink) {
+    return ranges::any_of(targets, [](auto* sink) -> bool {
         return dynamic_cast<RenderGraphInternalSink const*>(sink);
     });
 }
 
 bool RenderGraph::compile() {
+    /// We assert this for now until we fiugre out what to do in this case
+    BL_ASSERT(!isCompiled());
     auto allPasses = passes | ToAddress<> | ToSmallVector<>;
     if (!validate(allPasses)) {
         return false;
@@ -185,32 +157,51 @@ bool RenderGraph::compile() {
                       ranges::to<utl::small_vector<Pass*>>;
     auto livePasses = findLivePasses(sinkPasses);
     executionOrder = topsort(livePasses);
-    auto outputs = sources() | transform([](PassSource* source) {
-        return dynamic_cast<RenderGraphSource*>(source);
-    }) | ranges::to<utl::small_vector<RenderGraphSource*>>;
-    allocateBackingResources(context().resourcePool, executionOrder, outputs);
+    for (auto* pass: executionOrder) {
+        auto* rg = dynamic_cast<RenderGraph*>(pass);
+        if (rg && !rg->isCompiled()) {
+            rg->compile();
+        }
+    }
     return true;
 }
 
-static void reallocateHardwareResources(HardwareDevice& device,
-                                        ResourcePool& pool,
-                                        std::span<Pass* const> executionOrder,
-                                        FrameParameters const& frameParams) {
-    for (auto* resource: pool.resources()) {
-        resource->reallocate(device, frameParams);
-    }
-    for (auto* pass: executionOrder) {
-        pass->allocateResources(frameParams, device);
-    }
+static void allocateBackingResource(ResourcePool& pool,
+                                    PassTerminal& terminal) {
+    auto* resource = terminal.interface().visit(
+        [&](auto& interface) { return pool.allocate(interface); });
+    resource->addUser(&terminal);
+    terminal.setResource(resource);
 }
 
-void RenderGraph::allocateResources(FrameParameters params) {
-    if (lastFrameParams == params) {
-        return;
+void RenderGraph::allocateBackingResources() {
+    for (auto* pass: executionOrder) {
+        for (auto* sink: pass->activeSinks()) {
+            auto* source = sink->source();
+            /// Here we lazily allocate resources for graph inputs
+            if (!source->resource() && !source->pass()) {
+                allocateBackingResource(context().resourcePool, *source);
+            }
+            auto* resource = source->resource();
+            BL_ASSERT(resource, "Source has no resource assigned");
+            sink->setResource(resource);
+            resource->addUser(sink);
+        }
+        for (auto* source: pass->sources()) {
+            allocateBackingResource(context().resourcePool, *source);
+        }
+        if (auto* rg = dynamic_cast<RenderGraph*>(pass)) {
+            rg->allocateBackingResources();
+        }
     }
-    reallocateHardwareResources(device(), context().resourcePool,
-                                executionOrder, params);
-    lastFrameParams = params;
+    auto outputs = sources() | transform([](PassSource* source) {
+        return dynamic_cast<RenderGraphSource*>(source);
+    }) | ranges::to<utl::small_vector<RenderGraphSource*>>;
+    for (auto* output: outputs) {
+        if (auto* source = output->internalSink()->source()) {
+            output->setResource(source->resource());
+        }
+    }
 }
 
 Pass* RenderGraph::findPass(std::string_view name) {
@@ -238,6 +229,22 @@ void RenderGraph::doExecute(FrameParameters const& params,
     for (auto* pass: executionOrder) {
         pass->execute(params, cmdQueue);
     }
+}
+
+void RenderGraph::doAllocateResources(FrameParameters const& params,
+                                      HardwareDevice& device) {
+    if (lastFrameParams == params) {
+        return;
+    }
+    if (!parent()) {
+        for (auto* resource: context().resourcePool.resources()) {
+            resource->reallocate(device, params);
+        }
+    }
+    for (auto* pass: executionOrder) {
+        pass->allocateResources(params, device);
+    }
+    lastFrameParams = params;
 }
 
 static std::unique_ptr<RenderGraph> gRenderGraph;

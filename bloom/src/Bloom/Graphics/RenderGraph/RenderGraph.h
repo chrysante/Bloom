@@ -29,10 +29,12 @@ public:
     explicit RenderGraph(std::string name, RenderGraphContext& context,
                          HardwareDevice& device);
 
-    ///
+    /// Adds \p pass to this render graph.
+    /// \Returns a pointer to the added pass.
+    /// \pre this function must not be called after the graph is compiled.
     Pass* addPass(std::unique_ptr<Pass> pass);
 
-    ///
+    /// \overload
     template <std::derived_from<Pass> P>
     P* addPass(std::unique_ptr<P> pass) {
         auto* p = addPass(std::unique_ptr<Pass>(pass.release()));
@@ -40,15 +42,24 @@ public:
     }
 
     /// Links the source (output) \p source to the sink (input) \p sink
+    /// \pre this function must not be called after the graph is compiled.
     void addLink(PassSource* source, PassSink* sink);
 
-    /// Prepares the graph for execution
+    /// Checks that all relevant passes have all required sinks linked to a
+    /// source and determines the execution order. Nested render graphs may be
+    /// compiled separately but this function will recurse on any nested render
+    /// graph that has not been compiled before.
     bool compile();
 
-    /// TODO: Document this
-    void allocateResources(FrameParameters params);
+    /// \Returns `true` if this graph is compiled
+    bool isCompiled() const { return !executionOrder.empty(); }
 
-    ///
+    /// Allocates the resource wrappers backing the passes in this graph. This
+    /// must be called once by the top-level graph after compilation and before
+    /// execution
+    void allocateBackingResources();
+
+    /// \Returns the pass with name \p name if it exists
     Pass* findPass(std::string_view name);
 
     ///
@@ -70,8 +81,10 @@ public:
     }
 
 private:
-    virtual void doExecute(FrameParameters const& params,
-                           CommandQueue& queue) final;
+    void doExecute(FrameParameters const& params, CommandQueue& queue) override;
+
+    void doAllocateResources(FrameParameters const& params,
+                             HardwareDevice& device) override;
 
     RenderGraphContext* ctx;
     std::vector<std::unique_ptr<Pass>> passes;

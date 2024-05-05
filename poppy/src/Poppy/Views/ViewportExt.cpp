@@ -1,6 +1,7 @@
-#include "Poppy/Views/Viewport/ViewportOverlays.h"
+#include "Poppy/Views/ViewportExt.h"
 
 #include <imgui.h>
+#include <utl/functional.hpp>
 
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Runtime/SceneSystem.h"
@@ -11,23 +12,97 @@
 #include "Poppy/Views/Viewport/Viewport.h"
 
 using namespace bloom;
-using namespace vml::short_types;
+using namespace vml;
 using namespace poppy;
 
-static std::uint32_t toUCol32(vml::float4 color) {
+std::string poppy::toString(Projection proj) {
+    return std::array{ "Perspective", "Orthogonal" }[(size_t)proj];
+}
+
+void ViewportCameraController::update(Timestep time, Input const& input) {
+
+    data.angleLR = utl::mod(data.angleLR - input.mouseOffset().x / 180.,
+                            constants<>::pi * 2);
+    data.angleUD = std::clamp(data.angleUD + input.mouseOffset().y / 180.f,
+                              0.01f, constants<float>::pi - 0.01f);
+    float offset = data.speed * time.delta;
+    if (input.keyDown(Key::LeftShift)) {
+        offset *= 3;
+    }
+    if (input.keyDown(Key::A)) {
+        data.position -= normalize(cross(front(), up())) * offset;
+    }
+    if (input.keyDown(Key::D)) {
+        data.position += normalize(cross(front(), up())) * offset;
+    }
+    if (input.keyDown(Key::W)) {
+        data.position += front() * offset;
+    }
+    if (input.keyDown(Key::S)) {
+        data.position -= front() * offset;
+    }
+    if (input.keyDown(Key::Q)) {
+        data.position -= up() * offset;
+    }
+    if (input.keyDown(Key::E)) {
+        data.position += up() * offset;
+    }
+    applyTransform();
+}
+
+void ViewportCameraController::applyTransform() {
+    cam.setTransform(data.position, front());
+}
+
+void ViewportCameraController::applyProjection(float2 screenSize) {
+    if (data.projection == Projection::Perspective) {
+        cam.setProjection(to_radians(data.fieldOfView), screenSize,
+                          data.nearClip);
+    }
+    else {
+        float width = 1000;
+        float aspect = screenSize.y / screenSize.x;
+        float height = width * aspect;
+        cam.setProjectionOrtho(-width / 2, width / 2, -height / 2, height / 2,
+                               0, 5000);
+    }
+}
+
+float3 ViewportCameraController::front() const {
+    using std::cos;
+    using std::sin;
+    return { sin(data.angleUD) * cos(data.angleLR),
+             sin(data.angleUD) * sin(data.angleLR), cos(data.angleUD) };
+}
+
+BLOOM_MAKE_TEXT_SERIALIZER(poppy::ViewportCameraController::Data, angleLR,
+                           angleUD, speed, position, projection, fieldOfView,
+                           nearClip);
+
+YAML::Node ViewportCameraController::serialize() const {
+    return YAML::Node(data);
+}
+
+bool ViewportCameraController::deserialize(YAML::Node const& node) {
+    data = node.as<Data>();
+    applyTransform();
+    return true;
+}
+
+static std::uint32_t toUCol32(float4 color) {
     return ImGui::ColorConvertFloat4ToU32(color);
 }
 
-static std::uint32_t toUCol32(vml::float3 color, float alpha = 1.0f) {
-    return toUCol32(vml::float4{ color, alpha });
+static std::uint32_t toUCol32(float3 color, float alpha = 1.0f) {
+    return toUCol32(float4{ color, alpha });
 }
 
-static void drawArrow(vml::float2 from, vml::float2 to, float headSize,
-                      vml::float4 color, float thickness) {
+static void drawArrow(float2 from, float2 to, float headSize, float4 color,
+                      float thickness) {
     float2 const p0 = from;
     float2 const line = to - from;
 
-    float const angle = std::acos(vml::dot(vml::normalize(line), float2(1, 0)));
+    float const angle = std::acos(dot(normalize(line), float2(1, 0)));
     float2x2 const arrowRot = { std::cos(angle), -std::sin(angle),
                                 std::sin(angle), std::cos(angle) };
     float2 const t0 = arrowRot * headSize * float2{ 0, 0 };
@@ -37,8 +112,8 @@ static void drawArrow(vml::float2 from, vml::float2 to, float headSize,
     auto* const drawList = ImGui::GetWindowDrawList();
 
     std::array<float2, 5> const positions = {
-        p0, p0 + (vml::norm(line) - headSize) * vml::normalize(line),
-        p0 + line + t0, p0 + line + t1, p0 + line + t2
+        p0, p0 + (norm(line) - headSize) * normalize(line), p0 + line + t0,
+        p0 + line + t1, p0 + line + t2
     };
 
     drawList->AddLine(positions[0], positions[1], toUCol32(color), thickness);
@@ -46,116 +121,42 @@ static void drawArrow(vml::float2 from, vml::float2 to, float headSize,
                           toUCol32(color), thickness);
 }
 
-void ViewportOverlays::init(Viewport* viewport) { this->viewport = viewport; }
-
-void ViewportOverlays::display() {
-    drawLightOverlays<PointLightComponent>();
-    drawLightOverlays<SpotLightComponent>();
-    drawLightOverlays<DirectionalLightComponent>();
-    drawLightOverlays<SkyLightComponent>();
-}
-
-bloom::EntityHandle ViewportOverlays::hitTest(vml::float2 positionInView) {
-    if (auto result = hitTestLightOverlays<PointLightComponent>(positionInView))
-    {
-        return result;
-    }
-    if (auto result = hitTestLightOverlays<SpotLightComponent>(positionInView))
-    {
-        return result;
-    }
-    if (auto result =
-            hitTestLightOverlays<DirectionalLightComponent>(positionInView))
-    {
-        return result;
-    }
-    if (auto result = hitTestLightOverlays<SkyLightComponent>(positionInView)) {
-        return result;
-    }
-    return {};
-}
-
-template <typename Light>
-void ViewportOverlays::drawLightOverlays() {
-    auto const& selection = viewport->editor().selection();
-    for (auto&& scene: viewport->editor().coreSystems().sceneSystem().scenes())
-    {
-        auto view = scene->view<TransformMatrixComponent const, Light const>();
-        view.each([&](auto const id, TransformMatrixComponent const& transform,
-                      Light const& light) {
-            auto const positionVS =
-                viewport->worldSpaceToViewSpace(transform.matrix.column(3).xyz);
-            if (positionVS.z < 0 || positionVS.z > 1) {
-                return;
-            }
-            auto const positionOnScreen =
-                viewport->viewSpaceToScreenSpace(positionVS.xy);
-            auto const entity = scene->getHandle(id);
-            drawOneLightOverlay(entity, positionOnScreen,
-                                selection.contains(entity),
-                                Transform::fromMatrix(transform.matrix), light);
-        });
-    }
-}
-
-void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
-                                           vml::float2 positionOnScreen,
-                                           bool selected, Transform const&,
-                                           PointLight const& light) {
-    drawPointLightIcon(positionOnScreen, light.common.color, selected);
-}
-
-void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle entity,
-                                           vml::float2 positionOnScreen,
+void ViewportOverlays::drawOneLightOverlay(EntityHandle entity,
+                                           float2 positionOnScreen,
                                            bool selected, Transform const&,
                                            SpotLight const& s) {
     drawSpotLightIcon(positionOnScreen, s.common.color);
     if (selected) {
         drawSpotlightVizWS(entity, s.radius,
                            (s.innerCutoff + s.outerCutoff) / 2,
-                           (s.common.color + vml::colors<float3>::white) / 2);
+                           (s.common.color + colors<float3>::white) / 2);
     }
 }
 
-void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
-                                           vml::float2 positionOnScreen,
+void ViewportOverlays::drawOneLightOverlay(EntityHandle,
+                                           float2 positionOnScreen,
                                            bool /* selected */,
                                            Transform const& transform,
                                            DirectionalLight const& light) {
-    float3 const lightDirWS = vml::rotate({ 0, 0, 1 }, transform.orientation);
+    float3 const lightDirWS = rotate({ 0, 0, 1 }, transform.orientation);
     drawDirectionalLightIcon(positionOnScreen, lightDirWS, light.common.color);
 }
 
-void ViewportOverlays::drawOneLightOverlay(bloom::EntityHandle,
-                                           vml::float2 positionOnScreen,
+void ViewportOverlays::drawOneLightOverlay(EntityHandle,
+                                           float2 positionOnScreen,
                                            bool /* selected */,
                                            Transform const&,
                                            SkyLight const& light) {
     drawSkyLightIcon(positionOnScreen, light.common.color);
 }
 
-void ViewportOverlays::drawPointLightIcon(vml::float2 position,
-                                          vml::float3 color, bool selected) {
-    float size = 20;
-    float alphaFactor = selected ? 1.0 : 0.5;
-    auto* drawList = ImGui::GetWindowDrawList();
-    drawList->AddCircle(position, size,
-                        toUCol32({ 0, 0, 0, alphaFactor * 0.5 }),
-                        /* segments = */ 0,
-                        /* thickness = */ 4);
-    drawList->AddCircle(position, size, toUCol32(color, alphaFactor),
-                        /* segments = */ 0,
-                        /* thickness = */ 2);
-}
-
-void ViewportOverlays::drawSpotLightIcon(vml::float2 position,
-                                         vml::float3 color) {
+void ViewportOverlays::drawSpotLightIcon(float2 position, float3 color) {
     float const radius = 25;
     float2 const v0 = float2(0, 1) * radius + position;
-    float const angle1 = vml::constants<>::pi * (0.5 + 2. / 3.);
+    float const angle1 = constants<>::pi * (0.5 + 2. / 3.);
     float2 const v1 =
         float2(std::cos(angle1), std::sin(angle1)) * radius + position;
-    float const angle2 = vml::constants<>::pi * (0.5 + 4. / 3.);
+    float const angle2 = constants<>::pi * (0.5 + 4. / 3.);
     float2 const v2 =
         float2(std::cos(angle2), std::sin(angle2)) * radius + position;
 
@@ -164,9 +165,9 @@ void ViewportOverlays::drawSpotLightIcon(vml::float2 position,
     drawList->AddTriangle(v0, v1, v2, toUCol32(color), 2);
 }
 
-void ViewportOverlays::drawDirectionalLightIcon(vml::float2 position,
-                                                vml::float3 /* directionWS */,
-                                                vml::float3 color) {
+void ViewportOverlays::drawDirectionalLightIcon(float2 position,
+                                                float3 /* directionWS */,
+                                                float3 color) {
     float const size = 18;
     float2 const line = float2(-1, 2) * size;
     auto doDraw = [&](float4 color, float thickness) {
@@ -179,15 +180,14 @@ void ViewportOverlays::drawDirectionalLightIcon(vml::float2 position,
     doDraw(float4(color, 1), 2);
 }
 
-void ViewportOverlays::drawSkyLightIcon(vml::float2 position,
-                                        vml::float3 color) {
+void ViewportOverlays::drawSkyLightIcon(float2 position, float3 color) {
     float const size = 20;
     float const lineSize = size;
 
     auto doDraw = [&](float4 color, float thickness) {
         std::array<ImVec2, 9> points{};
         for (int i = 0; i < 9; ++i) {
-            float angle = vml::constants<>::pi * (0.5 + (i - 4) / 4.0 * 0.25);
+            float angle = constants<>::pi * (0.5 + (i - 4) / 4.0 * 0.25);
 
             float2 const dir = float2(std::cos(-angle), std::sin(-angle));
             float2 const from = position + (float2(0, 1) + dir * 2) * size;
@@ -206,14 +206,13 @@ void ViewportOverlays::drawSkyLightIcon(vml::float2 position,
     doDraw(float4(color, 1), 2);
 }
 
-void ViewportOverlays::drawSpotlightVizWS(bloom::EntityHandle entity,
-                                          float radius, float angle,
-                                          vml::float3 color) {
+void ViewportOverlays::drawSpotlightVizWS(EntityHandle entity, float radius,
+                                          float angle, float3 color) {
     auto* const drawList = ImGui::GetWindowDrawList();
     int const segments = 32;
     utl::small_vector<float3, 32> circlePoints1;
     for (int i = 0; i < segments; ++i) {
-        float const tau = vml::constants<>::pi * 2;
+        float const tau = constants<>::pi * 2;
         float const angle = i * tau / segments;
         circlePoints1.push_back({ 0, cos(angle), sin(angle) });
     }
@@ -267,9 +266,28 @@ void ViewportOverlays::drawSpotlightVizWS(bloom::EntityHandle entity,
     }
 }
 
+void ViewportOverlays::init(Viewport* viewport) { this->viewport = viewport; }
+
+void ViewportOverlays::display() {
+    drawLightOverlays<PointLightComponent>();
+    drawLightOverlays<SpotLightComponent>();
+    drawLightOverlays<DirectionalLightComponent>();
+    drawLightOverlays<SkyLightComponent>();
+}
+
+template <typename>
+void ViewportOverlays::drawLightOverlays() {}
+
+bloom::EntityHandle ViewportOverlays::hitTest(vml::float2 positionInView) {
+    hitTestLightOverlays<PointLightComponent>(positionInView);
+    hitTestLightOverlays<SpotLightComponent>(positionInView);
+    hitTestLightOverlays<DirectionalLightComponent>(positionInView);
+    hitTestLightOverlays<SkyLightComponent>(positionInView);
+    return {};
+}
+
 template <typename Light>
-EntityHandle ViewportOverlays::hitTestLightOverlays(
-    vml::float2 hitPositionInView) {
+EntityHandle ViewportOverlays::hitTestLightOverlays(float2 hitPositionInView) {
     for (auto&& scene: viewport->editor().coreSystems().sceneSystem().scenes())
     {
         auto componentView =
@@ -295,7 +313,7 @@ EntityHandle ViewportOverlays::hitTestLightOverlays(
 }
 
 template <typename Light>
-bool ViewportOverlays::hitTestOneLightOverlay(
-    vml::float2 entityPositionInWindow, vml::float2 hitPositionInWindow) {
-    return vml::distance(entityPositionInWindow, hitPositionInWindow) < 30;
+bool ViewportOverlays::hitTestOneLightOverlay(float2 entityPositionInWindow,
+                                              float2 hitPositionInWindow) {
+    return distance(entityPositionInWindow, hitPositionInWindow) < 30;
 }

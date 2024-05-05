@@ -10,8 +10,7 @@
 #include "Poppy/UI/View.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/Gizmo.h"
-#include "Poppy/Views/Viewport/ViewportCameraController.h"
-#include "Poppy/Views/Viewport/ViewportOverlays.h"
+#include "Poppy/Views/ViewportExt.h"
 
 namespace poppy {
 

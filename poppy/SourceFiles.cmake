@@ -83,12 +83,12 @@ set(poppy_sources
   src/Poppy/Views/Viewport2.cpp
   src/Poppy/Views/Gizmo.cpp
   src/Poppy/Views/Gizmo.h
+  src/Poppy/Views/ViewportExt.cpp
+  src/Poppy/Views/ViewportExt.h
+  src/Poppy/Views/LightOverlays.cpp
+  src/Poppy/Views/LightOverlays.h
   src/Poppy/Views/Viewport/Viewport.cpp
   src/Poppy/Views/Viewport/Viewport.h
-  src/Poppy/Views/Viewport/ViewportCameraController.cpp
-  src/Poppy/Views/Viewport/ViewportCameraController.h
-  src/Poppy/Views/Viewport/ViewportOverlays.cpp
-  src/Poppy/Views/Viewport/ViewportOverlays.h
 )
 
 set(poppy_shader_sources

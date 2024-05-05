@@ -3,6 +3,7 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <utl/vector.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Application/Window.h"
@@ -22,8 +23,8 @@
 #include "Poppy/Views/AssetDragDrop.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/Gizmo.h"
-#include "Poppy/Views/Viewport/ViewportCameraController.h"
-#include "Poppy/Views/Viewport/ViewportOverlays.h"
+#include "Poppy/Views/LightOverlays.h"
+#include "Poppy/Views/ViewportExt.h"
 
 using namespace poppy;
 using namespace bloom;
@@ -65,6 +66,7 @@ struct Viewport2: View, BasicSceneInspector {
     void display() override;
     void displayScenes();
     void displayGizmo();
+
     void displayToolbar() override {}
     void displayToolbarWithBackground();
     void readInput();
@@ -75,6 +77,11 @@ struct Viewport2: View, BasicSceneInspector {
     void deserialize(YAML::Node) override;
     Toolbar makeToolbar();
     void dropdownMenu();
+
+    float3 worldSpaceToViewSpace(float3 position);
+    float3 worldSpaceToScreenSpace(float3 position);
+    float2 worldSpaceDirToViewSpace(float3 direction);
+    float2 worldSpaceDirToScreenSpace(float3 direction);
 
     Gizmo gizmo;
     Parameters params;
@@ -102,6 +109,9 @@ void Viewport2::display() {
     if (!scenes().empty()) {
         readInput();
         displayScenes();
+        displayLightOverlays(scenes(), selection(), [&](float3 WS) {
+            return worldSpaceToScreenSpace(WS);
+        });
         displayGizmo();
     }
     else {
@@ -173,7 +183,7 @@ void Viewport2::displayGizmo() {
     if (!gizmo.display(cameraController.camera(), entityWSTransform)) {
         return;
     }
-    auto newLocalTransform = vml::inverse(parentTransform) * entityWSTransform;
+    auto newLocalTransform = inverse(parentTransform) * entityWSTransform;
     entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
 }
 
@@ -202,7 +212,7 @@ static MouseState detectViewportInput(ImGuiButtonFlags buttonFlags) {
     ImGuiID id = window->GetID("__Invisible_Button__");
     ImVec2 size = ImGui::CalcItemSize(window->Size, 0.0f, 0.0f);
     ImRect bb(window->DC.CursorPos,
-              vml::float2(window->DC.CursorPos) + vml::float2(size));
+              float2(window->DC.CursorPos) + float2(size));
     ImGui::ItemSize(size);
     if (!ImGui::ItemAdd(bb, id)) return {};
     MouseState result{};
@@ -365,4 +375,34 @@ static void displayRenderGraphDebugger(rg::RenderGraph const& rg, bool* open) {
         }
     }
     ImGui::End();
+}
+
+float3 Viewport2::worldSpaceToViewSpace(float3 positionWS) {
+    auto viewProj = cameraController.camera().viewProjection();
+    auto tmp = viewProj * float4(positionWS, 1);
+    auto ndc = tmp.xyz / tmp.w;
+    auto posVS = ndc.xy;
+    posVS = (posVS + 1) / 2;
+    posVS.y = 1 - posVS.y;
+    posVS *= this->size();
+    return { posVS, ndc.z };
+}
+
+float3 Viewport2::worldSpaceToScreenSpace(float3 position) {
+    auto vs = worldSpaceToViewSpace(position);
+    return { viewSpaceToScreenSpace(vs.xy), vs.z };
+}
+
+float2 Viewport2::worldSpaceDirToViewSpace(float3 positionWS) {
+    auto viewProj = cameraController.camera().viewProjection();
+    auto tmp = viewProj * float4(positionWS, 0);
+    auto ndc = tmp.xyz / tmp.w;
+    auto dirVS = ndc.xy;
+    dirVS.y = 1 - dirVS.y;
+    dirVS *= this->size();
+    return dirVS;
+}
+
+float2 Viewport2::worldSpaceDirToScreenSpace(float3 direction) {
+    return worldSpaceDirToViewSpace(direction);
 }

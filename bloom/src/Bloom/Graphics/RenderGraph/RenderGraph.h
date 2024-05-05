@@ -62,8 +62,11 @@ public:
     /// \Returns the pass with name \p name if it exists
     Pass* findPass(std::string_view name);
 
-    ///
+    /// Finds the internal source with name \p name
     PassSource* findInputSource(std::string_view name);
+
+    /// \Returns the internal source at index \p index
+    PassSource* inputSource(size_t index);
 
     /// \Returns the shared render graph context
     RenderGraphContext& context() const { return *ctx; }

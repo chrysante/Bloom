@@ -30,8 +30,8 @@ static R* findSource(RenderGraph* renderGraph, std::string_view name) {
 }
 
 static void wrapRenderGraph(RenderGraph& outer,
-                            std::unique_ptr<RenderGraph> inner_) {
-    auto& inner = *outer.addPass(std::move(inner_));
+                            std::unique_ptr<RenderGraph> innerOwner) {
+    auto& inner = *outer.addPass(std::move(innerOwner));
     for (auto* sink: inner.sinks()) {
         auto* outerSink = outer.declareSink(sink->interface());
         outer.addLink(outerSink->internalSource(), sink);
@@ -42,30 +42,30 @@ static void wrapRenderGraph(RenderGraph& outer,
     }
 }
 
-EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* sceneRenderGraph) {
-    //    auto* sceneRenderGraph = sceneRenderGraphOwner.get();
+EditorSceneRenderer2::EditorSceneRenderer2(
+    std::unique_ptr<RenderGraph> sceneRenderGraphOwner) {
+    auto* sceneRenderGraph = sceneRenderGraphOwner.get();
     mRenderGraph = std::make_unique<RenderGraph>("Editor Render Graph",
                                                  sceneRenderGraph->context(),
                                                  sceneRenderGraph->device());
+    wrapRenderGraph(*mRenderGraph, std::move(sceneRenderGraphOwner));
     auto* selPass = mRenderGraph->addPass(makeSelectionPass());
     //    auto* idPass = mRenderGraph->addPass(makeIDPass());
     auto* compPass = mRenderGraph->addPass(makeCompositionPass());
 
     auto* selGeo = mRenderGraph->declareSink(
         GeometryInterface{ "Selected Geometry", nullptr });
-    auto* camera = mRenderGraph->declareSink(
-        BufferInterface{ "Camera Buffer", nullptr, { sizeof(CameraInput) } });
+    auto* camera = mRenderGraph->findInputSource("Camera");
 
     auto* compositeColor = mRenderGraph->declareSource(
-        TextureInterface{ "Final Color", nullptr, {} });
+        TextureInterface{ "Composite Color", nullptr, {} });
 
     //    auto* idMap = mRenderGraph->declareSource(
     //        TextureInterface{ "ID Map", nullptr, {} });
     auto* sceneColor = sceneRenderGraph->findSource("Color");
     mRenderGraph->addLink(selGeo->internalSource(),
                           selPass->findSink("Selected Geometry"));
-    mRenderGraph->addLink(camera->internalSource(),
-                          selPass->findSink("Camera"));
+    mRenderGraph->addLink(camera, selPass->findSink("Camera"));
     mRenderGraph->addLink(selPass->findSource("Selection Map"),
                           compPass->findSink("Selection Map"));
     mRenderGraph->addLink(selPass->findSource("Selection Depth"),
@@ -86,7 +86,7 @@ EditorSceneRenderer2::EditorSceneRenderer2(RenderGraph* sceneRenderGraph) {
     cameraBuffer = dyncast<BufferResource*>(camera->resource());
     mCompositeColor = dyncast<TextureResource*>(compositeColor->resource());
     mSceneColor = dyncast<TextureResource*>(sceneColor->resource());
-    mRenderer = std::make_unique<rg::SceneRenderer>(sceneRenderGraph);
+    mRenderer = std::make_unique<rg::SceneRenderer>(mRenderGraph.get());
 }
 
 void EditorSceneRenderer2::begin(bloom::rg::FrameParameters const& frameParams,

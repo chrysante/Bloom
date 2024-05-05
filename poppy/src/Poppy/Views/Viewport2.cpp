@@ -28,6 +28,7 @@
 
 using namespace poppy;
 using namespace bloom;
+using namespace rg;
 using namespace vml::short_types;
 
 static void displayRenderGraphDebugger(rg::RenderGraph const& rg, bool* open);
@@ -138,12 +139,15 @@ void Viewport2::display() {
     }
 }
 
-static EditorSceneRenderer2& getSceneRenderer(rg::RenderGraph& renderGraph) {
-    static rg::RenderGraph const* graph = nullptr;
+static EditorSceneRenderer2& getSceneRenderer(rg::RenderGraph* renderGraph) {
+    static rg::RenderGraph const* current = nullptr;
     static std::unique_ptr<EditorSceneRenderer2> instance;
-    if (graph != &renderGraph) {
-        graph = &renderGraph;
-        instance = std::make_unique<EditorSceneRenderer2>(&renderGraph);
+    static RenderGraphContext context;
+    if (current != renderGraph) {
+        current = renderGraph;
+        context.resourcePool.clear();
+        instance =
+            std::make_unique<EditorSceneRenderer2>(renderGraph->clone(context));
     }
     return *instance;
 }
@@ -158,7 +162,7 @@ void Viewport2::drawScenes() {
         displayEmptyWithError("No Render Graph Found");
         return;
     }
-    auto& renderer = getSceneRenderer(*renderGraph);
+    auto& renderer = getSceneRenderer(renderGraph);
     cameraController.applyProjection(viewportSize);
     renderer.begin(frameParams, cameraController.camera());
     auto& sceneSystem = editor().coreSystems().sceneSystem();

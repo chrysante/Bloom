@@ -454,15 +454,21 @@ public:
     explicit RenderGraphInternalSink(PassSource* owningSource,
                                      InterfaceUnion interface, void* handle):
         PassSink(std::move(interface), nullptr, handle),
-        owningSource(owningSource) {}
+        _owningSource(owningSource) {}
+
+    /// \Returns the external source of this internal sink
+    PassSource& owningSource() { return *_owningSource; }
+
+    /// \overload
+    PassSource const& owningSource() const { return *_owningSource; }
 
 private:
     void doSetResource(Resource* resource) override {
         PassSink::doSetResource(resource);
-        owningSource->PassSource::doSetResource(resource);
+        owningSource().PassSource::doSetResource(resource);
     }
 
-    PassSource* owningSource;
+    PassSource* _owningSource;
 };
 
 /// Models a source within a render graph that is a sink of the render graph
@@ -471,15 +477,21 @@ public:
     explicit RenderGraphInternalSource(PassSink* owningSink,
                                        InterfaceUnion interface, void* handle):
         PassSource(std::move(interface), nullptr, handle),
-        owningSink(owningSink) {}
+        _owningSink(owningSink) {}
+
+    /// \Returns the external sink of this internal source
+    PassSink& owningSink() { return *_owningSink; }
+
+    /// \overload
+    PassSink const& owningSink() const { return *_owningSink; }
 
 private:
     void doSetResource(Resource* resource) override {
         PassSource::doSetResource(resource);
-        owningSink->PassSink::doSetResource(resource);
+        owningSink().PassSink::doSetResource(resource);
     }
 
-    PassSink* owningSink;
+    PassSink* _owningSink;
 };
 
 /// Resource input of a render graph.

@@ -224,6 +224,10 @@ PassSource* RenderGraph::findInputSource(std::string_view name) {
     return sink->internalSource();
 }
 
+PassSource* RenderGraph::inputSource(size_t index) {
+    return dynamic_cast<RenderGraphSink*>(sink(index))->internalSource();
+}
+
 void RenderGraph::doExecute(FrameParameters const& params,
                             CommandQueue& cmdQueue) {
     for (auto* pass: executionOrder) {
@@ -254,7 +258,7 @@ std::unique_ptr<RenderGraph> RenderGraph::clone(
         dynamic_cast<RenderGraph*>(p.release()));
 }
 
-Pass* get(auto& map, Pass const* pass) {
+Pass* get(utl::hashmap<Pass const*, Pass*> const& map, Pass const* pass) {
     auto itr = map.find(pass);
     BL_ASSERT(itr != map.end());
     return itr->second;
@@ -262,6 +266,12 @@ Pass* get(auto& map, Pass const* pass) {
 
 std::unique_ptr<Pass> RenderGraph::doClone(RenderGraphContext& context) const {
     auto clone = std::make_unique<RenderGraph>(name(), context, device());
+    for (auto* sink: sinks()) {
+        clone->declareSink(sink->interface());
+    }
+    for (auto* source: sources()) {
+        clone->declareSource(source->interface());
+    }
     utl::hashmap<Pass const*, Pass*> map;
     for (auto& pass: passes) {
         auto* clonedPass = clone->addPass(pass->clone(context));
@@ -269,17 +279,38 @@ std::unique_ptr<Pass> RenderGraph::doClone(RenderGraphContext& context) const {
         clonedPass->_parent = clone.get();
         map[pass.get()] = clonedPass;
     }
+    auto cloneSinkLinks = [&](PassSink const* sink, PassSink* cloneSink) {
+        auto* source = sink->source();
+        if (!source) {
+            return;
+        }
+        if (source->pass()) {
+            auto* sourcePass = get(map, source->pass());
+            clone->addLink(sourcePass->source(source->indexInParent()),
+                           cloneSink);
+            return;
+        }
+        auto* internalSource =
+            dynamic_cast<RenderGraphInternalSource const*>(source);
+        if (!internalSource) {
+            return;
+        }
+        BL_ASSERT(internalSource->owningSink().pass() == this);
+        size_t sourceIndex = internalSource->owningSink().indexInParent();
+        clone->addLink(clone->inputSource(sourceIndex), cloneSink);
+    };
     for (auto& pass: passes) {
         auto* clonedPass = get(map, pass.get());
         for (auto [index, sink]: pass->sinks() | enumerate) {
-            auto* source = sink->source();
-            if (!source) {
-                continue;
-            }
-            auto* sourcePass = get(map, source->pass());
-            clone->addLink(sourcePass->source(source->indexInParent()),
-                           clonedPass->sink(index));
+            cloneSinkLinks(sink, clonedPass->sink(index));
         }
+    }
+    for (auto [source, cloneSource]: zip(sources(), clone->sources())) {
+        auto* sink =
+            static_cast<RenderGraphSource const*>(source)->internalSink();
+        auto* cloneSink =
+            static_cast<RenderGraphSource*>(cloneSource)->internalSink();
+        cloneSinkLinks(sink, cloneSink);
     }
     clone->executionOrder = executionOrder | transform([&](auto* pass) {
         return get(map, pass);

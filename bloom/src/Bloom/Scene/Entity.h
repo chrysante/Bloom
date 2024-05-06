@@ -175,6 +175,13 @@ public:
     /// \Returns `true` if this handle refers to a valid entity
     explicit operator bool() const { return bool(ID()); }
 
+    ///
+    EntityHandleEx clone() const
+        requires(!IsConst)
+    {
+        return scene().cloneEntity(*this);
+    }
+
     /// \Returns `true` if this entity has no visibility component or if the
     /// visibility component is set to visible
     bool isVisible() const {

@@ -29,6 +29,7 @@
 using namespace poppy;
 using namespace bloom;
 using namespace rg;
+using namespace ranges::views;
 using namespace vml::short_types;
 
 static void displayRenderGraphDebugger(rg::RenderGraph const& rg, bool* open);
@@ -61,12 +62,21 @@ struct MouseState {
     bool hovered, held, pressed;
 };
 
+struct ActiveViewData {
+    void reset() { *this = {}; }
+
+    bool haveCopiedEntity = false;
+};
+
+struct ViewData: ActiveViewData {};
+
 struct Viewport2: View, BasicSceneInspector {
     Viewport2();
     void init() override;
 
     void display() override;
     void drawScenes();
+    void copySelection();
     void displayGizmo();
     void handleEntitySelection();
 
@@ -92,6 +102,7 @@ struct Viewport2: View, BasicSceneInspector {
     ViewportCameraController cameraController;
     MouseState mouseState;
     EditorSceneRenderer2* renderer = nullptr;
+    ViewData viewData;
     bool showRenderGraphDebugger = false;
     bool gameView = false;
 };
@@ -154,6 +165,12 @@ void Viewport2::display() {
     }
     displayToolbarWithBackground();
     acceptDragDrop();
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
+        ImGui::IsMouseReleased(ImGuiMouseButton_Right) ||
+        ImGui::IsMouseReleased(ImGuiMouseButton_Middle))
+    {
+        viewData.reset();
+    }
     ImGui::EndChild();
     if (showRenderGraphDebugger && rg::RenderGraphManager::get()) {
         displayRenderGraphDebugger(*rg::RenderGraphManager::get(),
@@ -198,6 +215,12 @@ void Viewport2::drawScenes() {
     ImGui::Image(finalColor.nativeHandle(), ImGui::GetContentRegionAvail());
 }
 
+void Viewport2::copySelection() {
+    auto entities = selection().entities() | transform(&EntityHandle::clone) |
+                    ToSmallVector<>;
+    selection().set(entities);
+}
+
 void Viewport2::displayGizmo() {
     if (selection().empty()) {
         return;
@@ -212,7 +235,11 @@ void Viewport2::displayGizmo() {
     if (!gizmo.display(cameraController.camera(), entityWSTransform)) {
         return;
     }
-    auto newLocalTransform = inverse(parentTransform) * entityWSTransform;
+    if (ImGui::IsKeyDown(ImGuiKey_ModShift) && !viewData.haveCopiedEntity) {
+        viewData.haveCopiedEntity = true;
+        copySelection();
+    }
+    auto newLocalTransform = vml::inverse(parentTransform) * entityWSTransform;
     entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
 }
 

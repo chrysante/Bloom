@@ -29,6 +29,8 @@ public:
                                         std::span<bloom::Scene* const> scenes,
                                         vml::float2 position) const;
 
+    bloom::rg::RenderGraph* renderGraph() { return mRenderGraph.get(); }
+
 private:
     std::unique_ptr<bloom::rg::SceneRenderer> mRenderer;
     std::unique_ptr<bloom::rg::RenderGraph> mRenderGraph;

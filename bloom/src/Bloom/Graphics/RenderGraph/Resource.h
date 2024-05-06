@@ -63,7 +63,7 @@ public:
         Resource(ResourceNodeType::BufferResource), idf(std::move(idf)) {}
 
     ///
-    BufferHandle const& handle() { return _handle; }
+    BufferHandle const& handle() const { return _handle; }
 
     /// Assigns the underlying resource and updates all users
     void assign(BufferHandle buffer);

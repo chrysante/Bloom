@@ -86,6 +86,11 @@ public:
     ///
     std::unique_ptr<RenderGraph> clone(RenderGraphContext& context) const;
 
+    ///
+    std::span<Pass const* const> getExecutionOrder() const {
+        return executionOrder;
+    }
+
 private:
     void doExecute(FrameParameters const& params, CommandQueue& queue) override;
 

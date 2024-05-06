@@ -65,6 +65,9 @@ struct FontDesc {
     static FontDesc UIDefault();
 
     ///
+    static FontDesc MonoDefault();
+
+    ///
     [[nodiscard]] FontDesc setSize(FontSize size) const {
         auto result = *this;
         result.size = size;

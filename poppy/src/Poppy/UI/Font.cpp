@@ -149,7 +149,15 @@ FontDesc FontDesc::UIDefault() {
     font.weight = FontWeight::Regular;
     font.style = FontStyle::Roman;
     return font;
-};
+}
+
+FontDesc FontDesc::MonoDefault() {
+    FontDesc font{};
+    font.size = FontSize{ 14 };
+    font.weight = FontWeight::Regular;
+    font.style = FontStyle::Monospaced;
+    return font;
+}
 
 FontManager::FontManager(float scaleFactor):
     allIconCodes(loadAllIconCodes()),

@@ -13,8 +13,25 @@ void* Interface::accessor(Pass& pass) const {
                  [&](auto& interface) -> void* { return interface.acc(pass); });
 }
 
+static std::string getParentPassName(PassTerminal const& term) {
+    if (term.pass()) {
+        return term.pass()->name();
+    }
+    if (auto* s = dynamic_cast<RenderGraphInternalSink const*>(&term)) {
+        return getParentPassName(s->owningSource());
+    }
+    if (auto* s = dynamic_cast<RenderGraphInternalSource const*>(&term)) {
+        return getParentPassName(s->owningSink());
+    }
+    return "<unknown-pass>";
+}
+
 std::string PassTerminal::qualifiedName() const {
-    return utl::strcat(pass() ? pass()->name() : "?", ".", name());
+    auto qualName = utl::strcat(getParentPassName(*this), ".", name());
+    auto itr = ranges::remove_if(qualName,
+                                 [](char c) { return std::isspace((int)c); });
+    qualName.erase(itr, qualName.end());
+    return qualName;
 }
 
 size_t PassSink::doIndexInParent() const {

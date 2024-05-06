@@ -177,8 +177,8 @@ void Viewport2::display() {
         viewData.reset();
     }
     ImGui::EndChild();
-    if (showRenderGraphDebugger && rg::RenderGraphManager::get()) {
-        displayRenderGraphDebugger(*rg::RenderGraphManager::get(),
+    if (showRenderGraphDebugger && renderer && renderer->renderGraph()) {
+        displayRenderGraphDebugger(*renderer->renderGraph(),
                                    &showRenderGraphDebugger);
     }
 }
@@ -506,27 +506,100 @@ void Viewport2::dropdownMenu() {
     ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);
 }
 
+namespace bloom {
+
+static std::ostream& operator<<(std::ostream& str, StorageMode mode) {
+    switch (mode) {
+    case StorageMode::Shared:
+        return str << "Shared";
+    case StorageMode::Managed:
+        return str << "Managed";
+    case StorageMode::GPUOnly:
+        return str << "GPUOnly";
+    default:
+        return str << "<invalid>";
+    }
+}
+
+} // namespace bloom
+
+static void labeledText(std::string_view label, auto const&... args) {
+    ImGui::TextEx(utl::strcat(label, ": ", args...).c_str());
+}
+
+static void displayResource(Resource const& resource) {
+    if (!ImGui::TreeNodeEx((void*)&resource, ImGuiTreeNodeFlags_DefaultOpen,
+                           "%s", utl::strcat(resource.type()).c_str()))
+    {
+        return;
+    }
+    // clang-format off
+    visit(resource, utl::overload{
+        [&](BufferResource const& resource) {
+            if (!resource.handle()) {
+                ImGui::Text("Not allocated");
+                return;
+            }
+            labeledText("Size", resource.handle().size());
+            labeledText("Storage Mode", resource.handle().storageMode());
+        },
+        [&](TextureResource const& resource) {
+            if (!resource.handle()) {
+                ImGui::Text("Not allocated");
+                return;
+            }
+            labeledText("Size", resource.handle().size());
+            labeledText("Storage Mode", 
+                        resource.handle().description().storageMode);
+        },
+        [&](GeometryResource const&) {},
+        [&](LightsResource const&) {}
+    }); // clang-format on
+    if (ImGui::TreeNodeEx((void*)&resource, ImGuiTreeNodeFlags_DefaultOpen,
+                          "Users"))
+    {
+        for (auto* user: resource.users()) {
+            withFont(FontDesc::MonoDefault(),
+                     [&] { ImGui::TextEx(user->qualifiedName().c_str()); });
+        }
+        ImGui::TreePop();
+    }
+    ImGui::TreePop();
+}
+
+static void displayExecutionOrder(rg::RenderGraph const& rg) {
+    for (auto* pass: rg.getExecutionOrder()) {
+        auto* passRG = dynamic_cast<RenderGraph const*>(pass);
+        bool open = withFont(FontDesc::MonoDefault(), [&] {
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+            if (!passRG) {
+                flags |= ImGuiTreeNodeFlags_Leaf;
+            }
+            return ImGui::TreeNodeEx(pass, flags, "%s", pass->name().c_str());
+        });
+        if (!open) {
+            continue;
+        }
+        if (passRG) {
+            displayExecutionOrder(*passRG);
+        }
+        ImGui::TreePop();
+    }
+}
+
 static void displayRenderGraphDebugger(rg::RenderGraph const& rg, bool* open) {
     ImGui::Begin("Render Graph Debugger", open);
+    if (ImGui::CollapsingHeader("Execution Order",
+                                ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        displayExecutionOrder(rg);
+    }
     if (ImGui::CollapsingHeader("Resource Pool",
                                 ImGuiTreeNodeFlags_DefaultOpen))
     {
         auto& pool = rg.context().resourcePool;
         for (auto* resource: pool.resources()) {
-            if (ImGui::TreeNodeEx((void*)resource,
-                                  ImGuiTreeNodeFlags_DefaultOpen, "Resource"))
-            {
-                ImGui::TextEx(utl::strcat(resource->type()).c_str());
-                if (ImGui::TreeNodeEx((void*)resource,
-                                      ImGuiTreeNodeFlags_DefaultOpen, "Users"))
-                {
-                    for (auto* user: resource->users()) {
-                        ImGui::TextEx(user->qualifiedName().c_str());
-                    }
-                    ImGui::TreePop();
-                }
-                ImGui::TreePop();
-            }
+            displayResource(*resource);
         }
     }
     ImGui::End();

@@ -74,6 +74,8 @@ struct FrameParameters {
 
     size_t numShadowMaps = 0;
 
+    bool drawWireframe = false;
+
     bool operator==(FrameParameters const&) const = default;
 };
 

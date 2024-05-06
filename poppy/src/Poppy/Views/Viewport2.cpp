@@ -164,8 +164,11 @@ void Viewport2::display() {
 void Viewport2::drawScenes() {
     float2 viewportSize =
         (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
-    rg::FrameParameters frameParams = { .screenSize = viewportSize,
-                                        .shadowMapSize = { 1024, 1024 } };
+    rg::FrameParameters frameParams = {
+        .screenSize = viewportSize,
+        .shadowMapSize = { 1024, 1024 },
+        .drawWireframe = drawOptions.mode == DebugDrawOptions::Mode::Wireframe
+    };
     auto* renderGraph = rg::RenderGraphManager::get();
     if (!renderGraph) {
         displayEmptyWithError("No Render Graph Found");

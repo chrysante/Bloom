@@ -121,7 +121,8 @@ BL_REGISTER_PASS(ForwardShadingPass, "Forward Shading Pass");
 ForwardShadingPass::ForwardShadingPass(std::string name):
     PassImpl(std::move(name)) {}
 
-void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
+void ForwardShadingPass::doExecute(FrameParameters const& params,
+                                   RenderContext& ctx) {
     RenderPassDescription desc{};
     desc.colorAttachments = {
         {
@@ -146,6 +147,9 @@ void ForwardShadingPass::doExecute(FrameParameters const&, RenderContext& ctx) {
     ctx.setFragmentBuffer(geometry->IDBuffer(), 5);
     ctx.setFragmentTexture(shadowMaps, 0);
     ctx.setFragmentSampler(shadowMapSampler, 0);
+    if (params.drawWireframe) {
+        ctx.setTriangleFillMode(TriangleFillMode::Lines);
+    }
     Material const* currentMaterial = nullptr;
     MaterialInstance const* currentMaterialInstance = nullptr;
     StaticMeshRenderer const* currentMesh = nullptr;

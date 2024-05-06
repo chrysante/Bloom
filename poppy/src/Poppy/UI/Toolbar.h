@@ -233,6 +233,10 @@ private:
 /// Non-interactive text item
 class ToolbarTextItem: public ToolbarItem {
 public:
+    ToolbarTextItem() = default;
+
+    ToolbarTextItem(std::string text) { this->text(std::move(text)); }
+
     /// Sets the displayed text
     ToolbarTextItem& text(std::string text) {
         return this->text([=] { return text.c_str(); });

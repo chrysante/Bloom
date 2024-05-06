@@ -227,7 +227,7 @@ void View::displayToolbar() {
     float posx = 0;
     ImGuiWindow* imWindow = (ImGuiWindow*)data.imguiWindow;
     BL_ASSERT(imWindow, "This should not be called if we don't have a window");
-    /// We tread the case where we are not docked but don't have a window as if
+    /// We treat the case where we are not docked but don't have a window as if
     /// we are docked, but that should not happen anyways. We could probably
     /// assert that.
     bool docked = data.docked || !data.window;
@@ -242,6 +242,8 @@ void View::displayToolbar() {
     }
     ImGui::SetCursorPosX(posx);
     float posy = ImGui::GetCursorPosY();
+    imWindow->DC.CursorPos =
+        (float2)imWindow->Pos + float2(posx, posy) - this->padding();
     _toolbar->display();
     ImGui::SetCursorPos({ 0, posy + _toolbar->getHeight() + 1 });
     if (docked) {

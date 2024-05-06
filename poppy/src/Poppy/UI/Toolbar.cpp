@@ -17,6 +17,10 @@ using namespace vml::short_types;
 using namespace poppy;
 using namespace ranges::views;
 
+static float2 computePadding(std::optional<float2> padding) {
+    return padding.value_or(ImGui::GetStyle().WindowPadding);
+}
+
 static bool tbButtonImpl(ToolbarStyle const& style, char const* label, int ID,
                          float2 size, bool enabled, bool open) {
     ImGui::BeginDisabled(!enabled);
@@ -189,17 +193,19 @@ float ToolbarSpacer::calcWidth([[maybe_unused]] float height) const {
     return 0.0f;
 }
 
-void ToolbarTextItem::display(ToolbarStyle const&) {
+void ToolbarTextItem::display(ToolbarStyle const& style) {
     auto* font = FontManager::get(getFontDesc());
     auto* DL = ImGui::GetWindowDrawList();
-    float2 pos = (float2)ImGui::GetCursorScreenPos() -
-                 float2(0, ImGui::GetStyle().ItemSpacing.y);
+    float2 pos = ImGui::GetCursorScreenPos();
+    pos.y += ImGui::GetStyle().FramePadding.y;
     DL->AddText(font, 0.0f, pos, ImGui::GetColorU32(ImGuiCol_Text), getText());
 }
 
 float ToolbarTextItem::calcWidth([[maybe_unused]] float height) const {
-    return withFont(getFontDesc(),
-                    [&] { return ImGui::CalcTextSize(getText()).x; });
+    return withFont(getFontDesc(), [&] {
+        return ImGui::CalcTextSize(getText()).x +
+               2 * ImGui::GetStyle().FramePadding.x;
+    });
 }
 
 char const* ToolbarTextItem::getText() const { return _text ? _text() : ""; }
@@ -343,6 +349,4 @@ void Toolbar::calcOffsets(float totalWidth) {
 
 float Toolbar::getHeight() const { return style.height + 2 * getPadding().y; }
 
-float2 Toolbar::getPadding() const {
-    return style.padding.value_or(ImGui::GetStyle().WindowPadding);
-}
+float2 Toolbar::getPadding() const { return computePadding(style.padding); }

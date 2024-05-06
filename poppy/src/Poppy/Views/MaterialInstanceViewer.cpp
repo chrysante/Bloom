@@ -20,8 +20,7 @@ MaterialInstanceViewer::MaterialInstanceViewer() {
         ToolbarTextItem()
             .text([this] { return inst ? inst->name().c_str() : ""; })
             .font(FontDesc::UIDefault().setWeight(FontWeight::Semibold))
-    });
-    // clang-format on
+    }); // clang-format on
 }
 
 void MaterialInstanceViewer::display() {

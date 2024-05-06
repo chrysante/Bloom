@@ -10,10 +10,11 @@
 
 namespace poppy {
 
-/// \Returns true if any entity has been selected
-bool displayLightOverlays(std::span<bloom::Scene* const> scenes,
-                          EntitySelectionManager& selection,
-                          utl::function_view<vml::float3(vml::float3)> WStoSS);
+/// \Returns the clicked entity if any
+bloom::EntityHandle displayLightOverlays(
+    std::span<bloom::Scene* const> scenes,
+    EntitySelectionManager const& selection,
+    utl::function_view<vml::float3(vml::float3)> WStoSS);
 
 } // namespace poppy
 

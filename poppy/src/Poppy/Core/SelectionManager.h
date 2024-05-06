@@ -157,6 +157,15 @@ public:
         _candidateMode = std::nullopt;
     }
 
+    /// Applies \p fn to all selected elements
+    void transform(std::invocable<T const&> auto fn) {
+        auto values = _elems.values();
+        _elems.clear();
+        for (auto& elem: values) {
+            _elems.insert(std::invoke(fn, elem));
+        }
+    }
+
 private:
     utl::hashset<T> _elems;
     utl::hashset<T> _candidates;

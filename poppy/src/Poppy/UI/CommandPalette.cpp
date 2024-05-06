@@ -60,7 +60,7 @@ Command const* CommandPalette::find(std::string_view name) const {
 }
 
 void CommandPalette::onInput(InputEvent& event) const {
-    event.dispatch<InputEventMask::KeyUp>([&](KeyEvent const& event) {
+    event.dispatch<InputEventMask::KeyDown>([&](KeyEvent const& event) {
         auto listItr = keyMap.find(event.key);
         if (listItr == keyMap.end()) {
             return false;

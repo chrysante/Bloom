@@ -53,6 +53,8 @@ struct Editor::Impl {
         viewManager(editor, editor->makeReceiver()),
         selection(editor->makeReceiver()) {}
 
+    void deleteSelectedEntities();
+
     struct EditorWindowDelegate;
 };
 
@@ -141,6 +143,11 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
         { Key::Period, ModFlags::Control },
         [this] { stopSimulation(); },
         [this] { return isSimulating(); }
+    });
+    addCommand({
+        "Delete Selected Entities",
+        { Key::Backspace, ModFlags::Control },
+        [this] { impl->deleteSelectedEntities(); }
     });
     impl->dockspace.setLeftToolbar({
         ToolbarDropdownMenu()
@@ -380,3 +387,10 @@ Command const* Editor::addCommand(Command command) {
 }
 
 void Editor::saveAll() { coreSystems().assetManager().saveAll(); }
+
+void Editor::Impl::deleteSelectedEntities() {
+    for (EntityHandle entity: selection.entities()) {
+        entity.scene().deleteEntity(entity);
+    }
+    selection.clear();
+}

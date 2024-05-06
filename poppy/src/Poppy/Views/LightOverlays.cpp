@@ -93,7 +93,7 @@ static void drawArrow(float2 from, float2 to, float headSize, float4 color,
 
 template <typename LightType>
 static void doDisplayLightOverlays(std::span<Scene* const> scenes,
-                                   EntitySelectionManager& selection,
+                                   EntitySelectionManager const& selection,
                                    utl::function_view<float3(float3)> WStoSS,
                                    auto draw, EntityHandle& clicked) {
     for (auto* scene: scenes) {
@@ -207,9 +207,9 @@ struct Draw {
 
 } // namespace
 
-bool poppy::displayLightOverlays(std::span<Scene* const> scenes,
-                                 EntitySelectionManager& selection,
-                                 utl::function_view<float3(float3)> WStoSS) {
+bloom::EntityHandle poppy::displayLightOverlays(
+    std::span<Scene* const> scenes, EntitySelectionManager const& selection,
+    utl::function_view<float3(float3)> WStoSS) {
     auto draw = Draw{ WStoSS };
     EntityHandle clicked;
     doDisplayLightOverlays<PointLightComponent>(scenes, selection, WStoSS, draw,
@@ -220,8 +220,5 @@ bool poppy::displayLightOverlays(std::span<Scene* const> scenes,
                                                       draw, clicked);
     doDisplayLightOverlays<SkyLightComponent>(scenes, selection, WStoSS, draw,
                                               clicked);
-    if (clicked) {
-        selection.amend(clicked, getSelectionMode());
-    }
-    return !!clicked;
+    return clicked;
 }

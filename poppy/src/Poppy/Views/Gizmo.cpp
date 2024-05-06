@@ -35,8 +35,8 @@ void Gizmo::setOperation(GizmoOperation op) {
 }
 
 void Gizmo::setSpace(GizmoSpace space) {
-    if (_operation == GizmoOperation::Scale) {
-        return;
+    if (operation() == GizmoOperation::Scale) {
+        space = GizmoSpace::Local;
     }
     _space[_operation] = space;
 }
@@ -45,6 +45,14 @@ void Gizmo::cycleSpace() {
     auto newSpace = space() == GizmoSpace::World ? GizmoSpace::Local :
                                                    GizmoSpace::World;
     setSpace(newSpace);
+}
+
+static ImGuizmo::OPERATION translateOperation(GizmoOperation op) {
+    return (ImGuizmo::OPERATION)op;
+}
+
+static ImGuizmo::MODE translateSpace(GizmoSpace space) {
+    return (ImGuizmo::MODE)(1 - (int)space);
 }
 
 static std::optional<float4x4> manipulateGizmo(ImGuizmo::Context* context,
@@ -62,12 +70,9 @@ static std::optional<float4x4> manipulateGizmo(ImGuizmo::Context* context,
     view = vml::transpose(view);
     proj = vml::transpose(proj);
     transform = vml::transpose(transform);
-    auto imguizmoOperation = (ImGuizmo::OPERATION)operation;
-    auto imguizmoMode = operation == GizmoOperation::Scale ?
-                            ImGuizmo::MODE::LOCAL :
-                            (ImGuizmo::MODE)(1 - (int)space);
-    if (ImGuizmo::Manipulate(view.data(), proj.data(), imguizmoOperation,
-                             imguizmoMode, transform.data()))
+    if (ImGuizmo::Manipulate(view.data(), proj.data(),
+                             translateOperation(operation),
+                             translateSpace(space), transform.data()))
     {
         return vml::transpose(transform);
     }

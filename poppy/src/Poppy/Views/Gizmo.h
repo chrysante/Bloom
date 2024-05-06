@@ -51,6 +51,12 @@ public:
     /// Displays the gizmo
     bool display(bloom::Camera const& camera, vml::float4x4& wsTransform);
 
+    /// Resets the gizmo to unused state
+    void reset() {
+        _hovered = false;
+        _using = false;
+    }
+
 private:
     struct ContextDeleter {
         void operator()(void*) const;

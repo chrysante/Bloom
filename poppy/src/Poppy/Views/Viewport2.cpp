@@ -3,6 +3,7 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <range/v3/numeric.hpp>
 #include <utl/vector.hpp>
 #include <vml/vml.hpp>
 
@@ -65,7 +66,7 @@ struct MouseState {
 struct ActiveViewData {
     void reset() { *this = {}; }
 
-    bool haveCopiedEntity = false;
+    float4x4 gizmoWSTransform = 0;
 };
 
 struct ViewData: ActiveViewData {};
@@ -76,7 +77,7 @@ struct Viewport2: View, BasicSceneInspector {
 
     void display() override;
     void drawScenes();
-    void copySelection();
+    void copyEntities(std::span<EntityHandle const> entities);
     void displayGizmo();
     void handleEntitySelection();
 
@@ -148,15 +149,19 @@ void Viewport2::display() {
         readInput();
         drawScenes();
         if (!gameView) {
-            bool selectedAny = false;
             auto WStoSS = [&](float3 WS) {
                 return worldSpaceToScreenSpace(WS);
             };
-            selectedAny |= displayLightOverlays(scenes(), selection(), WStoSS);
+            auto clickedEntity =
+                displayLightOverlays(scenes(), selection(), WStoSS);
             displayGizmo();
-            selectedAny |= gizmo.isUsing() || gizmo.isHovered();
-            if (!selectedAny) {
-                handleEntitySelection();
+            if (!gizmo.isUsing() && !gizmo.isHovered()) {
+                if (clickedEntity) {
+                    selection().amend(clickedEntity, getSelectionMode());
+                }
+                else {
+                    handleEntitySelection();
+                }
             }
         }
     }
@@ -215,32 +220,84 @@ void Viewport2::drawScenes() {
     ImGui::Image(finalColor.nativeHandle(), ImGui::GetContentRegionAvail());
 }
 
-void Viewport2::copySelection() {
-    auto entities = selection().entities() | transform(&EntityHandle::clone) |
-                    ToSmallVector<>;
-    selection().set(entities);
+void Viewport2::copyEntities(std::span<EntityHandle const> entities) {
+    utl::hashmap<EntityHandle, EntityHandle> cloneMap;
+    for (EntityHandle entity: entities) {
+        cloneMap.insert({ entity, entity.clone() });
+    }
+    selection().transform([&](EntityHandle entity) {
+        auto itr = cloneMap.find(entity);
+        return itr != cloneMap.end() ? itr->second : entity;
+    });
+}
+
+static float4x4 getDelta(float4x4 const& oldTransform,
+                         float4x4 const& newTransform) {
+    return newTransform * vml::inverse(oldTransform);
+}
+
+static float4x4 makeAverage(auto&& transforms) {
+    struct SplitTransform {
+        float3 position = { 0, 0, 0 };
+        quaternion_float orientation =
+            vml::make_rotation(0.0f, float3{ 0, 0, 1 });
+        float3 scale = { 1, 1, 1 };
+    };
+    auto t = ranges::accumulate(transforms, SplitTransform{},
+                                [&, i = 0](SplitTransform const& acc,
+                                           float4x4 const& matrix) mutable {
+        auto [position, orientation, scale] = vml::decompose_transform(matrix);
+        float t = 1.0f - float(i++) / ranges::size(transforms);
+        return SplitTransform{ vml::lerp(acc.position, position, t),
+                               vml::slerp(acc.orientation, orientation, t),
+                               vml::lerp(acc.scale, scale, t) };
+    });
+    return vml::make_transform(t.position, t.orientation, t.scale);
 }
 
 void Viewport2::displayGizmo() {
-    if (selection().empty()) {
+    auto entities = selection().entities() | filter([](EntityHandle entity) {
+        return entity.has<Transform>();
+    }) | ToSmallVector<>;
+    if (entities.empty()) {
+        gizmo.reset();
         return;
     }
-    EntityHandle entity = *selection().entities().begin();
-    Transform transformComponent = entity.get<Transform>();
-    EntityID parent = entity.getParent();
-    auto& scene = entity.scene();
-    auto localTransform = transformComponent.calculate();
-    auto parentTransform = scene.calculateTransformRelativeToWorld(parent);
-    auto entityWSTransform = parentTransform * localTransform;
-    if (!gizmo.display(cameraController.camera(), entityWSTransform)) {
+    auto localTransforms = entities | transform([](EntityHandle entity) {
+        return entity.get<Transform>().calculate();
+    }) | ToSmallVector<>;
+    auto parentTransforms = entities | transform([](EntityHandle entity) {
+        return entity.scene().calculateTransformRelativeToWorld(
+            entity.getParent());
+    }) | ToSmallVector<>;
+    float4x4 avgWSTransform = [&] {
+        if (!gizmo.isUsing()) {
+            auto transforms = zip(localTransforms, parentTransforms) |
+                              transform([](auto const& p) {
+                auto& [local, parent] = p;
+                return parent * local;
+            });
+            viewData.gizmoWSTransform = makeAverage(transforms);
+        }
+        return viewData.gizmoWSTransform;
+    }();
+    float4x4 oldTransform = avgWSTransform;
+    bool isUsing = gizmo.isUsing();
+    if (!gizmo.display(cameraController.camera(), avgWSTransform)) {
         return;
     }
-    if (ImGui::IsKeyDown(ImGuiKey_ModShift) && !viewData.haveCopiedEntity) {
-        viewData.haveCopiedEntity = true;
-        copySelection();
+    if (ImGui::IsKeyDown(ImGuiKey_ModShift) && !isUsing) {
+        copyEntities(entities);
     }
-    auto newLocalTransform = vml::inverse(parentTransform) * entityWSTransform;
-    entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
+    float4x4 transformDelta = getDelta(oldTransform, avgWSTransform);
+    for (auto [entity, local, parent]:
+         zip(entities, localTransforms, parentTransforms))
+    {
+        float4x4 newWSTransform = transformDelta * parent * local;
+        auto newLocalTransform = vml::inverse(parent) * newWSTransform;
+        entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
+    }
+    viewData.gizmoWSTransform = avgWSTransform;
 }
 
 void Viewport2::handleEntitySelection() {

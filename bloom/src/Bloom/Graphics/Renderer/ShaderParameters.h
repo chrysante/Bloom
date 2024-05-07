@@ -6,7 +6,7 @@
 
 namespace bloom {
 
-struct LightBufferContents {
+struct LightBufferContents_Depr {
     uint numPointLights;
     PointLight pointLights[32];
 
@@ -18,15 +18,6 @@ struct LightBufferContents {
 
     uint numSkyLights;
     SkyLight skyLights[32];
-};
-
-struct SceneRenderParameters {
-    vml::float4x4 camera;
-    vml::float3 cameraPosition;
-    vml::float2 screenSize;
-    vml::float2 screenResolution;
-
-    LightBufferContents lights;
 };
 
 BLOOM_SHADER_CONSTANT int maxShadowCascades = 10; // do we need this?
@@ -60,12 +51,6 @@ struct DebugDrawData {
     bool visualizeShadowCascades;
     vml::float4x4 shadowCascadeVizTransforms[10];
     uint shadowCascadeVizCount;
-};
-
-struct RendererParameters {
-    PostProcessParameters_Depr postprocess;
-    SceneRenderParameters scene;
-    ShadowRenderData shadowData;
 };
 
 } // namespace bloom

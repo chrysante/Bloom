@@ -5,37 +5,13 @@
 using namespace bloom;
 
 void Material::makeDefault(HardwareDevice& device) {
-    RenderPipelineDescription desc;
-    // Main Pass
-    desc.colorAttachments = { { .pixelFormat = PixelFormat::RGBA32Float },
-                              { .pixelFormat = PixelFormat::R32Uint } };
-    desc.vertexFunction = device.createFunction("mainPassVS");
-    desc.fragmentFunction = device.createFunction("mainPassFS");
-    desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
-    mainPass = device.createRenderPipeline(desc);
-
-    desc.vertexFunction = device.createFunction("rgMainPassVS");
-    desc.fragmentFunction = device.createFunction("rgMainPassFS");
-    rgMainPass = device.createRenderPipeline(desc);
-
-#if 0 // TODO: Reenable this
-    // Editor Pass
-    ca.pixelFormat = PixelFormat::RGBA32Float;
-    desc.colorAttachments.push_back(ca);
-    desc.vertexFunction   = device.createFunction("editorPassVS");
-    desc.fragmentFunction = device.createFunction("editorPassFS");
-    desc.depthAttachmentPixelFormat = PixelFormat::Depth32Float;
-    editorPass = device.createRenderPipeline(desc);
-#endif
-    // Outline Pass
-    desc.colorAttachments[0].pixelFormat = PixelFormat::R8Unorm;
-    desc.vertexFunction = device.createFunction("outlinePassVS");
-    desc.fragmentFunction = device.createFunction("outlinePassFS");
-    outlinePass = device.createRenderPipeline(desc);
-
-    // Depth stencil state
-    DepthStencilDescription dsDesc{};
-    dsDesc.depthWrite = true;
-    dsDesc.depthCompareFunction = CompareFunction::LessEqual;
-    depthStencil = device.createDepthStencil(dsDesc);
+    rgMainPass = device.createRenderPipeline(
+        { .colorAttachments = { { .pixelFormat = PixelFormat::RGBA32Float },
+                                { .pixelFormat = PixelFormat::R32Uint } },
+          .depthAttachmentPixelFormat = PixelFormat::Depth32Float,
+          .vertexFunction = device.createFunction("rgMainPassVS"),
+          .fragmentFunction = device.createFunction("rgMainPassFS") });
+    depthStencil = device.createDepthStencil(
+        { .depthWrite = true,
+          .depthCompareFunction = CompareFunction::LessEqual });
 }

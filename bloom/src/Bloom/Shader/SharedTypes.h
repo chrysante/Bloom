@@ -1,6 +1,7 @@
 #ifndef BLOOM_SHADER_SHAREDTYPES_H
 #define BLOOM_SHADER_SHAREDTYPES_H
 
+#include "Bloom/Graphics/Lights.h"
 #include "Bloom/Shader/Common.h"
 
 namespace bloom {
@@ -12,6 +13,21 @@ struct CameraInput {
 };
 
 BLOOM_SHADER_CONSTANT int NumMaxShadowCasters = 32;
+
+///
+struct LightBufferContents {
+    uint32_t numPointLights;
+    PointLight pointLights[32];
+
+    uint32_t numSpotLights;
+    SpotLight spotLights[32];
+
+    uint32_t numDirLights;
+    DirectionalLight dirLights[32];
+
+    uint32_t numSkyLights;
+    SkyLight skyLights[32];
+};
 
 /// Describes the layout of the shadow map texture array
 struct alignas(vml::float4x4) ShadowRenderMetadata {

@@ -1,13 +1,10 @@
 #include "Lights.h"
 
 using namespace metal;
+using namespace bloom;
 
-namespace bloom {
-
-/// **Lights**
-
-float3 calculatePointLight(PBRData pbrData, PointLight light, float3 V,
-                           float3 N, float3 worldPosition)
+float3 bloom::calculatePointLight(PBRData pbrData, PointLight light, float3 V,
+                                  float3 N, float3 worldPosition)
 {
     float3 const L = normalize(light.position - worldPosition);
     float3 const H = normalize(V + L);
@@ -22,8 +19,8 @@ float3 calculatePointLight(PBRData pbrData, PointLight light, float3 V,
     return PBRLighting(pbrData, radiance, N, V, L, H);
 }
 
-float3 calculateSpotlight(PBRData pbrData, SpotLight light, float3 V, float3 N,
-                          float3 worldPosition)
+float3 bloom::calculateSpotlight(PBRData pbrData, SpotLight light, float3 V,
+                                 float3 N, float3 worldPosition)
 {
     float3 const L = normalize(light.position - worldPosition);
 
@@ -48,8 +45,8 @@ float3 calculateSpotlight(PBRData pbrData, SpotLight light, float3 V, float3 N,
     return PBRLighting(pbrData, radiance, N, V, L, H);
 }
 
-float3 calculateDirectionalLight(PBRData pbrData, DirectionalLight light,
-                                 float3 V, float3 N)
+float3 bloom::calculateDirectionalLight(PBRData pbrData, DirectionalLight light,
+                                        float3 V, float3 N)
 {
     float3 const L = light.direction;
     float3 const H = normalize(V + L);
@@ -57,8 +54,6 @@ float3 calculateDirectionalLight(PBRData pbrData, DirectionalLight light,
 
     return PBRLighting(pbrData, radiance, N, V, L, H);
 }
-
-/// ** Shadows **
 
 static bool isInLightFrustum(float3 const projCoords)
 {
@@ -75,9 +70,10 @@ static float3 calculateLightProjection(float4 const positionLightSpace)
     return projCoords;
 }
 
-float calculateDirLightShadow(texture2d_array<float> shadowMap,
-                              sampler shadowMapSampler, int shadowMapIndex,
-                              float3 const projCoords, float NdotL)
+float bloom::calculateDirLightShadow(texture2d_array<float> shadowMap,
+                                     sampler shadowMapSampler,
+                                     int shadowMapIndex,
+                                     float3 const projCoords, float NdotL)
 {
     if (!isInLightFrustum(projCoords)) {
         return 1.0;
@@ -90,7 +86,7 @@ float calculateDirLightShadow(texture2d_array<float> shadowMap,
     return shadow;
 }
 
-float calculateDirLightCascadedShadow(
+float bloom::calculateDirLightCascadedShadow(
     texture2d_array<float> shadowMaps, sampler shadowMapSampler,
     int shadowMapOffset, int numCascades,
     float4x4 device const* lightSpaceTransforms, float4 worldPosition,
@@ -120,9 +116,9 @@ constant float3 shadowVizColors[10] = {
     float3(1.0, 0.0, 1.0)
 };
 
-float3 visualizeShadowCascade(int shadowMapOffset, int numCascades,
-                              float4x4 device const* lightSpaceTransforms,
-                              float4 worldPosition)
+float3 bloom::visualizeShadowCascade(
+    int shadowMapOffset, int numCascades,
+    float4x4 device const* lightSpaceTransforms, float4 worldPosition)
 {
     float3 shadowViz = 0.5;
     for (int j = numCascades - 1; j >= 0; --j) {
@@ -138,4 +134,3 @@ float3 visualizeShadowCascade(int shadowMapOffset, int numCascades,
     }
     return shadowViz;
 }
-} // namespace bloom

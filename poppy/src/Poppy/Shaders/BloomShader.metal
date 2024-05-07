@@ -1,8 +1,5 @@
 #include <metal_stdlib>
 
-#include "BloomShader.h"
-
-#include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Shader/SharedTypes.h"
 
 using namespace metal;
@@ -47,7 +44,7 @@ static half4 downsampleBox13Tap(texture2d<half, access::sample> tex, float2 uv,
 }
 
 // 9-tap bilinear upsampler (tent filter)
-half4 bloom::upsampleTent(texture2d<half, access::sample> tex, float2 uv,
+static half4 upsampleTent(texture2d<half, access::sample> tex, float2 uv,
                           float2 texelSize, float4 sampleScale)
 {
     float4 d = texelSize.xyxy * float4(1.0, 1.0, -1.0, 0.0) * sampleScale;
@@ -81,64 +78,6 @@ static vec<T, 3> quadraticThreshold(vec<T, 3> color, T threshold,
     color *= max(rq, br - threshold) / max(br, T(1e-4));
 
     return color;
-}
-
-kernel void bloomPrefilter(texture2d<half, access::sample> source
-                           [[texture(0)]],
-                           texture2d<half, access::write> dest [[texture(1)]],
-                           BloomParameters_Depr device const& params
-                           [[buffer(0)]],
-                           uint2 position [[thread_position_in_grid]])
-{
-    float2 const destSize = float2(dest.get_width(), dest.get_height());
-    float2 const uv = float2(position) / (destSize - 1);
-    float2 const texelSize = 1 / (destSize - 1);
-
-    half3 sample = safeHDR(downsampleBox13Tap(source, uv, texelSize).rgb);
-    sample = min(sample, params.clamp);
-
-    if (!params.physicallyCorrect) {
-        sample = quadraticThreshold(sample, (half)params.threshold,
-                                    (half3)params.curve);
-    }
-    dest.write(half4(sample, 1), position);
-}
-
-kernel void bloomDownsample(texture2d<half, access::sample> source
-                            [[texture(0)]],
-                            texture2d<half, access::write> dest [[texture(1)]],
-                            uint2 position [[thread_position_in_grid]])
-{
-    float2 destSize = float2(dest.get_width(), dest.get_height());
-    float2 uv = float2(position) / (destSize - 1);
-    float2 texelSize = 1 / (destSize - 1);
-    half4 value = downsampleBox13Tap(source, uv, texelSize);
-    dest.write(value, position);
-}
-
-kernel void bloomUpsample(texture2d<half, access::sample> sourceSmall
-                          [[texture(0)]],
-                          texture2d<half, access::read> sourceBig
-                          [[texture(1)]],
-                          texture2d<half, access::write> dest [[texture(2)]],
-                          BloomParameters_Depr device const& params
-                          [[buffer(0)]],
-                          uint2 position [[thread_position_in_grid]])
-{
-    float2 destSize = float2(dest.get_width(), dest.get_height());
-    float2 sourceSmallSize =
-        float2(sourceSmall.get_width(), sourceSmall.get_height());
-    float2 uv = float2(position) / (destSize - 1);
-    float2 texelSize = 1 / (sourceSmallSize - 1);
-    half4 upsampledValue =
-        upsampleTent(sourceSmall, uv, texelSize, params.scale);
-    half4 big = sourceBig.read(position);
-    if (params.physicallyCorrect) {
-        dest.write(mix(big, upsampledValue, params.contribution), position);
-    }
-    else {
-        dest.write(upsampledValue + big, position);
-    }
 }
 
 kernel void rgBloomPrefilter(texture2d<half, access::sample> source

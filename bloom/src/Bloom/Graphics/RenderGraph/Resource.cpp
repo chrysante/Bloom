@@ -5,6 +5,7 @@
 
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
 using namespace rg;

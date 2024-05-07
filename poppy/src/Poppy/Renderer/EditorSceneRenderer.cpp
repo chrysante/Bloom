@@ -1,7 +1,7 @@
 #include "Poppy/Renderer/EditorSceneRenderer.h"
 
-#include "Bloom/GPU/BlitContext.h"
-#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/CommandBuffer.h"
+#include "Bloom/GPU/CommandQueue.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Renderer/Passes.h"
@@ -143,12 +143,12 @@ bloom::EntityHandle EditorSceneRenderer::readEntityIDMap(
         return {};
     }
     auto idTex = idMap->handle();
-    auto ctx = commandQueue.createBlitContext();
-    ctx->begin();
-    ctx->synchronizeTexture(idTex, 0, 0);
-    ctx->end();
-    ctx->commit();
-    ctx->waitUntilCompleted();
+    auto commandBuffer = commandQueue.createCommandBuffer();
+    auto encoder = commandBuffer->makeBlitEncoder();
+    encoder->synchronizeTexture(idTex, 0, 0);
+    encoder->end();
+    commandBuffer->commit();
+    commandBuffer->waitForCompletion();
     EntityHandleEncoding encodedID;
     vml::AABB<uint32_t, 3> region = { uint3(position, 0),
                                       uint3(position, 0) + uint3(1) };

@@ -3,7 +3,6 @@
 #include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
-#include "Bloom/GPU/RenderContext.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Shader/SharedTypes.h"

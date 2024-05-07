@@ -73,7 +73,7 @@ set(poppy_sources
   src/Poppy/Views/MaterialInstanceViewer.cpp
   src/Poppy/Views/MaterialInstanceViewer.h
   src/Poppy/Views/RendererDebuggerView.cpp
-  src/Poppy/Views/RenderGraphEditorView.cpp
+  src/Poppy/Views/RenderGraphEditor.cpp
   src/Poppy/Views/SceneOutliner.cpp
   src/Poppy/Views/Viewport.cpp
   src/Poppy/Views/Gizmo.cpp

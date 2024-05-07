@@ -31,9 +31,9 @@ namespace {
 
 enum CompilationStatus { None, Success, Error };
 
-struct RenderGraphEditorView: View {
+struct RenderGraphEditor: View {
     struct Delegate: NodeEditorDelegate {
-        Delegate(RenderGraphEditorView* view): view(view) {}
+        Delegate(RenderGraphEditor* view): view(view) {}
 
         std::optional<float4> linkColor(PinUserType type) const override {
             switch ((InterfaceType)type) {
@@ -54,10 +54,10 @@ struct RenderGraphEditorView: View {
             view->backgroundContextMenu(position);
         }
 
-        RenderGraphEditorView* view;
+        RenderGraphEditor* view;
     };
 
-    RenderGraphEditorView();
+    RenderGraphEditor();
 
     void init() override;
 
@@ -79,7 +79,7 @@ struct RenderGraphEditorView: View {
     CompilationStatus compilationStatus = CompilationStatus::None;
 };
 
-POPPY_REGISTER_VIEW(RenderGraphEditorView, "Render Graph Editor");
+POPPY_REGISTER_VIEW(RenderGraphEditor, "Render Graph Editor");
 
 static constexpr float4 InputNodeColor = { 0.4, 0.7, 0.2, 1.0 };
 static constexpr float4 PassNodeColor = { 0.27, 0.58, 0.92, 1.0 };
@@ -361,14 +361,14 @@ static char const* compStatusMessage(CompilationStatus status) {
     }
 }
 
-RenderGraphEditorView::RenderGraphEditorView():
-    nodeEditor(commandPaletteWrite()) {
+RenderGraphEditor::RenderGraphEditor(): nodeEditor(commandPaletteWrite()) {
     nodeEditor.setDelegate(std::make_unique<Delegate>(this));
     auto& cmd = commandPaletteWrite();
-    cmd.add("Compile", { Key::B, ModFlags::Control }, [this] { compile(); });
+    auto* compileCmd = cmd.add("Compile", { Key::B, ModFlags::Control },
+                               [this] { compile(); });
     // clang-format off
     setToolbar({
-        ToolbarIconButton(commandPalette().find("Compile"), "ok"),
+        ToolbarIconButton(compileCmd, "ok"),
         ToolbarSpacer(),
         ToolbarTextItem()
             .text([this] { return compStatusMessage(compilationStatus); })
@@ -376,15 +376,15 @@ RenderGraphEditorView::RenderGraphEditorView():
     }); // clang-format on
 }
 
-void RenderGraphEditorView::init() { setPadding({ 0, 0 }); }
+void RenderGraphEditor::init() { setPadding({ 0, 0 }); }
 
-void RenderGraphEditorView::onInput(InputEvent& event) {
+void RenderGraphEditor::onInput(InputEvent& event) {
     nodeEditor.onInput(event);
 }
 
-void RenderGraphEditorView::display() { nodeEditor.display(); }
+void RenderGraphEditor::display() { nodeEditor.display(); }
 
-YAML::Node RenderGraphEditorView::serialize() const {
+YAML::Node RenderGraphEditor::serialize() const {
     YAML::Node root;
     root["NodeEditor"] = nodeEditor.serialize();
     /// We use these functions to serialize our graph for now. This is not
@@ -394,7 +394,7 @@ YAML::Node RenderGraphEditorView::serialize() const {
     return root;
 }
 
-void RenderGraphEditorView::deserialize(YAML::Node root) {
+void RenderGraphEditor::deserialize(YAML::Node root) {
     if (!root) {
         return;
     }
@@ -404,11 +404,11 @@ void RenderGraphEditorView::deserialize(YAML::Node root) {
     nodeEditor.setGraph(std::move(graph));
 }
 
-void RenderGraphEditorView::compile() {
+void RenderGraphEditor::compile() {
     dispatch(DispatchToken::NextFrame, [this] { doCompile(); });
 }
 
-void RenderGraphEditorView::doCompile() {
+void RenderGraphEditor::doCompile() {
     auto rg = constructRenderGraph(editor().device(), nodeEditor.model());
     if (rg) {
         compilationStatus = CompilationStatus::Success;
@@ -419,7 +419,7 @@ void RenderGraphEditorView::doCompile() {
     RenderGraphManager::set(std::move(rg));
 }
 
-void RenderGraphEditorView::backgroundContextMenu(float2 position) {
+void RenderGraphEditor::backgroundContextMenu(float2 position) {
     if (ImGui::MenuItem("Input")) {
         nodeEditor.addNode(GlobalInputNodeController::MakeDesc(position));
     }

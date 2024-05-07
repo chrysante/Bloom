@@ -9,6 +9,7 @@ namespace bloom {
 ///
 struct CameraInput {
     vml::float4x4 camera;
+    vml::float4x4 inverseCamera;
     vml::float3 cameraPosition;
 };
 

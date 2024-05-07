@@ -144,18 +144,33 @@ struct GridVertex {
     float2 UV;
 };
 
+static constant float2 GridUVs[] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
+
+static constant float GridSize = 2000;
+static constant float GridLineWidth = 2.5;
+static constant float NumLines = 20;
+
 vertex GridVertex rgGridPassVS(CameraInput device const& camera [[buffer(0)]],
-                               float2 device const* UVs [[buffer(1)]],
                                uint const vertexID [[vertex_id]])
 {
-    float size = 1000;
-    float2 pos = 2.0f * UVs[vertexID] - 1.0f;
-    float4 vertexPositionWS = float4(size * pos, 0, 1);
+    float4 vertexPositionWS =
+        float4(GridSize * (GridUVs[vertexID] - 0.5f), 0, 1);
     return { .position = camera.camera * vertexPositionWS,
-             .UV = UVs[vertexID] };
+             .UV = GridUVs[vertexID] };
 }
 
-fragment float4 gridPassFS(GridVertex in [[stage_in]])
+static float gridLines(float UV)
 {
-    return float4(in.UV, 0, 1);
+    float uvLineWidth = GridLineWidth / (GridSize / NumLines);
+    UV *= 1 + (GridLineWidth / GridSize);
+    UV -= (GridLineWidth / GridSize) / 2;
+    UV *= NumLines;
+    float x = fract(UV);
+    return max(1 - step(uvLineWidth / 2, x), step(1 - uvLineWidth / 2, x));
+}
+
+fragment float4 rgGridPassFS(GridVertex in [[stage_in]])
+{
+    return mix(float4(), float4(0.5, 0.5, 0.5, 1.0),
+               max(gridLines(in.UV.x), gridLines(in.UV.y)));
 }

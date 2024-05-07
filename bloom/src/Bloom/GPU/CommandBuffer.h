@@ -98,7 +98,8 @@ public:
     virtual void draw(DrawDescription const& desc) = 0;
 
     /// Encodes a draw call without index buffer
-    virtual void draw(size_t vertexStart, size_t vertexCount) = 0;
+    virtual void draw(PrimitiveType type, size_t vertexStart,
+                      size_t vertexCount) = 0;
 
 protected:
     RenderEncoder() = default;
@@ -130,6 +131,10 @@ protected:
 /// Encodes blit commands to a command buffer
 class BlitEncoder: public CommandEncoder {
 public:
+    ///
+    virtual void copyTexture(TextureView source, TextureView dest) = 0;
+
+    ///
     virtual void synchronizeTexture(TextureView texture, size_t slice,
                                     size_t level) = 0;
 

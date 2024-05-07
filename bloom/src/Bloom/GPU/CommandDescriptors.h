@@ -55,6 +55,9 @@ struct RenderPassDescription {
 
 /// Argument struct for an indexed draw call
 struct DrawDescription {
+    /// The type of primitive to draw
+    PrimitiveType primitiveType = PrimitiveType::Triangle;
+
     /// The index buffer to use
     BufferView indexBuffer;
 

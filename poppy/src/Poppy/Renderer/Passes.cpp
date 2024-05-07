@@ -227,12 +227,11 @@ void CompositionPass::doAllocateResources(FrameParameters const&,
         { .computeFunction = device.createFunction("rgEditorComposition") });
 }
 
-#if 0
-
 namespace {
 
 struct GridPass: PassImpl<GridPass> {
-    void doExecute(FrameParameters const& params, CommandBuffer& commandBuffer) override;
+    void doExecute(FrameParameters const& params,
+                   CommandBuffer& commandBuffer) override;
 
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
@@ -245,7 +244,7 @@ struct GridPass: PassImpl<GridPass> {
     BufferHandle cameraBuffer;
     TextureHandle colorIn;
     TextureHandle depth;
-    
+
     // Sources
     TextureHandle colorOut;
 
@@ -268,7 +267,7 @@ BEGIN_SINK_DECL(GridPass) {
         "Depth",
         &GridPass::depth,
         {}
-    }
+    },
     BufferInterface {
         "Camera",
         &GridPass::cameraBuffer,
@@ -278,7 +277,7 @@ BEGIN_SINK_DECL(GridPass) {
 END_DECL()
 
 BEGIN_SOURCE_DECL(GridPass) {
-    GridPass{
+    TextureInterface{
         "Color",
         &GridPass::colorOut,
         [](FrameParameters const& params) {
@@ -297,45 +296,45 @@ std::unique_ptr<Pass> poppy::makeGridPass() {
     return std::make_unique<GridPass>();
 }
 
-void GridPass::doExecute(FrameParameters const&, CommandBuffer& commandBuffer) {
-    auto encoder = commandBuffer.begin({
-        .colorAttachments = {
-            {
-                .texture = colorOut,
-                .loadAction = LoadAction::Load,
-            }
-        },
-        .depthAttachment = { .texture = depth }
-    });
-    encoder->setVertexBuffer(cameraBuffer, 0);
-    encoder->setVertexBuffer(geometry->transformBuffer(), 2);
-    encoder->setPipeline(pipeline);
-    encoder->setTriangleCullMode(TriangleCullMode::Back);
-    encoder->setDepthStencil(depthStencil);
-
-    StaticMeshRenderer const* currentMesh = nullptr;
-    for (size_t index = 0; auto object: geometry->getObjects()) {
-        if (object.mesh.get() != currentMesh) {
-            currentMesh = object.mesh.get();
-            encoder->setVertexBuffer(currentMesh->vertexBuffer(), 1);
-        }
-        // Object transform
-        encoder->setVertexBufferOffset(2, index * sizeof(float4x4));
-        BufferView indexBuffer = object.mesh->indexBuffer();
-        DrawDescription desc{};
-        desc.indexCount = indexBuffer.size() / 4;
-        desc.indexType = IndexType::U32;
-        desc.indexBuffer = indexBuffer;
-        encoder->draw(desc);
-        ++index;
+static void copyTexture(TextureHandle source, TextureHandle dest,
+                        BlitEncoder& encoder) {
+    if (source == dest) {
+        return;
     }
+    encoder.copyTexture(source, dest);
+    encoder.end();
+}
+
+void GridPass::doExecute(FrameParameters const&, CommandBuffer& commandBuffer) {
+    copyTexture(colorIn, colorOut, *commandBuffer.makeBlitEncoder());
+    auto encoder = commandBuffer.makeRenderEncoder(
+        { .colorAttachments = { {
+              .texture = colorOut,
+              .loadAction = LoadAction::Load,
+          } },
+          .depthAttachment = { .texture = depth,
+                               .loadAction = LoadAction::DontCare } });
+    encoder->setVertexBuffer(cameraBuffer, 0);
+    encoder->setPipeline(pipeline);
+    encoder->setTriangleCullMode(TriangleCullMode::None);
+    encoder->setDepthStencil(depthStencil);
+    encoder->draw(PrimitiveType::TriangleStrip, 0, 4);
     encoder->end();
 }
 
 void GridPass::doAllocateResources(FrameParameters const&,
-                                    HardwareDevice& device) {
+                                   HardwareDevice& device) {
     pipeline = device.createRenderPipeline(
-        { .colorAttachments = { { .pixelFormat = PixelFormat::R8Unorm } },
+        { .colorAttachments = { {
+              .pixelFormat = PixelFormat::R8Unorm,
+              .blendingEnabled = true,
+              .sourceRGBBlendFactor = BlendFactor::SourceAlpha,
+              .destinationRGBBlendFactor = BlendFactor::OneMinusSourceAlpha,
+              .rgbBlendOperation = BlendOperation::Add,
+              .sourceAlphaBlendFactor = BlendFactor::One,
+              .destinationAlphaBlendFactor = BlendFactor::Zero,
+              .alphaBlendOperation = BlendOperation::Add,
+          } },
           .depthAttachmentPixelFormat = PixelFormat::Depth32Float,
           .vertexFunction = device.createFunction("rgGridPassVS"),
           .fragmentFunction = device.createFunction("rgGridPassFS") });
@@ -343,5 +342,3 @@ void GridPass::doAllocateResources(FrameParameters const&,
         { .depthCompareFunction = CompareFunction::LessEqual,
           .depthWrite = false });
 }
-
-#endif

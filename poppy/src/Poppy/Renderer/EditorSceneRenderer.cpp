@@ -50,6 +50,7 @@ EditorSceneRenderer::EditorSceneRenderer(
                                                  sceneRenderGraph->device());
     wrapRenderGraph(*mRenderGraph, std::move(sceneRenderGraphOwner));
     auto* selPass = mRenderGraph->addPass(makeSelectionPass());
+    auto* gridPass = mRenderGraph->addPass(makeGridPass());
     auto* compPass = mRenderGraph->addPass(makeCompositionPass());
 
     auto* selGeo = mRenderGraph->declareSink(
@@ -59,17 +60,26 @@ EditorSceneRenderer::EditorSceneRenderer(
         TextureInterface{ "Composite Color", nullptr, {} });
     auto* idMapSource = mRenderGraph->findSource("ID Map");
     auto* sceneColor = sceneRenderGraph->findSource("Color");
+    // Link selection pass
     mRenderGraph->addLink(selGeo->internalSource(),
                           selPass->findSink("Selected Geometry"));
     mRenderGraph->addLink(camera, selPass->findSink("Camera"));
+    // Link grid pass
+    mRenderGraph->addLink(sceneRenderGraph->findSource("Depth"),
+                          gridPass->findSink("Depth"));
+    mRenderGraph->addLink(sceneRenderGraph->findSource("Color"),
+                          gridPass->findSink("Color"));
+    mRenderGraph->addLink(camera, gridPass->findSink("Camera"));
+    // Link composition pass
     mRenderGraph->addLink(selPass->findSource("Selection Map"),
                           compPass->findSink("Selection Map"));
     mRenderGraph->addLink(selPass->findSource("Selection Depth"),
                           compPass->findSink("Selection Depth"));
-    mRenderGraph->addLink(sceneRenderGraph->findSource("Color"),
+    mRenderGraph->addLink(gridPass->findSource("Color"),
                           compPass->findSink("Scene Color"));
     mRenderGraph->addLink(sceneRenderGraph->findSource("Depth"),
                           compPass->findSink("Scene Depth"));
+    // Link internal render graph sinks
     mRenderGraph->addLink(compPass->findSource("Final Color"),
                           compositeColor->internalSink());
     if (!mRenderGraph->compile()) {

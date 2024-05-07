@@ -126,7 +126,7 @@ public:
     void setTriangleFillMode(TriangleFillMode mode) final;
     void setTriangleCullMode(TriangleCullMode mode) final;
     void draw(DrawDescription const& desc) final;
-    void draw(size_t vertexStart, size_t vertexCount) final;
+    void draw(PrimitiveType type, size_t vertexStart, size_t vertexCount) final;
     void end() final;
 
     id<MTLRenderCommandEncoder> commandEncoder;
@@ -156,6 +156,7 @@ public:
     MetalBlitEncoder(id<MTLBlitCommandEncoder> commandEncoder):
         commandEncoder(commandEncoder) {}
 
+    void copyTexture(TextureView source, TextureView dest) final;
     void synchronizeTexture(TextureView texture, size_t slice,
                             size_t level) final;
     void end() final;

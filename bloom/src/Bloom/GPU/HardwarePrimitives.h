@@ -14,6 +14,14 @@
 
 namespace bloom {
 
+enum class PrimitiveType {
+    Point = 0,
+    Line = 1,
+    LineStrip = 2,
+    Triangle = 3,
+    TriangleStrip = 4,
+};
+
 enum class IndexType { U16, U32 };
 
 enum class LoadAction { DontCare = 0, Load = 1, Clear = 2 };

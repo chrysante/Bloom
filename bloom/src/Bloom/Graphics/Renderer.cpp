@@ -168,6 +168,15 @@ static BloomParameters makeBloomParams(BloomSettings settings) {
     return params;
 }
 
+static CameraInput makeCameraInput(Camera const& camera) {
+    auto viewProj = vml::transpose(camera.viewProjection());
+    return {
+        .camera = viewProj,
+        .inverseCamera = vml::inverse(viewProj),
+        .cameraPosition = camera.position(),
+    };
+}
+
 void Renderer::draw(CommandQueue& commandQueue) {
     auto& device = mRenderGraph->device();
     mRenderGraph->allocateResources(frameParams, device);
@@ -178,10 +187,7 @@ void Renderer::draw(CommandQueue& commandQueue) {
         lights->prepare(device);
     }
     if (cameraBuffer && cameraBuffer->handle()) {
-        CameraInput value = {
-            .camera = vml::transpose(camera.viewProjection()),
-            .cameraPosition = camera.position(),
-        };
+        auto value = makeCameraInput(camera);
         device.fillManagedBuffer(cameraBuffer->handle(), &value, sizeof value);
     }
     if (shadowMetadataBuffer && shadowMetadataBuffer->handle()) {

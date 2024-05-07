@@ -21,9 +21,13 @@ static MTLRegion toMTL(vml::AABB<uint32_t, 3> region) {
              .size = MTLSize{ size.x, size.y, size.z } };
 }
 
+static id<MTLTexture> getNative(TextureView texture) {
+    return (__bridge id<MTLTexture>)texture.nativeHandle();
+}
+
 void bloom::metalCopyData(TextureView source, void* dest, size_t bytesPerRow,
                           vml::AABB<uint32_t, 3> region, size_t mipLevel) {
-    id<MTLTexture> native = (__bridge id<MTLTexture>)source.nativeHandle();
+    id<MTLTexture> native = getNative(source);
     auto mtlRegion = toMTL(region);
     [native getBytes:dest
          bytesPerRow:bytesPerRow
@@ -128,10 +132,9 @@ SamplerHandle MetalDevice::createSampler(SamplerDescription const& desc) {
 
 TextureHandle MetalDevice::createSharedTextureView(
     TextureView texture, TextureType newType, PixelFormat newFormat,
-    std::size_t firstMipLevel, std::size_t numMipLevels, std::size_t firstSlice,
-    std::size_t numSlices) {
-    id<MTLTexture> mtlTexture = (__bridge id<MTLTexture>)texture.nativeHandle();
-    id<MTLTexture> sharedView = [mtlTexture
+    size_t firstMipLevel, size_t numMipLevels, size_t firstSlice,
+    size_t numSlices) {
+    id<MTLTexture> sharedView = [getNative(texture)
         newTextureViewWithPixelFormat:(MTLPixelFormat)newFormat
                           textureType:(MTLTextureType)newType
                                levels:NSRange{ firstMipLevel, numMipLevels }
@@ -250,7 +253,7 @@ ComputePipelineHandle MetalDevice::createComputePipeline(
 }
 
 void MetalDevice::fillManagedBuffer(BufferView buffer, void const* data,
-                                    std::size_t size, std::size_t offset) {
+                                    size_t size, size_t offset) {
     id<MTLBuffer> mtlBuffer = (__bridge id<MTLBuffer>)buffer.nativeHandle();
     char* const contents = (char*)[mtlBuffer contents];
     std::memcpy(contents + offset, data, size);
@@ -340,7 +343,7 @@ static MTLRenderPassDescriptor* translate(RenderPassDescription const& desc) {
     for (size_t index = 0; auto ca: desc.colorAttachments) {
         MTLRenderPassColorAttachmentDescriptor* CADesc =
             [[MTLRenderPassColorAttachmentDescriptor alloc] init];
-        CADesc.texture = (__bridge id<MTLTexture>)ca.texture.nativeHandle();
+        CADesc.texture = getNative(ca.texture);
         float4 const cc = ca.clearColor;
         CADesc.clearColor = MTLClearColorMake(cc.r, cc.g, cc.b, cc.a);
         CADesc.loadAction = (MTLLoadAction)utl::to_underlying(ca.loadAction);
@@ -351,8 +354,7 @@ static MTLRenderPassDescriptor* translate(RenderPassDescription const& desc) {
     }
     MTLRenderPassDepthAttachmentDescriptor* DADesc =
         [[MTLRenderPassDepthAttachmentDescriptor alloc] init];
-    DADesc.texture =
-        (__bridge id<MTLTexture>)desc.depthAttachment.texture.nativeHandle();
+    DADesc.texture = getNative(desc.depthAttachment.texture);
     auto& DA = desc.depthAttachment;
     DADesc.clearDepth = DA.clearDepth;
     DADesc.loadAction = (MTLLoadAction)utl::to_underlying(DA.loadAction);
@@ -392,55 +394,45 @@ void MetalRenderEncoder::setDepthStencil(DepthStencilView depthStencil) {
                                              depthStencil.nativeHandle()];
 }
 
-void MetalRenderEncoder::setVertexBuffer(BufferView buffer, std::size_t index,
-                                         std::size_t offset) {
+void MetalRenderEncoder::setVertexBuffer(BufferView buffer, size_t index,
+                                         size_t offset) {
     [commandEncoder
         setVertexBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
                  offset:offset
                 atIndex:index];
 }
 
-void MetalRenderEncoder::setVertexBufferOffset(std::size_t index,
-                                               std::size_t offset) {
+void MetalRenderEncoder::setVertexBufferOffset(size_t index, size_t offset) {
     [commandEncoder setVertexBufferOffset:offset atIndex:index];
 }
 
-void MetalRenderEncoder::setVertexTexture(TextureView texture,
-                                          std::size_t index) {
-    [commandEncoder
-        setVertexTexture:(__bridge id<MTLTexture>)texture.nativeHandle()
-                 atIndex:index];
+void MetalRenderEncoder::setVertexTexture(TextureView texture, size_t index) {
+    [commandEncoder setVertexTexture:getNative(texture) atIndex:index];
 }
 
-void MetalRenderEncoder::setVertexSampler(SamplerView sampler,
-                                          std::size_t index) {
+void MetalRenderEncoder::setVertexSampler(SamplerView sampler, size_t index) {
     [commandEncoder setVertexSamplerState:(__bridge id<MTLSamplerState>)
                                               sampler.nativeHandle()
                                   atIndex:index];
 }
 
-void MetalRenderEncoder::setFragmentBuffer(BufferView buffer, std::size_t index,
-                                           std::size_t offset) {
+void MetalRenderEncoder::setFragmentBuffer(BufferView buffer, size_t index,
+                                           size_t offset) {
     [commandEncoder
         setFragmentBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
                    offset:offset
                   atIndex:index];
 }
 
-void MetalRenderEncoder::setFragmentBufferOffset(std::size_t index,
-                                                 std::size_t offset) {
+void MetalRenderEncoder::setFragmentBufferOffset(size_t index, size_t offset) {
     [commandEncoder setFragmentBufferOffset:offset atIndex:index];
 }
 
-void MetalRenderEncoder::setFragmentTexture(TextureView texture,
-                                            std::size_t index) {
-    [commandEncoder
-        setFragmentTexture:(__bridge id<MTLTexture>)texture.nativeHandle()
-                   atIndex:index];
+void MetalRenderEncoder::setFragmentTexture(TextureView texture, size_t index) {
+    [commandEncoder setFragmentTexture:getNative(texture) atIndex:index];
 }
 
-void MetalRenderEncoder::setFragmentSampler(SamplerView sampler,
-                                            std::size_t index) {
+void MetalRenderEncoder::setFragmentSampler(SamplerView sampler, size_t index) {
     [commandEncoder setFragmentSamplerState:(__bridge id<MTLSamplerState>)
                                                 sampler.nativeHandle()
                                     atIndex:index];
@@ -455,7 +447,7 @@ void MetalRenderEncoder::setTriangleCullMode(TriangleCullMode mode) {
 }
 
 void MetalRenderEncoder::draw(DrawDescription const& desc) {
-    [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+    [commandEncoder drawIndexedPrimitives:(MTLPrimitiveType)desc.primitiveType
                                indexCount:desc.indexCount
                                 indexType:(MTLIndexType)desc.indexType
                               indexBuffer:(__bridge id<MTLBuffer>)
@@ -464,9 +456,9 @@ void MetalRenderEncoder::draw(DrawDescription const& desc) {
                             instanceCount:desc.instanceCount];
 }
 
-void MetalRenderEncoder::draw(std::size_t vertexStart,
-                              std::size_t vertexCount) {
-    [commandEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+void MetalRenderEncoder::draw(PrimitiveType type, size_t vertexStart,
+                              size_t vertexCount) {
+    [commandEncoder drawPrimitives:(MTLPrimitiveType)type
                        vertexStart:vertexStart
                        vertexCount:vertexCount];
 }
@@ -481,26 +473,25 @@ void MetalComputeEncoder::setPipeline(ComputePipelineView pipeline) {
                                     pipeline.nativeHandle()];
 }
 
-void MetalComputeEncoder::setBuffer(BufferView buffer, std::size_t index,
-                                    std::size_t offset) {
+void MetalComputeEncoder::setBuffer(BufferView buffer, size_t index,
+                                    size_t offset) {
     [commandEncoder setBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
                        offset:offset
                       atIndex:index];
 }
 
-void MetalComputeEncoder::setBufferOffset(std::size_t index,
-                                          std::size_t offset) {
+void MetalComputeEncoder::setBufferOffset(size_t index, size_t offset) {
     [commandEncoder setBufferOffset:offset atIndex:index];
 }
 
-void MetalComputeEncoder::setSampler(SamplerView sampler, std::size_t index) {
+void MetalComputeEncoder::setSampler(SamplerView sampler, size_t index) {
     [commandEncoder
         setSamplerState:(__bridge id<MTLSamplerState>)sampler.nativeHandle()
                 atIndex:index];
 }
 
 void MetalComputeEncoder::setSampler(SamplerView sampler, float lodMinClamp,
-                                     float lodMaxClamp, std::size_t index) {
+                                     float lodMaxClamp, size_t index) {
     [commandEncoder
         setSamplerState:(__bridge id<MTLSamplerState>)sampler.nativeHandle()
             lodMinClamp:lodMinClamp
@@ -508,9 +499,8 @@ void MetalComputeEncoder::setSampler(SamplerView sampler, float lodMinClamp,
                 atIndex:index];
 }
 
-void MetalComputeEncoder::setTexture(TextureView texture, std::size_t index) {
-    [commandEncoder setTexture:(__bridge id<MTLTexture>)texture.nativeHandle()
-                       atIndex:index];
+void MetalComputeEncoder::setTexture(TextureView texture, size_t index) {
+    [commandEncoder setTexture:getNative(texture) atIndex:index];
 }
 
 static MTLSize toMTLSize(vml::usize3 const& size) {
@@ -530,10 +520,16 @@ void MetalComputeEncoder::end() { [commandEncoder endEncoding]; }
 
 // MARK: MetalBlitEncoder
 
+void MetalBlitEncoder::copyTexture(TextureView source, TextureView dest) {
+    [commandEncoder copyFromTexture:getNative(source)
+                          toTexture:getNative(dest)];
+}
+
 void MetalBlitEncoder::synchronizeTexture(TextureView texture, size_t slice,
                                           size_t level) {
-    id<MTLTexture> native = (__bridge id<MTLTexture>)texture.nativeHandle();
-    [commandEncoder synchronizeTexture:native slice:slice level:level];
+    [commandEncoder synchronizeTexture:getNative(texture)
+                                 slice:slice
+                                 level:level];
 }
 
 void MetalBlitEncoder::end() { [commandEncoder endEncoding]; }

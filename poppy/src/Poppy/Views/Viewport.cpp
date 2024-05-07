@@ -70,8 +70,8 @@ struct ActiveViewData {
 
 struct ViewData: ActiveViewData {};
 
-struct Viewport2: View, BasicSceneInspector {
-    Viewport2();
+struct Viewport: View, BasicSceneInspector {
+    Viewport();
     void init() override;
 
     void display() override;
@@ -109,9 +109,9 @@ struct Viewport2: View, BasicSceneInspector {
 
 } // namespace
 
-POPPY_REGISTER_VIEW(Viewport2, "Viewport2");
+POPPY_REGISTER_VIEW(Viewport, "Viewport");
 
-Viewport2::Viewport2(): BasicSceneInspector(this) {
+Viewport::Viewport(): BasicSceneInspector(this) {
     cameraController.setFieldOfView(60);
     auto& cmd = commandPaletteWrite();
     cmd.add("Game View", { Key::G }, [this] { gameView ^= true; });
@@ -124,7 +124,7 @@ Viewport2::Viewport2(): BasicSceneInspector(this) {
             [this] { gizmo.setOperation(GizmoOperation::Scale); });
 }
 
-void Viewport2::init() {
+void Viewport::init() {
     setPadding({ 0, 0 });
     setToolbar(makeToolbar());
 }
@@ -142,7 +142,7 @@ static EditorSceneRenderer2& getSceneRenderer(rg::RenderGraph* renderGraph) {
     return *instance;
 }
 
-void Viewport2::display() {
+void Viewport::display() {
     ImGui::BeginChild("Child");
     if (!scenes().empty()) {
         readInput();
@@ -182,7 +182,7 @@ void Viewport2::display() {
     }
 }
 
-void Viewport2::drawScenes() {
+void Viewport::drawScenes() {
     float2 viewportSize =
         (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
     rg::FrameParameters frameParams = {
@@ -219,7 +219,7 @@ void Viewport2::drawScenes() {
     ImGui::Image(finalColor.nativeHandle(), ImGui::GetContentRegionAvail());
 }
 
-void Viewport2::copyEntities(std::span<EntityHandle const> entities) {
+void Viewport::copyEntities(std::span<EntityHandle const> entities) {
     utl::hashmap<EntityHandle, EntityHandle> cloneMap;
     for (EntityHandle entity: entities) {
         cloneMap.insert({ entity, entity.clone() });
@@ -254,7 +254,7 @@ static float4x4 makeAverage(auto&& transforms) {
     return vml::make_transform(t.position, t.orientation, t.scale);
 }
 
-void Viewport2::displayGizmo() {
+void Viewport::displayGizmo() {
     auto entities = selection().entities() | filter([](EntityHandle entity) {
         return entity.has<Transform>();
     }) | ToSmallVector<>;
@@ -299,7 +299,7 @@ void Viewport2::displayGizmo() {
     viewData.gizmoWSTransform = avgWSTransform;
 }
 
-void Viewport2::handleEntitySelection() {
+void Viewport::handleEntitySelection() {
     if (!renderer || !ImGui::IsWindowHovered() ||
         !ImGui::IsMouseClicked(ImGuiMouseButton_Left))
     {
@@ -318,7 +318,7 @@ void Viewport2::handleEntitySelection() {
     }
 }
 
-void Viewport2::displayToolbarWithBackground() {
+void Viewport::displayToolbarWithBackground() {
     float4 color = float4(ImGui::GetStyleColorVec4(ImGuiCol_WindowBg)) *
                    float4(1, 1, 1, 0.5);
     auto* DL = ImGui::GetWindowDrawList();
@@ -354,7 +354,7 @@ static MouseState detectViewportInput(ImGuiButtonFlags buttonFlags) {
     return result;
 }
 
-void Viewport2::readInput() {
+void Viewport::readInput() {
     if (scenes().empty()) {
         return;
     }
@@ -364,7 +364,7 @@ void Viewport2::readInput() {
     }
 }
 
-void Viewport2::acceptDragDrop() {
+void Viewport::acceptDragDrop() {
     if (isSimulating() || !GImGui->DragDropActive) {
         return;
     }
@@ -378,7 +378,7 @@ void Viewport2::acceptDragDrop() {
     receiveSceneDragDrop();
 }
 
-void Viewport2::receiveSceneDragDrop() {
+void Viewport::receiveSceneDragDrop() {
     auto payload = acceptAssetDragDrop({ AssetType::Scene });
     if (!payload) {
         return;
@@ -392,19 +392,19 @@ void Viewport2::receiveSceneDragDrop() {
     sceneSystem.loadScene(as<Scene>(asset));
 }
 
-void Viewport2::onInput(bloom::InputEvent&) {}
+void Viewport::onInput(bloom::InputEvent&) {}
 
-YAML::Node Viewport2::serialize() const {
+YAML::Node Viewport::serialize() const {
     YAML::Node root;
     root["CameraController"] = cameraController;
     return root;
 }
 
-void Viewport2::deserialize(YAML::Node node) {
+void Viewport::deserialize(YAML::Node node) {
     cameraController = node["CameraController"].as<ViewportCameraController>();
 }
 
-Toolbar Viewport2::makeToolbar() {
+Toolbar Viewport::makeToolbar() {
     // clang-format off
     Toolbar toolbar{
         ToolbarDropdownMenu()
@@ -478,7 +478,7 @@ Toolbar Viewport2::makeToolbar() {
     return toolbar;
 }
 
-void Viewport2::dropdownMenu() {
+void Viewport::dropdownMenu() {
     using namespace propertiesView;
     ImGui::SetWindowSize({ ImGui::GetWindowSize().x,
                            std::min(ImGui::GetWindowSize().y, 250.0f) });
@@ -604,7 +604,7 @@ static void displayRenderGraphDebugger(rg::RenderGraph const& rg, bool* open) {
     ImGui::End();
 }
 
-float3 Viewport2::worldSpaceToViewSpace(float3 positionWS) {
+float3 Viewport::worldSpaceToViewSpace(float3 positionWS) {
     auto viewProj = cameraController.camera().viewProjection();
     auto tmp = viewProj * float4(positionWS, 1);
     auto ndc = tmp.xyz / tmp.w;
@@ -615,12 +615,12 @@ float3 Viewport2::worldSpaceToViewSpace(float3 positionWS) {
     return { posVS, ndc.z };
 }
 
-float3 Viewport2::worldSpaceToScreenSpace(float3 position) {
+float3 Viewport::worldSpaceToScreenSpace(float3 position) {
     auto vs = worldSpaceToViewSpace(position);
     return { viewSpaceToScreenSpace(vs.xy), vs.z };
 }
 
-float2 Viewport2::worldSpaceDirToViewSpace(float3 positionWS) {
+float2 Viewport::worldSpaceDirToViewSpace(float3 positionWS) {
     auto viewProj = cameraController.camera().viewProjection();
     auto tmp = viewProj * float4(positionWS, 0);
     auto ndc = tmp.xyz / tmp.w;
@@ -630,6 +630,6 @@ float2 Viewport2::worldSpaceDirToViewSpace(float3 positionWS) {
     return dirVS;
 }
 
-float2 Viewport2::worldSpaceDirToScreenSpace(float3 direction) {
+float2 Viewport::worldSpaceDirToScreenSpace(float3 direction) {
     return worldSpaceDirToViewSpace(direction);
 }

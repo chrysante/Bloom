@@ -69,6 +69,7 @@ set(poppy_sources
   src/Poppy/Views/EntityInspector.cpp
   src/Poppy/Views/NodeEditor.cpp
   src/Poppy/Views/NodeEditor.h
+  src/Poppy/Views/MaterialEditor.cpp
   src/Poppy/Views/MaterialInstanceViewer.cpp
   src/Poppy/Views/MaterialInstanceViewer.h
   src/Poppy/Views/RendererDebuggerView.cpp

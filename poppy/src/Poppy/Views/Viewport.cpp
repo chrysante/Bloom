@@ -62,11 +62,11 @@ struct MouseState {
 
 struct ActiveViewData {
     void reset() { *this = {}; }
-
-    float4x4 gizmoWSTransform = 0;
 };
 
-struct ViewData: ActiveViewData {};
+struct ViewData: ActiveViewData {
+    float4x4 gizmoWSTransform = 0;
+};
 
 struct Viewport: View, BasicSceneInspector {
     Viewport();

@@ -93,15 +93,6 @@ public:
     /// \overload
     auto sources() const { return _sources | ToAddress<PassSource const>; }
 
-    /// Called by the render graph on resource reallocation
-    void allocateResources(FrameParameters const& frameParams,
-                           HardwareDevice& device) {
-        doAllocateResources(frameParams, device);
-    }
-
-    /// Executes this pass
-    void execute(FrameParameters const& params, CommandQueue& queue);
-
 protected:
     explicit Pass(std::string name, HardwareDevice* device = nullptr):
         _device(device), _name(std::move(name)) {}

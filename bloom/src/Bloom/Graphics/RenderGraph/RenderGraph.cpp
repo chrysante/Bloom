@@ -33,6 +33,15 @@ void RenderGraph::addLink(PassSource* source, PassSink* sink) {
     sink->setSource(source);
 }
 
+void RenderGraph::allocateResources(FrameParameters const& frameParams,
+                                    HardwareDevice& device) {
+    doAllocateResources(frameParams, device);
+}
+
+void RenderGraph::execute(FrameParameters const& params, CommandQueue& queue) {
+    doExecute(params, queue);
+}
+
 static std::string format(InterfaceType type) {
     using enum InterfaceType;
     switch (type) {
@@ -232,7 +241,7 @@ PassSource* RenderGraph::inputSource(size_t index) {
 void RenderGraph::doExecute(FrameParameters const& params,
                             CommandQueue& cmdQueue) {
     for (auto* pass: executionOrder) {
-        pass->execute(params, cmdQueue);
+        pass->doExecute(params, cmdQueue);
     }
 }
 
@@ -247,7 +256,7 @@ void RenderGraph::doAllocateResources(FrameParameters const& params,
         }
     }
     for (auto* pass: executionOrder) {
-        pass->allocateResources(params, device);
+        pass->doAllocateResources(params, device);
     }
     lastFrameParams = params;
 }

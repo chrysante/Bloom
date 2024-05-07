@@ -44,13 +44,22 @@ public:
     /// graph that has not been compiled before.
     bool compile();
 
-    /// \Returns `true` if this graph is compiled
-    bool isCompiled() const { return !executionOrder.empty(); }
-
     /// Allocates the resource wrappers backing the passes in this graph. This
     /// must be called once by the top-level graph after compilation and before
     /// execution
     void allocateBackingResources();
+
+    /// Must be called before execution on each frame. This function caches the
+    /// frame parameters and only reallocates resources when the frame
+    /// parameters change
+    void allocateResources(FrameParameters const& frameParams,
+                           HardwareDevice& device);
+
+    /// Executes the render graph
+    void execute(FrameParameters const& params, CommandQueue& queue);
+
+    /// \Returns `true` if this graph is compiled
+    bool isCompiled() const { return !executionOrder.empty(); }
 
     /// \Returns the pass with name \p name if it exists
     Pass* findPass(std::string_view name);
@@ -73,9 +82,6 @@ public:
                                                       nullptr);
     }
 
-    ///
-    std::unique_ptr<RenderGraph> clone() const;
-
     /// \Returns the execution order of the passes of this render graph
     std::span<Pass const* const> getExecutionOrder() const {
         return executionOrder;
@@ -83,6 +89,12 @@ public:
 
     /// \Returns the resource pool of this render graph
     ResourcePool const* resourcePool() const { return resPool.get(); }
+
+    /// Clones the render graph. The resulting render graph has the same
+    /// compilation status as this graph, i.e., resulting graph is compiled iff.
+    /// this graph is compiled. However cloned render graphs always require
+    /// explicit resource allocation.
+    std::unique_ptr<RenderGraph> clone() const;
 
 private:
     void doExecute(FrameParameters const& params, CommandQueue& queue) override;

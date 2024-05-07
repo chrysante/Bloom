@@ -23,10 +23,6 @@ PassSource* Pass::findSource(std::string_view name) {
     return itr != _sources.end() ? itr->get() : nullptr;
 }
 
-void Pass::execute(FrameParameters const& params, CommandQueue& queue) {
-    doExecute(params, queue);
-}
-
 void RenderPass::doExecute(FrameParameters const& params, CommandQueue& queue) {
     doExecute(params, *queue.createRenderContext());
 }

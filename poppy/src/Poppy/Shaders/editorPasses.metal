@@ -233,3 +233,24 @@ fragment EditorPassFragmentData
 }
 
 fragment float4 wireframePassFS() { return float4(1, 1, 1, 1); }
+
+struct GridVertex {
+    float4 position [[position]];
+    float2 UV;
+};
+
+vertex GridVertex rgGridPassVS(CameraInput device const& camera [[buffer(0)]],
+                               float2 device const* UVs [[buffer(1)]],
+                               uint const vertexID [[vertex_id]])
+{
+    float size = 1000;
+    float2 pos = 2.0f * UVs[vertexID] - 1.0f;
+    float4 vertexPositionWS = float4(size * pos, 0, 1);
+    return { .position = camera.camera * vertexPositionWS,
+             .UV = UVs[vertexID] };
+}
+
+fragment float4 gridPassFS(GridVertex in [[stage_in]])
+{
+    return float4(in.UV, 0, 1);
+}

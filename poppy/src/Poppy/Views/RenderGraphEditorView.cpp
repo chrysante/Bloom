@@ -14,6 +14,7 @@
 #include "Bloom/Graphics/Renderer.h"
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
@@ -33,6 +34,21 @@ enum CompilationStatus { None, Success, Error };
 struct RenderGraphEditorView: View {
     struct Delegate: NodeEditorDelegate {
         Delegate(RenderGraphEditorView* view): view(view) {}
+
+        std::optional<float4> linkColor(PinUserType type) const override {
+            switch ((InterfaceType)type) {
+            case InterfaceType::BufferInterface:
+                return float4(0, 0.5, 1, 1);
+            case InterfaceType::TextureInterface:
+                return float4(1, .2, 0, 1);
+            case InterfaceType::GeometryInterface:
+                return Appearance::get().style().colors.text;
+            case InterfaceType::LightsInterface:
+                return float4(0.2, 1, 0, 1);
+            default:
+                return std::nullopt;
+            }
+        }
 
         void backgroundPopupMenu(float2 position) override {
             view->backgroundContextMenu(position);
@@ -101,7 +117,8 @@ static PinFlags translateFlags(InterfaceFlags flags) {
 
 static PinDesc interfaceToPinDesc(InterfaceUnion const& interface) {
     return PinDesc{ .name = interface.base().name(),
-                    .flags = translateFlags(interface.base().flags()) };
+                    .flags = translateFlags(interface.base().flags()),
+                    .userType = (PinUserType)interface.base().type() };
 }
 
 struct GlobalInputNodeController: RenderGraphNodeController {

@@ -29,6 +29,8 @@ using namespace ranges::views;
 
 /// # Style
 
+namespace {
+
 struct NodeEditorStyleColors {
     float4 whiteOutline;
     float4 blackOutline;
@@ -111,6 +113,8 @@ struct NodeEditorStyle {
         dark.selectionRectOutline = { 1, 1, 1, 0.3 };
     }
 };
+
+} // namespace
 
 /// This is not const so we can edit the values with the style editor window
 static NodeEditorStyle style;
@@ -732,11 +736,14 @@ struct NodeEditor::Impl {
 
     void display();
 
+    bool isUserTypeCompatible(Pin const& a, Pin const& b) const;
+    float4 getLinkColor(PinUserType type) const;
     void linkPopup(bool show, Link link);
     void backgroundPopup(bool show);
     void backgroundBehaviour();
     void drawOverlays();
     void displayLinks(Node& node);
+    void displayPinLink(InputPin& pin, float2 pinPosition);
     void displayDraggingLink();
     void pinPopup(Pin& pin, bool show);
     void displayPin(Pin& pin, float2 position, float& maxLabelWith,
@@ -856,6 +863,30 @@ static bool nodeOverlapsRect(ViewData const& viewData, Node const& node,
     nodeRect.Max = (float2)nodeRect.Max * viewData.zoom;
     nodeRect.Translate((float2)viewData.clipRect.Min - viewData.position);
     return rect.Overlaps(nodeRect);
+}
+
+bool Impl::isUserTypeCompatible(Pin const& a, Pin const& b) const {
+    auto impl = [&](OutputPin const& a, InputPin const& b) {
+        if (!delegate) {
+            return a.userType() == b.userType();
+        }
+        return delegate->isPinTypeCompatible(a.userType(), b.userType());
+    };
+    // clang-format off
+    return visit(a, b, utl::overload{
+        impl,
+        [&](InputPin const& b, OutputPin const& a) {
+            return impl(a, b);
+        },
+        [](Pin const&, Pin const&) { return false; }
+    }); // clang-format on
+}
+
+float4 Impl::getLinkColor(PinUserType type) const {
+    if (!delegate) {
+        return styleColors().link;
+    }
+    return delegate->linkColor(type).value_or(styleColors().link);
 }
 
 void Impl::linkPopup(bool show, Link link) {
@@ -1045,7 +1076,7 @@ static void drawPin(float2 position, float zoom, PinDrawOptions options) {
         float radius = (options.hovered || options.missingInput) ?
                            styleVars().PinConnectIndicatorRadiusHovered :
                            styleVars().PinConnectIndicatorRadius;
-        float4 color = options.missingInput ?
+        float4 color = options.missingInput && !options.connected ?
                            styleColors().pinMissingIndicator :
                            styleColors().pinLinkIndicator;
         DL->AddCircleFilled(center, radius * zoom,
@@ -1090,7 +1121,7 @@ static void displayPinLabelOverlay(Pin const& pin, ViewData const& viewData) {
                 ImGui::GetColorU32(ImGuiCol_Text), textBegin, textEnd);
 }
 
-static bool isCompatible(Pin const& a, Pin const& b) {
+static bool isIOCompatible(Pin const& a, Pin const& b) {
     return &a.parent() != &b.parent() && a.type() != b.type();
 }
 
@@ -1167,7 +1198,7 @@ static bool testLinkOverlap(LinkDrawData const& dd,
 
 /// Draws a link from \p begin to \p end in screen coordinates
 /// \Returns `true` if \p mousePos overlaps the link
-static bool displayLink(float2 begin, float2 end,
+static bool displayLink(float2 begin, float2 end, float4 color,
                         std::optional<float2> mousePos, bool mayHighlight,
                         bool mustHighlight, float zoom) {
     auto* DL = ImGui::GetWindowDrawList();
@@ -1175,7 +1206,7 @@ static bool displayLink(float2 begin, float2 end,
     DL->PathLineTo(begin);
     DL->PathBezierQuadraticCurveTo(dd.beginControlPoint, dd.mid, 0);
     DL->PathBezierQuadraticCurveTo(dd.endControlPoint, end, 0);
-    auto col = ImGui::ColorConvertFloat4ToU32(styleColors().link);
+    auto col = ImGui::ColorConvertFloat4ToU32(color);
     bool hovered = mousePos &&
                    testLinkOverlap(dd, DL->_Path, *mousePos,
                                    styleVars().LinkHoverDist * zoom);
@@ -1186,13 +1217,24 @@ static bool displayLink(float2 begin, float2 end,
     return hovered;
 }
 
-static void drawLink(float2 begin, float2 end, bool highlighted, float zoom) {
-    displayLink(begin, end, std::nullopt, /* mayHighlight: */ true,
+static void drawLink(float2 begin, float2 end, float4 color, bool highlighted,
+                     float zoom) {
+    displayLink(begin, end, color, std::nullopt, /* mayHighlight: */ true,
                 /* mustHighlight: */ highlighted, zoom);
 }
 
-static void displayPinLink(ViewData& viewData, InputPin& pin,
-                           float2 pinPosition) {
+void Impl::displayLinks(Node& node) {
+    float2 nodepos = (float2)ImGui::GetWindowPos() +
+                     node.position() * viewData.zoom - viewData.position;
+    ImGui::PushID("Inputs");
+    for (auto [index, pin]: node.inputs() | enumerate) {
+        displayPinLink(*pin, nodepos + computePinPosition(*pin, index) *
+                                           viewData.zoom);
+    }
+    ImGui::PopID();
+}
+
+void Impl::displayPinLink(InputPin& pin, float2 pinPosition) {
     auto* origin = pin.origin();
     if (!origin) {
         return;
@@ -1201,26 +1243,15 @@ static void displayPinLink(ViewData& viewData, InputPin& pin,
     float2 begin = computeScreenPinPosition(viewData, *origin) +
                    styleVars().PinAreaSize * viewData.zoom / 2;
     float2 end = pinPosition + styleVars().PinAreaSize * viewData.zoom / 2;
+    float4 color = getLinkColor(origin->userType());
     bool mayHighlight = viewData.hoveredLink.getLast() == link;
     bool mustHighlight = link.contains(viewData.hoveredPin.getLast()) &&
                          !viewData.activePin;
-    bool hovered = displayLink(begin, end, ImGui::GetMousePos(), mayHighlight,
-                               mustHighlight, viewData.zoom);
+    bool hovered = displayLink(begin, end, color, ImGui::GetMousePos(),
+                               mayHighlight, mustHighlight, viewData.zoom);
     if (hovered && viewData.windowHovered && !viewData.activePin) {
         viewData.hoveredLink.set(link);
     }
-}
-
-void Impl::displayLinks(Node& node) {
-    float2 nodepos = (float2)ImGui::GetWindowPos() +
-                     node.position() * viewData.zoom - viewData.position;
-    ImGui::PushID("Inputs");
-    for (auto [index, pin]: node.inputs() | enumerate) {
-        displayPinLink(viewData, *pin,
-                       nodepos +
-                           computePinPosition(*pin, index) * viewData.zoom);
-    }
-    ImGui::PopID();
 }
 
 void Impl::displayDraggingLink() {
@@ -1229,12 +1260,13 @@ void Impl::displayDraggingLink() {
     }
     float2 pos = computeScreenPinPosition(viewData, *viewData.activePin) +
                  styleVars().PinAreaSize * viewData.zoom / 2;
+    float4 color = getLinkColor(viewData.activePin->userType());
     bool highlighted = true;
     if (isa<InputPin>(viewData.activePin)) {
-        drawLink(ImGui::GetMousePos(), pos, highlighted, viewData.zoom);
+        drawLink(ImGui::GetMousePos(), pos, color, highlighted, viewData.zoom);
     }
     else {
-        drawLink(pos, ImGui::GetMousePos(), highlighted, viewData.zoom);
+        drawLink(pos, ImGui::GetMousePos(), color, highlighted, viewData.zoom);
     }
 }
 
@@ -1333,8 +1365,9 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
         }
     }
     pinPopup(pin, /* show: */ clickedRight);
-    bool isDraggingCompatiblePin = viewData.activePin &&
-                                   isCompatible(*viewData.activePin, pin);
+    bool isDraggingCompatiblePin =
+        viewData.activePin && isIOCompatible(*viewData.activePin, pin) &&
+        isUserTypeCompatible(*viewData.activePin, pin);
     bool drawConnected = isConnected(pin) ||
                          (hovered && isDraggingCompatiblePin) ||
                          (viewData.activePin == &pin &&
@@ -1710,7 +1743,7 @@ static bool needDrawLabelOverlay(ViewData const& viewData,
     if (!viewData.activePin) {
         return true;
     }
-    return isCompatible(hoveredPin, *viewData.activePin);
+    return isIOCompatible(hoveredPin, *viewData.activePin);
 }
 
 static void drawSelectionRect(ImRect rect) {

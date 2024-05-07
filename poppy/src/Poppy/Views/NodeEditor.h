@@ -46,9 +46,12 @@ enum class PinFlags { Optional = 1 << 0 };
 
 UTL_ENUM_OPERATORS(PinFlags)
 
+enum class PinUserType : uint64_t;
+
 struct PinDesc {
     std::string name;
     PinFlags flags;
+    PinUserType userType;
 };
 
 /// Node controller interface. Objects of derived classes can be attached to any
@@ -111,11 +114,14 @@ public:
     /// The description from which this pin was created
     PinDesc const& desc() const { return _desc; }
 
-    /// Runtime type of this pin
+    /// Runtime type of this pin, i.e., `InputPin` or `OutputPin`
     PinType type() const { return _type; }
 
     /// Label name
     std::string const& name() const { return desc().name; }
+
+    /// \Returns the user defined type of the pin
+    PinUserType userType() const { return desc().userType; }
 
     /// The node in which this pin exists
     Node& parent() { return *_parent; }
@@ -355,6 +361,19 @@ private:
 class NodeEditorDelegate {
 public:
     virtual ~NodeEditorDelegate() = default;
+
+    /// Customization point that decides if two pin types can be linked to each
+    /// other
+    virtual bool isPinTypeCompatible(nodeEditor::PinUserType input,
+                                     nodeEditor::PinUserType output) const {
+        return input == output;
+    }
+
+    /// Customization point that assigns colors to links based on their type
+    virtual std::optional<vml::float4> linkColor(
+        nodeEditor::PinUserType /* type */) const {
+        return std::nullopt;
+    }
 
     /// Content callback for the editor background popup menu
     virtual void backgroundPopupMenu([[maybe_unused]] vml::float2 position) {}

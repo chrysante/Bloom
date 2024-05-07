@@ -52,8 +52,8 @@ static std::string format(InterfaceType type) {
 }
 
 static bool typecheck(PassSource const& source, PassSink const& sink) {
-    auto sinkType = sink.interface().get().type();
-    auto sourceType = source.interface().get().type();
+    auto sinkType = sink.interface().base().type();
+    auto sourceType = source.interface().base().type();
     if (sinkType != sourceType) {
         Logger::Error("Type mismatch on sink \"", sink.qualifiedName(), "\". ",
                       "Have ", format(sourceType), ", expected ",
@@ -168,8 +168,7 @@ bool RenderGraph::compile() {
 
 static void allocateBackingResource(ResourcePool& pool,
                                     PassTerminal& terminal) {
-    auto* resource = terminal.interface().visit(
-        [&](auto& interface) { return pool.allocate(interface); });
+    auto* resource = pool.allocate(terminal.interface());
     resource->addUser(&terminal);
     terminal.setResource(resource);
 }

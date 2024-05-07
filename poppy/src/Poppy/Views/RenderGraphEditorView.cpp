@@ -218,8 +218,8 @@ static PinFlags translateFlags(InterfaceFlags flags) {
 }
 
 static PinDesc interfaceToPinDesc(InterfaceUnion const& interface) {
-    return PinDesc{ .name = interface.get().name(),
-                    .flags = translateFlags(interface.get().flags()) };
+    return PinDesc{ .name = interface.base().name(),
+                    .flags = translateFlags(interface.base().flags()) };
 }
 
 struct PassNodeController: RenderGraphNodeController {

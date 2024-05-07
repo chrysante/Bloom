@@ -206,10 +206,10 @@ protected:
             "The pass must publicly derive from the `Pass` base class");
         auto* pass = static_cast<PassType*>(this);
         for (auto const& interface: PassType::Sinks()) {
-            pass->declareSink(interface, interface.get().accessor(*pass));
+            pass->declareSink(interface, interface.base().accessor(*pass));
         }
         for (auto const& interface: PassType::Sources()) {
-            pass->declareSource(interface, interface.get().accessor(*pass));
+            pass->declareSource(interface, interface.base().accessor(*pass));
         }
     }
 

@@ -245,83 +245,7 @@ private:
     InterfaceAccessor<LightsResource*> acc;
 };
 
-union InterfaceUnion {
-    template <typename T>
-    static auto& getImpl(auto* This) {
-        if (false)
-            ;
-#define RG_CONCRETE_RESOURCE_DEF(Name)                                         \
-    else if constexpr (std::same_as<T, Name##Interface>) return This           \
-        ->case##Name;
-#include "Bloom/Graphics/RenderGraph/Resource.def"
-        else
-            ;
-    }
-
-public:
-#define RG_CONCRETE_RESOURCE_DEF(Name)                                         \
-    InterfaceUnion(Name##Interface const& impl):                               \
-        case##Name(impl){} InterfaceUnion(Name##Interface && impl):            \
-    case##Name(std::move(impl)){}
-#include "Bloom/Graphics/RenderGraph/Resource.def"
-
-    template <typename F>
-    decltype(auto) visit(F&& f) {
-        return bloom::visit(get(), std::forward<F>(f));
-    }
-
-    template <typename F>
-    decltype(auto) visit(F&& f) const {
-        return bloom::visit(get(), std::forward<F>(f));
-    }
-
-    InterfaceUnion(InterfaceUnion const& rhs) {
-        rhs.visit([this]<typename I>(I const& rhs) {
-            std::construct_at(&getImpl<I>(this), rhs);
-        });
-    }
-
-    InterfaceUnion& operator=(InterfaceUnion const& rhs) {
-        if (this == &rhs) {
-            return *this;
-        }
-        std::destroy_at(this);
-        std::construct_at(this, rhs);
-        return *this;
-    }
-
-    InterfaceUnion(InterfaceUnion&& rhs) {
-        rhs.visit([this]<typename I>(I& rhs) {
-            std::construct_at(&getImpl<I>(this), std::move(rhs));
-        });
-    }
-
-    InterfaceUnion& operator=(InterfaceUnion&& rhs) {
-        if (this == &rhs) {
-            return *this;
-        }
-        std::destroy_at(this);
-        std::construct_at(this, std::move(rhs));
-        return *this;
-    }
-
-    ~InterfaceUnion() {
-        visit([]<typename I>(I const& This) { std::destroy_at(&This); });
-    }
-
-    Interface& get() {
-        return const_cast<Interface&>(
-            static_cast<InterfaceUnion const*>(this)->get());
-    }
-
-    Interface const& get() const {
-        return reinterpret_cast<Interface const&>(*this);
-    }
-
-private:
-#define RG_CONCRETE_RESOURCE_DEF(Name) Name##Interface case##Name;
-#include "Bloom/Graphics/RenderGraph/Resource.def"
-};
+using InterfaceUnion = utl::dyn_union<Interface>;
 
 /// Base class of `PassSource` and `PassSink`
 class PassTerminal {
@@ -336,7 +260,7 @@ public:
 
     /// \Returns the name of this terminal. Shorthand for
     /// `interface().get().name()`
-    std::string const& name() const { return interface().get().name(); }
+    std::string const& name() const { return interface().base().name(); }
 
     /// \Returns the name qualified with the name of the owning pass
     std::string qualifiedName() const;
@@ -354,7 +278,7 @@ public:
     void setResource(Resource* resource) { doSetResource(resource); }
 
     /// \Returns `interface().get().flags()`
-    InterfaceFlags flags() const { return interface().get().flags(); }
+    InterfaceFlags flags() const { return interface().base().flags(); }
 
     ///
     size_t indexInParent() const { return doIndexInParent(); }

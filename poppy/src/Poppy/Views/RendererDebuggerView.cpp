@@ -11,7 +11,6 @@
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
-#include "Poppy/Views/Viewport/Viewport.h"
 
 using namespace bloom;
 using namespace vml::short_types;

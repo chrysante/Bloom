@@ -24,7 +24,6 @@
 #include "Poppy/Views/AssetDragDrop.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/Gizmo.h"
-#include "Poppy/Views/LightOverlays.h"
 #include "Poppy/Views/ViewportExt.h"
 
 using namespace poppy;

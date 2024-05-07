@@ -1,20 +1,23 @@
 #ifndef POPPY_VIEWS_VIEWPORTEXT_H
 #define POPPY_VIEWS_VIEWPORTEXT_H
 
+#include <span>
+
+#include <utl/function_view.hpp>
 #include <vml/vml.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include "Bloom/Application/Input.h"
+#include "Bloom/Asset/Fwd.h"
 #include "Bloom/Core/Serialize.h"
 #include "Bloom/Core/Time.h"
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Scene/Components/Lights.h"
 #include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Entity.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 
 namespace poppy {
-
-class Viewport;
 
 /// Different kinds of projection
 enum class Projection { Perspective = 0, Orthogonal, LAST = Orthogonal };
@@ -85,48 +88,11 @@ private:
     bloom::Camera cam;
 };
 
-class ViewportOverlays {
-public:
-    void init(Viewport*);
-    void display();
-    bloom::EntityHandle hitTest(vml::float2 positionInView);
-
-private:
-    template <typename>
-    void drawLightOverlays();
-
-    void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionOnScreen,
-                             bool selected, bloom::Transform const&,
-                             bloom::PointLight const&);
-    void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionOnScreen,
-                             bool selected, bloom::Transform const&,
-                             bloom::SpotLight const&);
-    void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionOnScreen,
-                             bool selected, bloom::Transform const&,
-                             bloom::DirectionalLight const&);
-    void drawOneLightOverlay(bloom::EntityHandle, vml::float2 positionOnScreen,
-                             bool selected, bloom::Transform const&,
-                             bloom::SkyLight const&);
-
-    void drawPointLightIcon(vml::float2 position, vml::float3 color,
-                            bool selected);
-    void drawSpotLightIcon(vml::float2 position, vml::float3 color);
-    void drawDirectionalLightIcon(vml::float2 position, vml::float3 directionWS,
-                                  vml::float3 color);
-    void drawSkyLightIcon(vml::float2 position, vml::float3 color);
-    void drawSpotlightVizWS(bloom::EntityHandle entity, float radius,
-                            float angle, vml::float3 color);
-
-    template <typename Light>
-    bloom::EntityHandle hitTestLightOverlays(vml::float2 hitPositionInView);
-
-    template <typename Light>
-    bool hitTestOneLightOverlay(vml::float2 entityPositionInView,
-                                vml::float2 hitPositionInView);
-
-private:
-    Viewport* viewport = nullptr;
-};
+/// \Returns the clicked entity if any
+bloom::EntityHandle displayLightOverlays(
+    std::span<bloom::Scene* const> scenes,
+    EntitySelectionManager const& selection,
+    utl::function_view<vml::float3(vml::float3)> WStoSS);
 
 } // namespace poppy
 

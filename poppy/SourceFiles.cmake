@@ -84,10 +84,6 @@ set(poppy_sources
   src/Poppy/Views/Gizmo.h
   src/Poppy/Views/ViewportExt.cpp
   src/Poppy/Views/ViewportExt.h
-  src/Poppy/Views/LightOverlays.cpp
-  src/Poppy/Views/LightOverlays.h
-  src/Poppy/Views/Viewport/Viewport.cpp
-  src/Poppy/Views/Viewport/Viewport.h
 )
 
 set(poppy_shader_sources

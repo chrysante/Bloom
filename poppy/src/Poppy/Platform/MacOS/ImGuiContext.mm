@@ -1,8 +1,6 @@
 #include "Poppy/UI/ImGuiContext.h"
 
 #include <AppKit/AppKit.h>
-#include <Poppy/Platform/MacOS/imgui_impl_metal.h>
-#include <Poppy/Platform/MacOS/imgui_impl_osx.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -11,6 +9,8 @@
 #include "Bloom/Platform/Metal/MetalObjects.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/Platform/MacOS/imgui_impl_metal.h"
+#include "Poppy/Platform/MacOS/imgui_impl_osx.h"
 
 using namespace bloom;
 using namespace vml::short_types;

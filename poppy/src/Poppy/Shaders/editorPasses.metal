@@ -4,7 +4,6 @@
 #include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/Vertex.h"
 #include "Bloom/Shader/SharedTypes.h"
-#include "Poppy/Renderer/EditorDrawData.h"
 #include "Poppy/Shaders/Lights.h"
 #include "Poppy/Shaders/PostProcess.h"
 
@@ -131,32 +130,6 @@ static EdgeDetectResult edgeDetect(texture2d<float> selectionMap,
     occluded &= result.occluded;
     float edge = min(abs(edgeX) + abs(edgeY), 1.0);
     return { edge, occluded };
-}
-
-fragment float4 editorCompositionFS(
-    PPRasterOutput in [[stage_in]],
-    bloom::SceneRenderParameters device const& scene [[buffer(0)]],
-    poppy::EditorDrawData device const& editor [[buffer(1)]],
-    texture2d<float> postProcessed [[texture(0)]],
-    texture2d<float> depthMap [[texture(1)]],
-    texture2d<float> selectionMap [[texture(2)]],
-    texture2d<float> selectionDepthMap [[texture(3)]],
-    sampler sampler2D [[sampler(0)]])
-{
-    float3 result = postProcessed.sample(sampler2D, in.screenCoords).rgb;
-    float depth = depthMap.sample(sampler2D, in.screenCoords).r;
-    (void)depth;
-    if (editor.overlayDrawDesc.drawSelection) {
-        auto edgeResult = edgeDetect(selectionMap, depthMap, selectionDepthMap,
-                                     sampler2D, in.screenCoords,
-                                     editor.overlayDrawDesc.selectionLineWidth,
-                                     scene.screenResolution);
-        float edge = edgeResult.occluded ? edgeResult.edge / 3 :
-                                           edgeResult.edge;
-        result =
-            mix(result, editor.overlayDrawDesc.selectionLineColor.rgb, edge);
-    }
-    return float4(result, 1);
 }
 
 kernel void rgEditorComposition(

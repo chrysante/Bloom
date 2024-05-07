@@ -15,7 +15,6 @@
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Core/Timestamp.h"
 #include "Poppy/Editor/EntitySelectionManager.h"
-#include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Dockspace.h"
@@ -167,7 +166,7 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
         ToolbarSpacer(),
         ToolbarIconButton("cw")
             .onClick([&] {
-                dispatch(DispatchToken::NextFrame, ReloadShadersCommand{});
+                Logger::Debug("Reloading shaders is not implemented");
             })
             .tooltip("Reload Shaders")
     });
@@ -181,8 +180,7 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
             .content([] {
                 ImGui::Text("Placeholder Menu");
             }),
-    });
-    // clang-format on
+    }); // clang-format on
 }
 
 Editor::~Editor() = default;
@@ -215,19 +213,9 @@ bloom::Window* Editor::mainWindow() const { return impl->mainWindow; }
 
 void Editor::init() {
     BL_PROFILE_FUNCTION();
-    initRenderer();
     createMainWindow();
     initImGui();
     restoreConfigFromDisk();
-}
-
-void Editor::initRenderer() {
-    BL_PROFILE_FUNCTION();
-    auto editorRenderer =
-        std::make_unique<EditorRenderer>(makeReceiver(),
-                                         coreSystems().takeRenderer());
-    editorRenderer->init(device());
-    coreSystems().setRenderer(std::move(editorRenderer));
 }
 
 void Editor::createMainWindow() {

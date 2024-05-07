@@ -46,7 +46,6 @@ private:
                                       /// open test UI command
 
     void init() override;
-    void initRenderer();
     void createMainWindow();
     void initImGui();
     void shutdown() override;

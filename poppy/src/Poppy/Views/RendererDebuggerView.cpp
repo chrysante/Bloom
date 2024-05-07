@@ -7,7 +7,6 @@
 
 #include "Bloom/Graphics/Renderer/ForwardRenderer.h"
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Renderer/EditorRenderer.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
@@ -109,12 +108,5 @@ void RendererDebuggerView::display() {
 }
 
 bloom::ForwardRenderer* RendererDebuggerView::findRenderer() const {
-    if (auto* editorRenderer =
-            dynamic_cast<EditorRenderer*>(&editor().coreSystems().renderer()))
-    {
-        return dynamic_cast<bloom::ForwardRenderer*>(
-            &editorRenderer->wrappedRenderer());
-    }
-    return dynamic_cast<bloom::ForwardRenderer*>(
-        &editor().coreSystems().renderer());
+    return nullptr;
 }

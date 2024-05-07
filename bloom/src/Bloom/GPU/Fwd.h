@@ -15,9 +15,6 @@ class CommandEncoder;
 class RenderEncoder;
 class ComputeEncoder;
 class BlitEncoder;
-class RenderContext;
-class ComputeContext;
-class BlitContext;
 
 struct RenderPassDescription;
 struct DrawDescription;

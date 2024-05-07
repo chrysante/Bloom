@@ -7,7 +7,7 @@
 #include <imgui_internal.h>
 
 #include "Bloom/Application.h"
-#include "Bloom/GPU.h"
+#include "Bloom/GPU/Fwd.h"
 #include "Bloom/Platform/Metal/MetalObjects.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"

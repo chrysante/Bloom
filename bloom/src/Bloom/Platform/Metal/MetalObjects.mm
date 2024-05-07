@@ -325,22 +325,15 @@ std::unique_ptr<CommandBuffer> MetalCommandQueue::createCommandBuffer() {
     return std::make_unique<MetalCommandBuffer>([queue commandBuffer]);
 }
 
-std::unique_ptr<RenderContext> MetalCommandQueue::createRenderContext() {
-    return std::make_unique<MetalRenderContext>([queue commandBuffer]);
+// MARK: MetalCommandBuffer
+
+void MetalCommandBuffer::enqueue() { [commandBuffer enqueue]; }
+
+void MetalCommandBuffer::commit() { [commandBuffer commit]; }
+
+void MetalCommandBuffer::waitForCompletion() {
+    [commandBuffer waitUntilCompleted];
 }
-
-std::unique_ptr<ComputeContext> MetalCommandQueue::createComputeContext() {
-    return std::make_unique<MetalComputeContext>([queue commandBuffer]);
-}
-
-std::unique_ptr<BlitContext> MetalCommandQueue::createBlitContext() {
-    return std::make_unique<MetalBlitContext>([queue commandBuffer]);
-}
-
-// MARK: MetalRenderContext
-
-MetalRenderContext::MetalRenderContext(id<MTLCommandBuffer> cb):
-    commandBuffer(cb) {}
 
 static MTLRenderPassDescriptor* translate(RenderPassDescription const& desc) {
     MTLRenderPassDescriptor* result = [[MTLRenderPassDescriptor alloc] init];
@@ -369,207 +362,6 @@ static MTLRenderPassDescriptor* translate(RenderPassDescription const& desc) {
     result.renderTargetWidth = desc.renderTargetSize.x;
     result.renderTargetHeight = desc.renderTargetSize.y;
     return result;
-}
-
-void MetalRenderContext::begin(RenderPassDescription const& desc) {
-    commandEncoder =
-        [commandBuffer renderCommandEncoderWithDescriptor:translate(desc)];
-}
-
-void MetalRenderContext::end() { [commandEncoder endEncoding]; }
-
-void MetalRenderContext::setPipeline(RenderPipelineView pipeline) {
-    [commandEncoder setRenderPipelineState:(__bridge id<MTLRenderPipelineState>)
-                                               pipeline.nativeHandle()];
-}
-
-void MetalRenderContext::setDepthStencil(DepthStencilView depthStencil) {
-    [commandEncoder setDepthStencilState:(__bridge id<MTLDepthStencilState>)
-                                             depthStencil.nativeHandle()];
-}
-
-void MetalRenderContext::setVertexBuffer(BufferView buffer, std::size_t index,
-                                         std::size_t offset) {
-    [commandEncoder
-        setVertexBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
-                 offset:offset
-                atIndex:index];
-}
-
-void MetalRenderContext::setVertexBufferOffset(std::size_t index,
-                                               std::size_t offset) {
-    [commandEncoder setVertexBufferOffset:offset atIndex:index];
-}
-
-void MetalRenderContext::setVertexTexture(TextureView texture,
-                                          std::size_t index) {
-    [commandEncoder
-        setVertexTexture:(__bridge id<MTLTexture>)texture.nativeHandle()
-                 atIndex:index];
-}
-
-void MetalRenderContext::setVertexSampler(SamplerView sampler,
-                                          std::size_t index) {
-    [commandEncoder setVertexSamplerState:(__bridge id<MTLSamplerState>)
-                                              sampler.nativeHandle()
-                                  atIndex:index];
-}
-
-void MetalRenderContext::setFragmentBuffer(BufferView buffer, std::size_t index,
-                                           std::size_t offset) {
-    [commandEncoder
-        setFragmentBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
-                   offset:offset
-                  atIndex:index];
-}
-
-void MetalRenderContext::setFragmentBufferOffset(std::size_t index,
-                                                 std::size_t offset) {
-    [commandEncoder setFragmentBufferOffset:offset atIndex:index];
-}
-
-void MetalRenderContext::setFragmentTexture(TextureView texture,
-                                            std::size_t index) {
-    [commandEncoder
-        setFragmentTexture:(__bridge id<MTLTexture>)texture.nativeHandle()
-                   atIndex:index];
-}
-
-void MetalRenderContext::setFragmentSampler(SamplerView sampler,
-                                            std::size_t index) {
-    [commandEncoder setFragmentSamplerState:(__bridge id<MTLSamplerState>)
-                                                sampler.nativeHandle()
-                                    atIndex:index];
-}
-
-void MetalRenderContext::setTriangleFillMode(TriangleFillMode mode) {
-    [commandEncoder setTriangleFillMode:(MTLTriangleFillMode)mode];
-}
-
-void MetalRenderContext::setTriangleCullMode(TriangleCullMode mode) {
-    [commandEncoder setCullMode:(MTLCullMode)mode];
-}
-
-void MetalRenderContext::draw(DrawDescription const& desc) {
-    [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-                               indexCount:desc.indexCount
-                                indexType:(MTLIndexType)desc.indexType
-                              indexBuffer:(__bridge id<MTLBuffer>)
-                                              desc.indexBuffer.nativeHandle()
-                        indexBufferOffset:desc.indexBufferOffset
-                            instanceCount:desc.instanceCount];
-}
-
-void MetalRenderContext::draw(std::size_t vertexStart,
-                              std::size_t vertexCount) {
-    [commandEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-                       vertexStart:vertexStart
-                       vertexCount:vertexCount];
-}
-
-void MetalRenderContext::present(Backbuffer& bb) {
-    auto& mtlBackbuffer = utl::down_cast<MetalBackbuffer&>(bb);
-    [commandBuffer presentDrawable:mtlBackbuffer.drawable];
-}
-
-void MetalRenderContext::commit() { [commandBuffer commit]; }
-
-// MARK: MetalComputeContext
-
-static MTLSize toMTLSize(vml::usize3 const& size) {
-    return { size.x, size.y, size.z };
-}
-
-MetalComputeContext::MetalComputeContext(id<MTLCommandBuffer> commandBuffer):
-    commandBuffer(commandBuffer) {}
-
-void MetalComputeContext::begin() {
-    commandEncoder = [commandBuffer computeCommandEncoder];
-}
-
-void MetalComputeContext::end() { [commandEncoder endEncoding]; }
-
-void MetalComputeContext::setPipeline(ComputePipelineView pipeline) {
-    [commandEncoder
-        setComputePipelineState:(__bridge id<MTLComputePipelineState>)
-                                    pipeline.nativeHandle()];
-}
-
-void MetalComputeContext::setBuffer(BufferView buffer, std::size_t index,
-                                    std::size_t offset) {
-    [commandEncoder setBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
-                       offset:offset
-                      atIndex:index];
-}
-
-void MetalComputeContext::setBufferOffset(std::size_t index,
-                                          std::size_t offset) {
-    [commandEncoder setBufferOffset:offset atIndex:index];
-}
-
-void MetalComputeContext::setSampler(SamplerView sampler, std::size_t index) {
-    [commandEncoder
-        setSamplerState:(__bridge id<MTLSamplerState>)sampler.nativeHandle()
-                atIndex:index];
-}
-
-void MetalComputeContext::setSampler(SamplerView sampler, float lodMinClamp,
-                                     float lodMaxClamp, std::size_t index) {
-    [commandEncoder
-        setSamplerState:(__bridge id<MTLSamplerState>)sampler.nativeHandle()
-            lodMinClamp:lodMinClamp
-            lodMaxClamp:lodMaxClamp
-                atIndex:index];
-}
-
-void MetalComputeContext::setTexture(TextureView texture, std::size_t index) {
-    [commandEncoder setTexture:(__bridge id<MTLTexture>)texture.nativeHandle()
-                       atIndex:index];
-}
-
-void MetalComputeContext::dispatchThreads(vml::usize3 threadsPerGrid,
-                                          vml::usize3 threadsPerThreadgroup) {
-    if (threadsPerGrid.map([](auto i) { return i == 0; }).any()) {
-        return;
-    }
-    [commandEncoder dispatchThreads:toMTLSize(threadsPerGrid)
-              threadsPerThreadgroup:toMTLSize(threadsPerThreadgroup)];
-}
-
-void MetalComputeContext::commit() { [commandBuffer commit]; }
-
-// MARK: MetalBlitContext
-
-MetalBlitContext::MetalBlitContext(id<MTLCommandBuffer> commandBuffer):
-    commandBuffer(commandBuffer) {}
-
-void MetalBlitContext::begin() {
-    MTLBlitPassDescriptor* desc = [MTLBlitPassDescriptor blitPassDescriptor];
-    commandEncoder = [commandBuffer blitCommandEncoderWithDescriptor:desc];
-}
-
-void MetalBlitContext::end() { [commandEncoder endEncoding]; }
-
-void MetalBlitContext::commit() { [commandBuffer commit]; }
-
-void MetalBlitContext::waitUntilCompleted() {
-    [commandBuffer waitUntilCompleted];
-}
-
-void MetalBlitContext::synchronizeTexture(TextureView texture, size_t slice,
-                                          size_t level) {
-    id<MTLTexture> native = (__bridge id<MTLTexture>)texture.nativeHandle();
-    [commandEncoder synchronizeTexture:native slice:slice level:level];
-}
-
-// MARK: MetalCommandBuffer
-
-void MetalCommandBuffer::enqueue() { [commandBuffer enqueue]; }
-
-void MetalCommandBuffer::commit() { [commandBuffer commit]; }
-
-void MetalCommandBuffer::waitForCompletion() {
-    [commandBuffer waitUntilCompleted];
 }
 
 std::unique_ptr<RenderEncoder> MetalCommandBuffer::makeRenderEncoder(
@@ -719,6 +511,10 @@ void MetalComputeEncoder::setSampler(SamplerView sampler, float lodMinClamp,
 void MetalComputeEncoder::setTexture(TextureView texture, std::size_t index) {
     [commandEncoder setTexture:(__bridge id<MTLTexture>)texture.nativeHandle()
                        atIndex:index];
+}
+
+static MTLSize toMTLSize(vml::usize3 const& size) {
+    return { size.x, size.y, size.z };
 }
 
 void MetalComputeEncoder::dispatchThreads(vml::usize3 threadsPerGrid,

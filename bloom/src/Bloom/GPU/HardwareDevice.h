@@ -8,7 +8,6 @@
 #include "Bloom/GPU/CommandQueue.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
-#include "Bloom/GPU/RenderContext.h"
 #include "Bloom/GPU/Swapchain.h"
 
 namespace bloom {

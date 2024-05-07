@@ -3,9 +3,7 @@
 
 #include <memory>
 
-#include "Bloom/GPU/BlitContext.h"
-#include "Bloom/GPU/ComputeContext.h"
-#include "Bloom/GPU/RenderContext.h"
+#include "Bloom/GPU/Fwd.h"
 
 namespace bloom {
 
@@ -17,14 +15,8 @@ public:
     /// Creates a command buffer that will be submitted to this queue
     virtual std::unique_ptr<CommandBuffer> createCommandBuffer() = 0;
 
-    /// Creates a render context that commits to this command queue
-    virtual std::unique_ptr<RenderContext> createRenderContext() = 0;
-
-    /// Creates a compute context that commits to this command queue
-    virtual std::unique_ptr<ComputeContext> createComputeContext() = 0;
-
-    /// Creates a blit context that commits to this command queue
-    virtual std::unique_ptr<BlitContext> createBlitContext() = 0;
+protected:
+    CommandQueue() = default;
 };
 
 } // namespace bloom

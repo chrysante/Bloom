@@ -3,12 +3,9 @@
 
 #include <memory>
 
-#include "Bloom/GPU/BlitContext.h"
 #include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/CommandQueue.h"
-#include "Bloom/GPU/ComputeContext.h"
 #include "Bloom/GPU/HardwareDevice.h"
-#include "Bloom/GPU/RenderContext.h"
 
 namespace bloom {
 
@@ -89,81 +86,8 @@ public:
     MetalCommandQueue(id<MTLCommandQueue>);
 
     std::unique_ptr<CommandBuffer> createCommandBuffer() final;
-    std::unique_ptr<RenderContext> createRenderContext() final;
-    std::unique_ptr<ComputeContext> createComputeContext() final;
-    std::unique_ptr<BlitContext> createBlitContext() final;
 
     id<MTLCommandQueue> queue;
-};
-
-class BLOOM_API MetalRenderContext: public RenderContext {
-public:
-    MetalRenderContext(id<MTLCommandBuffer>);
-    void begin(RenderPassDescription const&) override;
-    void end() override;
-    void setPipeline(RenderPipelineView) override;
-    void setDepthStencil(DepthStencilView) override;
-    void setVertexBuffer(BufferView, std::size_t index,
-                         std::size_t offset) override;
-    void setVertexBufferOffset(std::size_t index, std::size_t offset) override;
-    void setVertexTexture(TextureView, std::size_t index) override;
-    void setVertexSampler(SamplerView, std::size_t index) override;
-    void setFragmentBuffer(BufferView, std::size_t index,
-                           std::size_t offset) override;
-    void setFragmentBufferOffset(std::size_t index,
-                                 std::size_t offset) override;
-    void setFragmentTexture(TextureView, std::size_t index) override;
-    void setFragmentSampler(SamplerView, std::size_t index) override;
-    void setTriangleFillMode(TriangleFillMode) override;
-    void setTriangleCullMode(TriangleCullMode) override;
-    void draw(DrawDescription const&) override;
-    void draw(std::size_t vertexStart, std::size_t vertexCount) override;
-    void present(Backbuffer&) override;
-    void commit() override;
-
-private:
-    id<MTLCommandBuffer> commandBuffer;
-    id<MTLRenderCommandEncoder> commandEncoder;
-};
-
-class MetalComputeContext: public ComputeContext {
-public:
-    MetalComputeContext(id<MTLCommandBuffer>);
-
-    void begin() override;
-    void end() override;
-
-    void setPipeline(ComputePipelineView) override;
-
-    void setBuffer(BufferView, std::size_t index,
-                   std::size_t offset = 0) override;
-    void setBufferOffset(std::size_t index, std::size_t offset) override;
-    void setSampler(SamplerView, std::size_t index) override;
-    void setSampler(SamplerView, float lodMinClamp, float lodMaxClamp,
-                    std::size_t index) override;
-    void setTexture(TextureView, std::size_t index) override;
-
-    void dispatchThreads(vml::usize3 threadsPerGrid,
-                         vml::usize3 threadsPerThreadgroup) override;
-
-    void commit() override;
-
-    id<MTLCommandBuffer> commandBuffer;
-    id<MTLComputeCommandEncoder> commandEncoder;
-};
-
-class MetalBlitContext: public BlitContext {
-public:
-    MetalBlitContext(id<MTLCommandBuffer>);
-    void begin() override;
-    void end() override;
-    void commit() override;
-    void waitUntilCompleted() override;
-    void synchronizeTexture(TextureView texture, size_t slice,
-                            size_t level) override;
-
-    id<MTLCommandBuffer> commandBuffer;
-    id<MTLBlitCommandEncoder> commandEncoder;
 };
 
 class MetalCommandBuffer: public CommandBuffer {

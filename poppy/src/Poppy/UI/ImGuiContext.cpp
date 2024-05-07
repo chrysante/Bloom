@@ -6,7 +6,6 @@
 
 #include "Bloom/Application.h"
 #include "Bloom/Core.h"
-#include "Bloom/GPU.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/CommandPalette.h"

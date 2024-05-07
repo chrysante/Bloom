@@ -47,7 +47,6 @@ EditorSceneRenderer::EditorSceneRenderer(
     std::unique_ptr<RenderGraph> sceneRenderGraphOwner) {
     auto* sceneRenderGraph = sceneRenderGraphOwner.get();
     mRenderGraph = std::make_unique<RenderGraph>("Editor Render Graph",
-                                                 sceneRenderGraph->context(),
                                                  sceneRenderGraph->device());
     wrapRenderGraph(*mRenderGraph, std::move(sceneRenderGraphOwner));
     auto* selPass = mRenderGraph->addPass(makeSelectionPass());

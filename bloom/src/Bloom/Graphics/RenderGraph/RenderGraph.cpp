@@ -9,9 +9,8 @@
 using namespace bloom;
 using namespace ranges::views;
 
-RenderGraph::RenderGraph(std::string name, RenderGraphContext& ctx,
-                         HardwareDevice& device):
-    Pass(std::move(name), &device), ctx(&ctx) {}
+RenderGraph::RenderGraph(std::string name, HardwareDevice& device):
+    Pass(std::move(name), &device) {}
 
 Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
     BL_EXPECT(!isCompiled());
@@ -173,12 +172,15 @@ static void allocateBackingResource(ResourcePool& pool,
 }
 
 void RenderGraph::allocateBackingResources() {
+    if (!resPool) {
+        resPool = std::make_shared<ResourcePool>();
+    }
     for (auto* pass: executionOrder) {
         for (auto* sink: pass->activeSinks()) {
             auto* source = sink->source();
             /// Here we lazily allocate resources for graph inputs
             if (!source->resource() && !source->pass()) {
-                allocateBackingResource(context().resourcePool, *source);
+                allocateBackingResource(*resPool, *source);
             }
             auto* resource = source->resource();
             BL_ASSERT(resource, "Source has no resource assigned");
@@ -186,9 +188,10 @@ void RenderGraph::allocateBackingResources() {
             resource->addUser(sink);
         }
         for (auto* source: pass->sources()) {
-            allocateBackingResource(context().resourcePool, *source);
+            allocateBackingResource(*resPool, *source);
         }
         if (auto* rg = dynamic_cast<RenderGraph*>(pass)) {
+            rg->resPool = resPool;
             rg->allocateBackingResources();
         }
     }
@@ -239,7 +242,7 @@ void RenderGraph::doAllocateResources(FrameParameters const& params,
         return;
     }
     if (!parent()) {
-        for (auto* resource: context().resourcePool.resources()) {
+        for (auto* resource: resPool->resources()) {
             resource->reallocate(device, params);
         }
     }
@@ -249,9 +252,8 @@ void RenderGraph::doAllocateResources(FrameParameters const& params,
     lastFrameParams = params;
 }
 
-std::unique_ptr<RenderGraph> RenderGraph::clone(
-    RenderGraphContext& context) const {
-    auto p = Pass::clone(context);
+std::unique_ptr<RenderGraph> RenderGraph::clone() const {
+    auto p = Pass::clone();
     return std::unique_ptr<RenderGraph>(
         dynamic_cast<RenderGraph*>(p.release()));
 }
@@ -262,8 +264,8 @@ Pass* get(utl::hashmap<Pass const*, Pass*> const& map, Pass const* pass) {
     return itr->second;
 }
 
-std::unique_ptr<Pass> RenderGraph::doClone(RenderGraphContext& context) const {
-    auto clone = std::make_unique<RenderGraph>(name(), context, device());
+std::unique_ptr<Pass> RenderGraph::doClone() const {
+    auto clone = std::make_unique<RenderGraph>(name(), device());
     for (auto* sink: sinks()) {
         clone->declareSink(sink->interface());
     }
@@ -272,7 +274,7 @@ std::unique_ptr<Pass> RenderGraph::doClone(RenderGraphContext& context) const {
     }
     utl::hashmap<Pass const*, Pass*> map;
     for (auto& pass: passes) {
-        auto* clonedPass = clone->addPass(pass->clone(context));
+        auto* clonedPass = clone->addPass(pass->clone());
         clonedPass->_device = &device();
         clonedPass->_parent = clone.get();
         map[pass.get()] = clonedPass;
@@ -317,12 +319,9 @@ std::unique_ptr<Pass> RenderGraph::doClone(RenderGraphContext& context) const {
 }
 
 static std::unique_ptr<RenderGraph> gRenderGraph;
-static RenderGraphContext gRenderGraphCtx;
 
 RenderGraph* RenderGraphManager::get() { return gRenderGraph.get(); }
 
 void RenderGraphManager::set(std::unique_ptr<RenderGraph> rg) {
     gRenderGraph = std::move(rg);
 }
-
-RenderGraphContext& RenderGraphManager::context() { return gRenderGraphCtx; }

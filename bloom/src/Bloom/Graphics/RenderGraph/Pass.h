@@ -125,17 +125,14 @@ protected:
 private:
     friend class RenderGraph; // To set parent and device
 
-    std::unique_ptr<Pass> clone(RenderGraphContext& context) const {
-        return doClone(context);
-    }
+    std::unique_ptr<Pass> clone() const { return doClone(); }
 
     virtual void doExecute(FrameParameters const& params,
                            CommandQueue& queue) = 0;
 
     virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
 
-    virtual std::unique_ptr<Pass> doClone(
-        RenderGraphContext& context) const = 0;
+    virtual std::unique_ptr<Pass> doClone() const = 0;
 
     RenderGraph* _parent = nullptr;
     HardwareDevice* _device = nullptr;
@@ -214,7 +211,7 @@ protected:
     }
 
 private:
-    std::unique_ptr<Pass> doClone(RenderGraphContext&) const override {
+    std::unique_ptr<Pass> doClone() const override {
         return std::make_unique<PassType>(CloneTag{}, this->name());
     }
 };

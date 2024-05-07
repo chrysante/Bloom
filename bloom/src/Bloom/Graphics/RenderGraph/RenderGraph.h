@@ -17,17 +17,10 @@
 
 namespace bloom {
 
-/// Data that is shared between nested render graphs
-class RenderGraphContext {
-public:
-    ResourcePool resourcePool;
-};
-
 ///
 class RenderGraph: public Pass {
 public:
-    explicit RenderGraph(std::string name, RenderGraphContext& context,
-                         HardwareDevice& device);
+    explicit RenderGraph(std::string name, HardwareDevice& device);
 
     /// Adds \p pass to this render graph.
     /// \Returns a pointer to the added pass.
@@ -68,9 +61,6 @@ public:
     /// \Returns the internal source at index \p index
     PassSource* inputSource(size_t index);
 
-    /// \Returns the shared render graph context
-    RenderGraphContext& context() const { return *ctx; }
-
     /// Declares a resource sink (input) to this graph
     RenderGraphSink* declareSink(InterfaceUnion interface) {
         return Pass::declareSink<RenderGraphSink>(std::move(interface),
@@ -84,12 +74,15 @@ public:
     }
 
     ///
-    std::unique_ptr<RenderGraph> clone(RenderGraphContext& context) const;
+    std::unique_ptr<RenderGraph> clone() const;
 
-    ///
+    /// \Returns the execution order of the passes of this render graph
     std::span<Pass const* const> getExecutionOrder() const {
         return executionOrder;
     }
+
+    /// \Returns the resource pool of this render graph
+    ResourcePool const* resourcePool() const { return resPool.get(); }
 
 private:
     void doExecute(FrameParameters const& params, CommandQueue& queue) override;
@@ -97,9 +90,12 @@ private:
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
 
-    std::unique_ptr<Pass> doClone(RenderGraphContext& context) const override;
+    std::unique_ptr<Pass> doClone() const override;
 
-    RenderGraphContext* ctx;
+    /// This could be a "`maybe_unique_ptr`". The resource pool is shared with
+    /// all nested render graphs, so it would be sufficient if only the outer
+    /// most render graph owns it
+    std::shared_ptr<ResourcePool> resPool;
     std::vector<std::unique_ptr<Pass>> passes;
     std::vector<Pass*> executionOrder;
     FrameParameters lastFrameParams;
@@ -112,9 +108,6 @@ struct RenderGraphManager {
 
     /// Sets the global render graph
     static void set(std::unique_ptr<RenderGraph> rg);
-
-    ///
-    static RenderGraphContext& context();
 };
 
 } // namespace bloom

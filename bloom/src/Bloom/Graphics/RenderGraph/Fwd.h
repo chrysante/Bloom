@@ -9,7 +9,6 @@
 
 namespace bloom {
 
-class RenderGraphContext;
 class RenderGraph;
 class Pass;
 class RenderPass;

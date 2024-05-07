@@ -130,12 +130,9 @@ void Viewport::init() {
 static EditorSceneRenderer& getSceneRenderer(RenderGraph* renderGraph) {
     static RenderGraph const* current = nullptr;
     static std::unique_ptr<EditorSceneRenderer> instance;
-    static RenderGraphContext context;
     if (current != renderGraph) {
         current = renderGraph;
-        context.resourcePool.clear();
-        instance =
-            std::make_unique<EditorSceneRenderer>(renderGraph->clone(context));
+        instance = std::make_unique<EditorSceneRenderer>(renderGraph->clone());
     }
     return *instance;
 }
@@ -594,9 +591,13 @@ static void displayRenderGraphDebugger(RenderGraph const& rg, bool* open) {
     if (ImGui::CollapsingHeader("Resource Pool",
                                 ImGuiTreeNodeFlags_DefaultOpen))
     {
-        auto& pool = rg.context().resourcePool;
-        for (auto* resource: pool.resources()) {
-            displayResource(*resource);
+        if (auto* pool = rg.resourcePool()) {
+            for (auto* resource: pool->resources()) {
+                displayResource(*resource);
+            }
+        }
+        else {
+            ImGui::TextDisabled("Resource pool not allocated");
         }
     }
     ImGui::End();

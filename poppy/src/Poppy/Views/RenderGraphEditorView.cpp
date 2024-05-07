@@ -317,10 +317,8 @@ static std::string uniqueName(std::string_view name) {
 }
 
 static std::unique_ptr<RenderGraph> constructRenderGraph(
-    RenderGraphContext& ctx, HardwareDevice& device,
-    NodeEditorGraph const& model) {
-    auto rg =
-        std::make_unique<RenderGraph>(uniqueName("RenderGraph"), ctx, device);
+    HardwareDevice& device, NodeEditorGraph const& model) {
+    auto rg = std::make_unique<RenderGraph>(uniqueName("RenderGraph"), device);
     for (auto* node: model.nodes()) {
         auto* controller = getController(*node);
         if (!controller) {
@@ -415,9 +413,7 @@ void RenderGraphEditorView::compile() {
 }
 
 void RenderGraphEditorView::doCompile() {
-    auto& ctx = RenderGraphManager::context();
-    ctx.resourcePool.clear();
-    auto rg = constructRenderGraph(ctx, editor().device(), nodeEditor.model());
+    auto rg = constructRenderGraph(editor().device(), nodeEditor.model());
     if (rg) {
         compilationStatus = CompilationStatus::Success;
     }

@@ -74,7 +74,7 @@ set(poppy_sources
   src/Poppy/Views/RendererDebuggerView.cpp
   src/Poppy/Views/RenderGraphEditorView.cpp
   src/Poppy/Views/SceneOutliner.cpp
-  src/Poppy/Views/Viewport2.cpp
+  src/Poppy/Views/Viewport.cpp
   src/Poppy/Views/Gizmo.cpp
   src/Poppy/Views/Gizmo.h
   src/Poppy/Views/ViewportExt.cpp
@@ -85,12 +85,11 @@ set(poppy_shader_sources
   src/Poppy/Shaders/BloomShader.metal
   src/Poppy/Shaders/Lights.h
   src/Poppy/Shaders/Lights.metal
-  src/Poppy/Shaders/OutlinePass.metal
   src/Poppy/Shaders/PBRShader.h
   src/Poppy/Shaders/PBRShader.metal
   src/Poppy/Shaders/PCSSTest.metal
   src/Poppy/Shaders/PostProcess.metal
   src/Poppy/Shaders/ShadowPassShader.metal
-  src/Poppy/Shaders/editorPasses.metal
-  src/Poppy/Shaders/mainPass.metal
+  src/Poppy/Shaders/EditorPasses.metal
+  src/Poppy/Shaders/MaterialShaders.metal
 )

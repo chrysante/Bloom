@@ -88,9 +88,10 @@ class BLOOM_API MetalCommandQueue: public CommandQueue {
 public:
     MetalCommandQueue(id<MTLCommandQueue>);
 
-    std::unique_ptr<RenderContext> createRenderContext() override;
-    std::unique_ptr<ComputeContext> createComputeContext() override;
-    std::unique_ptr<BlitContext> createBlitContext() override;
+    std::unique_ptr<CommandBuffer> createCommandBuffer() final;
+    std::unique_ptr<RenderContext> createRenderContext() final;
+    std::unique_ptr<ComputeContext> createComputeContext() final;
+    std::unique_ptr<BlitContext> createBlitContext() final;
 
     id<MTLCommandQueue> queue;
 };

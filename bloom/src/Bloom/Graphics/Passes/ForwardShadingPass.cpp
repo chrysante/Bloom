@@ -1,8 +1,8 @@
 #include <vml/vml.hpp>
 
+#include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
-#include "Bloom/GPU/RenderContext.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
@@ -16,12 +16,13 @@ using namespace vml;
 
 namespace {
 
-struct ForwardShadingPass: PassImpl<ForwardShadingPass, RenderPass> {
+struct ForwardShadingPass: PassImpl<ForwardShadingPass> {
     using PassImpl::PassImpl;
 
     explicit ForwardShadingPass(std::string name);
 
-    void doExecute(FrameParameters const& params, RenderContext& ctx) override;
+    void doExecute(FrameParameters const& params,
+                   CommandBuffer& commandBuffer) override;
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
 
@@ -121,33 +122,33 @@ ForwardShadingPass::ForwardShadingPass(std::string name):
     PassImpl(std::move(name)) {}
 
 void ForwardShadingPass::doExecute(FrameParameters const& params,
-                                   RenderContext& ctx) {
-    RenderPassDescription desc{};
-    desc.colorAttachments = {
-        {
-            .texture = rawColor,
-            .clearColor = vml::colors<>::black,
-            .loadAction = LoadAction::Clear,
+                                   CommandBuffer& commandBuffer) {
+    auto encoder = commandBuffer.makeRenderEncoder({
+        .colorAttachments = {
+            {
+                .texture = rawColor,
+                .clearColor = vml::colors<>::black,
+                .loadAction = LoadAction::Clear,
+            },
+            {
+                .texture = idMap,
+                .clearColor = { UINT_MAX, 0, 0, 1 },
+                .loadAction = LoadAction::Clear,
+            },
         },
-        {
-            .texture = idMap,
-            .clearColor = { UINT_MAX, 0, 0, 1 },
-            .loadAction = LoadAction::Clear,
-        },
-    };
-    desc.depthAttachment = { .texture = depth };
-    ctx.begin(desc);
-    ctx.setVertexBuffer(cameraBuffer, 0);
-    ctx.setVertexBuffer(geometry->transformBuffer(), 2);
-    ctx.setFragmentBuffer(cameraBuffer, 0);
-    ctx.setFragmentBuffer(lights->lightBuffer(), 1);
-    ctx.setFragmentBuffer(lightSpaceTransforms, 2);
-    ctx.setFragmentBuffer(shadowMetadata, 3);
-    ctx.setFragmentBuffer(geometry->IDBuffer(), 5);
-    ctx.setFragmentTexture(shadowMaps, 0);
-    ctx.setFragmentSampler(shadowMapSampler, 0);
+        .depthAttachment = { .texture = depth }
+    });
+    encoder->setVertexBuffer(cameraBuffer, 0);
+    encoder->setVertexBuffer(geometry->transformBuffer(), 2);
+    encoder->setFragmentBuffer(cameraBuffer, 0);
+    encoder->setFragmentBuffer(lights->lightBuffer(), 1);
+    encoder->setFragmentBuffer(lightSpaceTransforms, 2);
+    encoder->setFragmentBuffer(shadowMetadata, 3);
+    encoder->setFragmentBuffer(geometry->IDBuffer(), 5);
+    encoder->setFragmentTexture(shadowMaps, 0);
+    encoder->setFragmentSampler(shadowMapSampler, 0);
     if (params.drawWireframe) {
-        ctx.setTriangleFillMode(TriangleFillMode::Lines);
+        encoder->setTriangleFillMode(TriangleFillMode::Lines);
     }
     Material const* currentMaterial = nullptr;
     MaterialInstance const* currentMaterialInstance = nullptr;
@@ -156,33 +157,32 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
         object.materialInstance->uploadData(device());
         if (object.materialInstance->material() != currentMaterial) {
             currentMaterial = object.materialInstance->material();
-            ctx.setPipeline(currentMaterial->rgMainPass);
-            ctx.setTriangleCullMode(currentMaterial->cullMode);
-            ctx.setDepthStencil(currentMaterial->depthStencil);
+            encoder->setPipeline(currentMaterial->rgMainPass);
+            encoder->setTriangleCullMode(currentMaterial->cullMode);
+            encoder->setDepthStencil(currentMaterial->depthStencil);
         }
         if (object.materialInstance.get() != currentMaterialInstance) {
-            ctx.setFragmentBuffer(object.materialInstance->parameterBuffer(),
-                                  4);
+            auto paramBuffer = object.materialInstance->parameterBuffer();
+            encoder->setFragmentBuffer(paramBuffer, 4);
             currentMaterialInstance = object.materialInstance.get();
         }
         if (object.mesh.get() != currentMesh) {
-            ctx.setVertexBuffer(object.mesh->vertexBuffer(), 1);
+            encoder->setVertexBuffer(object.mesh->vertexBuffer(), 1);
             currentMesh = object.mesh.get();
         }
         // Object transform
-        ctx.setVertexBufferOffset(2, index * sizeof(float4x4));
+        encoder->setVertexBufferOffset(2, index * sizeof(float4x4));
         // Entity ID
-        ctx.setFragmentBufferOffset(5, index * sizeof(uint32_t));
+        encoder->setFragmentBufferOffset(5, index * sizeof(uint32_t));
         BufferView indexBuffer = object.mesh->indexBuffer();
         DrawDescription desc{};
         desc.indexCount = indexBuffer.size() / 4;
         desc.indexType = IndexType::U32;
         desc.indexBuffer = indexBuffer;
-        ctx.draw(desc);
+        encoder->draw(desc);
         ++index;
     }
-    ctx.end();
-    ctx.commit();
+    encoder->end();
 }
 
 void ForwardShadingPass::doAllocateResources(FrameParameters const&,

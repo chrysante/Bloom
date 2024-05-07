@@ -1,4 +1,4 @@
-#include "Bloom/GPU/ComputeContext.h"
+#include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
@@ -10,12 +10,13 @@ using namespace vml::short_types;
 
 namespace {
 
-struct PostProcessPass: PassImpl<PostProcessPass, ComputePass> {
+struct PostProcessPass: PassImpl<PostProcessPass> {
     using PassImpl::PassImpl;
 
     PostProcessPass(std::string name);
 
-    void doExecute(FrameParameters const& params, ComputeContext& ctx) override;
+    void doExecute(FrameParameters const& params,
+                   CommandBuffer& commandBuffer) override;
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
 
@@ -64,12 +65,12 @@ BL_REGISTER_PASS(PostProcessPass, "Post Process Pass");
 PostProcessPass::PostProcessPass(std::string name): PassImpl(std::move(name)) {}
 
 void PostProcessPass::doExecute(FrameParameters const& params,
-                                ComputeContext& ctx) {
-    ctx.begin();
-    ctx.setPipeline(pipeline);
-    ctx.setBuffer(parameterBuffer, 0);
-    ctx.setTexture(output, 0);
-    ctx.setTexture(rawColor, 1);
+                                CommandBuffer& commandBuffer) {
+    auto encoder = commandBuffer.makeComputeEncoder();
+    encoder->setPipeline(pipeline);
+    encoder->setBuffer(parameterBuffer, 0);
+    encoder->setTexture(output, 0);
+    encoder->setTexture(rawColor, 1);
     uint2 gridSize = params.screenSize;
     size_t threadGroupWidth = pipeline.threadExecutionWidth;
     size_t threadGroupHeight =
@@ -77,9 +78,8 @@ void PostProcessPass::doExecute(FrameParameters const& params,
     vml::uint2 threadGroupSize = { utl::narrow_cast<uint32_t>(threadGroupWidth),
                                    utl::narrow_cast<uint32_t>(
                                        threadGroupHeight) };
-    ctx.dispatchThreads(gridSize, threadGroupSize);
-    ctx.end();
-    ctx.commit();
+    encoder->dispatchThreads(gridSize, threadGroupSize);
+    encoder->end();
 }
 
 void PostProcessPass::doAllocateResources(FrameParameters const&,

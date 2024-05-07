@@ -4,7 +4,8 @@
 #include <utl/overload.hpp>
 
 #include "Bloom/Core/Ranges.h"
-#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/CommandBuffer.h"
+#include "Bloom/GPU/CommandQueue.h"
 
 using namespace bloom;
 using namespace ranges::views;
@@ -39,7 +40,9 @@ void RenderGraph::allocateResources(FrameParameters const& frameParams,
 }
 
 void RenderGraph::execute(FrameParameters const& params, CommandQueue& queue) {
-    doExecute(params, queue);
+    auto commandBuffer = queue.createCommandBuffer();
+    doExecute(params, *commandBuffer);
+    commandBuffer->commit();
 }
 
 static std::string format(InterfaceType type) {
@@ -239,9 +242,9 @@ PassSource* RenderGraph::inputSource(size_t index) {
 }
 
 void RenderGraph::doExecute(FrameParameters const& params,
-                            CommandQueue& cmdQueue) {
+                            CommandBuffer& buffer) {
     for (auto* pass: executionOrder) {
-        pass->doExecute(params, cmdQueue);
+        pass->doExecute(params, buffer);
     }
 }
 

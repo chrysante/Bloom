@@ -22,12 +22,3 @@ PassSource* Pass::findSource(std::string_view name) {
     });
     return itr != _sources.end() ? itr->get() : nullptr;
 }
-
-void RenderPass::doExecute(FrameParameters const& params, CommandQueue& queue) {
-    doExecute(params, *queue.createRenderContext());
-}
-
-void ComputePass::doExecute(FrameParameters const& params,
-                            CommandQueue& queue) {
-    doExecute(params, *queue.createComputeContext());
-}

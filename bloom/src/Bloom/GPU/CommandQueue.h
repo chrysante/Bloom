@@ -14,6 +14,9 @@ class BLOOM_API CommandQueue {
 public:
     virtual ~CommandQueue() = default;
 
+    /// Creates a command buffer that will be submitted to this queue
+    virtual std::unique_ptr<CommandBuffer> createCommandBuffer() = 0;
+
     /// Creates a render context that commits to this command queue
     virtual std::unique_ptr<RenderContext> createRenderContext() = 0;
 

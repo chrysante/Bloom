@@ -1,6 +1,6 @@
 #include <array>
 
-#include "Bloom/GPU/ComputeContext.h"
+#include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
@@ -15,12 +15,13 @@ static constexpr size_t NumUpsampleMips = NumDownsampleMips - 1;
 
 namespace {
 
-struct BloomPass: PassImpl<BloomPass, ComputePass> {
+struct BloomPass: PassImpl<BloomPass> {
     using PassImpl::PassImpl;
 
     explicit BloomPass(std::string name);
 
-    void doExecute(FrameParameters const& params, ComputeContext& ctx) override;
+    void doExecute(FrameParameters const& params,
+                   CommandBuffer& commandBuffer) override;
 
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
@@ -115,50 +116,52 @@ static vml::uint2 computeThreadGroupSize(
     return threadGroupSize;
 }
 
-void BloomPass::doExecute(FrameParameters const& params, ComputeContext& ctx) {
-    ctx.begin();
+void BloomPass::doExecute(FrameParameters const& params,
+                          CommandBuffer& commandBuffer) {
+    auto encoder = commandBuffer.makeComputeEncoder();
     uint2 dsThreadGroupSize = computeThreadGroupSize(downsamplePipeline);
     auto gridSizes = GridSizes::create(params.screenSize);
     // All bloom shaders want this
-    ctx.setBuffer(parameters, 0);
+    encoder->setBuffer(parameters, 0);
     // Prefilter pass, including first downsampling
-    ctx.setPipeline(prefilterPipeline);
-    ctx.setTexture(rawColor, 0);          // Source
-    ctx.setTexture(downsampleMips[0], 1); // Dest
-    ctx.dispatchThreads(gridSizes.downsample[0], dsThreadGroupSize);
+    encoder->setPipeline(prefilterPipeline);
+    encoder->setTexture(rawColor, 0);          // Source
+    encoder->setTexture(downsampleMips[0], 1); // Dest
+    encoder->dispatchThreads(gridSizes.downsample[0], dsThreadGroupSize);
     // Rest of downsample passes
-    ctx.setPipeline(downsamplePipeline);
+    encoder->setPipeline(downsamplePipeline);
     for (int i = 0; i < (int)NumDownsampleMips - 1; ++i) {
-        ctx.setTexture(downsampleMips[i], 0);     // Source
-        ctx.setTexture(downsampleMips[i + 1], 1); // Dest
-        ctx.dispatchThreads(gridSizes.downsample[i + 1], dsThreadGroupSize);
+        encoder->setTexture(downsampleMips[i], 0);     // Source
+        encoder->setTexture(downsampleMips[i + 1], 1); // Dest
+        encoder->dispatchThreads(gridSizes.downsample[i + 1],
+                                 dsThreadGroupSize);
     }
     uint2 usThreadGroupSize = computeThreadGroupSize(upsamplePipeline);
     // First upsample pass
-    ctx.setPipeline(upsamplePipeline);
-    ctx.setTexture(downsampleMips[NumDownsampleMips - 1],
-                   0);                                        // Upsample source
-    ctx.setTexture(downsampleMips[NumDownsampleMips - 2], 1); // Copy source
-    ctx.setTexture(upsampleMips[NumUpsampleMips - 1], 2);     // Dest
-    ctx.dispatchThreads(gridSizes.upsample[NumUpsampleMips - 1],
-                        usThreadGroupSize);
+    encoder->setPipeline(upsamplePipeline);
+    encoder->setTexture(downsampleMips[NumDownsampleMips - 1],
+                        0); // Upsample source
+    encoder->setTexture(downsampleMips[NumDownsampleMips - 2],
+                        1);                                    // Copy source
+    encoder->setTexture(upsampleMips[NumUpsampleMips - 1], 2); // Dest
+    encoder->dispatchThreads(gridSizes.upsample[NumUpsampleMips - 1],
+                             usThreadGroupSize);
     // Rest of upsample passes
     for (int i = NumUpsampleMips - 1; i > 0; --i) {
-        ctx.setTexture(upsampleMips[i], 0);
-        ctx.setTexture(downsampleMips[i - 1], 1);
-        ctx.setTexture(upsampleMips[i - 1], 2);
-        ctx.dispatchThreads(gridSizes.upsample[i - 1], usThreadGroupSize);
+        encoder->setTexture(upsampleMips[i], 0);
+        encoder->setTexture(downsampleMips[i - 1], 1);
+        encoder->setTexture(upsampleMips[i - 1], 2);
+        encoder->dispatchThreads(gridSizes.upsample[i - 1], usThreadGroupSize);
     }
     // Composite and write to dest
-    ctx.setPipeline(compositePipeline);
-    ctx.setBuffer(parameters, 0);
-    ctx.setTexture(output, 0);
-    ctx.setTexture(rawColor, 1);
-    ctx.setTexture(upsampleMips.front(), 2);
-    ctx.dispatchThreads(/* gridSize: */ params.screenSize,
-                        computeThreadGroupSize(compositePipeline));
-    ctx.end();
-    ctx.commit();
+    encoder->setPipeline(compositePipeline);
+    encoder->setBuffer(parameters, 0);
+    encoder->setTexture(output, 0);
+    encoder->setTexture(rawColor, 1);
+    encoder->setTexture(upsampleMips.front(), 2);
+    encoder->dispatchThreads(/* gridSize: */ params.screenSize,
+                             computeThreadGroupSize(compositePipeline));
+    encoder->end();
 }
 
 void BloomPass::doAllocateResources(FrameParameters const& params,

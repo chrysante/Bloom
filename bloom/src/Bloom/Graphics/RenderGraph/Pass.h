@@ -16,12 +16,12 @@
 
 namespace bloom {
 
-template <typename ConcretePass, typename Base = ConcretePass::BasePass>
+template <typename DerivedPass>
 class PassImpl;
 
 /// Base class for all render graph pass nodes.
 class Pass {
-    template <typename, typename>
+    template <typename>
     friend class PassImpl;
 
 public:
@@ -119,7 +119,7 @@ private:
     std::unique_ptr<Pass> clone() const { return doClone(); }
 
     virtual void doExecute(FrameParameters const& params,
-                           CommandQueue& queue) = 0;
+                           CommandBuffer& buffer) = 0;
 
     virtual void doAllocateResources(FrameParameters const&, HardwareDevice&) {}
 
@@ -132,41 +132,13 @@ private:
     std::vector<std::unique_ptr<PassSource>> _sources;
 };
 
-/// Base class for all passes that use the GPUs render pipeline
-class RenderPass: public Pass {
-protected:
-    using Pass::Pass;
-    explicit RenderPass(std::string name): Pass(std::move(name)) {}
-
-private:
-    void doExecute(FrameParameters const& params, CommandQueue& queue) final;
-    virtual void doExecute(FrameParameters const& params,
-                           RenderContext& ctx) = 0;
-};
-
-/// Base class for all passes that use the GPUs compute pipeline
-class ComputePass: public Pass {
-protected:
-    using Pass::Pass;
-
-    explicit ComputePass(std::string name): Pass(std::move(name)) {}
-
-private:
-    virtual void doExecute(FrameParameters const& params,
-                           CommandQueue& queue) final;
-    virtual void doExecute(FrameParameters const& params,
-                           ComputeContext& ctx) = 0;
-};
-
 /// Mixin base class for special purpose passes.
 /// This class exists to simplify defining pass interfaces in code
-template <typename PassType, std::derived_from<Pass> Base>
-class PassImpl<PassType, Base>: public Base {
+template <typename PassType>
+class PassImpl: public Pass {
     enum class CloneTag;
 
 public:
-    using BasePass = Base;
-
     /// To be defined by the pass author
     static std::span<InterfaceUnion const> Sinks();
 
@@ -188,7 +160,7 @@ protected:
     __attribute__((no_sanitize("vptr")))
 #endif
     PassImpl(Args&&... args):
-        Base(std::forward<Args>(args)...) {
+        Pass(std::forward<Args>(args)...) {
         static_assert(
             std::derived_from<PassType, Pass>,
             "The pass must publicly derive from the `Pass` base class");

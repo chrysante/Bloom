@@ -1,6 +1,6 @@
 #include "Poppy/Renderer/Passes.h"
 
-#include "Bloom/GPU/ComputeContext.h"
+#include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/GPU/RenderContext.h"
@@ -14,8 +14,9 @@ using namespace vml::short_types;
 
 namespace {
 
-struct SelectionPass: PassImpl<SelectionPass, RenderPass> {
-    void doExecute(FrameParameters const& params, RenderContext& ctx) override;
+struct SelectionPass: PassImpl<SelectionPass> {
+    void doExecute(FrameParameters const& params,
+                   CommandBuffer& commandBuffer) override;
 
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
@@ -84,43 +85,35 @@ std::unique_ptr<Pass> poppy::makeSelectionPass() {
     return std::make_unique<SelectionPass>();
 }
 
-void SelectionPass::doExecute(FrameParameters const&, RenderContext& ctx) {
-    RenderPassDescription desc{};
-    RenderPassColorAttachmentDescription caDesc{};
-    caDesc.texture = selectionMap;
-    caDesc.clearColor = { 0, 0, 0, 1 };
-    caDesc.loadAction = LoadAction::Clear;
-    desc.colorAttachments.push_back(caDesc);
-    RenderPassDepthAttachmentDescription dDesc{};
-    dDesc.texture = selectionDepth;
-    desc.depthAttachment = dDesc;
-    ctx.begin(desc);
-
-    ctx.setVertexBuffer(cameraBuffer, 0);
-    ctx.setVertexBuffer(geometry->transformBuffer(), 2);
-    ctx.setPipeline(pipeline);
-    ctx.setTriangleCullMode(TriangleCullMode::Back);
-    ctx.setDepthStencil(depthStencil);
-
+void SelectionPass::doExecute(FrameParameters const&,
+                              CommandBuffer& commandBuffer) {
+    auto encoder = commandBuffer.makeRenderEncoder(
+        { .colorAttachments = { { .texture = selectionMap,
+                                  .clearColor = { 0, 0, 0, 1 },
+                                  .loadAction = LoadAction::Clear } },
+          .depthAttachment = { .texture = selectionDepth } });
+    encoder->setVertexBuffer(cameraBuffer, 0);
+    encoder->setVertexBuffer(geometry->transformBuffer(), 2);
+    encoder->setPipeline(pipeline);
+    encoder->setTriangleCullMode(TriangleCullMode::Back);
+    encoder->setDepthStencil(depthStencil);
     StaticMeshRenderer const* currentMesh = nullptr;
     for (size_t index = 0; auto object: geometry->getObjects()) {
         if (object.mesh.get() != currentMesh) {
             currentMesh = object.mesh.get();
-            ctx.setVertexBuffer(currentMesh->vertexBuffer(), 1);
+            encoder->setVertexBuffer(currentMesh->vertexBuffer(), 1);
         }
         // Object transform
-        ctx.setVertexBufferOffset(2, index * sizeof(float4x4));
+        encoder->setVertexBufferOffset(2, index * sizeof(float4x4));
         BufferView indexBuffer = object.mesh->indexBuffer();
         DrawDescription desc{};
         desc.indexCount = indexBuffer.size() / 4;
         desc.indexType = IndexType::U32;
         desc.indexBuffer = indexBuffer;
-        ctx.draw(desc);
+        encoder->draw(desc);
         ++index;
     }
-    ctx.end();
-
-    ctx.commit();
+    encoder->end();
 }
 
 void SelectionPass::doAllocateResources(FrameParameters const&,
@@ -137,12 +130,13 @@ void SelectionPass::doAllocateResources(FrameParameters const&,
 
 namespace {
 
-struct CompositionPass: PassImpl<CompositionPass, ComputePass> {
+struct CompositionPass: PassImpl<CompositionPass> {
     using PassImpl::PassImpl;
 
     CompositionPass(): PassImpl("Composition") {}
 
-    void doExecute(FrameParameters const& params, ComputeContext& ctx) override;
+    void doExecute(FrameParameters const& params,
+                   CommandBuffer& commandBuffer) override;
 
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
@@ -209,16 +203,14 @@ std::unique_ptr<Pass> poppy::makeCompositionPass() {
 }
 
 void CompositionPass::doExecute(FrameParameters const& params,
-                                ComputeContext& ctx) {
-    ctx.begin();
-    ctx.setPipeline(pipeline);
-
-    ctx.setTexture(finalColor, 0);
-    ctx.setTexture(sceneColor, 1);
-    ctx.setTexture(sceneDepth, 2);
-    ctx.setTexture(selectionMap, 3);
-    ctx.setTexture(selectionDepth, 4);
-
+                                CommandBuffer& commandBuffer) {
+    auto encoder = commandBuffer.makeComputeEncoder();
+    encoder->setPipeline(pipeline);
+    encoder->setTexture(finalColor, 0);
+    encoder->setTexture(sceneColor, 1);
+    encoder->setTexture(sceneDepth, 2);
+    encoder->setTexture(selectionMap, 3);
+    encoder->setTexture(selectionDepth, 4);
     uint2 gridSize = params.screenSize;
     size_t threadGroupWidth = pipeline.threadExecutionWidth;
     size_t threadGroupHeight =
@@ -226,9 +218,8 @@ void CompositionPass::doExecute(FrameParameters const& params,
     vml::uint2 threadGroupSize = { utl::narrow_cast<uint32_t>(threadGroupWidth),
                                    utl::narrow_cast<uint32_t>(
                                        threadGroupHeight) };
-    ctx.dispatchThreads(gridSize, threadGroupSize);
-    ctx.end();
-    ctx.commit();
+    encoder->dispatchThreads(gridSize, threadGroupSize);
+    encoder->end();
 }
 
 void CompositionPass::doAllocateResources(FrameParameters const&,
@@ -241,8 +232,8 @@ void CompositionPass::doAllocateResources(FrameParameters const&,
 
 namespace {
 
-struct GridPass: PassImpl<GridPass, RenderPass> {
-    void doExecute(FrameParameters const& params, RenderContext& ctx) override;
+struct GridPass: PassImpl<GridPass> {
+    void doExecute(FrameParameters const& params, CommandBuffer& commandBuffer) override;
 
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
@@ -307,42 +298,39 @@ std::unique_ptr<Pass> poppy::makeGridPass() {
     return std::make_unique<GridPass>();
 }
 
-void GridPass::doExecute(FrameParameters const&, RenderContext& ctx) {
-    RenderPassDescription desc{};
-    desc.colorAttachments = {
-        {
-            .texture = colorOut,
-            .loadAction = LoadAction::Load,
-        }
-    };
-    desc.depthAttachment = { .texture = depth };
-    ctx.begin(desc);
-
-    ctx.setVertexBuffer(cameraBuffer, 0);
-    ctx.setVertexBuffer(geometry->transformBuffer(), 2);
-    ctx.setPipeline(pipeline);
-    ctx.setTriangleCullMode(TriangleCullMode::Back);
-    ctx.setDepthStencil(depthStencil);
+void GridPass::doExecute(FrameParameters const&, CommandBuffer& commandBuffer) {
+    auto encoder = commandBuffer.begin({
+        .colorAttachments = {
+            {
+                .texture = colorOut,
+                .loadAction = LoadAction::Load,
+            }
+        },
+        .depthAttachment = { .texture = depth }
+    });
+    encoder->setVertexBuffer(cameraBuffer, 0);
+    encoder->setVertexBuffer(geometry->transformBuffer(), 2);
+    encoder->setPipeline(pipeline);
+    encoder->setTriangleCullMode(TriangleCullMode::Back);
+    encoder->setDepthStencil(depthStencil);
 
     StaticMeshRenderer const* currentMesh = nullptr;
     for (size_t index = 0; auto object: geometry->getObjects()) {
         if (object.mesh.get() != currentMesh) {
             currentMesh = object.mesh.get();
-            ctx.setVertexBuffer(currentMesh->vertexBuffer(), 1);
+            encoder->setVertexBuffer(currentMesh->vertexBuffer(), 1);
         }
         // Object transform
-        ctx.setVertexBufferOffset(2, index * sizeof(float4x4));
+        encoder->setVertexBufferOffset(2, index * sizeof(float4x4));
         BufferView indexBuffer = object.mesh->indexBuffer();
         DrawDescription desc{};
         desc.indexCount = indexBuffer.size() / 4;
         desc.indexType = IndexType::U32;
         desc.indexBuffer = indexBuffer;
-        ctx.draw(desc);
+        encoder->draw(desc);
         ++index;
     }
-    ctx.end();
-
-    ctx.commit();
+    encoder->end();
 }
 
 void GridPass::doAllocateResources(FrameParameters const&,

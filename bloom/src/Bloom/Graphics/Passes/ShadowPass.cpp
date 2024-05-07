@@ -1,3 +1,4 @@
+#include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
@@ -10,12 +11,13 @@ using namespace vml::short_types;
 
 namespace {
 
-struct ShadowPass: PassImpl<ShadowPass, RenderPass> {
+struct ShadowPass: PassImpl<ShadowPass> {
     using PassImpl::PassImpl;
 
     ShadowPass(std::string name);
 
-    void doExecute(FrameParameters const& params, RenderContext& ctx) override;
+    void doExecute(FrameParameters const& params,
+                   CommandBuffer& commandBuffer) override;
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
 
@@ -70,42 +72,38 @@ BL_REGISTER_PASS(ShadowPass, "Shadow Pass");
 ShadowPass::ShadowPass(std::string name): PassImpl(std::move(name)) {}
 
 void ShadowPass::doExecute(FrameParameters const& frameParams,
-                           RenderContext& ctx) {
+                           CommandBuffer& commandBuffer) {
     size_t numCascades = frameParams.numShadowMaps;
     if (numCascades == 0) {
         return;
     }
     BL_ASSERT(numCascades == shadowMaps.description().arrayLength);
-    RenderPassDescription desc{};
-    RenderPassDepthAttachmentDescription dDesc{};
-    dDesc.texture = shadowMaps;
-    desc.depthAttachment = dDesc;
-    desc.renderTargetArrayLength = numCascades;
-    desc.renderTargetSize = shadowMaps.size().xy;
-    ctx.begin(desc);
-    ctx.setPipeline(pipeline);
-    ctx.setTriangleCullMode(TriangleCullMode::Front); /// TODO: temporary
-    ctx.setDepthStencil(depthStencil);
-    ctx.setVertexBuffer(lightSpaceTransforms, 1);
-    ctx.setVertexBuffer(geometry->transformBuffer(), 2);
+    auto encoder = commandBuffer.makeRenderEncoder(
+        { .depthAttachment = { .texture = shadowMaps },
+          .renderTargetArrayLength = numCascades,
+          .renderTargetSize = shadowMaps.size().xy });
+    encoder->setPipeline(pipeline);
+    encoder->setTriangleCullMode(TriangleCullMode::Front); /// TODO: temporary
+    encoder->setDepthStencil(depthStencil);
+    encoder->setVertexBuffer(lightSpaceTransforms, 1);
+    encoder->setVertexBuffer(geometry->transformBuffer(), 2);
     StaticMeshRenderer* currentMesh = nullptr;
     for (size_t index = 0; auto&& object: geometry->getObjects()) {
         if (object.mesh.get() != currentMesh) {
             currentMesh = object.mesh.get();
-            ctx.setVertexBuffer(currentMesh->vertexBuffer(), 0);
+            encoder->setVertexBuffer(currentMesh->vertexBuffer(), 0);
         }
-        ctx.setVertexBufferOffset(2, index * sizeof(float4x4));
+        encoder->setVertexBufferOffset(2, index * sizeof(float4x4));
         BufferView indexBuffer = object.mesh->indexBuffer();
         DrawDescription desc{};
         desc.indexCount = indexBuffer.size() / 4;
         desc.indexType = IndexType::U32;
         desc.indexBuffer = indexBuffer;
         desc.instanceCount = numCascades;
-        ctx.draw(desc);
+        encoder->draw(desc);
         ++index;
     }
-    ctx.end();
-    ctx.commit();
+    encoder->end();
 }
 
 void ShadowPass::doAllocateResources(FrameParameters const&,

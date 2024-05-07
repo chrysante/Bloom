@@ -10,8 +10,7 @@
 #include <utl/vector.hpp>
 #include <vml/vml.hpp>
 
-#include "Bloom/GPU/HardwareDevice.h"
-#include "Bloom/GPU/HardwarePrimitives.h"
+#include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/ResourcePool.h"
 
@@ -97,7 +96,8 @@ public:
     std::unique_ptr<RenderGraph> clone() const;
 
 private:
-    void doExecute(FrameParameters const& params, CommandQueue& queue) override;
+    void doExecute(FrameParameters const& params,
+                   CommandBuffer& buffer) override;
 
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;

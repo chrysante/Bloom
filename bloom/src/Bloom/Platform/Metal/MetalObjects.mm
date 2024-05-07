@@ -321,6 +321,10 @@ void MetalSwapchain::resize(vml::usize2 newSize) {
 
 MetalCommandQueue::MetalCommandQueue(id<MTLCommandQueue> q) { queue = q; }
 
+std::unique_ptr<CommandBuffer> MetalCommandQueue::createCommandBuffer() {
+    return std::make_unique<MetalCommandBuffer>([queue commandBuffer]);
+}
+
 std::unique_ptr<RenderContext> MetalCommandQueue::createRenderContext() {
     return std::make_unique<MetalRenderContext>([queue commandBuffer]);
 }

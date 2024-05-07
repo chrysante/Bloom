@@ -1,4 +1,4 @@
-#include "Bloom/Graphics/RenderGraph/SceneRenderer.h"
+#include "Bloom/Graphics/Renderer.h"
 
 #include <utl/functional.hpp>
 
@@ -23,8 +23,7 @@ static R* findResource(RenderGraph* renderGraph, std::string_view name) {
     return dyncast<R*>(source->resource());
 }
 
-rg::SceneRenderer::SceneRenderer(RenderGraph* renderGraph):
-    mRenderGraph(renderGraph) {
+rg::Renderer::Renderer(RenderGraph* renderGraph): mRenderGraph(renderGraph) {
     geometry = findResource<rg::GeometryResource>(renderGraph, "Geometry");
     lights = findResource<rg::LightsResource>(renderGraph, "Lights");
     cameraBuffer = findResource<rg::BufferResource>(renderGraph, "Camera");
@@ -38,8 +37,8 @@ rg::SceneRenderer::SceneRenderer(RenderGraph* renderGraph):
         findResource<rg::BufferResource>(renderGraph, "PostProcessParameters");
 }
 
-void rg::SceneRenderer::begin(FrameParameters const& frameParams,
-                              Camera const& camera) {
+void rg::Renderer::begin(FrameParameters const& frameParams,
+                         Camera const& camera) {
     this->frameParams = frameParams;
     this->camera = camera;
     if (geometry) {
@@ -105,7 +104,7 @@ static float4x4 makeDirectionalLightSpaceTransform(Camera const& camera,
     return lsProj * lsView;
 }
 
-void rg::SceneRenderer::submit(Scene const& scene) {
+void rg::Renderer::submit(Scene const& scene) {
     if (geometry) {
         submitGeometry(sceneIndex++, scene, *geometry);
     }
@@ -172,7 +171,7 @@ static BloomParameters makeBloomParams(BloomSettings settings) {
     return params;
 }
 
-void rg::SceneRenderer::draw(CommandQueue& commandQueue) {
+void rg::Renderer::draw(CommandQueue& commandQueue) {
     auto& device = mRenderGraph->device();
     mRenderGraph->allocateResources(frameParams, device);
     if (geometry) {

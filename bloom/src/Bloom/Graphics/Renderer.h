@@ -1,8 +1,5 @@
-#ifndef BLOOM_GRAPHICS_RENDERGRAPH_SCENERENDERER_H
-#define BLOOM_GRAPHICS_RENDERGRAPH_SCENERENDERER_H
-
-/// This file will replace Renderer/SceneRenderer once we get rid of the old
-/// renderer class
+#ifndef BLOOM_GRAPHICS_RENDERER_H
+#define BLOOM_GRAPHICS_RENDERER_H
 
 #include <bit>
 #include <cstring>
@@ -58,9 +55,9 @@ struct EntityHandleEncoding {
 };
 
 ///
-class BLOOM_API SceneRenderer {
+class BLOOM_API Renderer {
 public:
-    explicit SceneRenderer(RenderGraph* renderGraph);
+    explicit Renderer(RenderGraph* renderGraph);
 
     ///
     void begin(FrameParameters const& frameParams, Camera const& camera);
@@ -95,4 +92,4 @@ private:
 
 } // namespace bloom::rg
 
-#endif // BLOOM_GRAPHICS_RENDERGRAPH_SCENERENDERER_H
+#endif // BLOOM_GRAPHICS_RENDERER_H

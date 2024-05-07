@@ -11,7 +11,6 @@ namespace bloom {
 class Application;
 
 class HardwareDevice;
-class Renderer;
 class AssetManager;
 class SceneSystem;
 class ScriptSystem;

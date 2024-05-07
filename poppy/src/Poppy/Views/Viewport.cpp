@@ -12,7 +12,6 @@
 #include "Bloom/Core/Serialize.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
-#include "Bloom/Graphics/RenderGraph/SceneRenderer.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"

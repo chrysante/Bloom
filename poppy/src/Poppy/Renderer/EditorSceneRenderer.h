@@ -1,5 +1,5 @@
-#ifndef POPPY_RENDERER_EDITORSCENERENDERER2_H
-#define POPPY_RENDERER_EDITORSCENERENDERER2_H
+#ifndef POPPY_RENDERER_EDITORSCENERENDERER_H
+#define POPPY_RENDERER_EDITORSCENERENDERER_H
 
 #include <memory>
 #include <vector>
@@ -7,7 +7,7 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/GPU/HardwarePrimitives.h"
-#include "Bloom/Graphics/RenderGraph/SceneRenderer.h"
+#include "Bloom/Graphics/Renderer.h"
 #include "Poppy/Editor/EntitySelectionManager.h"
 
 namespace poppy {
@@ -32,7 +32,7 @@ public:
     bloom::rg::RenderGraph* renderGraph() { return mRenderGraph.get(); }
 
 private:
-    std::unique_ptr<bloom::rg::SceneRenderer> mRenderer;
+    std::unique_ptr<bloom::rg::Renderer> mRenderer;
     std::unique_ptr<bloom::rg::RenderGraph> mRenderGraph;
     bloom::rg::GeometryResource* selectedGeometry = nullptr;
     bloom::rg::TextureResource* idMap = nullptr;
@@ -42,4 +42,4 @@ private:
 
 } // namespace poppy
 
-#endif // POPPY_RENDERER_EDITORSCENERENDERER2_H
+#endif // POPPY_RENDERER_EDITORSCENERENDERER_H

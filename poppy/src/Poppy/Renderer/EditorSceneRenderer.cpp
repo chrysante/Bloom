@@ -82,11 +82,11 @@ EditorSceneRenderer::EditorSceneRenderer(
     idMap = dyncast<TextureResource*>(idMapSource->resource());
     mCompositeColor = dyncast<TextureResource*>(compositeColor->resource());
     mSceneColor = dyncast<TextureResource*>(sceneColor->resource());
-    mRenderer = std::make_unique<rg::SceneRenderer>(mRenderGraph.get());
+    mRenderer = std::make_unique<rg::Renderer>(mRenderGraph.get());
 }
 
 void EditorSceneRenderer::begin(bloom::rg::FrameParameters const& frameParams,
-                                 bloom::Camera const& camera) {
+                                bloom::Camera const& camera) {
     mRenderer->begin(frameParams, camera);
     if (selectedGeometry) {
         selectedGeometry->clear();

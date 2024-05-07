@@ -71,8 +71,6 @@ set(bloom_sources
   src/Bloom/Graphics/Material/MaterialInstance.h
   src/Bloom/Graphics/Material/MaterialParameters.h
 
-  src/Bloom/Graphics/RenderGraph/BloomPass.cpp
-  src/Bloom/Graphics/RenderGraph/ForwardShadingPass.cpp
   src/Bloom/Graphics/RenderGraph/Fwd.cpp
   src/Bloom/Graphics/RenderGraph/Fwd.h
   src/Bloom/Graphics/RenderGraph/Interface.cpp
@@ -81,7 +79,6 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/Pass.h
   src/Bloom/Graphics/RenderGraph/PassRegistry.cpp
   src/Bloom/Graphics/RenderGraph/PassRegistry.h
-  src/Bloom/Graphics/RenderGraph/PostProcessPass.cpp
   src/Bloom/Graphics/RenderGraph/RenderGraph.cpp
   src/Bloom/Graphics/RenderGraph/RenderGraph.h
   src/Bloom/Graphics/RenderGraph/Resource.cpp
@@ -89,10 +86,14 @@ set(bloom_sources
   src/Bloom/Graphics/RenderGraph/Resource.h
   src/Bloom/Graphics/RenderGraph/ResourcePool.cpp
   src/Bloom/Graphics/RenderGraph/ResourcePool.h
-  src/Bloom/Graphics/RenderGraph/SceneRenderer.cpp
-  src/Bloom/Graphics/RenderGraph/SceneRenderer.h
-  src/Bloom/Graphics/RenderGraph/ShadowPass.cpp
 
+  src/Bloom/Graphics/Passes/BloomPass.cpp
+  src/Bloom/Graphics/Passes/ForwardShadingPass.cpp
+  src/Bloom/Graphics/Passes/PostProcessPass.cpp
+  src/Bloom/Graphics/Passes/ShadowPass.cpp
+
+  src/Bloom/Graphics/Renderer.cpp
+  src/Bloom/Graphics/Renderer.h
   src/Bloom/Graphics/Camera.cpp
   src/Bloom/Graphics/Camera.h
   src/Bloom/Graphics/Lights.cpp

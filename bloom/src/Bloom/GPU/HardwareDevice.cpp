@@ -1,6 +1,6 @@
 #include "Bloom/GPU/HardwareDevice.h"
 
-#include "Bloom/Platform/Metal/MetalDevice.h"
+#include "Bloom/Platform/Metal/MetalObjects.h"
 
 using namespace bloom;
 

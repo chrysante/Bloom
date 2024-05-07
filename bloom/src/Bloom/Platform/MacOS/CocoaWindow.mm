@@ -11,7 +11,7 @@
 #include "Bloom/Application/Window.h"
 #include "Bloom/Platform/MacOS/CocoaImpl.h"
 #include "Bloom/Platform/MacOS/ObjCCommon.h"
-#include "Bloom/Platform/Metal/MetalSwapchain.h"
+#include "Bloom/Platform/Metal/MetalObjects.h"
 
 using namespace bloom;
 using namespace vml;

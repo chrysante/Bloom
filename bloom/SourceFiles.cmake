@@ -112,20 +112,8 @@ set(bloom_sources
   src/Bloom/Platform/MacOS/ResourceUtil.mm
   src/Bloom/Platform/MacOS/ObjCCommon.h
 
-  src/Bloom/Platform/Metal/MetalBlitContext.h
-  src/Bloom/Platform/Metal/MetalBlitContext.mm
-  src/Bloom/Platform/Metal/MetalCommandQueue.h
-  src/Bloom/Platform/Metal/MetalCommandQueue.mm
-  src/Bloom/Platform/Metal/MetalComputeContext.h
-  src/Bloom/Platform/Metal/MetalComputeContext.mm
-  src/Bloom/Platform/Metal/MetalDevice.h
-  src/Bloom/Platform/Metal/MetalDevice.mm
-  src/Bloom/Platform/Metal/MetalPrimitives.h
-  src/Bloom/Platform/Metal/MetalPrimitives.mm
-  src/Bloom/Platform/Metal/MetalRenderContext.h
-  src/Bloom/Platform/Metal/MetalRenderContext.mm
-  src/Bloom/Platform/Metal/MetalSwapchain.h
-  src/Bloom/Platform/Metal/MetalSwapchain.mm
+  src/Bloom/Platform/Metal/MetalObjects.h
+  src/Bloom/Platform/Metal/MetalObjects.mm
   src/Bloom/Platform/Metal/ObjCBridging.h
 
   src/Bloom/Runtime/CoreRuntime.cpp

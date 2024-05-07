@@ -8,9 +8,7 @@
 
 #include "Bloom/Application.h"
 #include "Bloom/GPU.h"
-#include "Bloom/Platform/Metal/MetalCommandQueue.h"
-#include "Bloom/Platform/Metal/MetalDevice.h"
-#include "Bloom/Platform/Metal/MetalSwapchain.h"
+#include "Bloom/Platform/Metal/MetalObjects.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
 

@@ -39,9 +39,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #ifndef IMGUI_DISABLE
-#include "Bloom/Platform/Metal/MetalDevice.h"
-#include "Bloom/Platform/Metal/MetalSwapchain.h"
-#include "Bloom/Platform/Metal/MetalCommandQueue.h"
+#include "Bloom/Platform/Metal/MetalObjects.h"
 #include "Bloom/Application/Window.h"
 #include "Poppy/Platform/MacOS/imgui_impl_metal.h"
 #include "Poppy/Editor/Editor.h"

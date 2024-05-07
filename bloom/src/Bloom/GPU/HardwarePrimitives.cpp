@@ -1,6 +1,6 @@
 #include "Bloom/GPU/HardwarePrimitives.h"
 
-#include "Bloom/Platform/Metal/MetalPrimitives.h"
+#include "Bloom/Platform/Metal/MetalObjects.h"
 
 using namespace bloom;
 

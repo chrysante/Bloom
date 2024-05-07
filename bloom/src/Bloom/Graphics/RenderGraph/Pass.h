@@ -14,7 +14,7 @@
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
 
-namespace bloom::rg {
+namespace bloom {
 
 template <typename ConcretePass, typename Base = ConcretePass::BasePass>
 class PassImpl;
@@ -221,7 +221,7 @@ private:
 
 #define BEGIN_INTERFACE_DECL_IMPL(Name, PassType)                              \
     template <>                                                                \
-    ::std::span<InterfaceUnion const> bloom::rg::PassImpl<PassType>::Name() {  \
+    ::std::span<InterfaceUnion const> bloom::PassImpl<PassType>::Name() {      \
         static std::vector<InterfaceUnion> list
 
 #define BEGIN_SINK_DECL(PassType) BEGIN_INTERFACE_DECL_IMPL(Sinks, PassType)
@@ -233,6 +233,6 @@ private:
     return list;                                                               \
     }
 
-} // namespace bloom::rg
+} // namespace bloom
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_PASS_H

@@ -17,7 +17,7 @@
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 
-namespace bloom::rg {
+namespace bloom {
 
 ///
 enum class InterfaceFlags {
@@ -475,6 +475,6 @@ inline Pass* PassSink::getSourcePass() const {
     return source() ? source()->pass() : nullptr;
 }
 
-} // namespace bloom::rg
+} // namespace bloom
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_INTERFACE_H

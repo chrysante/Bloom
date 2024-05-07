@@ -8,7 +8,6 @@
 #include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
-using namespace rg;
 using namespace vml::short_types;
 
 static constexpr size_t NumDownsampleMips = 8;

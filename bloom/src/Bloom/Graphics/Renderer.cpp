@@ -10,7 +10,6 @@
 #include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
-using namespace rg;
 using namespace vml::short_types;
 
 template <typename R>
@@ -23,22 +22,20 @@ static R* findResource(RenderGraph* renderGraph, std::string_view name) {
     return dyncast<R*>(source->resource());
 }
 
-rg::Renderer::Renderer(RenderGraph* renderGraph): mRenderGraph(renderGraph) {
-    geometry = findResource<rg::GeometryResource>(renderGraph, "Geometry");
-    lights = findResource<rg::LightsResource>(renderGraph, "Lights");
-    cameraBuffer = findResource<rg::BufferResource>(renderGraph, "Camera");
+Renderer::Renderer(RenderGraph* renderGraph): mRenderGraph(renderGraph) {
+    geometry = findResource<GeometryResource>(renderGraph, "Geometry");
+    lights = findResource<LightsResource>(renderGraph, "Lights");
+    cameraBuffer = findResource<BufferResource>(renderGraph, "Camera");
     lightSpaceTransformBuffer =
-        findResource<rg::BufferResource>(renderGraph, "LightSpaceTransforms");
+        findResource<BufferResource>(renderGraph, "LightSpaceTransforms");
     shadowMetadataBuffer =
-        findResource<rg::BufferResource>(renderGraph, "ShadowMetadata");
-    bloomParams =
-        findResource<rg::BufferResource>(renderGraph, "BloomParameters");
+        findResource<BufferResource>(renderGraph, "ShadowMetadata");
+    bloomParams = findResource<BufferResource>(renderGraph, "BloomParameters");
     postProcessParams =
-        findResource<rg::BufferResource>(renderGraph, "PostProcessParameters");
+        findResource<BufferResource>(renderGraph, "PostProcessParameters");
 }
 
-void rg::Renderer::begin(FrameParameters const& frameParams,
-                         Camera const& camera) {
+void Renderer::begin(FrameParameters const& frameParams, Camera const& camera) {
     this->frameParams = frameParams;
     this->camera = camera;
     if (geometry) {
@@ -52,7 +49,7 @@ void rg::Renderer::begin(FrameParameters const& frameParams,
 }
 
 template <typename LightComponent>
-static void submitLights(rg::LightsResource& lights, Scene const& scene,
+static void submitLights(LightsResource& lights, Scene const& scene,
                          auto&& lightModifier) {
     auto view =
         scene.view<TransformMatrixComponent const, LightComponent const>();
@@ -69,12 +66,12 @@ static void submitLights(rg::LightsResource& lights, Scene const& scene,
 }
 
 template <typename Light>
-static void submitLights(rg::LightsResource& lights, Scene const& scene) {
+static void submitLights(LightsResource& lights, Scene const& scene) {
     submitLights<Light>(lights, scene, [](auto&...) {});
 }
 
 static void submitGeometry(size_t sceneIndex, Scene const& scene,
-                           rg::GeometryResource& geometry) {
+                           GeometryResource& geometry) {
     auto view = scene.view<TransformMatrixComponent const,
                            MeshRendererComponent const>();
     view.each([&](EntityID ID, TransformMatrixComponent const& transform,
@@ -104,7 +101,7 @@ static float4x4 makeDirectionalLightSpaceTransform(Camera const& camera,
     return lsProj * lsView;
 }
 
-void rg::Renderer::submit(Scene const& scene) {
+void Renderer::submit(Scene const& scene) {
     if (geometry) {
         submitGeometry(sceneIndex++, scene, *geometry);
     }
@@ -171,7 +168,7 @@ static BloomParameters makeBloomParams(BloomSettings settings) {
     return params;
 }
 
-void rg::Renderer::draw(CommandQueue& commandQueue) {
+void Renderer::draw(CommandQueue& commandQueue) {
     auto& device = mRenderGraph->device();
     mRenderGraph->allocateResources(frameParams, device);
     if (geometry) {

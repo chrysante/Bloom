@@ -27,11 +27,10 @@
 
 using namespace poppy;
 using namespace bloom;
-using namespace rg;
 using namespace ranges::views;
 using namespace vml::short_types;
 
-static void displayRenderGraphDebugger(rg::RenderGraph const& rg, bool* open);
+static void displayRenderGraphDebugger(RenderGraph const& rg, bool* open);
 
 namespace {
 
@@ -128,8 +127,8 @@ void Viewport::init() {
     setToolbar(makeToolbar());
 }
 
-static EditorSceneRenderer& getSceneRenderer(rg::RenderGraph* renderGraph) {
-    static rg::RenderGraph const* current = nullptr;
+static EditorSceneRenderer& getSceneRenderer(RenderGraph* renderGraph) {
+    static RenderGraph const* current = nullptr;
     static std::unique_ptr<EditorSceneRenderer> instance;
     static RenderGraphContext context;
     if (current != renderGraph) {
@@ -184,12 +183,12 @@ void Viewport::display() {
 void Viewport::drawScenes() {
     float2 viewportSize =
         (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
-    rg::FrameParameters frameParams = {
+    FrameParameters frameParams = {
         .screenSize = viewportSize,
         .shadowMapSize = { 1024, 1024 },
         .drawWireframe = drawOptions.mode == DebugDrawOptions::Mode::Wireframe
     };
-    auto* renderGraph = rg::RenderGraphManager::get();
+    auto* renderGraph = RenderGraphManager::get();
     if (!renderGraph) {
         displayEmptyWithError("No Render Graph Found");
         return;
@@ -565,7 +564,7 @@ static void displayResource(Resource const& resource) {
     ImGui::TreePop();
 }
 
-static void displayExecutionOrder(rg::RenderGraph const& rg) {
+static void displayExecutionOrder(RenderGraph const& rg) {
     for (auto* pass: rg.getExecutionOrder()) {
         auto* passRG = dynamic_cast<RenderGraph const*>(pass);
         bool open = withFont(FontDesc::MonoDefault(), [&] {
@@ -585,7 +584,7 @@ static void displayExecutionOrder(rg::RenderGraph const& rg) {
     }
 }
 
-static void displayRenderGraphDebugger(rg::RenderGraph const& rg, bool* open) {
+static void displayRenderGraphDebugger(RenderGraph const& rg, bool* open) {
     ImGui::Begin("Render Graph Debugger", open);
     if (ImGui::CollapsingHeader("Execution Order",
                                 ImGuiTreeNodeFlags_DefaultOpen))

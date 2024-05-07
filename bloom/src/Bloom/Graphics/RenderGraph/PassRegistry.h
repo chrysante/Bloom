@@ -16,11 +16,11 @@
 /// file scope in the pass implementation file
 #define BL_REGISTER_PASS(PassType, StaticName)                                 \
     UTL_STATIC_INIT {                                                          \
-        ::bloom::rg::internal::doRegisterPass(                                 \
-            ::bloom::rg::internal::makeEntry<PassType>(StaticName));           \
+        ::bloom::internal::doRegisterPass(                                     \
+            ::bloom::internal::makeEntry<PassType>(StaticName));               \
     }
 
-namespace bloom::rg {
+namespace bloom {
 
 /// Entry in the pass registry. Holds a vtable with all relevant information
 /// about a pass
@@ -67,6 +67,6 @@ static PassRegistryEntry makeEntry(std::string name) {
 
 } // namespace internal
 
-} // namespace bloom::rg
+} // namespace bloom
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_PASSREGISTRY_H

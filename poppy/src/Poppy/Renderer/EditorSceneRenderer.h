@@ -15,8 +15,8 @@ namespace poppy {
 class EditorSceneRenderer {
 public:
     explicit EditorSceneRenderer(
-        std::unique_ptr<bloom::rg::RenderGraph> renderGraph);
-    void begin(bloom::rg::FrameParameters const& frameParams,
+        std::unique_ptr<bloom::RenderGraph> renderGraph);
+    void begin(bloom::FrameParameters const& frameParams,
                bloom::Camera const& camera);
     void submit(bloom::Scene const& scene,
                 EntitySelectionManager const& selectionManager);
@@ -29,15 +29,15 @@ public:
                                         std::span<bloom::Scene* const> scenes,
                                         vml::float2 position) const;
 
-    bloom::rg::RenderGraph* renderGraph() { return mRenderGraph.get(); }
+    bloom::RenderGraph* renderGraph() { return mRenderGraph.get(); }
 
 private:
-    std::unique_ptr<bloom::rg::Renderer> mRenderer;
-    std::unique_ptr<bloom::rg::RenderGraph> mRenderGraph;
-    bloom::rg::GeometryResource* selectedGeometry = nullptr;
-    bloom::rg::TextureResource* idMap = nullptr;
-    bloom::rg::TextureResource* mCompositeColor = nullptr;
-    bloom::rg::TextureResource* mSceneColor = nullptr;
+    std::unique_ptr<bloom::Renderer> mRenderer;
+    std::unique_ptr<bloom::RenderGraph> mRenderGraph;
+    bloom::GeometryResource* selectedGeometry = nullptr;
+    bloom::TextureResource* idMap = nullptr;
+    bloom::TextureResource* mCompositeColor = nullptr;
+    bloom::TextureResource* mSceneColor = nullptr;
 };
 
 } // namespace poppy

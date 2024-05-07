@@ -3,9 +3,9 @@
 #include <ostream>
 
 using namespace bloom;
-using namespace rg;
 
-std::ostream& rg::operator<<(std::ostream& ostream, ResourceNodeType nodeType) {
+std::ostream& bloom::operator<<(std::ostream& ostream,
+                                ResourceNodeType nodeType) {
     switch (nodeType) {
 #define RG_RESOURCE_DEF(Name, ...)                                             \
     case ResourceNodeType::Name:                                               \

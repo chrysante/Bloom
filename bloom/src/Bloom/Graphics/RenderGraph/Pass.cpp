@@ -6,7 +6,6 @@
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 
 using namespace bloom;
-using namespace rg;
 
 Pass::~Pass() = default;
 

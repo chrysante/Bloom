@@ -6,7 +6,6 @@
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 
 using namespace bloom;
-using namespace rg;
 
 void* Interface::accessor(Pass& pass) const {
     return visit(*this,

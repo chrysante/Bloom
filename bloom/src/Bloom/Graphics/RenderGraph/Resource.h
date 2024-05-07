@@ -16,7 +16,7 @@
 #include "Bloom/Graphics/RenderGraph/Interface.h"
 #include "Bloom/Graphics/StaticMesh.h"
 
-namespace bloom::rg {
+namespace bloom {
 
 /// Base class of all resources
 class Resource {
@@ -178,6 +178,6 @@ private:
     BufferHandle buffer;
 };
 
-} // namespace bloom::rg
+} // namespace bloom
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_RESOURCE_H

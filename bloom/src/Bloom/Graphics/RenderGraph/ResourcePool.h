@@ -8,7 +8,7 @@
 #include "Bloom/Graphics/RenderGraph/Interface.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 
-namespace bloom::rg {
+namespace bloom {
 
 /// Used by the render graph to allocate resources
 class ResourcePool {
@@ -28,6 +28,6 @@ private:
     std::vector<DynUniquePtr<Resource>> _resources;
 };
 
-} // namespace bloom::rg
+} // namespace bloom
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_RESOURCEPOOL_H

@@ -20,16 +20,6 @@ class Scene;
 class HardwareDevice;
 class Camera;
 
-} // namespace bloom
-
-namespace bloom::rg {
-
-class RenderGraph;
-class GeometryResource;
-class LightsResource;
-class BufferResource;
-struct FrameParameters;
-
 struct EntityHandleEncoding {
     EntityHandleEncoding() { std::memset(this, 0xff, sizeof *this); }
 
@@ -76,20 +66,20 @@ public:
 
 private:
     RenderGraph* mRenderGraph = nullptr;
-    rg::GeometryResource* geometry = nullptr;
-    rg::BufferResource* cameraBuffer = nullptr;
+    GeometryResource* geometry = nullptr;
+    BufferResource* cameraBuffer = nullptr;
     std::vector<vml::float4x4> lightSpaceTransforms;
-    rg::BufferResource* lightSpaceTransformBuffer = nullptr;
+    BufferResource* lightSpaceTransformBuffer = nullptr;
     ShadowRenderMetadata shadowMetadata;
-    rg::BufferResource* shadowMetadataBuffer;
-    rg::LightsResource* lights = nullptr;
-    rg::BufferResource* bloomParams = nullptr;
-    rg::BufferResource* postProcessParams = nullptr;
+    BufferResource* shadowMetadataBuffer;
+    LightsResource* lights = nullptr;
+    BufferResource* bloomParams = nullptr;
+    BufferResource* postProcessParams = nullptr;
     FrameParameters frameParams;
     Camera camera;
     size_t sceneIndex = 0;
 };
 
-} // namespace bloom::rg
+} // namespace bloom
 
 #endif // BLOOM_GRAPHICS_RENDERER_H

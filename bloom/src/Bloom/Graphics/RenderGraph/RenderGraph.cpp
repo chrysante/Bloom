@@ -7,7 +7,6 @@
 #include "Bloom/GPU/HardwareDevice.h"
 
 using namespace bloom;
-using namespace rg;
 using namespace ranges::views;
 
 RenderGraph::RenderGraph(std::string name, RenderGraphContext& ctx,

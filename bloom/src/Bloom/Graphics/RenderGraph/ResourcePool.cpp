@@ -1,7 +1,6 @@
 #include "Bloom/Graphics/RenderGraph/ResourcePool.h"
 
 using namespace bloom;
-using namespace rg;
 
 template <typename I>
 static DynUniquePtr<Resource> allocateResource(I const&) {

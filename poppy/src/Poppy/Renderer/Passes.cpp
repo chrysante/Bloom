@@ -10,7 +10,6 @@
 
 using namespace poppy;
 using namespace bloom;
-using namespace rg;
 using namespace vml::short_types;
 
 namespace {

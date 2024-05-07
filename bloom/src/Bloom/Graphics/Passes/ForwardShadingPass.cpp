@@ -12,7 +12,6 @@
 #include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
-using namespace rg;
 using namespace vml;
 
 namespace {

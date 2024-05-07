@@ -7,7 +7,7 @@
 
 #include "Bloom/Core/Dyncast.h"
 
-namespace bloom::rg {
+namespace bloom {
 
 class RenderGraphContext;
 class RenderGraph;
@@ -48,22 +48,22 @@ enum class InterfaceType {
 
 using NoParent = void;
 
-} // namespace bloom::rg
+} // namespace bloom
 
 #define RG_RESOURCE_DEF(Name, Parent, Corporeality)                            \
-    UTL_DYNCAST_DEFINE(bloom::rg::Name, bloom::rg::ResourceNodeType::Name,     \
-                       bloom::rg::Parent, Corporeality)
+    UTL_DYNCAST_DEFINE(bloom::Name, bloom::ResourceNodeType::Name,             \
+                       bloom::Parent, Corporeality)
 #include "Bloom/Graphics/RenderGraph/Resource.def"
 
-UTL_DYNCAST_DEFINE(bloom::rg::Interface, bloom::rg::InterfaceType::Interface,
-                   void, Abstract)
+UTL_DYNCAST_DEFINE(bloom::Interface, bloom::InterfaceType::Interface, void,
+                   Abstract)
 #define RG_CONCRETE_RESOURCE_DEF(Name)                                         \
-    UTL_DYNCAST_DEFINE(bloom::rg::Name##Interface,                             \
-                       bloom::rg::InterfaceType::Name##Interface,              \
-                       bloom::rg::Interface, Concrete)
+    UTL_DYNCAST_DEFINE(bloom::Name##Interface,                                 \
+                       bloom::InterfaceType::Name##Interface,                  \
+                       bloom::Interface, Concrete)
 #include "Bloom/Graphics/RenderGraph/Resource.def"
 
-namespace bloom::rg {
+namespace bloom {
 
 ///
 struct FrameParameters {
@@ -79,6 +79,6 @@ struct FrameParameters {
     bool operator==(FrameParameters const&) const = default;
 };
 
-} // namespace bloom::rg
+} // namespace bloom
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_FWD_H

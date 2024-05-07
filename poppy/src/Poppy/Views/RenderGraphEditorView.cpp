@@ -22,7 +22,6 @@
 using namespace poppy;
 using namespace nodeEditor;
 using namespace bloom;
-using namespace rg;
 using namespace vml::short_types;
 using namespace ranges::views;
 
@@ -72,19 +71,19 @@ static constexpr float4 OutputNodeColor = { 1.0, 0.0, 0.2, 1.0 };
 class RenderGraphNodeController: public NodeController {
 public:
     /// Creates this node in \p renderGraph
-    virtual void create(bloom::rg::RenderGraph& renderGraph) = 0;
+    virtual void create(bloom::RenderGraph& renderGraph) = 0;
 
     /// \Returns the source at index \p index
     /// \Param index is the index in the node editor UI
     /// \Pre \p index must be valid and `create(RenderGraph)` must have been
     /// called before
-    virtual bloom::rg::PassSource* getSource(size_t index) const = 0;
+    virtual bloom::PassSource* getSource(size_t index) const = 0;
 
     /// \Returns the sink at index \p index
     /// \Param index is the index in the node editor UI
     /// \Pre \p index must be valid and `create(RenderGraph)` must have been
     /// called before
-    virtual bloom::rg::PassSink* getSink(size_t index) const = 0;
+    virtual bloom::PassSink* getSink(size_t index) const = 0;
 
     /// Counterpart to the non-static `NodeController::serialize`
     static std::unique_ptr<RenderGraphNodeController> deserialize(

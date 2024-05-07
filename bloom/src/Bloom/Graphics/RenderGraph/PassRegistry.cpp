@@ -3,7 +3,6 @@
 #include "Bloom/Core/Debug.h"
 
 using namespace bloom;
-using namespace rg;
 
 namespace {
 
@@ -35,7 +34,7 @@ std::span<PassRegistryEntry const> PassRegistry::entries() {
     return instance()._entries.values();
 }
 
-void rg::internal::doRegisterPass(PassRegistryEntry entry) {
+void internal::doRegisterPass(PassRegistryEntry entry) {
     bool success = instance()._entries.insert(entry).second;
     BL_ASSERT(success, "Failed to register pass. Name already exists");
 }

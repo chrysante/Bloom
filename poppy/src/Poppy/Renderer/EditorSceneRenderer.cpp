@@ -8,7 +8,6 @@
 
 using namespace poppy;
 using namespace bloom;
-using namespace rg;
 using namespace vml::short_types;
 
 template <typename R>
@@ -82,10 +81,10 @@ EditorSceneRenderer::EditorSceneRenderer(
     idMap = dyncast<TextureResource*>(idMapSource->resource());
     mCompositeColor = dyncast<TextureResource*>(compositeColor->resource());
     mSceneColor = dyncast<TextureResource*>(sceneColor->resource());
-    mRenderer = std::make_unique<rg::Renderer>(mRenderGraph.get());
+    mRenderer = std::make_unique<Renderer>(mRenderGraph.get());
 }
 
-void EditorSceneRenderer::begin(bloom::rg::FrameParameters const& frameParams,
+void EditorSceneRenderer::begin(bloom::FrameParameters const& frameParams,
                                 bloom::Camera const& camera) {
     mRenderer->begin(frameParams, camera);
     if (selectedGeometry) {
@@ -94,7 +93,7 @@ void EditorSceneRenderer::begin(bloom::rg::FrameParameters const& frameParams,
 }
 
 static void submitSelectedGeometry(
-    Scene const& scene, rg::GeometryResource& geometry,
+    Scene const& scene, GeometryResource& geometry,
     EntitySelectionManager const& selectionManager) {
     auto view = scene.view<TransformMatrixComponent const,
                            MeshRendererComponent const>();

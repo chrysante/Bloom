@@ -15,7 +15,7 @@
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/ResourcePool.h"
 
-namespace bloom::rg {
+namespace bloom {
 
 /// Data that is shared between nested render graphs
 class RenderGraphContext {
@@ -117,6 +117,6 @@ struct RenderGraphManager {
     static RenderGraphContext& context();
 };
 
-} // namespace bloom::rg
+} // namespace bloom
 
 #endif // BLOOM_GRAPHICS_RENDERGRAPH_RENDERGRAPH_H

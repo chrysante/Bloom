@@ -3,6 +3,7 @@
 #include <utl/functional.hpp>
 
 #include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Runtime/SceneSystem.h"
@@ -12,27 +13,69 @@
 using namespace bloom;
 using namespace vml::short_types;
 
-template <typename R>
-static R* findResource(RenderGraph* renderGraph, std::string_view name) {
-    auto* source = renderGraph->findInputSource(name);
-    if (!source) {
-        Logger::Warn("Resource not found: ", name);
-        return nullptr;
+// clang-format off
+
+BEGIN_RENDERGRAPH_SINK_DECL(Renderer) {
+    GeometryInterface{
+        "Geometry",
+        nullptr,
+    },
+    LightsInterface{
+        "Lights",
+        nullptr
+    },
+    BufferInterface{
+        "Camera",
+        nullptr,
+        { .size = sizeof(CameraInput) }
+    },
+    BufferInterface{
+        "Light Space Transforms",
+        nullptr,
+        {}
+    },
+    BufferInterface{
+        "Shadow Metadata",
+        nullptr,
+        { .size = sizeof(ShadowRenderMetadata) }
+    },
+    BufferInterface{
+        "Bloom Parameters",
+        nullptr,
+        { .size = sizeof(BloomParameters) }
+    },
+    BufferInterface{
+        "Post Process Parameters",
+        nullptr,
+        { .size = sizeof(PostProcessParameters) }
     }
-    return dyncast<R*>(source->resource());
+}
+END_DECL()
+
+BEGIN_RENDERGRAPH_SOURCE_DECL(Renderer) {
+    TextureInterface{ "Color", nullptr, {} },
+    TextureInterface{ "Depth", nullptr, {} },
+    TextureInterface{ "ID Map", nullptr, {} },
+}
+END_DECL()
+
+    // clang-format on
+
+    template <typename R>
+    static R* getResource(RenderGraph* renderGraph, size_t index) {
+    auto* source = renderGraph->inputSource(index);
+    BL_ASSERT(source);
+    return cast<R*>(source->resource());
 }
 
 Renderer::Renderer(RenderGraph* renderGraph): mRenderGraph(renderGraph) {
-    geometry = findResource<GeometryResource>(renderGraph, "Geometry");
-    lights = findResource<LightsResource>(renderGraph, "Lights");
-    cameraBuffer = findResource<BufferResource>(renderGraph, "Camera");
-    lightSpaceTransformBuffer =
-        findResource<BufferResource>(renderGraph, "LightSpaceTransforms");
-    shadowMetadataBuffer =
-        findResource<BufferResource>(renderGraph, "ShadowMetadata");
-    bloomParams = findResource<BufferResource>(renderGraph, "BloomParameters");
-    postProcessParams =
-        findResource<BufferResource>(renderGraph, "PostProcessParameters");
+    geometry = getResource<GeometryResource>(renderGraph, 0);
+    lights = getResource<LightsResource>(renderGraph, 1);
+    cameraBuffer = getResource<BufferResource>(renderGraph, 2);
+    lightSpaceTransformBuffer = getResource<BufferResource>(renderGraph, 3);
+    shadowMetadataBuffer = getResource<BufferResource>(renderGraph, 4);
+    bloomParams = getResource<BufferResource>(renderGraph, 5);
+    postProcessParams = getResource<BufferResource>(renderGraph, 6);
 }
 
 void Renderer::begin(FrameParameters const& frameParams, Camera const& camera) {

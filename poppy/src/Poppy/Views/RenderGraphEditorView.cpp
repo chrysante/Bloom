@@ -11,6 +11,7 @@
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
+#include "Bloom/Graphics/Renderer.h"
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Toolbar.h"
@@ -90,6 +91,19 @@ public:
         YAML::Node node);
 };
 
+static PinFlags translateFlags(InterfaceFlags flags) {
+    PinFlags result{};
+    if (test(flags & InterfaceFlags::Optional)) {
+        result |= PinFlags::Optional;
+    }
+    return result;
+}
+
+static PinDesc interfaceToPinDesc(InterfaceUnion const& interface) {
+    return PinDesc{ .name = interface.base().name(),
+                    .flags = translateFlags(interface.base().flags()) };
+}
+
 struct GlobalInputNodeController: RenderGraphNodeController {
     static std::string StaticName() { return "Input"; }
 
@@ -100,15 +114,8 @@ struct GlobalInputNodeController: RenderGraphNodeController {
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
-        return {
-            { .name = "Geometry" },
-            { .name = "Lights" },
-            { .name = "Camera" },
-            { .name = "Light Space Transforms" },
-            { .name = "Shadow Metadata" },
-            { .name = "Bloom Parameters" },
-            { .name = "Post Process Parameters" },
-        };
+        return Renderer::Sinks() | transform(interfaceToPinDesc) |
+               ranges::to<std::vector>;
     }
 
     float4 nodeColor() override { return InputNodeColor; }
@@ -121,23 +128,9 @@ struct GlobalInputNodeController: RenderGraphNodeController {
 
     void create(RenderGraph& rg) override {
         sources.clear();
-        declareSink(rg, GeometryInterface{ "Geometry", nullptr });
-        declareSink(rg, LightsInterface{ "Lights", nullptr });
-        declareSink(rg, BufferInterface{ "Camera",
-                                         nullptr,
-                                         { .size = sizeof(CameraInput) } });
-        declareSink(rg, BufferInterface{ "LightSpaceTransforms", nullptr, {} });
-        declareSink(rg, BufferInterface{
-                            "ShadowMetadata",
-                            nullptr,
-                            { .size = sizeof(ShadowRenderMetadata) } });
-        declareSink(rg, BufferInterface{ "BloomParameters",
-                                         nullptr,
-                                         { .size = sizeof(BloomParameters) } });
-        declareSink(rg, BufferInterface{
-                            "PostProcessParameters",
-                            nullptr,
-                            { .size = sizeof(PostProcessParameters) } });
+        for (auto& interface: Renderer::Sinks()) {
+            declareSink(rg, interface);
+        }
     }
 
     PassSource* getSource(size_t index) const override {
@@ -171,9 +164,8 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
     }
 
     std::vector<PinDesc> makeInputDescriptors() override {
-        return { { .name = "Color" },
-                 { .name = "Depth" },
-                 { .name = "ID Map" } };
+        return Renderer::Sources() | transform(interfaceToPinDesc) |
+               ranges::to<std::vector>;
     }
 
     float4 nodeColor() override { return OutputNodeColor; }
@@ -186,9 +178,9 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
 
     void create(RenderGraph& rg) override {
         sinks.clear();
-        declareSource(rg, TextureInterface{ "Color", nullptr, {} });
-        declareSource(rg, TextureInterface{ "Depth", nullptr, {} });
-        declareSource(rg, TextureInterface{ "ID Map", nullptr, {} });
+        for (auto& interface: Renderer::Sources()) {
+            declareSource(rg, interface);
+        }
     }
 
     PassSource* getSource([[maybe_unused]] size_t index) const override {
@@ -207,19 +199,6 @@ struct GlobalOutputNodeController: RenderGraphNodeController {
 
     std::vector<PassSink*> sinks;
 };
-
-static PinFlags translateFlags(InterfaceFlags flags) {
-    PinFlags result{};
-    if (test(flags & InterfaceFlags::Optional)) {
-        result |= PinFlags::Optional;
-    }
-    return result;
-}
-
-static PinDesc interfaceToPinDesc(InterfaceUnion const& interface) {
-    return PinDesc{ .name = interface.base().name(),
-                    .flags = translateFlags(interface.base().flags()) };
-}
 
 struct PassNodeController: RenderGraphNodeController {
     PassNodeController(PassRegistryEntry entry):

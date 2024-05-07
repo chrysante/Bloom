@@ -3,6 +3,7 @@
 
 #include <bit>
 #include <cstring>
+#include <span>
 #include <vector>
 
 #include <utl/utility.hpp>
@@ -12,6 +13,7 @@
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
+#include "Bloom/Graphics/RenderGraph/Interface.h"
 #include "Bloom/Shader/SharedTypes.h"
 
 namespace bloom {
@@ -47,6 +49,10 @@ struct EntityHandleEncoding {
 ///
 class BLOOM_API Renderer {
 public:
+    static std::span<InterfaceUnion const> Sinks();
+
+    static std::span<InterfaceUnion const> Sources();
+
     explicit Renderer(RenderGraph* renderGraph);
 
     ///

@@ -179,14 +179,19 @@ private:
     }
 };
 
-#define BEGIN_INTERFACE_DECL_IMPL(Name, PassType)                              \
-    template <>                                                                \
-    ::std::span<InterfaceUnion const> bloom::PassImpl<PassType>::Name() {      \
+#define BEGIN_INTERFACE_DECL_IMPL(TemplDecl, Name, Typename)                   \
+    TemplDecl ::std::span<InterfaceUnion const> Typename::Name() {             \
         static std::vector<InterfaceUnion> list
 
-#define BEGIN_SINK_DECL(PassType) BEGIN_INTERFACE_DECL_IMPL(Sinks, PassType)
+#define BEGIN_SINK_DECL(PassType)                                              \
+    BEGIN_INTERFACE_DECL_IMPL(template <>, Sinks, bloom::PassImpl<PassType>)
+#define BEGIN_SOURCE_DECL(PassType)                                            \
+    BEGIN_INTERFACE_DECL_IMPL(template <>, Sources, bloom::PassImpl<PassType>)
 
-#define BEGIN_SOURCE_DECL(PassType) BEGIN_INTERFACE_DECL_IMPL(Sources, PassType)
+#define BEGIN_RENDERGRAPH_SINK_DECL(Type)                                      \
+    BEGIN_INTERFACE_DECL_IMPL(, Sinks, Type)
+#define BEGIN_RENDERGRAPH_SOURCE_DECL(Type)                                    \
+    BEGIN_INTERFACE_DECL_IMPL(, Sources, Type)
 
 #define END_DECL()                                                             \
     ;                                                                          \

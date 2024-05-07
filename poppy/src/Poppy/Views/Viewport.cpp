@@ -16,7 +16,7 @@
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
-#include "Poppy/Renderer/EditorSceneRenderer2.h"
+#include "Poppy/Renderer/EditorSceneRenderer.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
@@ -101,7 +101,7 @@ struct Viewport: View, BasicSceneInspector {
     DebugDrawOptions drawOptions;
     ViewportCameraController cameraController;
     MouseState mouseState;
-    EditorSceneRenderer2* renderer = nullptr;
+    EditorSceneRenderer* renderer = nullptr;
     ViewData viewData;
     bool showRenderGraphDebugger = false;
     bool gameView = false;
@@ -129,15 +129,15 @@ void Viewport::init() {
     setToolbar(makeToolbar());
 }
 
-static EditorSceneRenderer2& getSceneRenderer(rg::RenderGraph* renderGraph) {
+static EditorSceneRenderer& getSceneRenderer(rg::RenderGraph* renderGraph) {
     static rg::RenderGraph const* current = nullptr;
-    static std::unique_ptr<EditorSceneRenderer2> instance;
+    static std::unique_ptr<EditorSceneRenderer> instance;
     static RenderGraphContext context;
     if (current != renderGraph) {
         current = renderGraph;
         context.resourcePool.clear();
         instance =
-            std::make_unique<EditorSceneRenderer2>(renderGraph->clone(context));
+            std::make_unique<EditorSceneRenderer>(renderGraph->clone(context));
     }
     return *instance;
 }

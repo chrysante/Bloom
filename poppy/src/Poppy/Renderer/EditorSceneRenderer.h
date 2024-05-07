@@ -12,9 +12,9 @@
 
 namespace poppy {
 
-class EditorSceneRenderer2 {
+class EditorSceneRenderer {
 public:
-    explicit EditorSceneRenderer2(
+    explicit EditorSceneRenderer(
         std::unique_ptr<bloom::rg::RenderGraph> renderGraph);
     void begin(bloom::rg::FrameParameters const& frameParams,
                bloom::Camera const& camera);

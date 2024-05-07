@@ -33,12 +33,11 @@ public:
     float nearClipPlane() const { return _near; }
 
 private:
-    vml::float4x4 _view = 0, _projection = 0;
-    // transform
-    vml::float3 _position = 0;
+    vml::float4x4 _view = {};
+    vml::float4x4 _projection = {};
+    vml::float3 _position = {};
     vml::float3 _front = { 0, 1, 0 };
     vml::float3 _up = { 0, 0, 1 };
-    // projection
     vml::float2 _viewportSize = 0;
     float _fov = 1.0471; // 60 degrees
     float _near;

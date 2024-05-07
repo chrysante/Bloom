@@ -21,8 +21,8 @@ set(poppy_sources
   src/Poppy/Platform/MacOS/ImGuiContext.mm
   src/Poppy/Platform/MacOS/SystemAppearance.mm
 
-  src/Poppy/Renderer/EditorSceneRenderer2.cpp
-  src/Poppy/Renderer/EditorSceneRenderer2.h
+  src/Poppy/Renderer/EditorSceneRenderer.cpp
+  src/Poppy/Renderer/EditorSceneRenderer.h
   src/Poppy/Renderer/Passes.h
   src/Poppy/Renderer/Passes.cpp
 

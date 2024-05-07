@@ -14,7 +14,6 @@
 #include "Bloom/Graphics/Lights.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
-#include "Bloom/Graphics/Renderer/ShaderParameters.h"
 #include "Bloom/Graphics/StaticMesh.h"
 
 namespace bloom::rg {

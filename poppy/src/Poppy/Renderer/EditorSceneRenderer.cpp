@@ -1,4 +1,4 @@
-#include "Poppy/Renderer/EditorSceneRenderer2.h"
+#include "Poppy/Renderer/EditorSceneRenderer.h"
 
 #include "Bloom/GPU/BlitContext.h"
 #include "Bloom/GPU/HardwareDevice.h"
@@ -44,7 +44,7 @@ static void wrapRenderGraph(RenderGraph& outer,
     }
 }
 
-EditorSceneRenderer2::EditorSceneRenderer2(
+EditorSceneRenderer::EditorSceneRenderer(
     std::unique_ptr<RenderGraph> sceneRenderGraphOwner) {
     auto* sceneRenderGraph = sceneRenderGraphOwner.get();
     mRenderGraph = std::make_unique<RenderGraph>("Editor Render Graph",
@@ -85,7 +85,7 @@ EditorSceneRenderer2::EditorSceneRenderer2(
     mRenderer = std::make_unique<rg::SceneRenderer>(mRenderGraph.get());
 }
 
-void EditorSceneRenderer2::begin(bloom::rg::FrameParameters const& frameParams,
+void EditorSceneRenderer::begin(bloom::rg::FrameParameters const& frameParams,
                                  bloom::Camera const& camera) {
     mRenderer->begin(frameParams, camera);
     if (selectedGeometry) {
@@ -113,7 +113,7 @@ static void submitSelectedGeometry(
     });
 }
 
-void EditorSceneRenderer2::submit(
+void EditorSceneRenderer::submit(
     bloom::Scene const& scene, EntitySelectionManager const& selectionManager) {
     mRenderer->submit(scene);
     if (selectedGeometry) {
@@ -121,7 +121,7 @@ void EditorSceneRenderer2::submit(
     }
 }
 
-void EditorSceneRenderer2::draw(bloom::CommandQueue& commandQueue) {
+void EditorSceneRenderer::draw(bloom::CommandQueue& commandQueue) {
     mRenderGraph->allocateResources(mRenderer->getFrameParams(),
                                     mRenderGraph->device());
     if (selectedGeometry) {
@@ -130,15 +130,15 @@ void EditorSceneRenderer2::draw(bloom::CommandQueue& commandQueue) {
     mRenderer->draw(commandQueue);
 }
 
-bloom::TextureView EditorSceneRenderer2::sceneColor() const {
+bloom::TextureView EditorSceneRenderer::sceneColor() const {
     return mSceneColor ? mSceneColor->handle() : nullptr;
 }
 
-bloom::TextureView EditorSceneRenderer2::sceneColorWithOverlays() const {
+bloom::TextureView EditorSceneRenderer::sceneColorWithOverlays() const {
     return mCompositeColor ? mCompositeColor->handle() : nullptr;
 }
 
-bloom::EntityHandle EditorSceneRenderer2::readEntityIDMap(
+bloom::EntityHandle EditorSceneRenderer::readEntityIDMap(
     CommandQueue& commandQueue, std::span<Scene* const> scenes,
     float2 position) const {
     if (!idMap) {

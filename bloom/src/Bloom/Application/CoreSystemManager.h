@@ -40,12 +40,6 @@ public:
     HardwareDevice const& device() const { return *mDevice; }
 
     ///
-    Renderer& renderer() { return *mRenderer; }
-
-    /// \overload
-    Renderer const& renderer() const { return *mRenderer; }
-
-    ///
     AssetManager& assetManager() { return *mAssetManager; }
 
     /// \overload
@@ -69,19 +63,12 @@ public:
     /// \overload
     ScriptSystem const& scriptSystem() const { return *mScriptSystem; }
 
-    ///
-    [[nodiscard]] std::unique_ptr<Renderer> takeRenderer();
-
-    ///
-    void setRenderer(std::unique_ptr<Renderer> renderer);
-
 private:
     template <typename SystemType>
     std::unique_ptr<SystemType> makeCoreSystem(auto&&...);
 
     Application* mApp = nullptr;
     Reference<HardwareDevice> mDevice;
-    std::unique_ptr<Renderer> mRenderer;
     std::unique_ptr<AssetManager> mAssetManager;
     std::unique_ptr<CoreRuntime> mRuntime;
     std::shared_ptr<SceneSystem> mSceneSystem;

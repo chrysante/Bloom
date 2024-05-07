@@ -5,7 +5,6 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include "Bloom/Graphics/Renderer/ForwardRenderer.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/View.h"
@@ -17,18 +16,10 @@ using namespace poppy;
 
 namespace {
 
-class RendererDebuggerView: public View {
-public:
+struct RendererDebuggerView: View {
     void init() override;
     void display() override;
 
-private:
-    bloom::ForwardRenderer* findRenderer() const;
-
-private:
-    bloom::ForwardRenderer* mRenderer = nullptr;
-
-private:
     struct BloomVeilParams {
         int downsampleMipmapLevel = 0;
         int upsampleMipmapLevel = 0;
@@ -42,11 +33,9 @@ POPPY_REGISTER_VIEW(RendererDebuggerView, "Renderer Debugger");
 void RendererDebuggerView::init() {}
 
 void RendererDebuggerView::display() {
-    if (!mRenderer && !(mRenderer = findRenderer())) {
-        displayEmptyWithReason("No Renderer Found");
-        return;
-    }
-
+    displayEmptyWithReason("Unimplemented");
+    return;
+#if 0
     using namespace propertiesView;
     if (beginSection("Postprocessing")) {
         beginProperty("Tone Mapping");
@@ -105,8 +94,5 @@ void RendererDebuggerView::display() {
         }
         endSection();
     }
-}
-
-bloom::ForwardRenderer* RendererDebuggerView::findRenderer() const {
-    return nullptr;
+#endif
 }

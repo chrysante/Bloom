@@ -8,7 +8,6 @@
 #include "Bloom/Application/Application.h"
 #include "Bloom/Core/Profile.h"
 #include "Bloom/Core/Reference.h"
-#include "Bloom/Graphics/Renderer/Renderer.h"
 #include "Bloom/Runtime/ScriptSystem.h"
 #include "Bloom/Scene/Components/AllComponents.h"
 #include "Bloom/Scene/Scene.h"

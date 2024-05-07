@@ -3,7 +3,6 @@
 #include "Bloom/Application/Application.h"
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/GPU/HardwareDevice.h"
-#include "Bloom/Graphics/Renderer/Renderer.h"
 #include "Bloom/Runtime/CoreRuntime.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Runtime/ScriptSystem.h"
@@ -16,8 +15,6 @@ CoreSystemManager::~CoreSystemManager() = default;
 
 void CoreSystemManager::init() {
     mDevice = HardwareDevice::create(RenderAPI::Metal);
-    mRenderer = createForwardRenderer(*mApp);
-    mRenderer->init(device());
     mAssetManager = makeCoreSystem<AssetManager>();
     mRuntime = makeCoreSystem<CoreRuntime>();
     mSceneSystem = makeCoreSystem<SceneSystem>();
@@ -28,14 +25,6 @@ void CoreSystemManager::init() {
 }
 
 void CoreSystemManager::shutdown() {}
-
-std::unique_ptr<Renderer> CoreSystemManager::takeRenderer() {
-    return std::move(mRenderer);
-}
-
-void CoreSystemManager::setRenderer(std::unique_ptr<Renderer> renderer) {
-    mRenderer = std::move(renderer);
-}
 
 template <typename SystemType>
 std::unique_ptr<SystemType> CoreSystemManager::makeCoreSystem(auto&&... args) {

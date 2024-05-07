@@ -71,16 +71,6 @@ set(bloom_sources
   src/Bloom/Graphics/Material/MaterialInstance.h
   src/Bloom/Graphics/Material/MaterialParameters.h
 
-  src/Bloom/Graphics/Renderer/BloomFramebuffer.h
-  src/Bloom/Graphics/Renderer/BloomRenderer.cpp
-  src/Bloom/Graphics/Renderer/BloomRenderer.h
-  src/Bloom/Graphics/Renderer/ForwardRenderer.cpp
-  src/Bloom/Graphics/Renderer/ForwardRenderer.h
-  src/Bloom/Graphics/Renderer/Renderer.cpp
-  src/Bloom/Graphics/Renderer/Renderer.h
-  src/Bloom/Graphics/Renderer/RendererSanitizer.h
-  src/Bloom/Graphics/Renderer/SceneRenderer.cpp
-  src/Bloom/Graphics/Renderer/SceneRenderer.h
   src/Bloom/Graphics/Renderer/ShaderParameters.h
 
   src/Bloom/Graphics/RenderGraph/BloomPass.cpp
@@ -112,7 +102,6 @@ set(bloom_sources
   src/Bloom/Graphics/MaterialProperties.h
   src/Bloom/Graphics/Mesh.cpp
   src/Bloom/Graphics/Mesh.h
-  src/Bloom/Graphics/Renderer.h
   src/Bloom/Graphics/StaticMesh.cpp
   src/Bloom/Graphics/StaticMesh.h
   src/Bloom/Graphics/Vertex.h

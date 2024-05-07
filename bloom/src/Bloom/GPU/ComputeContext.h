@@ -2,6 +2,8 @@
 #define BLOOM_GPU_COMPUTECONTEXT_H
 
 #include "Bloom/Core/Core.h"
+#include "Bloom/GPU/CommandDescriptors.h"
+#include "Bloom/GPU/Fwd.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 
 namespace bloom {

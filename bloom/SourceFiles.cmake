@@ -54,8 +54,10 @@ set(bloom_sources
 
   src/Bloom/GPU.h
   src/Bloom/GPU/BlitContext.h
-  src/Bloom/GPU/Fwd.h
+  src/Bloom/GPU/CommandBuffer.h
+  src/Bloom/GPU/CommandDescriptors.h
   src/Bloom/GPU/CommandQueue.h
+  src/Bloom/GPU/Fwd.h
   src/Bloom/GPU/ComputeContext.h
   src/Bloom/GPU/HardwareDevice.cpp
   src/Bloom/GPU/HardwareDevice.h

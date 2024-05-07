@@ -10,9 +10,19 @@ class HardwareDevice;
 class CommandQueue;
 class Swapchain;
 class Backbuffer;
+class CommandBuffer;
+class CommandEncoder;
+class RenderEncoder;
+class ComputeEncoder;
+class BlitEncoder;
 class RenderContext;
 class ComputeContext;
 class BlitContext;
+
+struct RenderPassDescription;
+struct DrawDescription;
+struct RenderPassDepthAttachmentDescription;
+struct RenderPassColorAttachmentDescription;
 
 class BufferHandle;
 class BufferView;

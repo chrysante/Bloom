@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "Bloom/GPU/BlitContext.h"
+#include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/CommandQueue.h"
 #include "Bloom/GPU/ComputeContext.h"
 #include "Bloom/GPU/HardwareDevice.h"
@@ -161,6 +162,79 @@ public:
                             size_t level) override;
 
     id<MTLCommandBuffer> commandBuffer;
+    id<MTLBlitCommandEncoder> commandEncoder;
+};
+
+class MetalCommandBuffer: public CommandBuffer {
+public:
+    MetalCommandBuffer(id<MTLCommandBuffer> commandBuffer):
+        commandBuffer(commandBuffer) {}
+
+    void enqueue() final;
+    void commit() final;
+    void waitForCompletion() final;
+    std::unique_ptr<RenderEncoder> makeRenderEncoder(
+        RenderPassDescription const& desc) final;
+    std::unique_ptr<ComputeEncoder> makeComputeEncoder() final;
+    std::unique_ptr<BlitEncoder> makeBlitEncoder() final;
+
+    id<MTLCommandBuffer> commandBuffer;
+};
+
+class MetalRenderEncoder: public RenderEncoder {
+public:
+    MetalRenderEncoder(id<MTLRenderCommandEncoder> commandEncoder):
+        commandEncoder(commandEncoder) {}
+
+    void setPipeline(RenderPipelineView pipeline) final;
+    void setDepthStencil(DepthStencilView) final;
+    void setVertexBuffer(BufferView buffer, size_t index,
+                         size_t offset = 0) final;
+    void setVertexBufferOffset(size_t index, size_t offset) final;
+    void setVertexTexture(TextureView texture, size_t index) final;
+    void setVertexSampler(SamplerView sampler, size_t index) final;
+    void setFragmentBuffer(BufferView buffer, size_t index,
+                           size_t offset = 0) final;
+    void setFragmentBufferOffset(size_t index, size_t offset) final;
+    void setFragmentTexture(TextureView, size_t index) final;
+    void setFragmentSampler(SamplerView, size_t index) final;
+    void setTriangleFillMode(TriangleFillMode mode) final;
+    void setTriangleCullMode(TriangleCullMode mode) final;
+    void draw(DrawDescription const& desc) final;
+    void draw(size_t vertexStart, size_t vertexCount) final;
+    void end() final;
+
+    id<MTLRenderCommandEncoder> commandEncoder;
+};
+
+class MetalComputeEncoder: public ComputeEncoder {
+public:
+    MetalComputeEncoder(id<MTLComputeCommandEncoder> commandEncoder):
+        commandEncoder(commandEncoder) {}
+
+    void setPipeline(ComputePipelineView) final;
+    void setBuffer(BufferView, size_t index, size_t offset = 0) final;
+    void setBufferOffset(size_t index, size_t offset) final;
+    void setSampler(SamplerView, size_t index) final;
+    void setSampler(SamplerView, float lodMinClamp, float lodMaxClamp,
+                    size_t index) final;
+    void setTexture(TextureView, size_t index) final;
+    void dispatchThreads(vml::usize3 threadsPerGrid,
+                         vml::usize3 threadsPerThreadgroup) final;
+    void end() final;
+
+    id<MTLComputeCommandEncoder> commandEncoder;
+};
+
+class MetalBlitEncoder: public BlitEncoder {
+public:
+    MetalBlitEncoder(id<MTLBlitCommandEncoder> commandEncoder):
+        commandEncoder(commandEncoder) {}
+
+    void synchronizeTexture(TextureView texture, size_t slice,
+                            size_t level) final;
+    void end() final;
+
     id<MTLBlitCommandEncoder> commandEncoder;
 };
 

@@ -19,6 +19,9 @@ public:
     /// as possible
     virtual void commit() = 0;
 
+    /// Blocks the calling thread until the command buffer is done executing
+    virtual void waitForCompletion() = 0;
+
     /// Creates a render encoder that encodes commands to this buffer
     virtual std::unique_ptr<RenderEncoder> makeRenderEncoder(
         RenderPassDescription const& desc) = 0;

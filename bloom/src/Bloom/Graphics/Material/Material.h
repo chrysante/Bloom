@@ -1,18 +1,22 @@
 #ifndef BLOOM_GRAPHICS_MATERIAL_MATERIAL_H
 #define BLOOM_GRAPHICS_MATERIAL_MATERIAL_H
 
+#include <memory>
+
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Reference.h"
+#include "Bloom/GPU/Fwd.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
+#include "Bloom/Graphics/Material/Fwd.h"
 
 namespace bloom {
 
-class HardwareDevice;
-
 class BLOOM_API Material: public Asset {
 public:
-    BL_DEFINE_ASSET_CTOR(Material, Asset)
+    explicit Material(AssetHandle handle, std::string name);
+
+    ~Material();
 
     /// Reset this material to be the default material.
     /// We will probably change this in the future but for now the default

@@ -1,0 +1,30 @@
+
+#ifndef BL_MATGRAPH_TYPE
+#define BL_MATGRAPH_TYPE(Name, Parent, Corporeality)
+#endif
+
+BL_MATGRAPH_TYPE(Type, NoParent, Abstract)
+BL_MATGRAPH_TYPE(FloatType, Type, Concrete)
+BL_MATGRAPH_TYPE(Float2Type, Type, Concrete)
+BL_MATGRAPH_TYPE(Float3Type, Type, Concrete)
+BL_MATGRAPH_TYPE(Float4Type, Type, Concrete)
+BL_MATGRAPH_TYPE(AggregateType, Type, Concrete)
+
+#undef BL_MATGRAPH_TYPE
+
+#ifndef BL_MATGRAPH_VALUE
+#define BL_MATGRAPH_VALUE(Name, Parent, Corporeality)
+#endif
+
+BL_MATGRAPH_VALUE(Value, NoParent, Abstract)
+BL_MATGRAPH_VALUE(Constant, Value, Abstract)
+BL_MATGRAPH_VALUE(FloatConstant, Constant, Concrete)
+//BL_MATGRAPH_VALUE(Float2Constant, Constant, Concrete)
+BL_MATGRAPH_VALUE(Float3Constant, Constant, Concrete)
+//BL_MATGRAPH_VALUE(Float4Constant, Constant, Concrete)
+BL_MATGRAPH_VALUE(User, Value, Abstract)
+BL_MATGRAPH_VALUE(ArithmeticOperation, User, Concrete)
+BL_MATGRAPH_VALUE(AggregateBuilder, User, Concrete)
+
+#undef BL_MATGRAPH_VALUE
+

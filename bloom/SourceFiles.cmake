@@ -63,11 +63,21 @@ set(bloom_sources
   src/Bloom/GPU/HardwareResourceHandle.h
   src/Bloom/GPU/Swapchain.h
 
+  src/Bloom/Graphics/Material/Context.cpp
+  src/Bloom/Graphics/Material/Context.h
+  src/Bloom/Graphics/Material/Fwd.h
+  src/Bloom/Graphics/Material/Lists.def
   src/Bloom/Graphics/Material/Material.cpp
   src/Bloom/Graphics/Material/Material.h
+  src/Bloom/Graphics/Material/MaterialGraph.cpp
+  src/Bloom/Graphics/Material/MaterialGraph.h
   src/Bloom/Graphics/Material/MaterialInstance.cpp
   src/Bloom/Graphics/Material/MaterialInstance.h
   src/Bloom/Graphics/Material/MaterialParameters.h
+  src/Bloom/Graphics/Material/Types.cpp
+  src/Bloom/Graphics/Material/Types.h
+  src/Bloom/Graphics/Material/Values.cpp
+  src/Bloom/Graphics/Material/Values.h
 
   src/Bloom/Graphics/RenderGraph/Fwd.cpp
   src/Bloom/Graphics/RenderGraph/Fwd.h

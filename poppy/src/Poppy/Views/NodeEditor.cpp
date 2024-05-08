@@ -1312,6 +1312,9 @@ static bool isOptional(Pin const& pin) {
 }
 
 static float4 selectPinColor(Pin const& pin) {
+    if (pin.desc().color) {
+        return *pin.desc().color;
+    }
     if (isOptional(pin)) {
         return styleColors().pinOptBG;
     }

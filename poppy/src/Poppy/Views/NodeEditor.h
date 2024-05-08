@@ -52,6 +52,7 @@ struct PinDesc {
     std::string name;
     PinFlags flags;
     PinUserType userType;
+    std::optional<vml::float4> color;
 };
 
 /// Node controller interface. Objects of derived classes can be attached to any

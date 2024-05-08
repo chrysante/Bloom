@@ -726,6 +726,7 @@ Node::Node(NodeDesc desc):
         _desc.ID = utl::uuid::generate();
     }
     if (controller()) {
+        controller()->_node = this;
         _color = controller()->nodeColor();
         auto inputDescs = controller()->makeInputDescriptors();
         _inputs = inputDescs | transform([&](PinDesc const& pin) {

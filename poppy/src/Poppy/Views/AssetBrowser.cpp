@@ -108,7 +108,7 @@ AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
             case AssetType::SkeletalMesh:
                 return "cube";
             case AssetType::Material:
-                return "delicious";
+                return "leaf";
             case AssetType::MaterialInstance:
                 return "delicious";
             case AssetType::Scene:

@@ -2,7 +2,10 @@
 
 #include <vml/vml.hpp>
 
+#include "Bloom/Core/Yaml.h"
+#include "Bloom/Graphics/Material/Context.h"
 #include "Bloom/Graphics/Material/Material.h"
+#include "Bloom/Graphics/Material/MaterialGraph.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
@@ -11,15 +14,17 @@
 using namespace poppy;
 using namespace bloom;
 using namespace nodeEditor;
+using namespace matgraph;
 using namespace vml::short_types;
+using namespace ranges::views;
 
 namespace {
 
 enum class DataType { Float, Float2, Float3, Float4, Texture };
 
-enum class NodeType { Output, Arithmetic, TextureSampler };
+enum class NodeType { Output, Constant, Arithmetic, TextureSampler };
 
-enum class ArithmeticOperation { Add, Sub, Mul, Div, LAST = Div };
+enum class ArithmeticOp { Add, Sub, Mul, Div, LAST = Div };
 
 } // namespace
 
@@ -32,7 +37,7 @@ struct YAML::convert<DataType> {
         return node;
     }
 
-    static bool decode(DataType& type, Node const& node) {
+    static bool decode(Node const& node, DataType& type) {
         auto text = node.as<std::string>();
         if (text == "Float") {
             type = DataType::Float;
@@ -62,7 +67,7 @@ template <>
 struct YAML::convert<::NodeType> {
     static Node encode(::NodeType type) {
         Node node;
-        node = std::array{ "Output", "Arithmetic",
+        node = std::array{ "Output", "Constant", "Arithmetic",
                            "TextureSampler" }[(size_t)type];
         return node;
     }
@@ -71,6 +76,10 @@ struct YAML::convert<::NodeType> {
         auto text = node.as<std::string>();
         if (text == "Output") {
             type = ::NodeType::Output;
+            return true;
+        }
+        if (text == "Constant") {
+            type = ::NodeType::Constant;
             return true;
         }
         if (text == "Arithmetic") {
@@ -93,34 +102,34 @@ struct YAML::convert<::NodeType> {
     }
 };
 
-static std::string toString(ArithmeticOperation op) {
+static std::string toString(ArithmeticOp op) {
     return std::array{ "Add", "Sub", "Mul", "Div" }[(size_t)op];
 }
 
 template <>
-struct YAML::convert<ArithmeticOperation> {
-    static Node encode(ArithmeticOperation op) {
+struct YAML::convert<ArithmeticOp> {
+    static Node encode(ArithmeticOp op) {
         Node node;
         node = toString(op);
         return node;
     }
 
-    static bool decode(Node const& node, ArithmeticOperation& op) {
+    static bool decode(Node const& node, ArithmeticOp& op) {
         auto text = node.as<std::string>();
         if (text == "Add") {
-            op = ArithmeticOperation::Add;
+            op = ArithmeticOp::Add;
             return true;
         }
         if (text == "Sub") {
-            op = ArithmeticOperation::Sub;
+            op = ArithmeticOp::Sub;
             return true;
         }
         if (text == "Mul") {
-            op = ArithmeticOperation::Mul;
+            op = ArithmeticOp::Mul;
             return true;
         }
         if (text == "Div") {
-            op = ArithmeticOperation::Div;
+            op = ArithmeticOp::Div;
             return true;
         }
         return false;
@@ -129,7 +138,37 @@ struct YAML::convert<ArithmeticOperation> {
 
 namespace {
 
-struct OutputNodeController: NodeController {
+struct MaterialNodeController: NodeController {
+    struct ValueMap: utl::hashmap<Node*, Value*> {
+        Value* get(Node* node) const {
+            auto itr = find(node);
+            BL_ASSERT(itr != end());
+            return itr->second;
+        }
+        template <typename T>
+        T* get(Node* node) const {
+            return dyncast<T*>(get(node));
+        }
+    };
+
+    virtual Value* createGraphNode(MaterialGraph& graph) const = 0;
+
+    virtual void linkGraphNode(ValueMap const& map) const {
+        auto* user = map.get<User>(node());
+        if (!user) {
+            return;
+        }
+        for (auto [index, input]: node()->inputs() | enumerate) {
+            if (input->origin()) {
+                // FIXME: This only works for nodes with single outputs
+                auto* operand = map.get(&input->origin()->parent());
+                user->setOperand(index, operand);
+            }
+        }
+    }
+};
+
+struct OutputNodeController: MaterialNodeController {
     static NodeDesc Make(float2 position) {
         return { .name = "Output",
                  .position = position,
@@ -160,26 +199,78 @@ struct OutputNodeController: NodeController {
             { .name = "Emissive",
               .flags = PinFlags::Optional,
               .userType = (PinUserType)DataType::Float3 },
-            { .name = "Ambient Occlusion",
-              .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Float },
         };
+    }
+
+    Value* createGraphNode(MaterialGraph& graph) const override {
+        auto& ctx = graph.context();
+        auto* type = ctx.aggregateType(std::array<Type const*, 4>{
+            ctx.float3Type(),
+            ctx.floatType(),
+            ctx.floatType(),
+            ctx.float3Type(),
+        });
+        return graph.setRoot(allocate<AggregateBuilder>(type));
     }
 
     vml::float4 nodeColor() override { return { 0.1, 0.1, 0.1, 1 }; }
 };
 
-struct ArithmeticNodeController: NodeController {
-    static NodeDesc Make(ArithmeticOperation op, float2 position) {
+struct ConstantController: MaterialNodeController {
+    static NodeDesc Make(float2 position, DataType dataType) {
+        return { .name = "Constant",
+                 .position = position,
+                 .controller = std::make_unique<ConstantController>(dataType) };
+    }
+
+    explicit ConstantController(DataType dataType): dataType(dataType) {}
+
+    explicit ConstantController(YAML::Node const& node) {
+        dataType = node["DataType"].as<DataType>();
+        value = node["Value"].as<float4>();
+    }
+
+    YAML::Node serialize() const override {
+        YAML::Node node;
+        node["Type"] = NodeType::Constant;
+        node["DataType"] = dataType;
+        node["Value"] = value;
+        return node;
+    }
+
+    std::vector<PinDesc> makeOutputDescriptors() override {
+        return {
+            { .name = "Value", .userType = (PinUserType)dataType },
+        };
+    }
+
+    Value* createGraphNode(MaterialGraph& graph) const override {
+        BL_ASSERT(dataType == DataType::Float, "Other cases not implemented");
+        return graph.addValue(
+            allocate<FloatConstant>(graph.context(), value.x));
+    }
+
+    bool alwaysDisplayInputNames() const override { return false; }
+
+    bool alwaysDisplayOutputNames() const override { return true; }
+
+    float4 nodeColor() override { return { 0.2, .8, .2, 1 }; }
+
+    DataType dataType;
+    float4 value = 0;
+};
+
+struct ArithmeticNodeController: MaterialNodeController {
+    static NodeDesc Make(ArithmeticOp op, float2 position) {
         return { .name = toString(op),
                  .position = position,
                  .controller = std::make_unique<ArithmeticNodeController>(op) };
     }
 
-    ArithmeticNodeController(ArithmeticOperation op): operation(op) {}
+    ArithmeticNodeController(ArithmeticOp op): operation(op) {}
 
     explicit ArithmeticNodeController(YAML::Node const& root) {
-        operation = root["Operation"].as<ArithmeticOperation>();
+        operation = root["Operation"].as<ArithmeticOp>();
     }
 
     YAML::Node serialize() const override {
@@ -203,14 +294,18 @@ struct ArithmeticNodeController: NodeController {
                    .userType = (PinUserType)DataType::Float } };
     }
 
+    Value* createGraphNode(MaterialGraph&) const override {
+        BL_UNIMPLEMENTED();
+    }
+
     bool alwaysDisplayInputNames() const override { return false; }
 
     bool alwaysDisplayOutputNames() const override { return false; }
 
-    ArithmeticOperation operation;
+    ArithmeticOp operation;
 };
 
-struct TextureSamplerController: NodeController {
+struct TextureSamplerController: MaterialNodeController {
     static NodeDesc Make(float2 position) {
         return { .name = "Texture Sample",
                  .position = position,
@@ -257,6 +352,10 @@ struct TextureSamplerController: NodeController {
         };
     }
 
+    Value* createGraphNode(MaterialGraph&) const override {
+        BL_UNIMPLEMENTED();
+    }
+
     vml::float4 nodeColor() override { return { 0.2, 0.4, 1, 1 }; }
 };
 
@@ -265,6 +364,8 @@ static std::unique_ptr<NodeController> deserializeNodeController(
     switch (type) {
     case NodeType::Output:
         return std::make_unique<OutputNodeController>(node);
+    case NodeType::Constant:
+        return std::make_unique<ConstantController>(node);
     case NodeType::Arithmetic:
         return std::make_unique<ArithmeticNodeController>(node);
     case NodeType::TextureSampler:
@@ -336,11 +437,14 @@ struct Delegate: NodeEditorDelegate {
         if (ImGui::MenuItem("Output")) {
             model->addNode(OutputNodeController::Make(position));
         }
+        if (ImGui::MenuItem("Constant")) {
+            model->addNode(ConstantController::Make(position, DataType::Float));
+        }
         if (ImGui::MenuItem("Texture Sample")) {
             model->addNode(TextureSamplerController::Make(position));
         }
-        for (size_t i = 0; i < EnumCount<ArithmeticOperation>; ++i) {
-            auto op = (ArithmeticOperation)i;
+        for (size_t i = 0; i < EnumCount<ArithmeticOp>; ++i) {
+            auto op = (ArithmeticOp)i;
             if (ImGui::MenuItem(toString(op).c_str())) {
                 model->addNode(ArithmeticNodeController::Make(op, position));
             }
@@ -359,7 +463,8 @@ POPPY_REGISTER_VIEW(MaterialEditor, "Material Editor");
 MaterialEditor::MaterialEditor(): nodeEditor(commandPaletteWrite()) {
     auto& cmd = commandPaletteWrite();
     auto* compileCmd = cmd.add("Compile", { Key::B, ModFlags::Control },
-                               [this] { compile(); });
+                               [this] { compile(); },
+                               [this]() -> bool { return material.get(); });
     // clang-format off
     setToolbar({
         ToolbarIconButton(compileCmd, "ok"),
@@ -394,4 +499,21 @@ void MaterialEditor::deserialize(YAML::Node node) {
     nodeEditor.deserialize(node["NodeEditor"]);
 }
 
-void MaterialEditor::compile() {}
+static MaterialNodeController* getController(Node* node) {
+    return dynamic_cast<MaterialNodeController*>(node->controller());
+}
+
+void MaterialEditor::compile() {
+    auto* model = getModel(material.get());
+    BL_ASSERT(model);
+    MaterialGraph graph;
+    MaterialNodeController::ValueMap map;
+    for (auto* node: model->nodes()) {
+        auto* controller = getController(node);
+        auto* value = controller->createGraphNode(graph);
+        map[node] = value;
+    }
+    for (auto* node: model->nodes()) {
+        getController(node)->linkGraphNode(map);
+    }
+}

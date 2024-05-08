@@ -8,6 +8,7 @@
 
 using namespace bloom;
 using namespace matgraph;
+using namespace ranges::views;
 
 FloatConstant::FloatConstant(Context& ctx, float value):
     Constant(ValueNodeType::FloatConstant, ctx.floatType()), _value(value) {}
@@ -24,3 +25,7 @@ AggregateBuilder::AggregateBuilder(Context& ctx, std::vector<Value*> values):
          ctx.aggregateType(values | ranges::views::transform(&Value::type) |
                            ToSmallVector<>),
          std::move(values)) {}
+
+AggregateBuilder::AggregateBuilder(AggregateType const* type):
+    User(ValueNodeType::AggregateBuilder, type,
+         std::vector<Value*>(type->elements().size())) {}

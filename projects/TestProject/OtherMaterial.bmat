@@ -1,4 +1,36 @@
 Nodes:
+  - ID: 55677fce d8e9104 e1a2cf46 36a04a1
+    Name: Constant
+    Position:
+      - 1994.4281
+      - -320.403625
+    Size:
+      - 74
+      - 55
+    Controller:
+      Type: Constant
+      DataType: Float
+      Value:
+        - 0
+        - 0
+        - 0
+        - 0
+  - ID: 74abf884 bec689c3 7c0d98f3 e75c2731
+    Name: Constant
+    Position:
+      - 1975.4281
+      - -420.403625
+    Size:
+      - 74
+      - 55
+    Controller:
+      Type: Constant
+      DataType: Float
+      Value:
+        - 0
+        - 0
+        - 0
+        - 0
   - ID: e7947b c75bc6d9 462ceb81 dbcb4213
     Name: Output
     Position:
@@ -9,33 +41,12 @@ Nodes:
       - 135
     Controller:
       Type: Output
-  - ID: e7aedeb6 8f6bf2b4 34a01403 479a6127
-    Name: Texture Sample
-    Position:
-      - 1937.42822
-      - -498.403625
-    Size:
-      - 117
-      - 135
-    Controller:
-      Type: TextureSampler
-  - ID: e3acbf6c 2be3f1d e72def2d 7af97033
-    Name: Add
-    Position:
-      - 1992.4281
-      - -299.403625
-    Size:
-      - 87
-      - 75
-    Controller:
-      Type: Arithmetic
-      Operation: Add
 Links:
-  - FromID: e7aedeb6 8f6bf2b4 34a01403 479a6127
-    FromIndex: 0
-    ToID: e7947b c75bc6d9 462ceb81 dbcb4213
-    ToIndex: 0
-  - FromID: e3acbf6c 2be3f1d e72def2d 7af97033
+  - FromID: 74abf884 bec689c3 7c0d98f3 e75c2731
     FromIndex: 0
     ToID: e7947b c75bc6d9 462ceb81 dbcb4213
     ToIndex: 1
+  - FromID: 55677fce d8e9104 e1a2cf46 36a04a1
+    FromIndex: 0
+    ToID: e7947b c75bc6d9 462ceb81 dbcb4213
+    ToIndex: 2

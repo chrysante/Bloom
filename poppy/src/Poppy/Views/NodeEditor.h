@@ -26,6 +26,7 @@ namespace poppy::nodeEditor {
 class Pin;
 class InputPin;
 class OutputPin;
+class Node;
 
 enum class PinType { Pin, InputPin, OutputPin, LAST = OutputPin };
 
@@ -86,6 +87,14 @@ public:
 
     /// The color of the node body
     virtual vml::float4 nodeColor() { return { 1, 0, 0.5, 1 }; }
+
+    /// \Returns the node that this controller is attached to
+    Node* node() const { return _node; }
+
+private:
+    friend class Node;
+
+    Node* _node = nullptr;
 };
 
 /// Descriptor structure used to create nodes
@@ -106,8 +115,6 @@ struct NodeDesc {
     /// The controller that will be added to the node
     std::unique_ptr<NodeController> controller;
 };
-
-class Node;
 
 /// Base class of pins
 class Pin {

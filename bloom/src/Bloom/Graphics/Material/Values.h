@@ -63,6 +63,11 @@ public:
         return _operands[index];
     }
 
+    void setOperand(size_t index, Value* value) {
+        BL_ASSERT(index < _operands.size());
+        _operands[index] = value;
+    }
+
 protected:
     User(ValueNodeType nodeType, Type const* type,
          std::vector<Value*> operands):
@@ -95,6 +100,8 @@ private:
 class AggregateBuilder: public User {
 public:
     explicit AggregateBuilder(Context& ctx, std::vector<Value*> values);
+
+    explicit AggregateBuilder(AggregateType const* type);
 };
 
 } // namespace bloom::matgraph

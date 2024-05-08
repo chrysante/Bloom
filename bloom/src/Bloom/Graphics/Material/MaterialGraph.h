@@ -28,6 +28,7 @@ public:
 
     template <std::derived_from<Value> T>
     T* setRoot(DynUniquePtr<T> value) {
+        BL_EXPECT(!_root);
         auto* result = addValue(std::move(value));
         _root = result;
         return result;
@@ -49,7 +50,7 @@ public:
 private:
     Context ctx;
     std::vector<DynUniquePtr<Value>> _values;
-    Value* _root;
+    Value* _root = nullptr;
 };
 
 } // namespace bloom::matgraph

@@ -5,12 +5,13 @@
 
 using namespace bloom;
 
+std::unique_ptr<MaterialModel> bloom::makeMaterialModel() { BL_UNREACHABLE(); }
+
 Material::Material(AssetHandle handle, std::string name):
     Asset(handle, std::move(name)) {
     BL_EXPECT(handle.type() == AssetType::Material, "Mismatched asset type");
+    model = makeMaterialModel();
 }
-
-Material::~Material() = default;
 
 void Material::makeDefault(HardwareDevice& device) {
     rgMainPass = device.createRenderPipeline(

@@ -44,6 +44,11 @@
   Name: MyScript
   Location: MyScript.sc
 - Handle:
+    AssetType: Material
+    AssetID: 76bf5c30 31128588 a6aaf910 39fdbcf4
+  Name: OtherMaterial
+  Location: OtherMaterial.bmat
+- Handle:
     AssetType: ScriptSource
     AssetID: d5d03e7d f2e3d455 9f1ec432 b5521366
   Name: Print

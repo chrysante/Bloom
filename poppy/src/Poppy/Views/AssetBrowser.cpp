@@ -271,6 +271,13 @@ void AssetBrowser::displayNoOpenProject() {
 
 void AssetBrowser::openAsset(bloom::AssetHandle handle) {
     switch (handle.type()) {
+    case AssetType::Material: {
+        editor().openView("Material Editor", [=, this](View& view) {
+            view.openData(as<Material>(assetManager->get(handle)));
+            assetManager->makeAvailable(handle, AssetRepresentation::CPU);
+        });
+        break;
+    }
     case AssetType::MaterialInstance: {
         editor().openView("Material Instance Viewer", [=, this](View& view) {
             auto* matInstViewer = dynamic_cast<MaterialInstanceViewer*>(&view);

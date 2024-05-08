@@ -304,6 +304,12 @@ class NodeEditorGraph {
 public:
     using Node = nodeEditor::Node;
 
+    /// Adds \p node to the model and return a pointer to it
+    Node* addNode(std::unique_ptr<nodeEditor::Node> node);
+
+    /// Creates a node from \p desc and adds it to the model
+    Node* addNode(nodeEditor::NodeDesc desc);
+
     /// \Returns a view over the nodes in this graph
     auto nodes() {
         return _nodes | ranges::views::transform(
@@ -333,9 +339,6 @@ public:
 
     /// \overload
     utl::small_vector<Node const*> sinks() const;
-
-    /// Inserts the node \p node into the graph
-    void add(std::unique_ptr<Node> node) { _nodes.push_back(std::move(node)); }
 
     /// \Returns a YAML node representing this document
     YAML::Node serialize() const;
@@ -390,17 +393,17 @@ public:
 
     void setDelegate(std::unique_ptr<NodeEditorDelegate> delegate);
 
-    void setGraph(NodeEditorGraph graph);
+    NodeEditorDelegate* getDelegate();
 
     void display();
 
     void onInput(bloom::InputEvent& event);
 
-    /// Adds \p node to the editor
-    void addNode(nodeEditor::NodeDesc desc);
-
     /// \Returns the underlying graph
-    NodeEditorGraph const& model() const;
+    NodeEditorGraph* model() const;
+
+    ///
+    void setModel(NodeEditorGraph* model);
 
     /// Serializes view data. This does not serialize the current model
     YAML::Node serialize() const;

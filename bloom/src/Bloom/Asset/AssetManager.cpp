@@ -230,6 +230,8 @@ struct AssetManager::Impl {
 
     Reference<StaticMeshData> readStaticMeshFromDisk(
         std::filesystem::path const& source);
+    void loadMaterialFromDisk(Material& mat,
+                              std::filesystem::path const& source);
     void loadMaterialInstanceFromDisk(MaterialInstance& inst,
                                       std::filesystem::path const& source);
     void loadSceneFromDisk(Scene& scene, std::filesystem::path const& source);
@@ -630,15 +632,15 @@ bool Impl::makeAvailImpl(SkeletalMesh&, RegistryEntry const&,
     BL_UNIMPLEMENTED();
 }
 
-bool Impl::makeAvailImpl(Material& mat, RegistryEntry const&,
+bool Impl::makeAvailImpl(Material& mat, RegistryEntry const& entry,
                          AssetRepresentation repr, bool forceReload) {
     // clang-format off
     visitRepr(repr, utl::overload{
         [&](Tag<AssetRepresentation::CPU>) {
-            Logger::Warn("No CPU Representation for materials yet");
+            loadMaterialFromDisk(mat, entry.diskLocation);
         },
         [&](Tag<AssetRepresentation::GPU>) {
-            if (mat.mainPass && !forceReload) {
+            if (mat.rgMainPass && !forceReload) {
                 return;
             }
             mat.makeDefault(assetManager->device());
@@ -865,6 +867,14 @@ Reference<StaticMeshData> Impl::readStaticMeshFromDisk(
     return nullptr;
 }
 
+void Impl::loadMaterialFromDisk(Material& mat,
+                                std::filesystem::path const& source) {
+    assert(toExtension(source) == FileExtension::Bmat);
+    auto file = openFile(makeAbsolute(source), std::ios::in | std::ios::binary);
+    YAML::Node root = YAML::Load(file);
+    mat.model->deserialize(root);
+}
+
 void Impl::loadMaterialInstanceFromDisk(MaterialInstance& inst,
                                         std::filesystem::path const& source) {
     assert(toExtension(source) == FileExtension::Bmatinst);
@@ -946,11 +956,14 @@ void Impl::flushToDiskImpl(SkeletalMesh const&, std::filesystem::path const&) {
     BL_UNIMPLEMENTED();
 }
 
-void Impl::flushToDiskImpl(Material const&, std::filesystem::path const& dest) {
-    /// Since we don't have any material representation yet we only create the
-    /// file and return
-    (void)openOrCreateFile(dest,
-                           std::ios::out | std::ios::trunc | std::ios::binary);
+void Impl::flushToDiskImpl(Material const& mat,
+                           std::filesystem::path const& dest) {
+    YAML::Emitter out;
+    out << mat.model->serialize();
+    std::ios::sync_with_stdio(false);
+    auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
+                                           std::ios::binary);
+    file << out.c_str();
 }
 
 void Impl::flushToDiskImpl(MaterialInstance const& inst,

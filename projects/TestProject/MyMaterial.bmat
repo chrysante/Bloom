@@ -1,0 +1,21 @@
+Nodes:
+  - ID: 42ee0642 db7462dc cf8b06ad 42e4f9f5
+    Name: Output
+    Position:
+      - 2246.42822
+      - -388.403625
+    Size:
+      - 153
+      - 135
+    Controller:
+      Type: Output
+  - ID: 1ce7489d 15b647a4 fbca24ed df21ee1f
+    Name: Texture Sample
+    Position:
+      - 2026.42822
+      - -423.403625
+    Size:
+      - 120
+      - 135
+    Controller:
+      Type: TextureSampler

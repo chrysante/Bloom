@@ -364,6 +364,15 @@ utl::hashset<Node const*> Node::predecessors() const {
     return predsImpl(inputs()) | ranges::to<utl::hashset<Node const*>>;
 }
 
+Node* NodeEditorGraph::addNode(std::unique_ptr<Node> node) {
+    _nodes.push_back(std::move(node));
+    return _nodes.back().get();
+}
+
+Node* NodeEditorGraph::addNode(NodeDesc desc) {
+    return addNode(std::make_unique<Node>(std::move(desc)));
+}
+
 bool NodeEditorGraph::hasCycles() const {
     return ranges::any_of(sources(),
                           [](auto* source) { return findCycle(source); });
@@ -497,7 +506,7 @@ bool NodeEditorGraph::deserialize(
             if (!utl::is_null(node->ID())) {
                 map[node->ID()] = node.get();
             }
-            add(std::move(node));
+            addNode(std::move(node));
         }
         for (auto& linkSource: source["Links"]) {
             deserializeLink(linkSource, map);
@@ -759,7 +768,7 @@ struct NodeEditor::Impl {
 
     void defer(auto f) { deferList.push_back(f); }
 
-    NodeEditorGraph model;
+    NodeEditorGraph* model = nullptr;
     SelectionManager selection;
     ViewData viewData;
     std::unique_ptr<NodeEditorDelegate> delegate;
@@ -775,10 +784,6 @@ NodeEditor::~NodeEditor() = default;
 
 void NodeEditor::setDelegate(std::unique_ptr<NodeEditorDelegate> delegate) {
     impl->delegate = std::move(delegate);
-}
-
-void NodeEditor::setGraph(NodeEditorGraph model) {
-    impl->model = std::move(model);
 }
 
 static bool beginInvisibleWindow(
@@ -954,8 +959,11 @@ void Impl::backgroundBehaviour() {
 Impl::Impl(CommandPalette& cmd) {
     cmd.add("Delete Selected Nodes", { Key::Backspace, ModFlags::Control },
             [this] { deleteSelected(); });
-    cmd.add("Select All", { Key::A, ModFlags::Control },
-            [this] { selection.set(model.nodes()); });
+    cmd.add("Select All", { Key::A, ModFlags::Control }, [this] {
+        if (model) {
+            selection.set(model->nodes());
+        }
+    });
 }
 
 void NodeEditor::onInput(InputEvent& event) { impl->onInput(event); }
@@ -971,12 +979,14 @@ void Impl::onInput(InputEvent& event) {
             // FIXME: This must be .locationInWindow when not using viewports
             viewData.selectionEnd = event.locationOnScreen;
             ImRect selectionRect = viewData.getSelectionRect();
-            auto candidates = model.nodes() |
-                              ranges::views::filter([&](Node const* node) {
-                return nodeOverlapsRect(viewData, *node, selectionRect);
-            });
-            selection.setCandidates(candidates |
-                                    ranges::to<utl::hashset<Node*>>);
+            if (model) {
+                auto candidates = model->nodes() |
+                                  ranges::views::filter([&](Node const* node) {
+                    return nodeOverlapsRect(viewData, *node, selectionRect);
+                });
+                selection.setCandidates(candidates |
+                                        ranges::to<utl::hashset<Node*>>);
+            }
         }
         return true;
     });
@@ -1002,12 +1012,9 @@ void Impl::onInput(InputEvent& event) {
     });
 }
 
-void NodeEditor::addNode(NodeDesc desc) {
-    auto p = std::make_unique<Node>(std::move(desc));
-    impl->model.add(std::move(p));
-}
+NodeEditorGraph* NodeEditor::model() const { return impl->model; }
 
-NodeEditorGraph const& NodeEditor::model() const { return impl->model; }
+void NodeEditor::setModel(NodeEditorGraph* model) { impl->model = model; }
 
 YAML::Node NodeEditor::serialize() const {
     YAML::Node root;
@@ -1710,12 +1717,14 @@ void Impl::display() {
     viewData.windowHovered =
         ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow) &&
         ImGui::GetCurrentWindow()->Rect().Contains(ImGui::GetMousePos());
-    for (auto* node: model.nodes()) {
-        displayLinks(*node);
-    }
-    displayDraggingLink();
-    for (auto* node: model.nodes()) {
-        displayNode(*node);
+    if (model) {
+        for (auto* node: model->nodes()) {
+            displayLinks(*node);
+        }
+        displayDraggingLink();
+        for (auto* node: model->nodes()) {
+            displayNode(*node);
+        }
     }
     backgroundBehaviour();
     drawOverlays();
@@ -1782,10 +1791,17 @@ void Impl::drawOverlays() {
     ImGui::EndChild();
 }
 
-void Impl::orderFront(Node* node) { model.orderFront(node); }
+void Impl::orderFront(Node* node) {
+    if (model) {
+        model->orderFront(node);
+    }
+}
 
 void Impl::deleteSelected() {
+    if (!model) {
+        return;
+    }
     auto pred = [&](Node const& node) { return selection.contains(&node); };
-    model.deleteIf(pred);
+    model->deleteIf(pred);
     selection.clear();
 }

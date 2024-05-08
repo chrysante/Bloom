@@ -105,6 +105,10 @@ public:
     /// Converts the point \p p from view coordinates into screen coordinates
     vml::float2 viewSpaceToScreenSpace(vml::float2 p) const;
 
+    /// Can be used to send data to derived views without knowing their type.
+    /// Unexpected data will be ignored
+    void openData(std::any data) { doOpenData(std::move(data)); }
+
     struct BackendImpl;
 
 protected:
@@ -139,6 +143,9 @@ private:
 
     /// Callback to deserialize derived view data
     virtual void deserialize(YAML::Node) {}
+
+    /// Callback to receive data
+    virtual void doOpenData(std::any){};
 
     friend class ViewRegistryEntry;
     friend class ViewManager;

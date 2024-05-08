@@ -75,6 +75,7 @@ struct RenderGraphEditor: View {
     void backgroundContextMenu(float2 position);
 
     RenderGraph* renderGraph;
+    NodeEditorGraph model;
     NodeEditor nodeEditor;
     CompilationStatus compilationStatus = CompilationStatus::None;
 };
@@ -363,6 +364,7 @@ static char const* compStatusMessage(CompilationStatus status) {
 
 RenderGraphEditor::RenderGraphEditor(): nodeEditor(commandPaletteWrite()) {
     nodeEditor.setDelegate(std::make_unique<Delegate>(this));
+    nodeEditor.setModel(&model);
     auto& cmd = commandPaletteWrite();
     auto* compileCmd = cmd.add("Compile", { Key::B, ModFlags::Control },
                                [this] { compile(); });
@@ -390,7 +392,7 @@ YAML::Node RenderGraphEditor::serialize() const {
     /// We use these functions to serialize our graph for now. This is not
     /// really correct, these functions should only serialize view related data,
     /// we will change this in the future
-    root["Model"] = nodeEditor.model().serialize();
+    root["Model"] = model.serialize();
     return root;
 }
 
@@ -399,9 +401,7 @@ void RenderGraphEditor::deserialize(YAML::Node root) {
         return;
     }
     nodeEditor.deserialize(root["NodeEditor"]);
-    NodeEditorGraph graph;
-    graph.deserialize(root["Model"], RenderGraphNodeController::deserialize);
-    nodeEditor.setGraph(std::move(graph));
+    model.deserialize(root["Model"], RenderGraphNodeController::deserialize);
 }
 
 void RenderGraphEditor::compile() {
@@ -409,7 +409,7 @@ void RenderGraphEditor::compile() {
 }
 
 void RenderGraphEditor::doCompile() {
-    auto rg = constructRenderGraph(editor().device(), nodeEditor.model());
+    auto rg = constructRenderGraph(editor().device(), model);
     if (rg) {
         compilationStatus = CompilationStatus::Success;
     }
@@ -421,14 +421,14 @@ void RenderGraphEditor::doCompile() {
 
 void RenderGraphEditor::backgroundContextMenu(float2 position) {
     if (ImGui::MenuItem("Input")) {
-        nodeEditor.addNode(GlobalInputNodeController::MakeDesc(position));
+        model.addNode(GlobalInputNodeController::MakeDesc(position));
     }
     if (ImGui::MenuItem("Output")) {
-        nodeEditor.addNode(GlobalOutputNodeController::MakeDesc(position));
+        model.addNode(GlobalOutputNodeController::MakeDesc(position));
     }
     for (auto& entry: PassRegistry::entries()) {
         if (ImGui::MenuItem(entry.name.c_str())) {
-            nodeEditor.addNode(PassNodeController::MakeDesc(position, entry));
+            model.addNode(PassNodeController::MakeDesc(position, entry));
         }
     }
 }

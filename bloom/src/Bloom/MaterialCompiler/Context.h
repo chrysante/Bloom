@@ -8,7 +8,7 @@
 
 #include "Bloom/MaterialCompiler/Fwd.h"
 
-namespace bloom::matgraph {
+namespace bloom::matc {
 
 class Context {
 public:
@@ -30,6 +30,6 @@ private:
     std::unique_ptr<Impl> impl;
 };
 
-} // namespace bloom::matgraph
+} // namespace bloom::matc
 
 #endif // BLOOM_GRAPHICS_MATERIAL_CONTEXT_H

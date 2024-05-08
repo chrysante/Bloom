@@ -15,7 +15,7 @@
 using namespace poppy;
 using namespace bloom;
 using namespace nodeEditor;
-using namespace matgraph;
+using namespace matc;
 using namespace vml::short_types;
 using namespace ranges::views;
 
@@ -40,7 +40,8 @@ struct MaterialNodeController: NodeController {
         }
     };
 
-    virtual Value* createGraphNode(MaterialGraph& graph) const = 0;
+    virtual Value* createGraphNode(Context& ctx,
+                                   MaterialGraph& graph) const = 0;
 
     virtual void linkGraphNode(ValueMap const& map) const {
         auto* user = map.get<User>(node());
@@ -91,8 +92,7 @@ struct OutputNodeController: MaterialNodeController {
         };
     }
 
-    Value* createGraphNode(MaterialGraph& graph) const override {
-        auto& ctx = graph.context();
+    Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
         auto* type = ctx.aggregateType(std::array<Type const*, 4>{
             ctx.float3Type(),
             ctx.floatType(),
@@ -133,10 +133,9 @@ struct ConstantController: MaterialNodeController {
         };
     }
 
-    Value* createGraphNode(MaterialGraph& graph) const override {
+    Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
         BL_ASSERT(dataType == DataType::Float, "Other cases not implemented");
-        return graph.addValue(
-            allocate<FloatConstant>(graph.context(), value.x));
+        return graph.addValue(allocate<FloatConstant>(ctx, value.x));
     }
 
     bool alwaysDisplayInputNames() const override { return false; }
@@ -183,7 +182,7 @@ struct ArithmeticNodeController: MaterialNodeController {
                    .userType = (PinUserType)DataType::Float } };
     }
 
-    Value* createGraphNode(MaterialGraph&) const override {
+    Value* createGraphNode(Context&, MaterialGraph&) const override {
         BL_UNIMPLEMENTED();
     }
 
@@ -241,7 +240,7 @@ struct TextureSamplerController: MaterialNodeController {
         };
     }
 
-    Value* createGraphNode(MaterialGraph&) const override {
+    Value* createGraphNode(Context&, MaterialGraph&) const override {
         BL_UNIMPLEMENTED();
     }
 
@@ -396,11 +395,12 @@ static MaterialNodeController* getController(Node* node) {
 void MaterialEditor::compile() {
     auto* model = getModel(material.get());
     BL_ASSERT(model);
+    Context ctx;
     MaterialGraph graph;
     MaterialNodeController::ValueMap map;
     for (auto* node: model->nodes()) {
         auto* controller = getController(node);
-        auto* value = controller->createGraphNode(graph);
+        auto* value = controller->createGraphNode(ctx, graph);
         map[node] = value;
     }
     for (auto* node: model->nodes()) {

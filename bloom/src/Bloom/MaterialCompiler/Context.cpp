@@ -8,7 +8,7 @@
 #include "Bloom/MaterialCompiler/Types.h"
 
 using namespace bloom;
-using namespace matgraph;
+using namespace matc;
 
 using Impl = Context::Impl;
 

@@ -16,16 +16,10 @@
 #include "Bloom/MaterialCompiler/Types.h"
 #include "Bloom/MaterialCompiler/Values.h"
 
-namespace bloom::matgraph {
-
-struct MaterialCodeGenOptions {
-    std::string declarations;
-};
+namespace bloom::matc {
 
 class MaterialGraph {
 public:
-    Context& context() { return ctx; }
-
     template <std::derived_from<Value> T>
     T* setRoot(DynUniquePtr<T> value) {
         assert(!_root);
@@ -44,15 +38,16 @@ public:
 
     Value* root() const { return _root; }
 
-    std::optional<std::string> generateCode(
-        MaterialCodeGenOptions const& options);
+    auto values() const {
+        return _values | ranges::views::transform(
+                             [](auto& p) -> auto const* { return p.get(); });
+    }
 
 private:
-    Context ctx;
     std::vector<DynUniquePtr<Value>> _values;
     Value* _root = nullptr;
 };
 
-} // namespace bloom::matgraph
+} // namespace bloom::matc
 
 #endif // BLOOM_GRAPHICS_MATERIAL_MATERIALGRAPH_H

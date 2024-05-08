@@ -18,6 +18,8 @@ target_link_libraries(matc
 )
 
 set(matc_sources
+  src/Bloom/MaterialCompiler/CodeGen.cpp
+  src/Bloom/MaterialCompiler/CodeGen.h
   src/Bloom/MaterialCompiler/Context.cpp
   src/Bloom/MaterialCompiler/Context.h
   src/Bloom/MaterialCompiler/Fwd.h

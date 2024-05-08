@@ -7,7 +7,7 @@
 
 #include "Bloom/MaterialCompiler/Fwd.h"
 
-namespace bloom::matgraph {
+namespace bloom::matc {
 
 class Type {
 public:
@@ -60,6 +60,6 @@ private:
     std::vector<Type const*> _elements;
 };
 
-} // namespace bloom::matgraph
+} // namespace bloom::matc
 
 #endif // BLOOM_GRAPHICS_MATERIAL_TYPES_H

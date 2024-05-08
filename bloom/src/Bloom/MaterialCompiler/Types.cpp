@@ -3,7 +3,7 @@
 #include <sstream>
 
 using namespace bloom;
-using namespace matgraph;
+using namespace matc;
 
 std::string AggregateType::makeName(std::span<Type const*> elements) {
     std::stringstream sstr;

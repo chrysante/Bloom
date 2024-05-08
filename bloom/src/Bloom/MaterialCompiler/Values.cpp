@@ -7,7 +7,7 @@
 #include "Bloom/MaterialCompiler/Types.h"
 
 using namespace bloom;
-using namespace matgraph;
+using namespace matc;
 using namespace ranges::views;
 
 FloatConstant::FloatConstant(Context& ctx, float value):
@@ -17,7 +17,8 @@ Float3Constant::Float3Constant(Context& ctx, vml::float3 value):
     Constant(ValueNodeType::Float3Constant, ctx.float3Type()), _value(value) {}
 
 Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
-    assert(false);
+    assert(lhs == rhs);
+    return lhs;
 }
 
 AggregateBuilder::AggregateBuilder(Context& ctx, std::vector<Value*> values):

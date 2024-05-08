@@ -3,7 +3,7 @@
 
 #include "Bloom/Core/Dyncast.h"
 
-namespace bloom::matgraph {
+namespace bloom::matc {
 
 class MaterialGraph;
 class Context;
@@ -28,18 +28,16 @@ enum class ValueNodeType {
 
 using NoParent = void;
 
-} // namespace bloom::matgraph
+} // namespace bloom::matc
 
 #define BL_MATGRAPH_TYPE(Name, Parent, Corporeality)                           \
-    UTL_DYNCAST_DEFINE(bloom::matgraph::Name,                                  \
-                       bloom::matgraph::TypeCategory::Name,                    \
-                       bloom::matgraph::Parent, Corporeality)
+    UTL_DYNCAST_DEFINE(bloom::matc::Name, bloom::matc::TypeCategory::Name,     \
+                       bloom::matc::Parent, Corporeality)
 #include "Bloom/MaterialCompiler/Lists.def"
 
 #define BL_MATGRAPH_VALUE(Name, Parent, Corporeality)                          \
-    UTL_DYNCAST_DEFINE(bloom::matgraph::Name,                                  \
-                       bloom::matgraph::ValueNodeType::Name,                   \
-                       bloom::matgraph::Parent, Corporeality)
+    UTL_DYNCAST_DEFINE(bloom::matc::Name, bloom::matc::ValueNodeType::Name,    \
+                       bloom::matc::Parent, Corporeality)
 #include "Bloom/MaterialCompiler/Lists.def"
 
 #endif // BLOOM_GRAPHICS_MATERIAL_FWD_H

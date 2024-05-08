@@ -8,7 +8,7 @@
 #include "Bloom/Core/Debug.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
 
-namespace bloom::matgraph {
+namespace bloom::matc {
 
 class Value {
 public:
@@ -104,6 +104,6 @@ public:
     explicit AggregateBuilder(AggregateType const* type);
 };
 
-} // namespace bloom::matgraph
+} // namespace bloom::matc
 
 #endif // BLOOM_GRAPHICS_MATERIAL_VALUES_H

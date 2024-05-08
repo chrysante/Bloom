@@ -4,14 +4,12 @@
 #include <filesystem>
 #include <type_traits>
 
+#include <magic_enum.hpp>
 #include <utl/UUID.hpp>
 #include <utl/common.hpp>
 #include <vml/vml.hpp>
 #include <yaml-cpp/yaml.h>
 
-namespace YAML {
-
-/// MARK: vml::complex
 template <typename T>
 struct YAML::convert<vml::complex<T>> {
     static Node encode(vml::complex<T> const& z) {
@@ -23,7 +21,6 @@ struct YAML::convert<vml::complex<T>> {
     }
 };
 
-/// MARK: vml::quaternion
 template <typename T>
 struct YAML::convert<vml::quaternion<T>> {
     static Node encode(vml::quaternion<T> const& z) {
@@ -35,7 +32,6 @@ struct YAML::convert<vml::quaternion<T>> {
     }
 };
 
-/// MARK: vml::vector
 template <typename T, std::size_t Size, vml::vector_options O>
 struct YAML::convert<vml::vector<T, Size, O>> {
     static Node encode(vml::vector<T, Size, O> const& v) {
@@ -56,7 +52,6 @@ struct YAML::convert<vml::vector<T, Size, O>> {
     }
 };
 
-/// MARK: vml::matrix
 template <typename T, std::size_t Rows, std::size_t Columns,
           vml::vector_options O>
 struct YAML::convert<vml::matrix<T, Rows, Columns, O>> {
@@ -79,7 +74,6 @@ struct YAML::convert<vml::matrix<T, Rows, Columns, O>> {
     }
 };
 
-/// MARK: utl::uuid
 template <>
 struct YAML::convert<utl::uuid> {
     static Node encode(utl::uuid const& id) {
@@ -94,7 +88,6 @@ struct YAML::convert<utl::uuid> {
     }
 };
 
-/// MARK: std::filesystem::path
 template <>
 struct YAML::convert<std::filesystem::path> {
     static Node encode(std::filesystem::path const& path) {
@@ -109,22 +102,22 @@ struct YAML::convert<std::filesystem::path> {
     }
 };
 
-/// MARK: Enums
 template <typename E>
     requires(std::is_enum_v<E>)
 struct YAML::convert<E> {
-    static Node encode(E const& e) {
+    static Node encode(E e) {
         Node node;
-        node = utl::to_underlying(e);
+        node = magic_enum::enum_name(e);
         return node;
     }
 
     static bool decode(Node const& node, E& e) {
-        e = (E)node.as<std::underlying_type_t<E>>();
-        return true;
+        if (auto value = magic_enum::enum_cast<E>(node.as<std::string>())) {
+            e = *value;
+            return true;
+        }
+        return false;
     }
 };
-
-} // namespace YAML
 
 #endif // BLOOM_CORE_YAML_H

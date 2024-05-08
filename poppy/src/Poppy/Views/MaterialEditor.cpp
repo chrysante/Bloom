@@ -1,5 +1,6 @@
 #include <vector>
 
+#include <magic_enum.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Yaml.h"
@@ -25,118 +26,6 @@ enum class DataType { Float, Float2, Float3, Float4, Texture };
 enum class NodeType { Output, Constant, Arithmetic, TextureSampler };
 
 enum class ArithmeticOp { Add, Sub, Mul, Div, LAST = Div };
-
-} // namespace
-
-template <>
-struct YAML::convert<DataType> {
-    static Node encode(DataType type) {
-        Node node;
-        node = std::array{ "Float", "Float2", "Float3", "Float4",
-                           "Texture" }[(size_t)type];
-        return node;
-    }
-
-    static bool decode(Node const& node, DataType& type) {
-        auto text = node.as<std::string>();
-        if (text == "Float") {
-            type = DataType::Float;
-            return true;
-        }
-        if (text == "Float2") {
-            type = DataType::Float2;
-            return true;
-        }
-        if (text == "Float3") {
-            type = DataType::Float3;
-            return true;
-        }
-        if (text == "Float4") {
-            type = DataType::Float4;
-            return true;
-        }
-        if (text == "Texture") {
-            type = DataType::Texture;
-            return true;
-        }
-        return false;
-    }
-};
-
-template <>
-struct YAML::convert<::NodeType> {
-    static Node encode(::NodeType type) {
-        Node node;
-        node = std::array{ "Output", "Constant", "Arithmetic",
-                           "TextureSampler" }[(size_t)type];
-        return node;
-    }
-
-    static bool decode(Node const& node, ::NodeType& type) {
-        auto text = node.as<std::string>();
-        if (text == "Output") {
-            type = ::NodeType::Output;
-            return true;
-        }
-        if (text == "Constant") {
-            type = ::NodeType::Constant;
-            return true;
-        }
-        if (text == "Arithmetic") {
-            type = ::NodeType::Arithmetic;
-            return true;
-        }
-        if (text == "TextureSampler") {
-            type = ::NodeType::TextureSampler;
-            return true;
-        }
-        if (text == "Output") {
-            type = ::NodeType::Output;
-            return true;
-        }
-        if (text == "Arithmetic") {
-            type = ::NodeType::Arithmetic;
-            return true;
-        }
-        return false;
-    }
-};
-
-static std::string toString(ArithmeticOp op) {
-    return std::array{ "Add", "Sub", "Mul", "Div" }[(size_t)op];
-}
-
-template <>
-struct YAML::convert<ArithmeticOp> {
-    static Node encode(ArithmeticOp op) {
-        Node node;
-        node = toString(op);
-        return node;
-    }
-
-    static bool decode(Node const& node, ArithmeticOp& op) {
-        auto text = node.as<std::string>();
-        if (text == "Add") {
-            op = ArithmeticOp::Add;
-            return true;
-        }
-        if (text == "Sub") {
-            op = ArithmeticOp::Sub;
-            return true;
-        }
-        if (text == "Mul") {
-            op = ArithmeticOp::Mul;
-            return true;
-        }
-        if (text == "Div") {
-            op = ArithmeticOp::Div;
-            return true;
-        }
-        return false;
-    }
-};
-
-namespace {
 
 struct MaterialNodeController: NodeController {
     struct ValueMap: utl::hashmap<Node*, Value*> {
@@ -262,7 +151,7 @@ struct ConstantController: MaterialNodeController {
 
 struct ArithmeticNodeController: MaterialNodeController {
     static NodeDesc Make(ArithmeticOp op, float2 position) {
-        return { .name = toString(op),
+        return { .name = std::string(magic_enum::enum_name(op)),
                  .position = position,
                  .controller = std::make_unique<ArithmeticNodeController>(op) };
     }
@@ -445,7 +334,8 @@ struct Delegate: NodeEditorDelegate {
         }
         for (size_t i = 0; i < EnumCount<ArithmeticOp>; ++i) {
             auto op = (ArithmeticOp)i;
-            if (ImGui::MenuItem(toString(op).c_str())) {
+            if (ImGui::MenuItem(std::string(magic_enum::enum_name(op)).c_str()))
+            {
                 model->addNode(ArithmeticNodeController::Make(op, position));
             }
         }

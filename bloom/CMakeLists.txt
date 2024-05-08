@@ -26,6 +26,7 @@ target_link_libraries(bloom
     utility
     yaml-cpp
     termfmt
+    magic_enum
     "-framework AppKit"
     "-framework Metal"
     "-framework IOKit"

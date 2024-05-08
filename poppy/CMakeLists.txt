@@ -22,6 +22,7 @@ target_link_libraries(poppy
     imgui
     ImGuizmo
     scatha
+    magic_enum
     "-framework AppKit"
     "-framework Metal"
     "-framework GameController"

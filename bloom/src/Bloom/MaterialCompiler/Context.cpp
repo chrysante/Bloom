@@ -1,11 +1,11 @@
-#include "Bloom/Graphics/Material/Context.h"
+#include "Bloom/MaterialCompiler/Context.h"
 
 #include <range/v3/algorithm.hpp>
 #include <utl/hash.hpp>
 #include <utl/vector.hpp>
 
 #include "Bloom/Core/Ranges.h"
-#include "Bloom/Graphics/Material/Types.h"
+#include "Bloom/MaterialCompiler/Types.h"
 
 using namespace bloom;
 using namespace matgraph;

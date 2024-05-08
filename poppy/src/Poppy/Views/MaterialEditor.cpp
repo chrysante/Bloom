@@ -4,9 +4,9 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Yaml.h"
-#include "Bloom/Graphics/Material/Context.h"
 #include "Bloom/Graphics/Material/Material.h"
-#include "Bloom/Graphics/Material/MaterialGraph.h"
+#include "Bloom/MaterialCompiler/Context.h"
+#include "Bloom/MaterialCompiler/MaterialGraph.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"

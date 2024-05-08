@@ -6,7 +6,7 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Debug.h"
-#include "Bloom/Graphics/Material/Fwd.h"
+#include "Bloom/MaterialCompiler/Fwd.h"
 
 namespace bloom::matgraph {
 
@@ -59,12 +59,12 @@ public:
     size_t numOperands() const { return operands().size(); }
 
     Value* operand(size_t index) const {
-        BL_ASSERT(index < _operands.size());
+        assert(index < _operands.size());
         return _operands[index];
     }
 
     void setOperand(size_t index, Value* value) {
-        BL_ASSERT(index < _operands.size());
+        assert(index < _operands.size());
         _operands[index] = value;
     }
 

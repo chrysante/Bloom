@@ -1,7 +1,6 @@
 #include "Bloom/Graphics/Material/Material.h"
 
 #include "Bloom/GPU/HardwareDevice.h"
-#include "Bloom/Graphics/Material/MaterialGraph.h"
 
 using namespace bloom;
 

@@ -16,6 +16,7 @@ target_include_directories(poppy
 target_link_libraries(poppy
   PRIVATE
     bloom
+    matc
     utility
     vml
     yaml-cpp

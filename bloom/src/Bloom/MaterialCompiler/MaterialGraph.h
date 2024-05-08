@@ -12,9 +12,9 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Ranges.h"
-#include "Bloom/Graphics/Material/Context.h"
-#include "Bloom/Graphics/Material/Types.h"
-#include "Bloom/Graphics/Material/Values.h"
+#include "Bloom/MaterialCompiler/Context.h"
+#include "Bloom/MaterialCompiler/Types.h"
+#include "Bloom/MaterialCompiler/Values.h"
 
 namespace bloom::matgraph {
 
@@ -28,7 +28,7 @@ public:
 
     template <std::derived_from<Value> T>
     T* setRoot(DynUniquePtr<T> value) {
-        BL_EXPECT(!_root);
+        assert(!_root);
         auto* result = addValue(std::move(value));
         _root = result;
         return result;

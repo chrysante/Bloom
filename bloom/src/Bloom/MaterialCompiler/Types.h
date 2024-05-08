@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "Bloom/Graphics/Material/Fwd.h"
+#include "Bloom/MaterialCompiler/Fwd.h"
 
 namespace bloom::matgraph {
 

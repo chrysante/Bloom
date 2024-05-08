@@ -1,4 +1,4 @@
-#include "Bloom/Graphics/Material/Types.h"
+#include "Bloom/MaterialCompiler//Types.h"
 
 #include <sstream>
 

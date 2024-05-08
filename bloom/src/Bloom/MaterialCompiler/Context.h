@@ -6,7 +6,7 @@
 
 #include <utl/hashtable.hpp>
 
-#include "Bloom/Graphics/Material/Fwd.h"
+#include "Bloom/MaterialCompiler/Fwd.h"
 
 namespace bloom::matgraph {
 

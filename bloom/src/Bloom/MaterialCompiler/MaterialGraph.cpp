@@ -1,4 +1,4 @@
-#include "Bloom/Graphics/Material/MaterialGraph.h"
+#include "Bloom/MaterialCompiler/MaterialGraph.h"
 
 using namespace bloom;
 using namespace matgraph;

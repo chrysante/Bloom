@@ -1,3 +1,4 @@
+include(MaterialCompiler.cmake)
 include(SourceFiles.cmake)
 
 # bloom

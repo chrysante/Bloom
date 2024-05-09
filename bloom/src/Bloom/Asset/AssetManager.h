@@ -81,6 +81,10 @@ public:
     /// \Param handle Handle to the asset to be deleted
     void deleteAsset(AssetHandle handle);
 
+    /// \Returns the handle of the asset with name \p name or a null handle if
+    /// it does not exist
+    AssetHandle findAsset(std::string_view name);
+
     /// Retrieves an asset from an AssetHandle. Does not load the asset into
     /// memory. Use `makeAvailable()` to load the asset into memory.
     ///

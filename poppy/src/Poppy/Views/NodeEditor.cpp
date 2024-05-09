@@ -126,10 +126,9 @@ static NodeEditorStyleColors const& styleColors() {
 static NodeEditorStyleVars const& styleVars() { return style.vars; }
 
 /// Derived properties
-static float2 NodeBodyPadding() {
-    return vml::max(styleVars().MinNodeBodyPadding,
-                    float2(styleVars().PinAreaSize + styleVars().PinInset, 0));
-}
+
+///
+static float2 NodeBodyPadding() { return styleVars().MinNodeBodyPadding; }
 
 static float2 NodeOuterPadding() {
     return vml::max(float2(1), float2(-styleVars().PinInset, 0));
@@ -1421,13 +1420,22 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
     ImGui::PopID();
 }
 
-static float2 computeNodeMinSize(Node const& node, float2 bodyPadding) {
+static float2 computeNodeMinSize(Node const& node) {
+    float2 bodyPadding = NodeBodyPadding();
+
     float pinHeight = styleVars().PinAreaSize *
                       std::max(node.inputs().size(), node.outputs().size());
-    return vml::max(node.desc().minSize, node.layoutData().minSize,
-                    float2(0, pinHeight + styleVars().NodeBodyTitleHeight +
-                                  bodyPadding.y)) +
-           2 * bodyPadding + float2(0, styleVars().NodeBodyBottomPadding);
+    float2 result =
+        vml::max(node.desc().minSize, node.layoutData().minSize,
+                 float2(0, pinHeight + styleVars().NodeBodyTitleHeight +
+                               bodyPadding.y));
+    result.y += styleVars().NodeBodyBottomPadding + 2 * bodyPadding.y;
+    float leftInset = node.inputs().empty() ? bodyPadding.x :
+                                              styleVars().PinAreaSize;
+    float rightInset = node.outputs().empty() ? bodyPadding.x :
+                                                styleVars().PinAreaSize;
+    result.x += leftInset + rightInset;
+    return result;
 }
 
 static bool alwaysDisplayInputNames(Node const& node) {
@@ -1552,9 +1560,18 @@ static ImRect drawNodeBody(Node const& node, float zoom, bool selected) {
                 labelEnd);
     ImGui::PopClipRect();
     ImGui::PopFont();
+
     float2 contentRectMin =
         pos + (bodyPadding + float2(0, labelSize.y + 2 * bodyPadding.y));
     float2 contentRectMax = pos + scaledSize - bodyPadding;
+    if (!node.inputs().empty()) {
+        contentRectMin.x =
+            contentRectMin.x - bodyPadding.x + styleVars().PinAreaSize * zoom;
+    }
+    if (!node.outputs().empty()) {
+        contentRectMax.x =
+            contentRectMax.x + bodyPadding.x - styleVars().PinAreaSize * zoom;
+    }
     return ImRect(contentRectMin, contentRectMax);
 }
 
@@ -1604,7 +1621,7 @@ static void displayNodeResizeGrip(ViewData& viewData, Node& node) {
     bool dragging = viewData.activeResize == &node &&
                     ImGui::IsMouseDown(ImGuiMouseButton_Left);
     if (dragging) {
-        float2 minSize = computeNodeMinSize(node, NodeBodyPadding());
+        float2 minSize = computeNodeMinSize(node);
         viewData.resizeSize += ImGui::GetIO().MouseDelta;
         float2 newSize = vml::max(viewData.resizeSize / viewData.zoom, minSize);
         node.setSize(newSize);
@@ -1713,11 +1730,10 @@ void Impl::displayNodeBody(Node& node) {
 
 void Impl::displayNode(Node& node) {
     if (node.desc().resizable) {
-        node.setSize(
-            vml::max(node.size(), computeNodeMinSize(node, NodeBodyPadding())));
+        node.setSize(vml::max(node.size(), computeNodeMinSize(node)));
     }
     else {
-        node.setSize(computeNodeMinSize(node, NodeBodyPadding()));
+        node.setSize(computeNodeMinSize(node));
     }
     ImGui::PushID(&node);
     displayNodeBody(node);

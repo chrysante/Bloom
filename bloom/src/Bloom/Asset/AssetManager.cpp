@@ -557,6 +557,12 @@ void AssetManager::deleteAsset(AssetHandle handle) {
     impl->writeRegistryToDisk();
 }
 
+AssetHandle AssetManager::findAsset(std::string_view name) {
+    auto entries = impl->assets | values;
+    auto itr = ranges::find(entries, name, &RegistryEntry::name);
+    return itr != entries.end() ? itr->handle : AssetHandle{};
+}
+
 Reference<Asset> AssetManager::get(AssetHandle handle) {
     auto itr = impl->assets.find(handle.ID());
     if (itr == impl->assets.end()) {

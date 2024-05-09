@@ -24,6 +24,10 @@ using namespace ranges::views;
 
 namespace {
 
+static constexpr std::array<float4, 3> PinChannelColors = {
+    { { 1, 0, 0, 1 }, { .4, .9, .3, 1 }, { 0, 0.5, 1, 1 } }
+};
+
 enum class DataType { Float, Float2, Float3, Float4, Texture };
 
 enum class NodeType { Output, Constant, Arithmetic, TextureSampler };
@@ -120,22 +124,32 @@ struct OutputNodeController: MaterialNodeController {
 struct ConstantController: MaterialNodeController {
     static NodeDesc Make(float2 position, DataType dataType) {
         using enum DataType;
-        auto minSize = [&]() -> float2 {
-            if (dataType == Float || dataType == Float2) {
-                return { 100, 50 };
-            }
-            if (dataType == Float3 || dataType == Float4) {
-                return { 200, 200 };
-            }
-            return { 200, 200 };
-        }();
-        return { .name =
-                     utl::strcat(magic_enum::enum_name(dataType), " Constant"),
-                 .position = position,
-                 .minSize = minSize,
-                 .resizable = dataType == Float3 || dataType == Float4 ||
-                              dataType == Texture,
-                 .controller = std::make_unique<ConstantController>(dataType) };
+        NodeDesc desc = {
+            .name = utl::strcat(magic_enum::enum_name(dataType), " Constant"),
+            .position = position,
+            .controller = std::make_unique<ConstantController>(dataType)
+        };
+        switch (dataType) {
+        case Float:
+            desc.minSize = { 100, 50 };
+            break;
+        case Float2:
+            desc.minSize = { 100, 50 };
+            break;
+        case Float3:
+            desc.minSize = { 200, 200 };
+            desc.resizable = true;
+            break;
+        case Float4:
+            desc.minSize = { 200, 200 };
+            desc.resizable = true;
+            break;
+        case Texture:
+            desc.minSize = { 200, 200 };
+            desc.resizable = true;
+            break;
+        }
+        return desc;
     }
 
     explicit ConstantController(DataType dataType): dataType(dataType) {}
@@ -154,9 +168,56 @@ struct ConstantController: MaterialNodeController {
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
-        return {
-            { .name = "Value", .userType = (PinUserType)dataType },
-        };
+        using enum DataType;
+        switch (dataType) {
+        case Float:
+            return {
+                { .name = "Value", .userType = (PinUserType)Float },
+            };
+        case Float2:
+            return {
+                { .name = "Value", .userType = (PinUserType)Float2 },
+                { .name = "Red",
+                  .userType = (PinUserType)Float,
+                  .color = PinChannelColors[0] },
+                { .name = "Green",
+                  .userType = (PinUserType)Float,
+                  .color = PinChannelColors[1] },
+            };
+        case Float3:
+            return {
+                { .name = "Value", .userType = (PinUserType)Float3 },
+                { .name = "Red",
+                  .userType = (PinUserType)Float,
+                  .color = PinChannelColors[0] },
+                { .name = "Green",
+                  .userType = (PinUserType)Float,
+                  .color = PinChannelColors[1] },
+                { .name = "Blue",
+                  .userType = (PinUserType)Float,
+                  .color = PinChannelColors[2] },
+            };
+        case Float4:
+            return {
+                { .name = "Value", .userType = (PinUserType)Float3 },
+                { .name = "Red",
+                  .userType = (PinUserType)Float,
+                  .color = PinChannelColors[0] },
+                { .name = "Green",
+                  .userType = (PinUserType)Float,
+                  .color = PinChannelColors[1] },
+                { .name = "Blue",
+                  .userType = (PinUserType)Float,
+                  .color = PinChannelColors[2] },
+                { .name = "Alpha",
+                  .userType = (PinUserType)Float,
+                  .flags = PinFlags::Optional },
+            };
+        case Texture:
+            return {
+                { .name = "Texture", .userType = (PinUserType)Texture },
+            };
+        }
     }
 
     Value* createGraphNode(Context& ctx, MaterialGraph&) const override {
@@ -175,18 +236,23 @@ struct ConstantController: MaterialNodeController {
             ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoLabel |
             ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder |
             ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoOptions;
-        ImGui::SetNextItemWidth(-FLT_MIN);
         switch (dataType) {
         case DataType::Float:
-            ImGui::DragFloat("###Value", &value.x, 0.001, 0.0f, 0.0f, "%.3f");
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::DragFloat("###Value", &value.x);
             break;
         case DataType::Float2:
-            ImGui::DragFloat2("###Value", value.data());
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::DragFloat("###ValueR", &value.x);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::DragFloat("###ValueG", &value.y);
             break;
         case DataType::Float3:
+            ImGui::SetNextItemWidth(-FLT_MIN);
             ImGui::ColorPicker3("###Value", value.data(), colFlags);
             break;
         case DataType::Float4:
+            ImGui::SetNextItemWidth(-FLT_MIN);
             ImGui::ColorPicker4("###Value", value.data(), colFlags);
             break;
         case DataType::Texture:
@@ -265,15 +331,15 @@ struct TextureSamplerController: MaterialNodeController {
                  { .name = "Red",
                    .flags = PinFlags::Optional,
                    .userType = (PinUserType)DataType::Float,
-                   .color = float4{ 1, 0, 0, 1 } },
+                   .color = PinChannelColors[0] },
                  { .name = "Green",
                    .flags = PinFlags::Optional,
                    .userType = (PinUserType)DataType::Float,
-                   .color = float4{ 0, 1, 0, 1 } },
+                   .color = PinChannelColors[1] },
                  { .name = "Blue",
                    .flags = PinFlags::Optional,
                    .userType = (PinUserType)DataType::Float,
-                   .color = float4{ 0, 0.5, 1, 1 } },
+                   .color = PinChannelColors[2] },
                  { .name = "Alpha",
                    .flags = PinFlags::Optional,
                    .userType = (PinUserType)DataType::Float } };

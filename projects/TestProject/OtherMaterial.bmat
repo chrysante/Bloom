@@ -1,24 +1,4 @@
 Nodes:
-  - ID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
-    Name: Float3 Constant
-    MinSize:
-      - 200
-      - 200
-    Position:
-      - 1803.42822
-      - -776.403564
-    Resizable: true
-    Size:
-      - 240
-      - 295
-    Controller:
-      Type: Constant
-      DataType: Float3
-      Value:
-        - 0.334291369
-        - 0.819767475
-        - 0.247836694
-        - 0.5
   - ID: d0fca01d c9fd5869 d7ee52a4 f818ad8a
     Name: Float Constant
     MinSize:
@@ -32,7 +12,7 @@ Nodes:
       Type: Constant
       DataType: Float
       Value:
-        - 1.48899996
+        - 1
         - 0.5
         - 0.5
         - 0.5
@@ -64,6 +44,43 @@ Nodes:
     Resizable: false
     Controller:
       Type: Output
+  - ID: ce44ecb4 1bdd61d8 f4ef946c 49eccf64
+    Name: Float2 Constant
+    MinSize:
+      - 100
+      - 50
+    Position:
+      - 1822.42822
+      - -177.403564
+    Resizable: false
+    Controller:
+      Type: Constant
+      DataType: Float2
+      Value:
+        - 0.5
+        - 0.5
+        - 0.5
+        - 0.5
+  - ID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
+    Name: Float3 Constant
+    MinSize:
+      - 200
+      - 200
+    Position:
+      - 1803.42822
+      - -776.403564
+    Resizable: true
+    Size:
+      - 225
+      - 299
+    Controller:
+      Type: Constant
+      DataType: Float3
+      Value:
+        - 0.334291369
+        - 0.819767475
+        - 0.247836694
+        - 0.5
 Links:
   - FromID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
     FromIndex: 0

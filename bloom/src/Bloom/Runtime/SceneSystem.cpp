@@ -20,6 +20,7 @@ void SceneSystem::doInit() {
 
 void SceneSystem::loadScene(Reference<Scene> scene) {
     auto* raw = scene.get();
+    BL_ASSERT(raw);
     auto [itr, success] =
         mScenes.insert({ scene->handle().ID(), std::move(scene) });
     if (!success) {

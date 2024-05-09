@@ -222,7 +222,7 @@ void View::displayToolbar() {
     if (!_toolbar) {
         return;
     }
-    float2 padding = { 6, 6 };
+    float2 padding = { 7, 7 };
     _toolbar->setPadding(padding);
     float posx = 0;
     ImGuiWindow* imWindow = (ImGuiWindow*)data.imguiWindow;
@@ -232,7 +232,7 @@ void View::displayToolbar() {
     /// assert that.
     bool docked = data.docked || !data.window;
     if (docked) {
-        _toolbar->setHeight(26);
+        _toolbar->setHeight(25);
     }
     else {
         posx += computeLeftInset(window());

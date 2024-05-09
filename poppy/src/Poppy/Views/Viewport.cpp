@@ -1,4 +1,5 @@
 #include <array>
+#include <cstdlib>
 #include <string>
 
 #include <imgui.h>
@@ -83,6 +84,7 @@ struct Viewport: View, BasicSceneInspector {
     void readInput();
     void acceptDragDrop();
     void receiveSceneDragDrop();
+    void openScene(AssetHandle handle);
     void onInput(bloom::InputEvent&) override;
     YAML::Node serialize() const override;
     void deserialize(YAML::Node) override;
@@ -125,6 +127,9 @@ Viewport::Viewport(): BasicSceneInspector(this) {
 void Viewport::init() {
     setPadding({ 0, 0 });
     setToolbar(makeToolbar());
+    if (auto* defaultScene = std::getenv("DEFAULT_SCENE")) {
+        openScene(assetManager().findAsset(defaultScene));
+    }
 }
 
 static EditorSceneRenderer& getSceneRenderer(RenderGraph* renderGraph) {
@@ -378,9 +383,17 @@ void Viewport::receiveSceneDragDrop() {
     if (!payload) {
         return;
     }
-    AssetHandle const handle = *payload;
+    openScene(*payload);
+}
+
+void Viewport::openScene(AssetHandle handle) {
     auto& AM = assetManager();
     auto asset = AM.get(handle);
+    auto scene = as<Scene>(asset);
+    if (!scene) {
+        Logger::Error("Cannot open scene. Asset is not a scene");
+        return;
+    }
     AM.makeAvailable(handle, AssetRepresentation::CPU);
     auto& sceneSystem = editor().coreSystems().sceneSystem();
     sceneSystem.unloadAll();
@@ -405,9 +418,12 @@ Toolbar Viewport::makeToolbar() {
         ToolbarDropdownMenu()
             .content([this] { dropdownMenu(); })
             .minWidth(400),
-
+        ToolbarTextItem()
+            .text([this] {
+                return scenes().empty() ? "" : scenes().front()->name().c_str();
+            })
+            .font(FontDesc::UIDefault().setWeight(FontWeight::Bold)),
         ToolbarSpacer{},
-
         ToolbarDropdownMenu()
             .content([this] {
                 enumCombo(drawOptions.mode);
@@ -425,7 +441,6 @@ Toolbar Viewport::makeToolbar() {
             .previewValue([this] {
                 return toString(gizmo.operation());
             }),
-
         ToolbarDropdownMenu()
             .content([this] {
                 auto space = gizmo.space();
@@ -445,9 +460,7 @@ Toolbar Viewport::makeToolbar() {
             .previewValue([this] {
                 return toString(cameraController.projection());
             }),
-
         ToolbarSpacer{},
-
         ToolbarIconButton([this] {
             return maximized() ? "resize-small" : "resize-full";
         })

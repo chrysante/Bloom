@@ -193,11 +193,12 @@ float ToolbarSpacer::calcWidth([[maybe_unused]] float height) const {
     return 0.0f;
 }
 
-void ToolbarTextItem::display(ToolbarStyle const& style) {
+void ToolbarTextItem::display(ToolbarStyle const&) {
     auto* font = FontManager::get(getFontDesc());
     auto* DL = ImGui::GetWindowDrawList();
     float2 pos = ImGui::GetCursorScreenPos();
-    pos.y += ImGui::GetStyle().FramePadding.y;
+    auto& style = ImGui::GetStyle();
+    pos.y += style.FramePadding.y;
     DL->AddText(font, 0.0f, pos, ImGui::GetColorU32(ImGuiCol_Text), getText());
 }
 

@@ -1,5 +1,5 @@
-#ifndef BLOOM_GRAPHICS_MATERIAL_FWD_H
-#define BLOOM_GRAPHICS_MATERIAL_FWD_H
+#ifndef BLOOM_MATERIALCOMPILER_FWD_H
+#define BLOOM_MATERIALCOMPILER_FWD_H
 
 #include "Bloom/Core/Dyncast.h"
 
@@ -40,4 +40,4 @@ using NoParent = void;
                        bloom::matc::Parent, Corporeality)
 #include "Bloom/MaterialCompiler/Lists.def"
 
-#endif // BLOOM_GRAPHICS_MATERIAL_FWD_H
+#endif // BLOOM_MATERIALCOMPILER_FWD_H

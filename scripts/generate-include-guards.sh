@@ -8,3 +8,4 @@ generate_dir() {
 generate_dir bloom/src bloom/src
 generate_dir bloom/test bloom/test
 generate_dir poppy/src poppy/src
+generate_dir poppy/resource poppy/resource/Shaders

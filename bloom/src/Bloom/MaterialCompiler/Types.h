@@ -1,5 +1,5 @@
-#ifndef BLOOM_GRAPHICS_MATERIAL_TYPES_H
-#define BLOOM_GRAPHICS_MATERIAL_TYPES_H
+#ifndef BLOOM_MATERIALCOMPILER_TYPES_H
+#define BLOOM_MATERIALCOMPILER_TYPES_H
 
 #include <span>
 #include <string>
@@ -48,4 +48,4 @@ private:
 
 } // namespace bloom::matc
 
-#endif // BLOOM_GRAPHICS_MATERIAL_TYPES_H
+#endif // BLOOM_MATERIALCOMPILER_TYPES_H

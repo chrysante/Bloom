@@ -83,12 +83,12 @@ set(poppy_sources
 )
 
 set(poppy_shader_sources
-  src/Poppy/Shaders/BloomShader.metal
-  src/Poppy/Shaders/PBRShader.h
-  src/Poppy/Shaders/PBRShader.metal
-  src/Poppy/Shaders/PCSSTest.metal
-  src/Poppy/Shaders/PostProcess.metal
-  src/Poppy/Shaders/ShadowPassShader.metal
-  src/Poppy/Shaders/EditorPasses.metal
-  src/Poppy/Shaders/MaterialShaders.metal
+  resource/Shaders/BloomShader.metal
+  resource/Shaders/PBRShader.h
+  resource/Shaders/PBRShader.metal
+  resource/Shaders/PCSSTest.metal
+  resource/Shaders/PostProcess.metal
+  resource/Shaders/ShadowPassShader.metal
+  resource/Shaders/EditorPasses.metal
+  resource/Shaders/MaterialShaders.metal
 )

@@ -1,5 +1,5 @@
-#ifndef CodeGen_hpp
-#define CodeGen_hpp
+#ifndef BLOOM_MATERIALCOMPILER_CODEGEN_H
+#define BLOOM_MATERIALCOMPILER_CODEGEN_H
 
 #include <memory>
 #include <string>
@@ -23,4 +23,4 @@ std::unique_ptr<CodeGenerator> makeCodeGenerator(Context const& ctx,
 
 } // namespace bloom::matc
 
-#endif /* CodeGen_hpp */
+#endif // BLOOM_MATERIALCOMPILER_CODEGEN_H

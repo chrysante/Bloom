@@ -1,5 +1,5 @@
-#ifndef BLOOM_GRAPHICS_MATERIAL_CONTEXT_H
-#define BLOOM_GRAPHICS_MATERIAL_CONTEXT_H
+#ifndef BLOOM_MATERIALCOMPILER_CONTEXT_H
+#define BLOOM_MATERIALCOMPILER_CONTEXT_H
 
 #include <span>
 #include <vector>
@@ -36,4 +36,4 @@ private:
 
 } // namespace bloom::matc
 
-#endif // BLOOM_GRAPHICS_MATERIAL_CONTEXT_H
+#endif // BLOOM_MATERIALCOMPILER_CONTEXT_H

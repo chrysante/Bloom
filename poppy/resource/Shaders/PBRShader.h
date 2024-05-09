@@ -1,5 +1,5 @@
-#ifndef POPPY_SHADERS_PBRSHADER_H
-#define POPPY_SHADERS_PBRSHADER_H
+#ifndef SHADERS_PBRSHADER_H
+#define SHADERS_PBRSHADER_H
 
 #include <metal_stdlib>
 
@@ -25,4 +25,4 @@ metal::float3 PBRForwardShader(
 
 } // namespace bloom
 
-#endif // POPPY_SHADERS_PBRSHADER_H
+#endif // SHADERS_PBRSHADER_H

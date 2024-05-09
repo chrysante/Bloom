@@ -37,6 +37,7 @@ target_sources(poppy
     ${poppy_shader_sources}
 )
 source_group(TREE ${PROJECT_SOURCE_DIR}/poppy/src/Poppy FILES ${poppy_sources})
+source_group(TREE ${PROJECT_SOURCE_DIR}/poppy/resource FILES ${poppy_shader_sources})
 
 set_source_files_properties(${poppy_shader_sources} PROPERTIES LANGUAGE METAL)
 

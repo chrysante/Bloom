@@ -1,11 +1,16 @@
 - Handle:
     AssetType: StaticMesh
+    AssetID: c7d2b17b 488cf93a e9c3ed0e f1a89eab
+  Name: Cube
+  Location: ./Cube.bmesh
+- Handle:
+    AssetType: StaticMesh
     AssetID: e848676c 6ba4a07f b3a3ebcc a8336ae8
   Name: CubeBeveledLowPoly
   Location: ./CubeBeveledLowPoly.bmesh
 - Handle:
     AssetType: StaticMesh
-    AssetID: b0d777f6 216eb44b 8fcc0438 fc12e91d
+    AssetID: 90b1b43 2375ea9f 57454596 8acaac4d
   Name: Cube
   Location: Cube.bmesh
 - Handle:

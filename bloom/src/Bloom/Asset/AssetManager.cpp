@@ -11,7 +11,7 @@
 #include <utl/strcat.hpp>
 
 #include "Bloom/Application/Application.h"
-#include "Bloom/Asset/MeshImport.h"
+#include "Bloom/Asset/AssetImport.h"
 #include "Bloom/Core/Core.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/GPU/HardwareDevice.h"

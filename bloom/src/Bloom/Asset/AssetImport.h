@@ -12,6 +12,9 @@ struct StaticMeshData;
 ///
 StaticMeshData importStaticMesh(std::filesystem::path const& path);
 
+///
+void importTexture(std::filesystem::path const& path);
+
 } // namespace bloom
 
 #endif // BLOOM_ASSET_MESHIMPORT_H

@@ -19,6 +19,7 @@
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Bloom/Graphics/StaticMesh.h"
+#include "Bloom/Graphics/Texture.h"
 #include "Bloom/Runtime/ScriptSystem.h"
 
 using namespace bloom;
@@ -29,7 +30,7 @@ namespace {
 static std::filesystem::path registryFilePath() { return ".registry"; }
 
 /// List of possible asset file extensions
-enum class FileExtension { Bmesh, Bmat, Bmatinst, Bscene, Scatha };
+enum class FileExtension { Bmesh, Bmat, Bmatinst, Btex, Bscene, Scatha };
 
 /// \Returns the file extension \p ext as a string with a preceding dot
 /// character
@@ -41,6 +42,8 @@ static std::string toString(FileExtension ext) {
         return ".bmat";
     case FileExtension::Bmatinst:
         return ".bmatinst";
+    case FileExtension::Btex:
+        return ".btex";
     case FileExtension::Bscene:
         return ".bscene";
     case FileExtension::Scatha:
@@ -64,6 +67,9 @@ static std::optional<FileExtension> toExtension(std::string_view ext) {
     }
     if (ext == ".bmatinst") {
         return FileExtension::Bmatinst;
+    }
+    if (ext == ".btex") {
+        return FileExtension::Btex;
     }
     if (ext == ".bscene") {
         return FileExtension::Bscene;
@@ -95,6 +101,8 @@ static FileExtension toExtension(AssetType type) {
         return FileExtension::Bmat;
     case AssetType::MaterialInstance:
         return FileExtension::Bmatinst;
+    case AssetType::Texture2D:
+        return FileExtension::Btex;
     case AssetType::Scene:
         return FileExtension::Bscene;
     case AssetType::ScriptSource:
@@ -113,6 +121,8 @@ static AssetType toAssetType(FileExtension ext) {
         return AssetType::Material;
     case FileExtension::Bmatinst:
         return AssetType::MaterialInstance;
+    case FileExtension::Btex:
+        return AssetType::Texture2D;
     case FileExtension::Bscene:
         return AssetType::Scene;
     case FileExtension::Scatha:
@@ -225,6 +235,8 @@ struct AssetManager::Impl {
                        AssetRepresentation repr, bool force);
     bool makeAvailImpl(MaterialInstance&, RegistryEntry const& entry,
                        AssetRepresentation repr, bool force);
+    bool makeAvailImpl(Texture2D&, RegistryEntry const& entry,
+                       AssetRepresentation repr, bool force);
     bool makeAvailImpl(Scene&, RegistryEntry const& entry,
                        AssetRepresentation repr, bool force);
     bool makeAvailImpl(ScriptSource&, RegistryEntry const& entry,
@@ -236,9 +248,12 @@ struct AssetManager::Impl {
                               std::filesystem::path const& source);
     void loadMaterialInstanceFromDisk(MaterialInstance& inst,
                                       std::filesystem::path const& source);
+    void loadTextureFromDisk(Texture2D& texture,
+                             std::filesystem::path const& source);
     void loadSceneFromDisk(Scene& scene, std::filesystem::path const& source);
 
-    void loadStaticMeshRenderer(StaticMesh& mesh, RegistryEntry const& entry);
+    void uploadStaticMeshToGPU(StaticMesh& mesh, RegistryEntry const& entry);
+    void uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry);
 
     void flushToDisk(AssetHandle handle);
 
@@ -248,6 +263,7 @@ struct AssetManager::Impl {
     void flushToDiskImpl(Material const&, std::filesystem::path const& dest);
     void flushToDiskImpl(MaterialInstance const&,
                          std::filesystem::path const& dest);
+    void flushToDiskImpl(Texture2D const&, std::filesystem::path const& dest);
     void flushToDiskImpl(Scene const&, std::filesystem::path const& dest);
     void flushToDiskImpl(ScriptSource const&,
                          std::filesystem::path const& dest);
@@ -635,7 +651,7 @@ bool Impl::makeAvailImpl(StaticMesh& mesh, RegistryEntry const& entry,
             mesh.mData = readStaticMeshFromDisk(entry.diskLocation);
         },
         [&](Tag<AssetRepresentation::GPU>) {
-            loadStaticMeshRenderer(mesh, entry);
+            uploadStaticMeshToGPU(mesh, entry);
         },
     }); // clang-format on
     return true;
@@ -694,6 +710,21 @@ bool Impl::makeAvailImpl(MaterialInstance& inst, RegistryEntry const& entry,
                 assetManager->makeAvailable(mat->handle(),
                                             AssetRepresentation::GPU);
             }
+        },
+    }); // clang-format on
+    return true;
+}
+
+bool Impl::makeAvailImpl(Texture2D& texture, RegistryEntry const& entry,
+                         AssetRepresentation repr, bool forceReload) {
+    loadTextureFromDisk(texture, entry.diskLocation);
+    // clang-format off
+    visitRepr(repr, utl::overload{
+        [&](Tag<AssetRepresentation::CPU>) {
+            loadTextureFromDisk(texture, entry.diskLocation);
+        },
+        [&](Tag<AssetRepresentation::GPU>) {
+            uploadTextureToGPU(texture, entry);
         },
     }); // clang-format on
     return true;
@@ -915,6 +946,11 @@ void Impl::loadMaterialInstanceFromDisk(MaterialInstance& inst,
     inst.deserialize(root, *assetManager);
 }
 
+void Impl::loadTextureFromDisk(Texture2D& texture,
+                               std::filesystem::path const& source) {
+    BL_UNIMPLEMENTED();
+}
+
 void Impl::loadSceneFromDisk(Scene& scene,
                              std::filesystem::path const& source) {
     assert(toExtension(source) == FileExtension::Bscene);
@@ -925,8 +961,7 @@ void Impl::loadSceneFromDisk(Scene& scene,
 
 /// MARK: - Memory -> GPU
 
-void Impl::loadStaticMeshRenderer(StaticMesh& mesh,
-                                  RegistryEntry const& entry) {
+void Impl::uploadStaticMeshToGPU(StaticMesh& mesh, RegistryEntry const& entry) {
     if (mesh.mRenderer) {
         return;
     }
@@ -944,6 +979,10 @@ void Impl::loadStaticMeshRenderer(StaticMesh& mesh,
     desc.data = mesh.mData->indices.data();
     desc.size = mesh.mData->indices.size() * 4;
     renderer->mIndexBuffer = assetManager->device().createBuffer(desc);
+}
+
+void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
+    BL_UNIMPLEMENTED();
 }
 
 /// MARK: - Memory -> Disk
@@ -1006,6 +1045,11 @@ void Impl::flushToDiskImpl(MaterialInstance const& inst,
     auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
                                            std::ios::binary);
     file << out.c_str();
+}
+
+void Impl::flushToDiskImpl(Texture2D const& texture,
+                           std::filesystem::path const&) {
+    Logger::Warn("Not saving texture to disk: ", texture.name());
 }
 
 void Impl::flushToDiskImpl(Scene const& scene,

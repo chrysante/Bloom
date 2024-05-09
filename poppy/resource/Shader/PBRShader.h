@@ -1,5 +1,5 @@
-#ifndef SHADERS_PBRSHADER_H
-#define SHADERS_PBRSHADER_H
+#ifndef SHADER_PBRSHADER_H
+#define SHADER_PBRSHADER_H
 
 #include <metal_stdlib>
 
@@ -25,4 +25,4 @@ metal::float3 PBRForwardShader(
 
 } // namespace bloom
 
-#endif // SHADERS_PBRSHADER_H
+#endif // SHADER_PBRSHADER_H

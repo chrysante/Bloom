@@ -2,8 +2,11 @@
 #define POPPY_UI_IMGUIHELPERS_H
 
 #include <array>
+#include <initializer_list>
+#include <string_view>
 
 #include <imgui.h>
+#include <utl/function_view.hpp>
 #include <utl/scope_guard.hpp>
 
 #include "Bloom/Core/EnumCount.h"
@@ -90,6 +93,10 @@ void displayEmptyWithReason(std::string_view reason);
 
 /// Placeholder for views that don't display content because an error occurred
 void displayEmptyWithError(std::string_view reason);
+
+/// Displays a resizable split view
+void splitView(std::string_view ID,
+               std::initializer_list<utl::function_view<void()>> contents);
 
 } // namespace poppy
 

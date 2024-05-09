@@ -12,7 +12,8 @@ struct MainPassData {
     float4 positionCS [[position]];
     float3 normalWS;
     float3 positionWS;
-    float3 color;
+    float3 vertexColor;
+    float2 textureCoords;
 };
 
 struct MainPassFragmentData {
@@ -30,12 +31,13 @@ vertex MainPassData rgMainPassVS(CameraInput device const& cameraBuffer
     float4 vertexPositionMS = float4(v.position, 1);
     float4 vertexNormalMS = float4(v.normal, 0);
     float4 vertexPositionWS = transform * vertexPositionMS;
-    MainPassData result;
-    result.positionCS = cameraBuffer.camera * vertexPositionWS;
-    result.normalWS = (transform * vertexNormalMS).xyz;
-    result.positionWS = vertexPositionWS.xyz;
-    result.color = v.color.rgb;
-    return result;
+    return {
+        .positionCS = cameraBuffer.camera * vertexPositionWS,
+        .normalWS = (transform * vertexNormalMS).xyz,
+        .positionWS = vertexPositionWS.xyz,
+        .vertexColor = v.color.rgb,
+        .textureCoords = v.textureCoordinates[0]
+    };
 }
 
 fragment MainPassFragmentData rgMainPassFS(

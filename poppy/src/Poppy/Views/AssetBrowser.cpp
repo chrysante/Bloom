@@ -112,6 +112,8 @@ AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
                 return "leaf";
             case AssetType::MaterialInstance:
                 return "delicious";
+            case AssetType::Texture2D:
+                return "file-image";
             case AssetType::Scene:
                 return "cubes";
             case AssetType::ScriptSource:

@@ -1,3 +1,7 @@
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <vml/vml.hpp>
+
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Reference.h"
 #include "Bloom/Graphics/Texture.h"
@@ -8,12 +12,14 @@
 
 using namespace poppy;
 using namespace bloom;
+using namespace vml::short_types;
 
 namespace {
 
 struct TextureViewer: View {
     TextureViewer();
     void display() override;
+    void displayTexture();
     void doOpenData(std::any data) override;
 
     Reference<Texture2D> texture;
@@ -30,6 +36,7 @@ TextureViewer::TextureViewer() {
             .text([this] { return texture ? texture->name().c_str() : ""; })
             .font(FontDesc::UIDefault().setWeight(FontWeight::Bold))
     }); // clang-format on
+    setPadding(float2{});
 }
 
 void TextureViewer::display() {
@@ -37,12 +44,28 @@ void TextureViewer::display() {
         displayEmptyWithReason("No Texture Opened");
         return;
     }
+    // clang-format off
+    splitView("SplitView", {
+        [&] { displayTexture(); },
+        [&] {},
+    }); // clang-format on
+}
+
+void TextureViewer::displayTexture() {
+    BL_ASSERT(texture);
     auto* native = texture->GPUHandle.nativeHandle();
     if (!native) {
         displayEmptyWithError("Texture not in GPU memory");
         return;
     }
-    ImGui::Image(native, ImGui::GetContentRegionAvail());
+    float2 pos = ImGui::GetCursorScreenPos();
+    float2 availSize = ImGui::GetContentRegionAvail();
+    float minSize = std::min(availSize.x, availSize.y);
+    // FIXME: We assume an aspect ratio of 1 here
+    float2 displaySize = { minSize, minSize };
+    auto* DL = ImGui::GetWindowDrawList();
+    float2 displayPos = pos + (availSize - displaySize) / 2;
+    DL->AddImage(native, displayPos, displayPos + displaySize);
 }
 
 void TextureViewer::doOpenData(std::any data) {

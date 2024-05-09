@@ -1,5 +1,5 @@
-#ifndef BLOOM_ASSET_MESHIMPORT_H
-#define BLOOM_ASSET_MESHIMPORT_H
+#ifndef BLOOM_ASSET_ASSETIMPORT_H
+#define BLOOM_ASSET_ASSETIMPORT_H
 
 #include "Bloom/Asset/Fwd.h"
 #include "Bloom/Core/Core.h"
@@ -18,4 +18,4 @@ void importTexture(Texture2D& texture, std::filesystem::path const& path);
 
 } // namespace bloom
 
-#endif // BLOOM_ASSET_MESHIMPORT_H
+#endif // BLOOM_ASSET_ASSETIMPORT_H

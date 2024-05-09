@@ -4,12 +4,14 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <range/v3/view.hpp>
 #include <utl/strcat.hpp>
 #include <vml/vml.hpp>
 
 #include "Poppy/Core/Debug.h"
 
 using namespace poppy;
+using namespace ranges::views;
 using namespace vml::short_types;
 
 ViewportInput poppy::detectViewportInput(ImGuiButtonFlags buttonFlags) {
@@ -165,4 +167,55 @@ void poppy::displayEmptyWithReason(std::string_view reason) {
 
 void poppy::displayEmptyWithError(std::string_view reason) {
     displayEmptyImpl(reason, emptyPlaceholderFont(), { 1, 0, .2, 1 });
+}
+
+void poppy::splitView(
+    std::string_view strID,
+    std::initializer_list<utl::function_view<void()>> contents) {
+    ImGuiID ID = ImGui::GetID(strID.data(), strID.data() + strID.size());
+    static float totalWidth = ImGui::GetContentRegionAvail().x;
+    static std::vector<float> widths;
+    if (widths.size() != contents.size()) {
+        widths.resize(contents.size(), totalWidth / contents.size());
+    }
+    float newWidth = ImGui::GetContentRegionAvail().x;
+    if (totalWidth != newWidth) {
+        float factor = newWidth / totalWidth;
+        for (auto& width: widths) {
+            width *= factor;
+        }
+        totalWidth = newWidth;
+    }
+    ImGui::PushID(ID);
+    float2 cursorPos = ImGui::GetCursorScreenPos();
+    auto* window = ImGui::GetCurrentWindow();
+    float acc = 0;
+    float height = ImGui::GetContentRegionAvail().y;
+    for (auto [index, width, content]: zip(iota(0), widths, contents)) {
+        float widthCopy = width;
+        float2 pos = cursorPos + float2(acc, 0);
+        float halfSplitterWidth = 1;
+        if (index > 0) {
+            ImGui::SplitterBehavior(ImRect(pos - float2(halfSplitterWidth, 0),
+                                           pos + float2(halfSplitterWidth,
+                                                        height)),
+                                    window->GetID(-index), ImGuiAxis_X,
+                                    &widths[index - 1], &widths[index],
+                                    /* minsize1: */ 10,
+                                    /* minsize2: */ 10,
+                                    /* hover_extend: */ 4.0f,
+                                    /* hover_visibility_delay */ 0.04f);
+            pos.x += halfSplitterWidth;
+        }
+        if (index < (int)contents.size() - 1) {
+            widthCopy -= 2 * halfSplitterWidth;
+        }
+        ImGui::SetNextWindowPos(pos);
+        if (ImGui::BeginChild(window->GetID(index), { widthCopy, 0 })) {
+            content();
+        }
+        ImGui::EndChild();
+        acc += width;
+    }
+    ImGui::PopID();
 }

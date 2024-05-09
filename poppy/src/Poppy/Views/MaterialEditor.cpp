@@ -221,8 +221,21 @@ struct ConstantController: MaterialNodeController {
     }
 
     Value* createGraphNode(Context& ctx, MaterialGraph&) const override {
-        int numComponents = (int)dataType - (int)DataType::Float + 1;
-        return ctx.vectorConstant(numComponents, value);
+        using enum DataType;
+        switch (dataType) {
+        case DataType::Float:
+            [[fallthrough]];
+        case DataType::Float2:
+            [[fallthrough]];
+        case DataType::Float3:
+            [[fallthrough]];
+        case DataType::Float4: {
+            int numComponents = (int)dataType - (int)DataType::Float + 1;
+            return ctx.vectorConstant(numComponents, value);
+        }
+        case Texture:
+            BL_UNIMPLEMENTED();
+        }
     }
 
     bool alwaysDisplayInputNames() const override { return false; }
@@ -256,12 +269,17 @@ struct ConstantController: MaterialNodeController {
             ImGui::ColorPicker4("###Value", value.data(), colFlags);
             break;
         case DataType::Texture:
-            BL_UNIMPLEMENTED();
+            if (texture) {
+                ImGui::Image(texture.nativeHandle(),
+                             ImGui::GetContentRegionAvail());
+            }
+            break;
         }
     }
 
     DataType dataType;
     float4 value = .5;
+    TextureHandle texture; // FIXME: This is not correct
 };
 
 struct ArithmeticNodeController: MaterialNodeController {

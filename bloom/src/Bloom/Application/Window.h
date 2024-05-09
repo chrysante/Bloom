@@ -150,18 +150,12 @@ public:
     /// Sets \p swapchain as this windows swapchain
     void setSwapchain(Reference<Swapchain> swapchain);
 
-    /// Sets \p commandQueue as this windows command queue
-    void setCommandQueue(Reference<CommandQueue> commandQueue);
-
     /// Adds the window delegate \p delegate to this window.
     /// \Returns a pointer to \p delegate
     WindowDelegate* addDelegate(std::unique_ptr<WindowDelegate> delegate);
 
     /// \Returns the window's swapchain
     Reference<Swapchain> swapchain() { return _swapchain; }
-
-    /// \Returns the window's command queue
-    Reference<CommandQueue> commandQueue() { return _commandQueue; }
 
     /// \Returns the window's descriptor of the current state
     WindowDescription const& getDescription() const { return desc; }
@@ -287,7 +281,6 @@ private:
     WindowDescPrivate desc;
     std::unique_ptr<void, Deleter> windowPtr;
     Reference<Swapchain> _swapchain;
-    Reference<CommandQueue> _commandQueue;
     std::vector<std::unique_ptr<WindowDelegate>> delegates;
 };
 

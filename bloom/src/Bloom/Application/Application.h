@@ -47,6 +47,9 @@ public:
     /// \Returns a reference to the current GPU
     HardwareDevice& device() { return coreSystems().device(); }
 
+    /// \Returns a reference to the applicatins command queue
+    CommandQueue& commandQueue() { return coreSystems().commandQueue(); }
+
     /// \Returns the core system manager
     CoreSystemManager& coreSystems() { return mCoreSystems; }
 

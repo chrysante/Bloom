@@ -226,7 +226,6 @@ void Editor::createMainWindow() {
     auto& window = createWindow(desc);
     window.addDelegate(std::make_unique<Impl::EditorWindowDelegate>(this));
     window.createDefaultSwapchain(device());
-    window.setCommandQueue(device().createCommandQueue());
     window.setMinSize({ 600, 400 });
     impl->mainWindow = &window;
 }

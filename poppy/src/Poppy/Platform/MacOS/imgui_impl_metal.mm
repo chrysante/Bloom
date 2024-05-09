@@ -446,11 +446,10 @@ static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
     bloom::Window* window = (bloom::Window*)viewport->PlatformHandle;
     IM_ASSERT(window != nullptr);
     window->createDefaultSwapchain(bd->editor->device());
-    window->setCommandQueue(bd->editor->device().createCommandQueue());
     auto swapchain = as<bloom::MetalSwapchain>(window->swapchain());
-    auto commandQueue = as<bloom::MetalCommandQueue>(window->commandQueue());
+    auto& commandQueue = dynamic_cast<bloom::MetalCommandQueue&>(bd->editor->commandQueue());
     data->MetalLayer = swapchain->layer;
-    data->CommandQueue = commandQueue->queue;
+    data->CommandQueue = commandQueue.queue;
     data->RenderPassDescriptor = [[MTLRenderPassDescriptor alloc] init];
     data->Handle = window;
 }

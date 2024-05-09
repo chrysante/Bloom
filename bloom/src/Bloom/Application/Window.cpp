@@ -61,10 +61,6 @@ void Window::createDefaultSwapchain(HardwareDevice& device,
     setSwapchain(device.createSwapchain(swapchainDesc));
 }
 
-void Window::setCommandQueue(Reference<CommandQueue> queue) {
-    _commandQueue = std::move(queue);
-}
-
 WindowDelegate* Window::addDelegate(std::unique_ptr<WindowDelegate> delegate) {
     auto* result = delegate.get();
     delegates.push_back(std::move(delegate));

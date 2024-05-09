@@ -5,12 +5,12 @@
 
 #include "Bloom/Core/Core.h"
 #include "Bloom/Core/Reference.h"
+#include "Bloom/GPU/Fwd.h"
 
 namespace bloom {
 
 class Application;
 
-class HardwareDevice;
 class AssetManager;
 class SceneSystem;
 class ScriptSystem;
@@ -34,6 +34,9 @@ public:
 
     ///
     HardwareDevice& device() { return *mDevice; }
+
+    ///
+    CommandQueue& commandQueue() { return *mCommandQueue; }
 
     /// \overload
     HardwareDevice const& device() const { return *mDevice; }
@@ -68,6 +71,7 @@ private:
 
     Application* mApp = nullptr;
     Reference<HardwareDevice> mDevice;
+    Reference<CommandQueue> mCommandQueue;
     std::unique_ptr<AssetManager> mAssetManager;
     std::unique_ptr<CoreRuntime> mRuntime;
     std::shared_ptr<SceneSystem> mSceneSystem;

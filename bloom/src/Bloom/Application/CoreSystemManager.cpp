@@ -15,6 +15,7 @@ CoreSystemManager::~CoreSystemManager() = default;
 
 void CoreSystemManager::init() {
     mDevice = HardwareDevice::create(RenderAPI::Metal);
+    mCommandQueue = mDevice->createCommandQueue();
     mAssetManager = makeCoreSystem<AssetManager>();
     mRuntime = makeCoreSystem<CoreRuntime>();
     mSceneSystem = makeCoreSystem<SceneSystem>();

@@ -85,14 +85,13 @@ void poppy::ImGuiContext::drawFramePlatform() {
             continue;
         }
         ++numRenderTasks;
-        mEditor->onRenderThread([=, this, swapchain = window.swapchain(),
-                                 commandQueue = window.commandQueue()] {
+        mEditor->onRenderThread([=, this, swapchain = window.swapchain()] {
             @autoreleasepool {
                 BackendImpl::drawWindow(*this, viewport->DrawData,
                                         dynamic_cast<MetalSwapchain&>(
                                             *swapchain),
                                         dynamic_cast<MetalCommandQueue&>(
-                                            *commandQueue),
+                                            mEditor->commandQueue()),
                                         renderPassDescriptor);
             }
             --numRenderTasks;

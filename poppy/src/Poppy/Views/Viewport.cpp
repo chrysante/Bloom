@@ -205,7 +205,7 @@ void Viewport::drawScenes() {
         renderer->submit(*scene, selection());
     }
     lock.unlock();
-    renderer->draw(*window().commandQueue());
+    renderer->draw(editor().commandQueue());
     if (renderGraph->sources().empty()) {
         displayEmptyWithError("Render Graph Has No Outputs");
         return;
@@ -308,7 +308,7 @@ void Viewport::handleEntitySelection() {
     float2 mousePos = window().contentScaleFactor() *
                       screenSpaceToViewSpace(ImGui::GetMousePos());
     EntityHandle entity =
-        renderer->readEntityIDMap(*window().commandQueue(), scenes(), mousePos);
+        renderer->readEntityIDMap(editor().commandQueue(), scenes(), mousePos);
     auto mode = getSelectionMode();
     if (entity) {
         selection().amend(entity, mode);

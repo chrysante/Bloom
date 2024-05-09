@@ -8,13 +8,13 @@
 
 using namespace bloom;
 using namespace matc;
+using namespace vml::short_types;
 using namespace ranges::views;
 
-FloatConstant::FloatConstant(Context& ctx, float value):
-    Constant(ValueNodeType::FloatConstant, ctx.floatType()), _value(value) {}
-
-Float3Constant::Float3Constant(Context& ctx, vml::float3 value):
-    Constant(ValueNodeType::Float3Constant, ctx.float3Type()), _value(value) {}
+VectorConstant::VectorConstant(Context& ctx, int numComponents, float4 value):
+    Constant(ValueNodeType::VectorConstant, ctx.vectorType(numComponents)),
+    _value(value),
+    numc(numComponents) {}
 
 Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
     assert(lhs == rhs);

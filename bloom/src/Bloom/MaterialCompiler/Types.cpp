@@ -2,8 +2,14 @@
 
 #include <sstream>
 
+#include <utl/strcat.hpp>
+
 using namespace bloom;
 using namespace matc;
+
+VectorType::VectorType(int numComponents):
+    Type(TypeCategory::VectorType, utl::strcat("Float", numComponents)),
+    numComps(numComponents) {}
 
 static std::string makeAggregateName(std::span<Type const*> elements) {
     std::stringstream sstr;

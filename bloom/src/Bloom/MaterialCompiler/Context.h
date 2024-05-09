@@ -17,10 +17,11 @@ public:
     Context& operator=(Context&&) noexcept;
     ~Context();
 
-    FloatType const* floatType() const;
-    Float2Type const* float2Type() const;
-    Float3Type const* float3Type() const;
-    Float4Type const* float4Type() const;
+    VectorType const* vectorType(int numComponents) const;
+    VectorType const* floatType() const { return vectorType(1); }
+    VectorType const* float2Type() const { return vectorType(2); }
+    VectorType const* float3Type() const { return vectorType(3); }
+    VectorType const* float4Type() const { return vectorType(4); }
 
     AggregateType const* aggregateType(std::span<Type const* const> elements);
 

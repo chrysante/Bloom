@@ -38,10 +38,7 @@ struct Context::Impl {
     }
 
     std::vector<DynUniquePtr<Type>> typeOwners;
-    FloatType const* floatType;
-    Float2Type const* float2Type;
-    Float3Type const* float3Type;
-    Float4Type const* float4Type;
+    VectorType const* vectorType[4]{};
     utl::hashmap<utl::small_vector<Type const*>, AggregateType const*,
                  AggregateHash, AggregateEqual>
         aggTypes;
@@ -56,10 +53,10 @@ Context& Context::operator=(Context&&) noexcept = default;
 Context::~Context() = default;
 
 Impl::Impl() {
-    floatType = addType<FloatType>();
-    float2Type = addType<Float2Type>();
-    float3Type = addType<Float3Type>();
-    float4Type = addType<Float4Type>();
+    vectorType[0] = addType<VectorType>(1);
+    vectorType[1] = addType<VectorType>(2);
+    vectorType[2] = addType<VectorType>(3);
+    vectorType[3] = addType<VectorType>(4);
 }
 
 AggregateType const* Context::aggregateType(
@@ -74,13 +71,11 @@ AggregateType const* Context::aggregateType(
     return type;
 }
 
-FloatType const* Context::floatType() const { return impl->floatType; }
-
-Float2Type const* Context::float2Type() const { return impl->float2Type; }
-
-Float3Type const* Context::float3Type() const { return impl->float3Type; }
-
-Float4Type const* Context::float4Type() const { return impl->float4Type; }
+VectorType const* Context::vectorType(int numComponents) const {
+    assert(numComponents >= 1);
+    assert(numComponents <= 4);
+    return impl->vectorType[numComponents - 1];
+}
 
 std::vector<Type const*> Context::types() const {
     return impl->typeOwners | ToAddress<Type const> | ranges::to<std::vector>;

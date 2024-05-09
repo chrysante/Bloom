@@ -135,7 +135,10 @@ struct ConstantController: MaterialNodeController {
 
     Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
         BL_ASSERT(dataType == DataType::Float, "Other cases not implemented");
-        return graph.addValue(allocate<FloatConstant>(ctx, value.x));
+        return graph.addValue(
+            allocate<VectorConstant>(ctx,
+                                     (int)dataType - (int)DataType::Float + 1,
+                                     value));
     }
 
     bool alwaysDisplayInputNames() const override { return false; }

@@ -26,24 +26,14 @@ private:
     std::string _name;
 };
 
-class FloatType: public Type {
+class VectorType: public Type {
 public:
-    FloatType(): Type(TypeCategory::FloatType, "Float") {}
-};
+    explicit VectorType(int numComponents);
 
-class Float2Type: public Type {
-public:
-    Float2Type(): Type(TypeCategory::Float2Type, "Float2") {}
-};
+    int numComponents() const { return numComps; }
 
-class Float3Type: public Type {
-public:
-    Float3Type(): Type(TypeCategory::Float3Type, "Float3") {}
-};
-
-class Float4Type: public Type {
-public:
-    Float4Type(): Type(TypeCategory::Float4Type, "Float4") {}
+private:
+    int numComps;
 };
 
 class AggregateType: public Type {

@@ -32,24 +32,17 @@ public:
     using Value::Value;
 };
 
-class FloatConstant: public Constant {
+class VectorConstant: public Constant {
 public:
-    explicit FloatConstant(Context& ctx, float value);
+    explicit VectorConstant(Context& ctx, int numComponents, vml::float4 value);
 
-    float get() const { return _value; }
+    int numComponents() const { return numc; }
+
+    vml::float4 get() const { return _value; }
 
 private:
-    float _value;
-};
-
-class Float3Constant: public Constant {
-public:
-    Float3Constant(Context& ctx, vml::float3 value);
-
-    vml::float3 get() const { return _value; }
-
-private:
-    vml::float3 _value;
+    vml::float4 _value;
+    int numc;
 };
 
 class User: public Value {

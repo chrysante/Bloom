@@ -85,7 +85,8 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
     void declareType(Type const* type) {
         visit(*type, [this](auto& type) { declareTypeImpl(&type); });
     }
-    void declareTypeImpl(Type const* type);
+    void declareTypeImpl(Type const*) {}
+    void declareTypeImpl(VectorType const* type);
     void declareTypeImpl(AggregateType const* type);
 
     void codegen(Value const& value) {
@@ -96,7 +97,7 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
     void endFunction();
 
     void codegenImpl(Value const&) { assert(false); }
-    void codegenImpl(FloatConstant const& value);
+    void codegenImpl(VectorConstant const& value);
     void codegenImpl(AggregateBuilder const& value);
 
     Context const& ctx;
@@ -157,8 +158,13 @@ std::string MetalCodeGenerator::run() {
     return std::move(sstr).str();
 }
 
-void MetalCodeGenerator::declareTypeImpl(Type const* type) {
-    typeNameGen.setName(type, type->name());
+void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
+    typeNameGen.setName(type, [&] {
+        if (type->numComponents() == 1) {
+            return std::string("float");
+        }
+        return utl::strcat("float", type->numComponents());
+    }());
 }
 
 void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
@@ -172,7 +178,7 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
 }
 
 void MetalCodeGenerator::beginFunction() {
-    sstr << typeNameGen(returnType) << " " << "material() ";
+    sstr << "static " << typeNameGen(returnType) << " " << "material() ";
     pushScope();
 }
 
@@ -181,14 +187,29 @@ void MetalCodeGenerator::endFunction() {
     popScope();
 }
 
-void MetalCodeGenerator::codegenImpl(FloatConstant const& value) {
-    sstr << beginLine() << value.type()->name() << " " << valueNameGen(&value)
-         << " = " << value.get() << ";\n";
+void MetalCodeGenerator::codegenImpl(VectorConstant const& value) {
+    sstr << beginLine() << typeNameGen(value.type()) << " "
+         << valueNameGen(&value);
+    if (value.numComponents() == 1) {
+        sstr << " = " << value.get().x << ";\n";
+    }
+    else {
+        pushScope();
+        sstr << beginLine();
+        for (int i = 0; i < value.numComponents(); ++i) {
+            if (i != 0) {
+                sstr << ", ";
+            }
+            sstr << value.get()[i];
+        }
+        sstr << "\n";
+        popScope(";");
+    }
 }
 
 void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {
     sstr << beginLine() << typeNameGen(value.type()) << " "
-         << valueNameGen(&value) << " = ";
+         << valueNameGen(&value);
     pushScope();
     for (auto* operand: value.operands()) {
         sstr << beginLine() << valueNameGen(operand) << ",\n";

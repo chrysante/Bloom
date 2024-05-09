@@ -95,8 +95,6 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
         visit(value, [this](auto& value) { codegenImpl(value); });
     }
 
-    void includeShadingModel();
-
     void beginFunction();
     void endFunction();
 
@@ -153,10 +151,12 @@ static std::vector<Value const*> topsort(std::span<Value const* const> values) {
 
 std::string MetalCodeGenerator::run() {
     returnType = graph.root()->type();
-    typeNameGen.setName(returnType, "MaterialType");
     auto order = topsort(graph.values() | ranges::to<std::vector>);
+    sstr << R"(
+#include "Shader/PBRShader.h"
+#include "Shader/SharedTypes.h"
 
-    includeShadingModel();
+)";
     for (auto* type: ctx.types()) {
         declareType(type);
     }
@@ -179,6 +179,10 @@ void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
 }
 
 void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
+    if (type == graph.root()->type()) {
+        typeNameGen.setName(type, "PBRData");
+        return;
+    }
     // TODO: This does not handle nested structs
     sstr << "struct " << typeNameGen(type);
     pushScope();
@@ -186,15 +190,7 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
         sstr << beginLine() << typeNameGen(member) << " _" << index << ";\n";
     }
     popScope(";");
-}
-
-void MetalCodeGenerator::includeShadingModel() {
-    std::fstream header(options.shaderDir / "PBRShader.h", std::ios::in);
-    if (!header) {
-        throw std::runtime_error("Failed to open shading model header");
-    }
-    sstr << header.rdbuf();
-    sstr << std::endl;
+    sstr << "\n";
 }
 
 void MetalCodeGenerator::beginFunction() {
@@ -209,6 +205,11 @@ void MetalCodeGenerator::endFunction() {
 
 void MetalCodeGenerator::defineFragmentFunction() {
     sstr << R"(
+struct MainPassFragmentData {
+    float4 color [[color(0)]];
+    uint32_t entityID [[color(1)]];
+};
+
 fragment MainPassFragmentData materialFragmentShader(
     MainPassData in [[stage_in]],
     CameraInput device const& cameraBuffer [[buffer(0)]],

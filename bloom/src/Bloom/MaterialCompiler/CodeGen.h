@@ -20,9 +20,7 @@ protected:
     CodeGenerator() = default;
 };
 
-struct CodeGenOptions {
-    std::filesystem::path shaderDir;
-};
+struct CodeGenOptions {};
 
 BLOOM_API std::unique_ptr<CodeGenerator> makeCodeGenerator(
     Context const& ctx, MaterialGraph const& graph,

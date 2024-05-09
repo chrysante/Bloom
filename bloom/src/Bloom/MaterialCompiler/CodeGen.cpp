@@ -1,5 +1,6 @@
 #include "Bloom/MaterialCompiler/CodeGen.h"
 
+#include <fstream>
 #include <span>
 #include <sstream>
 #include <stdexcept>
@@ -77,8 +78,9 @@ private:
 struct Data {};
 
 struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
-    MetalCodeGenerator(Context const& ctx, MaterialGraph const& graph):
-        Indenter(sstr), ctx(ctx), graph(graph) {}
+    MetalCodeGenerator(Context const& ctx, MaterialGraph const& graph,
+                       CodeGenOptions const& options):
+        Indenter(sstr), ctx(ctx), graph(graph), options(options) {}
 
     std::string run() override;
 
@@ -93,8 +95,12 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
         visit(value, [this](auto& value) { codegenImpl(value); });
     }
 
+    void includeShadingModel();
+
     void beginFunction();
     void endFunction();
+
+    void defineFragmentFunction();
 
     void codegenImpl(Value const&) { assert(false); }
     void codegenImpl(VectorConstant const& value);
@@ -102,6 +108,7 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
 
     Context const& ctx;
     MaterialGraph const& graph;
+    CodeGenOptions options;
 
     Type const* returnType;
     NameGenerator<Type const*> typeNameGen{ "Type_" };
@@ -112,8 +119,9 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
 } // namespace
 
 std::unique_ptr<CodeGenerator> matc::makeCodeGenerator(
-    Context const& ctx, MaterialGraph const& graph) {
-    return std::make_unique<MetalCodeGenerator>(ctx, graph);
+    Context const& ctx, MaterialGraph const& graph,
+    CodeGenOptions const& options) {
+    return std::make_unique<MetalCodeGenerator>(ctx, graph, options);
 }
 
 static std::vector<Value const*> topsort(std::span<Value const* const> values) {
@@ -147,6 +155,8 @@ std::string MetalCodeGenerator::run() {
     returnType = graph.root()->type();
     typeNameGen.setName(returnType, "MaterialType");
     auto order = topsort(graph.values() | ranges::to<std::vector>);
+
+    includeShadingModel();
     for (auto* type: ctx.types()) {
         declareType(type);
     }
@@ -155,6 +165,7 @@ std::string MetalCodeGenerator::run() {
         codegen(*value);
     }
     endFunction();
+    defineFragmentFunction();
     return std::move(sstr).str();
 }
 
@@ -177,6 +188,15 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
     popScope(";");
 }
 
+void MetalCodeGenerator::includeShadingModel() {
+    std::fstream header(options.shaderDir / "PBRShader.h", std::ios::in);
+    if (!header) {
+        throw std::runtime_error("Failed to open shading model header");
+    }
+    sstr << header.rdbuf();
+    sstr << std::endl;
+}
+
 void MetalCodeGenerator::beginFunction() {
     sstr << "static " << typeNameGen(returnType) << " " << "material() ";
     pushScope();
@@ -185,6 +205,27 @@ void MetalCodeGenerator::beginFunction() {
 void MetalCodeGenerator::endFunction() {
     sstr << beginLine() << "return " << valueNameGen(graph.root()) << ";\n";
     popScope();
+}
+
+void MetalCodeGenerator::defineFragmentFunction() {
+    sstr << R"(
+fragment MainPassFragmentData materialFragmentShader(
+    MainPassData in [[stage_in]],
+    CameraInput device const& cameraBuffer [[buffer(0)]],
+    LightBufferContents device const& lights [[buffer(1)]],
+    float4x4 device const* lightSpaceTransforms [[buffer(2)]],
+    ShadowRenderMetadata device const& shadowMetadata [[buffer(3)]],
+    uint32_t device const& entityID [[buffer(5)]],
+    texture2d_array<float> shadowMaps [[texture(0)]])
+{
+    PBRData pbr = material();
+    float3 color =
+        PBRForwardShader(pbr, in.positionWS, normalize(in.normalWS.xyz),
+                         cameraBuffer.cameraPosition, lightSpaceTransforms,
+                         lights, shadowMetadata, shadowMaps);
+    return { float4(color, 1), entityID };
+}
+)";
 }
 
 void MetalCodeGenerator::codegenImpl(VectorConstant const& value) {

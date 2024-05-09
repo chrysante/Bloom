@@ -55,7 +55,7 @@ ScriptSystem::ScriptSystem(): impl(std::make_unique<Impl>()) {}
 
 ScriptSystem::~ScriptSystem() = default;
 
-void ScriptSystem::init() {
+void ScriptSystem::doInit() {
     listen([this](ScriptsWillLoadEvent) { scriptsWillCompile(); });
     listen([this](ScriptsDidLoadEvent) { scriptsDidCompile(); });
     listen([this](SceneLoadedEvent event) { onScriptCompile(*event.scene); });

@@ -10,7 +10,7 @@
 
 using namespace bloom;
 
-void SceneSystem::init() {
+void SceneSystem::doInit() {
     listen([this](ScriptsDidLoadEvent) {
         for (auto* scene: scenes()) {
             application().coreSystems().scriptSystem().onScriptCompile(*scene);

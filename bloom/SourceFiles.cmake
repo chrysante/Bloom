@@ -62,6 +62,7 @@ set(bloom_sources
   src/Bloom/GPU/HardwarePrimitives.h
   src/Bloom/GPU/HardwareResourceHandle.h
   src/Bloom/GPU/Swapchain.h
+  src/Bloom/GPU/ShaderCompiler.h
 
   src/Bloom/Graphics/Material/Material.cpp
   src/Bloom/Graphics/Material/Material.h

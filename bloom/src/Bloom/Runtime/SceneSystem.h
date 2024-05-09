@@ -23,9 +23,6 @@ class Scene;
 /// Can have multiple scenes loaded at the same time .
 class BLOOM_API SceneSystem: public CoreSystem, public RuntimeDelegate {
 public:
-    ///
-    void init();
-
     /// Loads the scene \p scene into the system
     void loadScene(Reference<Scene> scene);
 
@@ -45,6 +42,8 @@ public:
     void applyTransformHierarchy();
 
 private:
+    void doInit() override;
+
     /// Implementation of `RuntimeDelegate` interface
     /// @{
     void start() override;

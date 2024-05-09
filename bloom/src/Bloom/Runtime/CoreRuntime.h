@@ -50,9 +50,6 @@ public:
     ~CoreRuntime();
 
     ///
-    void init();
-
-    ///
     UpdateOptions updateOptions() const { return mUpdateOptions; }
 
     ///

@@ -21,8 +21,6 @@ public:
 
     ~ScriptSystem();
 
-    void init();
-
     void onScriptCompile(Scene& scene);
 
     void onSceneConstruction(Scene& scene);
@@ -40,6 +38,8 @@ public:
 
 private:
     friend class AssetManager;
+
+    void doInit() override;
 
     void deserializeScript(ScriptComponent& component,
                            ScriptPreservedData const& preservedData);

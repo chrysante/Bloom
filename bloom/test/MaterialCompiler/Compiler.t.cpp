@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <iostream>
 
 #include <catch2/catch_test_macros.hpp>
@@ -16,6 +17,11 @@ TEST_CASE() {
     auto* c1 =
         g.addValue(allocate<VectorConstant>(ctx, 1, vml::float4{ 1, 0, 0, 0 }));
     g.setRoot(allocate<AggregateBuilder>(ctx, std::vector<Value*>{ c1, c2 }));
-    auto generator = makeCodeGenerator(ctx, g);
+    auto* shaderDir = std::getenv("SHADER_DIR");
+    if (!shaderDir) {
+        std::cerr << "Environtment variable 'SHADER_DIR' must be defined\n";
+        std::exit(1);
+    }
+    auto generator = makeCodeGenerator(ctx, g, { .shaderDir = shaderDir });
     std::cout << generator->run() << std::endl;
 }

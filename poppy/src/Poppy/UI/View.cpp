@@ -177,7 +177,7 @@ void View::doFrame() {
         auto* imguiWindow = ImGui::GetCurrentWindow();
         imguiWindow->UserPointer = this;
         data.imguiWindow = imguiWindow;
-        data.position = imguiWindow->Pos;
+        data.position = imguiWindow->WorkRect.Min;
         data.size = imguiWindow->Size;
         data.docked = docked;
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;

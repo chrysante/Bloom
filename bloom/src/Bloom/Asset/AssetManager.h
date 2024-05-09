@@ -154,6 +154,8 @@ public:
     struct Impl;
 
 private:
+    void doInit() override;
+
     std::unique_ptr<Impl> impl;
 };
 

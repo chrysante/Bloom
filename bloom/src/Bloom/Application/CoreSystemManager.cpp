@@ -18,9 +18,7 @@ void CoreSystemManager::init() {
     mAssetManager = makeCoreSystem<AssetManager>();
     mRuntime = makeCoreSystem<CoreRuntime>();
     mSceneSystem = makeCoreSystem<SceneSystem>();
-    mSceneSystem->init();
     mScriptSystem = makeCoreSystem<ScriptSystem>();
-    mScriptSystem->init();
     mRuntime->addDelegate(mSceneSystem);
 }
 
@@ -32,5 +30,6 @@ std::unique_ptr<SystemType> CoreSystemManager::makeCoreSystem(auto&&... args) {
     system->assignEmitter(mApp->makeEmitter());
     system->assignReceiver(mApp->makeReceiver());
     system->mApp = mApp;
+    system->init();
     return system;
 }

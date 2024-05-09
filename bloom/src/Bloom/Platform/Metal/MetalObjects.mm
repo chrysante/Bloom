@@ -1,5 +1,8 @@
 #include "Bloom/Platform/Metal/MetalObjects.h"
 
+#include <fstream>
+#include <sstream>
+
 #include <utl/functional.hpp>
 #include <utl/utility.hpp>
 
@@ -61,6 +64,10 @@ Reference<Swapchain> MetalDevice::createSwapchain(
 
 Reference<CommandQueue> MetalDevice::createCommandQueue() {
     return allocateRef<MetalCommandQueue>([device newCommandQueue]);
+}
+
+Reference<ShaderCompiler> MetalDevice::createShaderCompiler() {
+    return allocateRef<MetalShaderCompiler>(device);
 }
 
 BufferHandle MetalDevice::createBuffer(BufferDescription const& desc) {
@@ -533,3 +540,53 @@ void MetalBlitEncoder::synchronizeTexture(TextureView texture, size_t slice,
 }
 
 void MetalBlitEncoder::end() { [commandEncoder endEncoding]; }
+
+static id<MTLDynamicLibrary> createBaseLibrary(id<MTLDevice> device) {
+    std::fstream file(resourceDir() / "Shaders/PBRShader.metal");
+    if (!file) {
+        Logger::Error("Failed to open shader source file");
+        return nil;
+    }
+    std::stringstream sstr;
+    sstr << file.rdbuf();
+    NSString* source =
+        [NSString stringWithUTF8String:std::move(sstr).str().c_str()];
+    NSError* error = nil;
+    MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
+    options.libraryType = MTLLibraryTypeDynamic;
+    options.installName = @"ShadingModels";
+    id<MTLDynamicLibrary> lib = (id<MTLDynamicLibrary>)[device
+        newLibraryWithSource:source
+                     options:options
+                       error:&error];
+    if (error == nil) {
+        Logger::Info("Successfully compiled shading models");
+        return lib;
+    }
+    Logger::Error("Failed to compile shading models: ",
+                  error.localizedDescription.UTF8String);
+    return nil;
+}
+
+MetalShaderCompiler::MetalShaderCompiler(id<MTLDevice> device):
+    device(device), baseLib(createBaseLibrary(device)) {}
+
+ShaderFunctionHandle MetalShaderCompiler::compileFunction(std::string source,
+                                                          std::string name) {
+    NSError* error = nil;
+    MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
+    options.libraryType = MTLLibraryTypeExecutable;
+    id<MTLLibrary> lib = [device
+        newLibraryWithSource:[NSString stringWithUTF8String:source.c_str()]
+                     options:options
+                       error:&error];
+    if (error != nil) {
+        Logger::Error("Failed to compiler function: ",
+                      error.localizedDescription.UTF8String);
+        return {};
+    }
+    Logger::Info("Successfully compiled shader function: ", name);
+    id<MTLFunction> function =
+        [lib newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
+    return ShaderFunctionHandle(bloom_retain(function), bloom_release);
+}

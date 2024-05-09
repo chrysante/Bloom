@@ -6,6 +6,7 @@
 #include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/CommandQueue.h"
 #include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/ShaderCompiler.h"
 
 namespace bloom {
 
@@ -29,6 +30,8 @@ public:
 
     Reference<Swapchain> createSwapchain(SwapchainDescription const&) override;
     Reference<CommandQueue> createCommandQueue() override;
+
+    Reference<ShaderCompiler> createShaderCompiler() override;
 
     BufferHandle createBuffer(BufferDescription const&) override;
     TextureHandle createTexture(TextureDescription const&) override;
@@ -162,6 +165,17 @@ public:
     void end() final;
 
     id<MTLBlitCommandEncoder> commandEncoder;
+};
+
+class MetalShaderCompiler: public ShaderCompiler {
+public:
+    MetalShaderCompiler(id<MTLDevice> device);
+
+    ShaderFunctionHandle compileFunction(std::string source,
+                                         std::string name) override;
+
+    id<MTLDevice> device;
+    id<MTLDynamicLibrary> baseLib;
 };
 
 } // namespace bloom

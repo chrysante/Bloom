@@ -174,8 +174,9 @@ struct AssetManager::Impl {
     AssetManager* assetManager;
     utl::hashmap<utl::uuid, RegistryEntry> assets;
     std::filesystem::path rootDir;
+    Reference<ShaderCompiler> shaderCompiler;
 
-    explicit Impl(AssetManager* assetManager): assetManager(assetManager) {}
+    explicit Impl(AssetManager* assetManager);
 
     /// Opens the registry file in mode \p mode
     std::fstream openRegistryFile(std::ios_base::openmode mode = std::ios::in |
@@ -324,9 +325,11 @@ static void visitRepr(AssetRepresentation repr, Callback&& callback) {
 
 using Impl = AssetManager::Impl;
 
-AssetManager::AssetManager(): impl(std::make_unique<Impl>(this)) {}
+AssetManager::AssetManager() {}
 
 AssetManager::~AssetManager() = default;
+
+void AssetManager::doInit() { impl = std::make_unique<Impl>(this); }
 
 HardwareDevice& AssetManager::device() const { return application().device(); };
 
@@ -349,6 +352,10 @@ void AssetManager::refreshProject() {
     impl->writeRegistryToDisk();
     // TODO: Evaluate this
     compileScripts();
+}
+
+Impl::Impl(AssetManager* assetManager): assetManager(assetManager) {
+    shaderCompiler = assetManager->device().createShaderCompiler();
 }
 
 std::fstream Impl::openRegistryFile(std::ios_base::openmode mode) {

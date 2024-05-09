@@ -22,6 +22,9 @@ public:
     ///
     virtual ~CoreSystem() = default;
 
+    /// Initializes the system after being linked
+    void init() { doInit(); }
+
     /// \Returns the currently running application
     Application& application() const { return *mApp; }
 
@@ -29,6 +32,8 @@ protected:
     CoreSystem() = default;
 
 private:
+    virtual void doInit() {}
+
     Application* mApp;
 };
 

@@ -52,6 +52,9 @@ public:
     /// \Returns the device.
     HardwareDevice& device() const;
 
+    /// \Returns the command queue.
+    CommandQueue& commandQueue() const;
+
     /// Creates a new asset in project subdirectory \p destDir
     ///
     /// \Param type	The type of the asset.

@@ -14,6 +14,7 @@
 #include "Bloom/Asset/AssetImport.h"
 #include "Bloom/Core/Core.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/ShaderCompiler.h"
 #include "Bloom/Graphics/Material/Material.h"
@@ -352,6 +353,10 @@ AssetManager::~AssetManager() = default;
 void AssetManager::doInit() { impl = std::make_unique<Impl>(this); }
 
 HardwareDevice& AssetManager::device() const { return application().device(); };
+
+CommandQueue& AssetManager::commandQueue() const {
+    return application().commandQueue();
+}
 
 void AssetManager::openProject(std::filesystem::path path) {
     impl->rootDir = path.lexically_normal();
@@ -1015,7 +1020,27 @@ void Impl::uploadStaticMeshToGPU(StaticMesh& mesh, RegistryEntry const& entry) {
 }
 
 void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
-    Logger::Error("uploadTextureToGPU not implemented");
+    auto handle = assetManager->device().createTexture(
+        { .pixelFormat = PixelFormat::RGBA8Unorm,
+          .size = usize3(texture.size, 1),
+          .mipmapLevelCount = 1,
+          .sampleCount = 1,
+          .storageMode = StorageMode::Shared,
+          .usage = TextureUsage::ShaderRead });
+    bool hasMemoryRepr = !texture.data.empty();
+    if (!hasMemoryRepr) {
+        loadTextureFromDisk(texture, entry.diskLocation);
+    }
+    if (texture.data.empty()) {
+        return;
+    }
+    copyMemoryToTexture(RenderAPI::Metal, handle, texture.data.data(),
+                        texture.size.x * 4,
+                        { usize3{}, handle.description().size }, 0);
+    texture.GPUHandle = handle;
+    if (!hasMemoryRepr) {
+        texture.data.clear();
+    }
 }
 
 /// MARK: - Memory -> Disk

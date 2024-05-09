@@ -12,8 +12,12 @@ namespace bloom {
 
 std::unique_ptr<HardwareDevice> createMetalDevice();
 
-void metalCopyData(TextureView source, void* dest, size_t bytesPerRow,
-                   vml::AABB<uint32_t, 3> region, size_t mipLevel);
+void metalCopyTextureToMemory(TextureView source, void* dest,
+                              size_t bytesPerRow, vml::AABB<uint32_t, 3> region,
+                              size_t mipLevel);
+
+void metalCopyMemoryToTexture(TextureView dest, void* data, size_t bytesPerRow,
+                              vml::AABB<uint32_t, 3> region, size_t mipLevel);
 
 } // namespace bloom
 

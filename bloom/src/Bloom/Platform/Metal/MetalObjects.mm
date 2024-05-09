@@ -31,14 +31,28 @@ static id<MTLTexture> getNative(TextureView texture) {
     return (__bridge id<MTLTexture>)texture.nativeHandle();
 }
 
-void bloom::metalCopyData(TextureView source, void* dest, size_t bytesPerRow,
-                          vml::AABB<uint32_t, 3> region, size_t mipLevel) {
+void bloom::metalCopyTextureToMemory(TextureView source, void* dest,
+                                     size_t bytesPerRow,
+                                     vml::AABB<uint32_t, 3> region,
+                                     size_t mipLevel) {
     id<MTLTexture> native = getNative(source);
     auto mtlRegion = toMTL(region);
     [native getBytes:dest
          bytesPerRow:bytesPerRow
           fromRegion:mtlRegion
          mipmapLevel:mipLevel];
+}
+
+void bloom::metalCopyMemoryToTexture(TextureView dest, void* data,
+                                     size_t bytesPerRow,
+                                     vml::AABB<uint32_t, 3> region,
+                                     size_t mipLevel) {
+    id<MTLTexture> native = getNative(dest);
+    auto mtlRegion = toMTL(region);
+    [native replaceRegion:mtlRegion
+              mipmapLevel:mipLevel
+                withBytes:data
+              bytesPerRow:bytesPerRow];
 }
 
 // MARK: MetalDevice

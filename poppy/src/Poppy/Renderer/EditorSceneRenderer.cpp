@@ -162,7 +162,7 @@ bloom::EntityHandle EditorSceneRenderer::readEntityIDMap(
     EntityHandleEncoding encodedID;
     vml::AABB<uint32_t, 3> region = { uint3(position, 0),
                                       uint3(position, 0) + uint3(1) };
-    copyData(RenderAPI::Metal, idTex, &encodedID, 4, region, 0);
+    copyTextureToMemory(RenderAPI::Metal, idTex, &encodedID, 4, region, 0);
     if (!encodedID.valid() || encodedID.sceneIndex >= scenes.size()) {
         return {};
     }

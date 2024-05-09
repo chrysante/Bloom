@@ -374,8 +374,13 @@ private:
 
 /// Copies the region of the texture \p source specified by \p region into \p
 /// dest
-void copyData(RenderAPI api, TextureView source, void* dest, size_t bytesPerRow,
-              vml::AABB<uint32_t, 3> region, size_t mipLevel);
+void copyTextureToMemory(RenderAPI api, TextureView source, void* dest,
+                         size_t bytesPerRow, vml::AABB<uint32_t, 3> region,
+                         size_t mipLevel);
+
+void copyMemoryToTexture(RenderAPI api, TextureView dest, void* data,
+                         size_t bytesPerRow, vml::AABB<uint32_t, 3> region,
+                         size_t mipLevel);
 
 class ShaderFunctionHandle: public HardwareResourceHandle {
 public:

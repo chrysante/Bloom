@@ -14,6 +14,6 @@ TEST_CASE() {
     auto* c2 = g.addValue(allocate<FloatConstant>(ctx, 2));
     auto* c1 = g.addValue(allocate<FloatConstant>(ctx, 1));
     g.setRoot(allocate<AggregateBuilder>(ctx, std::vector<Value*>{ c1, c2 }));
-    auto generator = makeCodeGenerator();
-    std::cout << generator->run(g) << std::endl;
+    auto generator = makeCodeGenerator(ctx, g);
+    std::cout << generator->run() << std::endl;
 }

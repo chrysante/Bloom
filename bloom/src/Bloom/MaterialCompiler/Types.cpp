@@ -5,7 +5,7 @@
 using namespace bloom;
 using namespace matc;
 
-std::string AggregateType::makeName(std::span<Type const*> elements) {
+static std::string makeAggregateName(std::span<Type const*> elements) {
     std::stringstream sstr;
     sstr << "{ ";
     bool first = true;
@@ -19,3 +19,7 @@ std::string AggregateType::makeName(std::span<Type const*> elements) {
     sstr << " }";
     return std::move(sstr).str();
 }
+
+AggregateType::AggregateType(std::vector<Type const*> elements):
+    Type(TypeCategory::AggregateType, makeAggregateName(elements)),
+    _elements(std::move(elements)) {}

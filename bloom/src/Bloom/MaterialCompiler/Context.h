@@ -24,6 +24,9 @@ public:
 
     AggregateType const* aggregateType(std::span<Type const* const> elements);
 
+    ///  \Returns a list of all existing types
+    std::vector<Type const*> types() const;
+
     struct Impl;
 
 private:

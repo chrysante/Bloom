@@ -48,11 +48,7 @@ public:
 
 class AggregateType: public Type {
 public:
-    static std::string makeName(std::span<Type const*> elements);
-
-    AggregateType(std::vector<Type const*> elements):
-        Type(TypeCategory::AggregateType, makeName(elements)),
-        _elements(std::move(elements)) {}
+    AggregateType(std::vector<Type const*> elements);
 
     std::span<Type const* const> elements() const { return _elements; }
 

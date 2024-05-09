@@ -12,13 +12,14 @@ class CodeGenerator {
 public:
     virtual ~CodeGenerator() = default;
 
-    virtual std::string run(MaterialGraph const& graph) = 0;
+    virtual std::string run() = 0;
 
 protected:
     CodeGenerator() = default;
 };
 
-std::unique_ptr<CodeGenerator> makeCodeGenerator();
+std::unique_ptr<CodeGenerator> makeCodeGenerator(Context const& ctx,
+                                                 MaterialGraph const& graph);
 
 } // namespace bloom::matc
 

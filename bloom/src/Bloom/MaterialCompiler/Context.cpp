@@ -8,6 +8,7 @@
 #include "Bloom/MaterialCompiler/Types.h"
 
 using namespace bloom;
+using namespace ranges::views;
 using namespace matc;
 
 using Impl = Context::Impl;
@@ -80,3 +81,7 @@ Float2Type const* Context::float2Type() const { return impl->float2Type; }
 Float3Type const* Context::float3Type() const { return impl->float3Type; }
 
 Float4Type const* Context::float4Type() const { return impl->float4Type; }
+
+std::vector<Type const*> Context::types() const {
+    return impl->typeOwners | ToAddress<Type const> | ranges::to<std::vector>;
+}

@@ -7,45 +7,112 @@
 
 #include <utl/hashtable.hpp>
 #include <utl/strcat.hpp>
+#include <utl/streammanip.hpp>
 
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
 #include "Bloom/MaterialCompiler/Values.h"
 
 using namespace bloom;
 using namespace matc;
+using namespace ranges::views;
 
 namespace {
 
-struct MetalCodeGenerator: CodeGenerator {
-    std::string run(MaterialGraph const& graph) override;
+struct Indenter {
+public:
+    explicit Indenter(std::ostream& str): str(str) {}
+
+    auto beginLine() const {
+        return utl::streammanip(
+            [n = scopeNesting](std::ostream& str) { indent(str, n); });
+    }
+
+    void pushScope() {
+        ++scopeNesting;
+        str << " {\n";
+    }
+
+    void popScope(std::string_view postfix = {}) {
+        --scopeNesting;
+        str << beginLine();
+        str << "}" << postfix << "\n";
+    }
+
+private:
+    static void indent(std::ostream& str, int n) {
+        for (int i = 0; i < n; ++i) {
+            str << "    ";
+        }
+    }
+
+    int scopeNesting = 0;
+    std::ostream& str;
+};
+
+template <typename T>
+class NameGenerator {
+public:
+    explicit NameGenerator(std::string prefix): prefix(prefix) {}
+
+    std::string operator()(T const& elem) {
+        auto itr = map.find(elem);
+        if (itr != map.end()) {
+            return itr->second;
+        }
+        return map.insert({ elem, generateNewName() }).first->second;
+    }
+
+    void setName(T const& elem, std::string name) {
+        map[elem] = std::move(name);
+    }
+
+private:
+    std::string generateNewName() { return utl::strcat(prefix, index++); }
+
+    std::string prefix;
+    int index = 0;
+    utl::hashmap<T, std::string> map;
+};
+
+struct Data {};
+
+struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
+    MetalCodeGenerator(Context const& ctx, MaterialGraph const& graph):
+        Indenter(sstr), ctx(ctx), graph(graph) {}
+
+    std::string run() override;
+
+    void declareType(Type const* type) {
+        visit(*type, [this](auto& type) { declareTypeImpl(&type); });
+    }
+    void declareTypeImpl(Type const* type);
+    void declareTypeImpl(AggregateType const* type);
 
     void codegen(Value const& value) {
         visit(value, [this](auto& value) { codegenImpl(value); });
     }
 
+    void beginFunction();
+    void endFunction();
+
     void codegenImpl(Value const&) { assert(false); }
     void codegenImpl(FloatConstant const& value);
     void codegenImpl(AggregateBuilder const& value);
 
-    std::string getName(Value const& value) {
-        auto itr = nameMap.find(&value);
-        if (itr != nameMap.end()) {
-            return itr->second;
-        }
-        return nameMap.insert({ &value, generateNewName() }).first->second;
-    }
+    Context const& ctx;
+    MaterialGraph const& graph;
 
-    std::string generateNewName() { return utl::strcat("_", nameIndex++); }
-
-    int nameIndex = 0;
-    utl::hashmap<Value const*, std::string> nameMap;
+    Type const* returnType;
+    NameGenerator<Type const*> typeNameGen{ "Type_" };
+    NameGenerator<Value const*> valueNameGen{ "Value_" };
     std::stringstream sstr;
 };
 
 } // namespace
 
-std::unique_ptr<CodeGenerator> matc::makeCodeGenerator() {
-    return std::make_unique<MetalCodeGenerator>();
+std::unique_ptr<CodeGenerator> matc::makeCodeGenerator(
+    Context const& ctx, MaterialGraph const& graph) {
+    return std::make_unique<MetalCodeGenerator>(ctx, graph);
 }
 
 static std::vector<Value const*> topsort(std::span<Value const* const> values) {
@@ -75,23 +142,56 @@ static std::vector<Value const*> topsort(std::span<Value const* const> values) {
     return sorted;
 }
 
-std::string MetalCodeGenerator::run(MaterialGraph const& graph) {
-    *this = {};
+std::string MetalCodeGenerator::run() {
+    returnType = graph.root()->type();
+    typeNameGen.setName(returnType, "MaterialType");
     auto order = topsort(graph.values() | ranges::to<std::vector>);
+    for (auto* type: ctx.types()) {
+        declareType(type);
+    }
+    beginFunction();
     for (auto* value: order) {
         codegen(*value);
     }
+    endFunction();
     return std::move(sstr).str();
 }
 
+void MetalCodeGenerator::declareTypeImpl(Type const* type) {
+    typeNameGen.setName(type, type->name());
+}
+
+void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
+    // TODO: This does not handle nested structs
+    sstr << "struct " << typeNameGen(type);
+    pushScope();
+    for (auto [index, member]: type->elements() | enumerate) {
+        sstr << beginLine() << typeNameGen(member) << " _" << index << ";\n";
+    }
+    popScope(";");
+}
+
+void MetalCodeGenerator::beginFunction() {
+    sstr << typeNameGen(returnType) << " " << "material() ";
+    pushScope();
+}
+
+void MetalCodeGenerator::endFunction() {
+    sstr << beginLine() << "return " << valueNameGen(graph.root()) << ";\n";
+    popScope();
+}
+
 void MetalCodeGenerator::codegenImpl(FloatConstant const& value) {
-    sstr << "float " << getName(value) << " = " << value.get() << ";\n";
+    sstr << beginLine() << value.type()->name() << " " << valueNameGen(&value)
+         << " = " << value.get() << ";\n";
 }
 
 void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {
-    sstr << "TYPE " << getName(value) << " = {\n";
+    sstr << beginLine() << typeNameGen(value.type()) << " "
+         << valueNameGen(&value) << " = ";
+    pushScope();
     for (auto* operand: value.operands()) {
-        sstr << "    " << getName(*operand) << ",\n";
+        sstr << beginLine() << valueNameGen(operand) << ",\n";
     }
-    sstr << "};\n";
+    popScope(";");
 }

@@ -15,6 +15,7 @@
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Serialize.h"
 #include "Bloom/Core/Yaml.h"
+#include "Bloom/Graphics/Texture.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Components/Script.h"
 #include "Poppy/Core/Debug.h"
@@ -285,6 +286,12 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
             auto materialInstance =
                 as<MaterialInstance>(assetManager->get(handle));
             matInstViewer->setMaterialInstance(std::move(materialInstance));
+        });
+        break;
+    }
+    case AssetType::Texture2D: {
+        editor().openView("Texture Viewer", [=, this](View& view) {
+            view.openData(as<Texture2D>(assetManager->get(handle)));
         });
         break;
     }

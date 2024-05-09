@@ -80,6 +80,7 @@ set(poppy_sources
   src/Poppy/Views/Gizmo.h
   src/Poppy/Views/ViewportExt.cpp
   src/Poppy/Views/ViewportExt.h
+  src/Poppy/Views/TextureViewer.h
 )
 
 set(poppy_shader_sources

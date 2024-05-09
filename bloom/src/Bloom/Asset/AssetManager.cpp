@@ -1015,7 +1015,7 @@ void Impl::uploadStaticMeshToGPU(StaticMesh& mesh, RegistryEntry const& entry) {
 }
 
 void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
-    BL_UNIMPLEMENTED();
+    Logger::Error("uploadTextureToGPU not implemented");
 }
 
 /// MARK: - Memory -> Disk

@@ -1,21 +1,4 @@
 Nodes:
-  - ID: d0fca01d c9fd5869 d7ee52a4 f818ad8a
-    Name: Float Constant
-    MinSize:
-      - 100
-      - 50
-    Position:
-      - 1840.42822
-      - -324.403564
-    Resizable: false
-    Controller:
-      Type: Constant
-      DataType: Float
-      Value:
-        - 1
-        - 0.5
-        - 0.5
-        - 0.5
   - ID: b398694c 7c59820f 2c43ef6c 30628767
     Name: Float Constant
     MinSize:
@@ -33,17 +16,6 @@ Nodes:
         - 0.5
         - 0.5
         - 0.5
-  - ID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
-    Name: Output
-    MinSize:
-      - 0
-      - 0
-    Position:
-      - 2176.42822
-      - -572.403625
-    Resizable: false
-    Controller:
-      Type: Output
   - ID: ce44ecb4 1bdd61d8 f4ef946c 49eccf64
     Name: Float2 Constant
     MinSize:
@@ -58,6 +30,23 @@ Nodes:
       DataType: Float2
       Value:
         - 0.5
+        - 0.5
+        - 0.5
+        - 0.5
+  - ID: d0fca01d c9fd5869 d7ee52a4 f818ad8a
+    Name: Float Constant
+    MinSize:
+      - 100
+      - 50
+    Position:
+      - 1840.42822
+      - -324.403564
+    Resizable: false
+    Controller:
+      Type: Constant
+      DataType: Float
+      Value:
+        - 1
         - 0.5
         - 0.5
         - 0.5
@@ -77,10 +66,21 @@ Nodes:
       Type: Constant
       DataType: Float3
       Value:
-        - 0.334291369
-        - 0.819767475
-        - 0.247836694
+        - 0
+        - 0.267441988
+        - 1
         - 0.5
+  - ID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
+    Name: Output
+    MinSize:
+      - 0
+      - 0
+    Position:
+      - 2176.42822
+      - -572.403625
+    Resizable: false
+    Controller:
+      Type: Output
 Links:
   - FromID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
     FromIndex: 0

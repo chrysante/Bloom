@@ -29,7 +29,7 @@ public:
     /// Creates a new command queue
     virtual Reference<CommandQueue> createCommandQueue() = 0;
 
-    /// 
+    ///
     virtual Reference<ShaderCompiler> createShaderCompiler() = 0;
 
     /// Creates a buffer with description \p desc

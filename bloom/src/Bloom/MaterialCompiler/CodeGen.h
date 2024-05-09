@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 
+#include "Bloom/Core/Base.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
 
 namespace bloom::matc {
@@ -23,9 +24,9 @@ struct CodeGenOptions {
     std::filesystem::path shaderDir;
 };
 
-std::unique_ptr<CodeGenerator> makeCodeGenerator(Context const& ctx,
-                                                 MaterialGraph const& graph,
-                                                 CodeGenOptions const& options);
+BLOOM_API std::unique_ptr<CodeGenerator> makeCodeGenerator(
+    Context const& ctx, MaterialGraph const& graph,
+    CodeGenOptions const& options);
 
 } // namespace bloom::matc
 

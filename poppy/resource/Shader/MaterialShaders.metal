@@ -1,9 +1,9 @@
 #include <metal_stdlib>
 
-#include "Bloom/Graphics/Material/MaterialParameters.h"
-#include "Bloom/Graphics/Vertex.h"
-#include "Bloom/Shader/SharedTypes.h"
-#include "PBRShader.h"
+#include "Shader/MaterialParameters.h"
+#include "Shader/Vertex.h"
+#include "Shader/SharedTypes.h"
+#include "Shader/PBRShader.h"
 
 using namespace metal;
 using namespace bloom;

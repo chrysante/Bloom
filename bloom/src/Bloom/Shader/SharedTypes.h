@@ -1,8 +1,8 @@
 #ifndef BLOOM_SHADER_SHAREDTYPES_H
 #define BLOOM_SHADER_SHAREDTYPES_H
 
-#include "Bloom/Graphics/Lights.h"
-#include "Bloom/Shader/Common.h"
+#include "Shader/Common.h"
+#include "Shader/Lights.h"
 
 namespace bloom {
 

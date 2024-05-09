@@ -1,7 +1,7 @@
-#ifndef BLOOM_GRAPHICS_VERTEX_H
-#define BLOOM_GRAPHICS_VERTEX_H
+#ifndef BLOOM_SHADER_VERTEX_H
+#define BLOOM_SHADER_VERTEX_H
 
-#include "Bloom/Shader/Common.h"
+#include "Shader/Common.h"
 
 namespace bloom {
 
@@ -16,4 +16,4 @@ struct Vertex3D {
 
 } // namespace bloom
 
-#endif // BLOOM_GRAPHICS_VERTEX_H
+#endif // BLOOM_SHADER_VERTEX_H

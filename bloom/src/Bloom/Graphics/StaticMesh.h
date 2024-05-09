@@ -6,7 +6,7 @@
 #include "Bloom/Core/Core.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/Mesh.h"
-#include "Bloom/Graphics/Vertex.h"
+#include "Bloom/Shader/Vertex.h"
 
 namespace bloom {
 

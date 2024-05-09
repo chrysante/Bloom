@@ -3,7 +3,7 @@
 
 #include <metal_stdlib>
 
-#include "Bloom/Shader/SharedTypes.h"
+#include "Shader/SharedTypes.h"
 
 namespace bloom {
 

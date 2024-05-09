@@ -8,6 +8,7 @@
 
 #include "Bloom/Application/ResourceUtil.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/MaterialCompiler/Preprocessor.h"
 #include "Bloom/Platform/Metal/ObjCBridging.h"
 
 using namespace bloom;
@@ -541,16 +542,24 @@ void MetalBlitEncoder::synchronizeTexture(TextureView texture, size_t slice,
 
 void MetalBlitEncoder::end() { [commandEncoder endEncoding]; }
 
-static id<MTLDynamicLibrary> createBaseLibrary(id<MTLDevice> device) {
-    std::fstream file(resourceDir() / "Shaders/PBRShader.metal");
+static std::string openShaderSourceFile() {
+    std::fstream file(resourceDir() / "Shader/PBRShader.metal");
     if (!file) {
         Logger::Error("Failed to open shader source file");
-        return nil;
+        return {};
     }
     std::stringstream sstr;
     sstr << file.rdbuf();
+    return preprocessIncludes(std::move(sstr).str(),
+                              std::array{ resourceDir() });
+}
+
+static id<MTLDynamicLibrary> createBaseLibrary(id<MTLDevice> device) {
     NSString* source =
-        [NSString stringWithUTF8String:std::move(sstr).str().c_str()];
+        [NSString stringWithUTF8String:openShaderSourceFile().c_str()];
+    if (source.length == 0) {
+        return nil;
+    }
     NSError* error = nil;
     MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
     options.libraryType = MTLLibraryTypeDynamic;

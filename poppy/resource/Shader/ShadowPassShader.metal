@@ -1,5 +1,6 @@
-#include "Bloom/Graphics/Vertex.h"
 #include <metal_stdlib>
+
+#include "Shader/Vertex.h"
 
 using namespace metal;
 

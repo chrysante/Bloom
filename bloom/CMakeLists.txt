@@ -10,8 +10,7 @@ target_include_directories(bloom
     PUBLIC
       src
       ${EnTT_SOURCE_DIR}/src
-    PRIVATE
-      src/Bloom
+      src/Bloom # For shared shader headers
 )
 
 target_link_libraries(bloom
@@ -19,6 +18,7 @@ target_link_libraries(bloom
     utility
     vml
   PRIVATE
+    matc
     range-v3
     assimp
     glfw

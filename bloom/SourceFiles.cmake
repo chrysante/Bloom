@@ -97,12 +97,10 @@ set(bloom_sources
   src/Bloom/Graphics/Camera.h
   src/Bloom/Graphics/Lights.cpp
   src/Bloom/Graphics/Lights.h
-  src/Bloom/Graphics/MaterialProperties.h
   src/Bloom/Graphics/Mesh.cpp
   src/Bloom/Graphics/Mesh.h
   src/Bloom/Graphics/StaticMesh.cpp
   src/Bloom/Graphics/StaticMesh.h
-  src/Bloom/Graphics/Vertex.h
 
   src/Bloom/Platform/MacOS/Autorelease.mm
   src/Bloom/Platform/MacOS/CocoaImpl.h
@@ -144,6 +142,9 @@ set(bloom_sources
 
   src/Bloom/Shader/Common.h
   src/Bloom/Shader/SharedTypes.h
+  src/Bloom/Shader/Lights.h
+  src/Bloom/Shader/Vertex.h
+  src/Bloom/Shader/MaterialParameters.h
 )
 
 set(bloom_test_sources

@@ -44,12 +44,14 @@ set_source_files_properties(${poppy_shader_sources} PROPERTIES LANGUAGE METAL)
 set_target_properties(poppy
   PROPERTIES
     XCODE_ATTRIBUTE_MTL_HEADER_SEARCH_PATHS
-      "${PROJECT_SOURCE_DIR}/Poppy/src ${PROJECT_SOURCE_DIR}/Bloom/src/ ${utility_SOURCE_DIR}/include"
+      "${PROJECT_SOURCE_DIR}/poppy/resource ${PROJECT_SOURCE_DIR}/bloom/src/Bloom"
 )
 
 add_custom_command(TARGET poppy POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                       ${CMAKE_CURRENT_SOURCE_DIR}/resource $<TARGET_FILE_DIR:poppy>/resource)
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/resource $<TARGET_FILE_DIR:poppy>/resource
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/bloom/src/Bloom/Shader $<TARGET_FILE_DIR:poppy>/resource/Shader)
 
 add_custom_target(touch_timestamp
     touch ${CMAKE_CURRENT_SOURCE_DIR}/src/Poppy/Core/Timestamp.cpp

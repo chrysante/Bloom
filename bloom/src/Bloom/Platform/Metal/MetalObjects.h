@@ -171,11 +171,11 @@ class MetalShaderCompiler: public ShaderCompiler {
 public:
     MetalShaderCompiler(id<MTLDevice> device);
 
-    ShaderFunctionHandle compileFunction(std::string source,
-                                         std::string name) override;
+    std::vector<ShaderFunctionHandle> compile(
+        std::string source,
+        std::span<std::string const> functionNames) override;
 
     id<MTLDevice> device;
-    id<MTLDynamicLibrary> baseLib;
 };
 
 } // namespace bloom

@@ -2,8 +2,10 @@
 
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 #include <utl/functional.hpp>
+#include <utl/strcat.hpp>
 #include <utl/utility.hpp>
 
 #include "Bloom/Application/ResourceUtil.h"
@@ -542,46 +544,12 @@ void MetalBlitEncoder::synchronizeTexture(TextureView texture, size_t slice,
 
 void MetalBlitEncoder::end() { [commandEncoder endEncoding]; }
 
-static std::string openShaderSourceFile() {
-    std::fstream file(resourceDir() / "Shader/PBRShader.metal");
-    if (!file) {
-        Logger::Error("Failed to open shader source file");
-        return {};
-    }
-    std::stringstream sstr;
-    sstr << file.rdbuf();
-    return preprocessIncludes(std::move(sstr).str(),
-                              std::array{ resourceDir() });
-}
-
-static id<MTLDynamicLibrary> createBaseLibrary(id<MTLDevice> device) {
-    NSString* source =
-        [NSString stringWithUTF8String:openShaderSourceFile().c_str()];
-    if (source.length == 0) {
-        return nil;
-    }
-    NSError* error = nil;
-    MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-    options.libraryType = MTLLibraryTypeDynamic;
-    options.installName = @"ShadingModels";
-    id<MTLDynamicLibrary> lib = (id<MTLDynamicLibrary>)[device
-        newLibraryWithSource:source
-                     options:options
-                       error:&error];
-    if (error == nil) {
-        Logger::Info("Successfully compiled shading models");
-        return lib;
-    }
-    Logger::Error("Failed to compile shading models: ",
-                  error.localizedDescription.UTF8String);
-    return nil;
-}
-
 MetalShaderCompiler::MetalShaderCompiler(id<MTLDevice> device):
-    device(device), baseLib(createBaseLibrary(device)) {}
+    device(device) {}
 
-ShaderFunctionHandle MetalShaderCompiler::compileFunction(std::string source,
-                                                          std::string name) {
+std::vector<ShaderFunctionHandle> MetalShaderCompiler::compile(
+    std::string source, std::span<std::string const> functionNames) {
+    source = preprocessIncludes(std::move(source), std::array{ resourceDir() });
     NSError* error = nil;
     MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
     options.libraryType = MTLLibraryTypeExecutable;
@@ -590,12 +558,23 @@ ShaderFunctionHandle MetalShaderCompiler::compileFunction(std::string source,
                      options:options
                        error:&error];
     if (error != nil) {
-        Logger::Error("Failed to compiler function: ",
-                      error.localizedDescription.UTF8String);
+        throw std::runtime_error(
+            utl::strcat("Failed to compile shader library: ",
+                        error.localizedDescription.UTF8String));
         return {};
     }
-    Logger::Info("Successfully compiled shader function: ", name);
-    id<MTLFunction> function =
-        [lib newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
-    return ShaderFunctionHandle(bloom_retain(function), bloom_release);
+    Logger::Info("Successfully compiled shader library");
+    std::vector<ShaderFunctionHandle> result;
+    result.reserve(functionNames.size());
+    for (auto& name: functionNames) {
+        id<MTLFunction> function = [lib
+            newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
+        if (!function) {
+            throw std::runtime_error(
+                utl::strcat("Failed to create shader function: ", name));
+        }
+        result.push_back(
+            ShaderFunctionHandle(bloom_retain(function), bloom_release));
+    }
+    return result;
 }

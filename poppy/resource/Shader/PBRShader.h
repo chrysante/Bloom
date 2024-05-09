@@ -10,8 +10,8 @@ namespace bloom {
 struct PBRData {
     metal::float3 albedo;
     metal::float3 emissive;
-    float metallic;
     float roughness;
+    float metallic;
     float ao;
 };
 

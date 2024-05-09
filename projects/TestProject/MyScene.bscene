@@ -1,342 +1,122 @@
-- EntityID: 12
+- EntityID: 13
   Tag:
-    name: Red Cube
+    name: PointLightArray
   Transform:
     position:
-      - 171.04454
-      - 840.179443
-      - 113.773605
+      - 0
+      - 0
+      - -227.431183
     orientation:
-      - 0.957379103
-      - 0.204746321
-      - 0.202150166
-      - 0.0252892468
+      - 1
+      - 0
+      - 0
+      - 0
     scale:
-      - 2.45600057
-      - 2.4559989
-      - 2.45600152
+      - 1
+      - 1
+      - 0.959999979
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: 5
+    lastChild: 9
+  Visibility:
+    value: true
+- EntityID: 4
+  Tag:
+    name: Torus
+  Transform:
+    position:
+      - -658.641052
+      - -1831.94238
+      - 422.346344
+    orientation:
+      - 0.329041094
+      - 0.156011447
+      - -0.207195878
+      - 0.907999039
+    scale:
+      - 3.38999581
+      - 3.39000106
+      - 3.38998938
   Hierarchy:
     parent: -1
     prevSibling: -1
     nextSibling: -1
     firstChild: -1
     lastChild: -1
-  Script: ~
-  Script Preserved Data:
-    Typename: RotateBehaviour
   Mesh Renderer:
     MaterialInstance:
       AssetType: MaterialInstance
       AssetID: e26ba1dc b9fd446e f9e537ac c56ff427
     Mesh:
       AssetType: StaticMesh
-      AssetID: a92e67e7 5700752f 86e6d1c8 8111d850
+      AssetID: 2cee2aa3 57f81268 d88f389f aa81a117
   Visibility:
-    value: true
-- EntityID: 11
+    value: false
+- EntityID: 3
   Tag:
-    name: Directional Light
+    name: Sky Light
   Transform:
     position:
-      - -383.876648
-      - -50.985733
-      - 56.6314011
+      - 18.1578369
+      - -852.283264
+      - 0
     orientation:
-      - -0.258504003
-      - 0.299560368
-      - 0.203625366
-      - 0.895531118
+      - 1
+      - 0
+      - 0
+      - 0
     scale:
-      - 0.999999464
-      - 0.999997318
-      - 1.00000131
+      - 1
+      - 1
+      - 1
   Hierarchy:
     parent: -1
     prevSibling: -1
     nextSibling: -1
     firstChild: -1
     lastChild: -1
-  Directional Light:
+  Sky Light:
     common:
       color:
-        - 1
-        - 0.831541061
-        - 0.476634443
-      intensity: 0.769999981
-    direction:
-      - 0
-      - 0
-      - 0
-    castsShadows: true
-    numCascades: 5
-    shadowDistance: 501
-    shadowDistanceZ: 10000
-    cascadeDistributionExponent: 2
-    cascadeTransitionFraction: 0.0500000007
-    shadowDistanceFadeoutFraction: 0.0500000007
+        - 0.661161602
+        - 0.749280274
+        - 0.778088629
+      intensity: 0.0392999984
   Visibility:
     value: true
-- EntityID: 10
+- EntityID: 0
   Tag:
-    name: Directional Light
+    name: Floor
   Transform:
     position:
-      - -383.876648
-      - -50.985733
-      - 56.6314011
+      - 105.99971
+      - 1.14440918e-05
+      - -158.604645
     orientation:
-      - 0.602251232
-      - 0.335493386
-      - -0.13654168
-      - 0.711402893
+      - 1
+      - -2.89518027e-08
+      - 5.91340807e-08
+      - 1.54304161e-08
     scale:
-      - 1.00000036
-      - 0.999998152
-      - 1.00000298
+      - 15.3216619
+      - 15.3861628
+      - 0.629970312
   Hierarchy:
     parent: -1
     prevSibling: -1
     nextSibling: -1
     firstChild: -1
     lastChild: -1
-  Directional Light:
-    common:
-      color:
-        - 1
-        - 0.831541061
-        - 0.476634443
-      intensity: 0.730000019
-    direction:
-      - 0
-      - 0
-      - 0
-    castsShadows: true
-    numCascades: 5
-    shadowDistance: 501
-    shadowDistanceZ: 10000
-    cascadeDistributionExponent: 2
-    cascadeTransitionFraction: 0.0500000007
-    shadowDistanceFadeoutFraction: 0.0500000007
-  Visibility:
-    value: true
-- EntityID: 9
-  Tag:
-    name: Point Light
-  Transform:
-    position:
-      - 30.3036194
-      - 13.7626953
-      - 846.57843
-    orientation:
-      - 1
-      - 0
-      - 0
-      - 0
-    scale:
-      - 1
-      - 1
-      - 1
-  Hierarchy:
-    parent: 13
-    prevSibling: 8
-    nextSibling: 5
-    firstChild: -1
-    lastChild: -1
-  Point Light:
-    common:
-      color:
-        - 0.555668831
-        - 0.310006499
-        - 1
-      intensity: 80300
-    position:
-      - 0
-      - 0
-      - 0
-    radius: 100
-  Visibility:
-    value: true
-- EntityID: 8
-  Tag:
-    name: Point Light
-  Transform:
-    position:
-      - 174.259827
-      - 744.74054
-      - 446.690918
-    orientation:
-      - 1
-      - 0
-      - 0
-      - 0
-    scale:
-      - 1
-      - 1
-      - 1
-  Hierarchy:
-    parent: 13
-    prevSibling: 7
-    nextSibling: 9
-    firstChild: -1
-    lastChild: -1
-  Point Light:
-    common:
-      color:
-        - 0.99999994
-        - 0.829001486
-        - 0.381788224
-      intensity: 80300
-    position:
-      - 0
-      - 0
-      - 0
-    radius: 100
-  Visibility:
-    value: true
-- EntityID: 7
-  Tag:
-    name: Point Light
-  Transform:
-    position:
-      - -604.463013
-      - 131.387085
-      - 446.690918
-    orientation:
-      - 1
-      - 0
-      - 0
-      - 0
-    scale:
-      - 1
-      - 1
-      - 1
-  Hierarchy:
-    parent: 13
-    prevSibling: 6
-    nextSibling: 8
-    firstChild: -1
-    lastChild: -1
-  Point Light:
-    common:
-      color:
-        - 0.217455074
-        - 0.883781731
-        - 0.617943466
-      intensity: 80300
-    position:
-      - 0
-      - 0
-      - 0
-    radius: 100
-  Visibility:
-    value: true
-- EntityID: 6
-  Tag:
-    name: Point Light
-  Transform:
-    position:
-      - -0.0126037598
-      - -850.021423
-      - 446.690918
-    orientation:
-      - 1
-      - 0
-      - 0
-      - 0
-    scale:
-      - 1
-      - 1
-      - 1
-  Hierarchy:
-    parent: 13
-    prevSibling: 5
-    nextSibling: 7
-    firstChild: -1
-    lastChild: -1
-  Point Light:
-    common:
-      color:
-        - 0.424496174
-        - 0.553522468
-        - 1
-      intensity: 80300
-    position:
-      - 0
-      - 0
-      - 0
-    radius: 100
-  Visibility:
-    value: true
-- EntityID: 5
-  Tag:
-    name: Point Light
-  Transform:
-    position:
-      - 708.491394
-      - -146.187454
-      - 446.690918
-    orientation:
-      - 1
-      - 0
-      - 0
-      - 0
-    scale:
-      - 1
-      - 1
-      - 1
-  Hierarchy:
-    parent: 13
-    prevSibling: 9
-    nextSibling: 6
-    firstChild: -1
-    lastChild: -1
-  Point Light:
-    common:
-      color:
-        - 0.883781731
-        - 0.217455074
-        - 0.668607473
-      intensity: 80300
-    position:
-      - 0
-      - 0
-      - 0
-    radius: 100
-  Visibility:
-    value: true
-- EntityID: 2
-  Tag:
-    name: Cube
-  Transform:
-    position:
-      - 3.67159919e-06
-      - 1.49009324e-07
-      - 148.269882
-    orientation:
-      - 0.695915043
-      - -0.132382303
-      - 0.693142653
-      - 0.133155689
-    scale:
-      - 1.99999475
-      - 1.99998951
-      - 1.99999535
-  Hierarchy:
-    parent: -1
-    prevSibling: -1
-    nextSibling: -1
-    firstChild: -1
-    lastChild: -1
-  Script: ~
-  Script Preserved Data:
-    Typename: RotateBehaviour
   Mesh Renderer:
     MaterialInstance:
       AssetType: MaterialInstance
-      AssetID: 94812734 2da111d0 d27f1d2c bcc5fc0
+      AssetID: 296ec2ec 58c82aa1 65e93dc2 1a2a8637
     Mesh:
       AssetType: StaticMesh
-      AssetID: 7bbf14ee ab50f97c 860de249 7bbd5e17
+      AssetID: b0d777f6 216eb44b 8fcc0438 fc12e91d
   Visibility:
     value: true
 - EntityID: 1
@@ -382,46 +162,49 @@
     shadowDistanceFadeoutFraction: 0.0500000007
   Visibility:
     value: true
-- EntityID: 0
+- EntityID: 2
   Tag:
-    name: Floor
+    name: Cube
   Transform:
     position:
-      - 105.99971
-      - 1.14440918e-05
-      - -158.604645
+      - 3.67159919e-06
+      - 1.49009324e-07
+      - 148.269882
     orientation:
-      - 1
-      - -2.89518027e-08
-      - 5.91340807e-08
-      - 1.54304161e-08
+      - 0.695915043
+      - -0.132382303
+      - 0.693142653
+      - 0.133155689
     scale:
-      - 15.3216619
-      - 15.3861628
-      - 0.629970312
+      - 1.99999475
+      - 1.99998951
+      - 1.99999535
   Hierarchy:
     parent: -1
     prevSibling: -1
     nextSibling: -1
     firstChild: -1
     lastChild: -1
+  Script: ~
+  Script Preserved Data:
+    Typename: RotateBehaviour
   Mesh Renderer:
     MaterialInstance:
       AssetType: MaterialInstance
-      AssetID: 296ec2ec 58c82aa1 65e93dc2 1a2a8637
+      AssetID: 94812734 2da111d0 d27f1d2c bcc5fc0
     Mesh:
       AssetType: StaticMesh
-      AssetID: b0d777f6 216eb44b 8fcc0438 fc12e91d
+      AssetID: 7bbf14ee ab50f97c 860de249 7bbd5e17
   Visibility:
     value: true
-- EntityID: 3
+- EntityID: 5
   Tag:
-    name: Sky Light
+    name: Point Light
   Transform:
     position:
-      - 18.1578369
-      - -852.283264
-      - 0
+      - 708.491394
+      - -146.187454
+      - 446.690918
     orientation:
       - 1
       - 0
@@ -432,74 +215,291 @@
       - 1
       - 1
   Hierarchy:
-    parent: -1
-    prevSibling: -1
-    nextSibling: -1
+    parent: 13
+    prevSibling: 9
+    nextSibling: 6
     firstChild: -1
     lastChild: -1
-  Sky Light:
+  Point Light:
     common:
       color:
-        - 0.661161602
-        - 0.749280274
-        - 0.778088629
-      intensity: 0.0392999984
+        - 0.883781731
+        - 0.217455074
+        - 0.668607473
+      intensity: 80300
+    position:
+      - 0
+      - 0
+      - 0
+    radius: 100
   Visibility:
     value: true
-- EntityID: 4
+- EntityID: 6
   Tag:
-    name: Torus
+    name: Point Light
   Transform:
     position:
-      - -658.641052
-      - -1831.94238
-      - 422.346344
+      - -0.0126037598
+      - -850.021423
+      - 446.690918
     orientation:
-      - 0.329041094
-      - 0.156011447
-      - -0.207195878
-      - 0.907999039
+      - 1
+      - 0
+      - 0
+      - 0
     scale:
-      - 3.38999581
-      - 3.39000106
-      - 3.38998938
+      - 1
+      - 1
+      - 1
+  Hierarchy:
+    parent: 13
+    prevSibling: 5
+    nextSibling: 7
+    firstChild: -1
+    lastChild: -1
+  Point Light:
+    common:
+      color:
+        - 0.424496174
+        - 0.553522468
+        - 1
+      intensity: 80300
+    position:
+      - 0
+      - 0
+      - 0
+    radius: 100
+  Visibility:
+    value: true
+- EntityID: 7
+  Tag:
+    name: Point Light
+  Transform:
+    position:
+      - -604.463013
+      - 131.387085
+      - 446.690918
+    orientation:
+      - 1
+      - 0
+      - 0
+      - 0
+    scale:
+      - 1
+      - 1
+      - 1
+  Hierarchy:
+    parent: 13
+    prevSibling: 6
+    nextSibling: 8
+    firstChild: -1
+    lastChild: -1
+  Point Light:
+    common:
+      color:
+        - 0.217455074
+        - 0.883781731
+        - 0.617943466
+      intensity: 80300
+    position:
+      - 0
+      - 0
+      - 0
+    radius: 100
+  Visibility:
+    value: true
+- EntityID: 8
+  Tag:
+    name: Point Light
+  Transform:
+    position:
+      - 174.259827
+      - 744.74054
+      - 446.690918
+    orientation:
+      - 1
+      - 0
+      - 0
+      - 0
+    scale:
+      - 1
+      - 1
+      - 1
+  Hierarchy:
+    parent: 13
+    prevSibling: 7
+    nextSibling: 9
+    firstChild: -1
+    lastChild: -1
+  Point Light:
+    common:
+      color:
+        - 0.99999994
+        - 0.829001486
+        - 0.381788224
+      intensity: 80300
+    position:
+      - 0
+      - 0
+      - 0
+    radius: 100
+  Visibility:
+    value: true
+- EntityID: 9
+  Tag:
+    name: Point Light
+  Transform:
+    position:
+      - 30.3036194
+      - 13.7626953
+      - 846.57843
+    orientation:
+      - 1
+      - 0
+      - 0
+      - 0
+    scale:
+      - 1
+      - 1
+      - 1
+  Hierarchy:
+    parent: 13
+    prevSibling: 8
+    nextSibling: 5
+    firstChild: -1
+    lastChild: -1
+  Point Light:
+    common:
+      color:
+        - 0.555668831
+        - 0.310006499
+        - 1
+      intensity: 80300
+    position:
+      - 0
+      - 0
+      - 0
+    radius: 100
+  Visibility:
+    value: true
+- EntityID: 10
+  Tag:
+    name: Directional Light
+  Transform:
+    position:
+      - -383.876648
+      - -50.985733
+      - 56.6314011
+    orientation:
+      - 0.602251232
+      - 0.335493386
+      - -0.13654168
+      - 0.711402893
+    scale:
+      - 1.00000036
+      - 0.999998152
+      - 1.00000298
   Hierarchy:
     parent: -1
     prevSibling: -1
     nextSibling: -1
     firstChild: -1
     lastChild: -1
+  Directional Light:
+    common:
+      color:
+        - 1
+        - 0.831541061
+        - 0.476634443
+      intensity: 0.730000019
+    direction:
+      - 0
+      - 0
+      - 0
+    castsShadows: true
+    numCascades: 5
+    shadowDistance: 501
+    shadowDistanceZ: 10000
+    cascadeDistributionExponent: 2
+    cascadeTransitionFraction: 0.0500000007
+    shadowDistanceFadeoutFraction: 0.0500000007
+  Visibility:
+    value: true
+- EntityID: 11
+  Tag:
+    name: Directional Light
+  Transform:
+    position:
+      - -383.876648
+      - -50.985733
+      - 56.6314011
+    orientation:
+      - -0.258504003
+      - 0.299560368
+      - 0.203625366
+      - 0.895531118
+    scale:
+      - 0.999999464
+      - 0.999997318
+      - 1.00000131
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: -1
+    lastChild: -1
+  Directional Light:
+    common:
+      color:
+        - 1
+        - 0.831541061
+        - 0.476634443
+      intensity: 0.769999981
+    direction:
+      - 0
+      - 0
+      - 0
+    castsShadows: true
+    numCascades: 5
+    shadowDistance: 501
+    shadowDistanceZ: 10000
+    cascadeDistributionExponent: 2
+    cascadeTransitionFraction: 0.0500000007
+    shadowDistanceFadeoutFraction: 0.0500000007
+  Visibility:
+    value: true
+- EntityID: 12
+  Tag:
+    name: Red Cube
+  Transform:
+    position:
+      - 171.04454
+      - 840.179443
+      - 113.773605
+    orientation:
+      - 0.957379103
+      - 0.204746321
+      - 0.202150166
+      - 0.0252892468
+    scale:
+      - 2.45600057
+      - 2.4559989
+      - 2.45600152
+  Hierarchy:
+    parent: -1
+    prevSibling: -1
+    nextSibling: -1
+    firstChild: -1
+    lastChild: -1
+  Script: ~
+  Script Preserved Data:
+    Typename: RotateBehaviour
   Mesh Renderer:
     MaterialInstance:
       AssetType: MaterialInstance
       AssetID: e26ba1dc b9fd446e f9e537ac c56ff427
     Mesh:
       AssetType: StaticMesh
-      AssetID: 2cee2aa3 57f81268 d88f389f aa81a117
-  Visibility:
-    value: false
-- EntityID: 13
-  Tag:
-    name: PointLightArray
-  Transform:
-    position:
-      - 0
-      - 0
-      - -227.431183
-    orientation:
-      - 1
-      - 0
-      - 0
-      - 0
-    scale:
-      - 1
-      - 1
-      - 0.959999979
-  Hierarchy:
-    parent: -1
-    prevSibling: -1
-    nextSibling: -1
-    firstChild: 5
-    lastChild: 9
+      AssetID: a92e67e7 5700752f 86e6d1c8 8111d850
   Visibility:
     value: true

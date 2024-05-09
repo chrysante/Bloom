@@ -3,10 +3,13 @@
 #include <magic_enum.hpp>
 #include <vml/vml.hpp>
 
+#include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/Graphics/Material/Material.h"
+#include "Bloom/MaterialCompiler/CodeGen.h"
 #include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
+#include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
@@ -43,7 +46,7 @@ struct MaterialNodeController: NodeController {
     virtual Value* createGraphNode(Context& ctx,
                                    MaterialGraph& graph) const = 0;
 
-    virtual void linkGraphNode(ValueMap const& map) const {
+    virtual void linkGraphNode(Context& ctx, ValueMap const& map) const {
         auto* user = map.get<User>(node());
         if (!user) {
             return;
@@ -53,6 +56,11 @@ struct MaterialNodeController: NodeController {
                 // FIXME: This only works for nodes with single outputs
                 auto* operand = map.get(&input->origin()->parent());
                 user->setOperand(index, operand);
+            }
+            else {
+                int numComponents =
+                    (int)input->userType() - (int)DataType::Float + 1;
+                user->setOperand(index, ctx.vectorConstant(numComponents, {}));
             }
         }
     }
@@ -80,24 +88,28 @@ struct OutputNodeController: MaterialNodeController {
             { .name = "Base Color",
               .flags = PinFlags::Optional,
               .userType = (PinUserType)DataType::Float3 },
+            { .name = "Emissive",
+              .flags = PinFlags::Optional,
+              .userType = (PinUserType)DataType::Float3 },
             { .name = "Roughness",
               .flags = PinFlags::Optional,
               .userType = (PinUserType)DataType::Float },
             { .name = "Metallic",
               .flags = PinFlags::Optional,
               .userType = (PinUserType)DataType::Float },
-            { .name = "Emissive",
+            { .name = "Ambient Occlusion",
               .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Float3 },
+              .userType = (PinUserType)DataType::Float },
         };
     }
 
     Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
-        auto* type = ctx.aggregateType(std::array<Type const*, 4>{
+        auto* type = ctx.aggregateType(std::array<Type const*, 5>{
+            ctx.float3Type(),
             ctx.float3Type(),
             ctx.floatType(),
             ctx.floatType(),
-            ctx.float3Type(),
+            ctx.floatType(),
         });
         return graph.setRoot(allocate<AggregateBuilder>(type));
     }
@@ -107,7 +119,8 @@ struct OutputNodeController: MaterialNodeController {
 
 struct ConstantController: MaterialNodeController {
     static NodeDesc Make(float2 position, DataType dataType) {
-        return { .name = "Constant",
+        return { .name =
+                     utl::strcat(magic_enum::enum_name(dataType), " Constant"),
                  .position = position,
                  .controller = std::make_unique<ConstantController>(dataType) };
     }
@@ -133,12 +146,9 @@ struct ConstantController: MaterialNodeController {
         };
     }
 
-    Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
-        BL_ASSERT(dataType == DataType::Float, "Other cases not implemented");
-        return graph.addValue(
-            allocate<VectorConstant>(ctx,
-                                     (int)dataType - (int)DataType::Float + 1,
-                                     value));
+    Value* createGraphNode(Context& ctx, MaterialGraph&) const override {
+        int numComponents = (int)dataType - (int)DataType::Float + 1;
+        return ctx.vectorConstant(numComponents, value);
     }
 
     bool alwaysDisplayInputNames() const override { return false; }
@@ -148,7 +158,7 @@ struct ConstantController: MaterialNodeController {
     float4 nodeColor() override { return { 0.2, .8, .2, 1 }; }
 
     DataType dataType;
-    float4 value = 0;
+    float4 value = .5;
 };
 
 struct ArithmeticNodeController: MaterialNodeController {
@@ -265,17 +275,35 @@ static std::unique_ptr<NodeController> deserializeNodeController(
 }
 
 struct MaterialModelImpl: bloom::MaterialModel {
-    YAML::Node serialize() const { return model.serialize(); }
+    YAML::Node serialize() const override { return model.serialize(); }
 
-    void deserialize(YAML::Node const& node) {
+    void deserialize(YAML::Node const& node) override {
         model.deserialize(node, [](YAML::Node const& node) {
             return deserializeNodeController(node["Type"].as<NodeType>(), node);
         });
     }
 
-    void compile(Material&) const {}
+    static MaterialNodeController* getController(Node* node) {
+        return dynamic_cast<MaterialNodeController*>(node->controller());
+    }
 
-    NodeEditorGraph model;
+    std::string generateSource() const override {
+        Context ctx;
+        MaterialGraph graph;
+        MaterialNodeController::ValueMap map;
+        for (auto* node: model.nodes()) {
+            auto* controller = getController(node);
+            auto* value = controller->createGraphNode(ctx, graph);
+            map[node] = value;
+        }
+        for (auto* node: model.nodes()) {
+            getController(node)->linkGraphNode(ctx, map);
+        }
+        auto codegen = makeCodeGenerator(ctx, graph, {});
+        return codegen->run();
+    }
+
+    mutable NodeEditorGraph model;
 };
 
 } // namespace
@@ -328,8 +356,15 @@ struct Delegate: NodeEditorDelegate {
         if (ImGui::MenuItem("Output")) {
             model->addNode(OutputNodeController::Make(position));
         }
-        if (ImGui::MenuItem("Constant")) {
-            model->addNode(ConstantController::Make(position, DataType::Float));
+        if (ImGui::BeginMenu("Constant")) {
+            for (auto type: magic_enum::enum_values<DataType>()) {
+                if (ImGui::MenuItem(
+                        std::string(magic_enum::enum_name(type)).c_str()))
+                {
+                    model->addNode(ConstantController::Make(position, type));
+                }
+            }
+            ImGui::EndMenu();
         }
         if (ImGui::MenuItem("Texture Sample")) {
             model->addNode(TextureSamplerController::Make(position));
@@ -391,22 +426,13 @@ void MaterialEditor::deserialize(YAML::Node node) {
     nodeEditor.deserialize(node["NodeEditor"]);
 }
 
-static MaterialNodeController* getController(Node* node) {
-    return dynamic_cast<MaterialNodeController*>(node->controller());
-}
-
 void MaterialEditor::compile() {
-    auto* model = getModel(material.get());
-    BL_ASSERT(model);
-    Context ctx;
-    MaterialGraph graph;
-    MaterialNodeController::ValueMap map;
-    for (auto* node: model->nodes()) {
-        auto* controller = getController(node);
-        auto* value = controller->createGraphNode(ctx, graph);
-        map[node] = value;
-    }
-    for (auto* node: model->nodes()) {
-        getController(node)->linkGraphNode(map);
-    }
+    BL_ASSERT(material.get());
+    dispatch(DispatchToken::NextFrame, [this] {
+        editor()
+            .coreSystems()
+            .assetManager()
+            .makeAvailable(material->handle(), AssetRepresentation::GPU,
+                           /* forceReload: */ true);
+    });
 }

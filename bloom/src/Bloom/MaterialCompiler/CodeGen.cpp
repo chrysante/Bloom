@@ -55,7 +55,7 @@ class NameGenerator {
 public:
     explicit NameGenerator(std::string prefix): prefix(prefix) {}
 
-    std::string operator()(T const& elem) {
+    std::string get(T const& elem) {
         auto itr = map.find(elem);
         if (itr != map.end()) {
             return itr->second;
@@ -67,6 +67,8 @@ public:
         map[elem] = std::move(name);
     }
 
+    bool contains(T const& elem) const { return map.contains(elem); }
+
 private:
     std::string generateNewName() { return utl::strcat(prefix, index++); }
 
@@ -76,6 +78,21 @@ private:
 };
 
 struct Data {};
+
+static std::string makeConstantName(VectorConstant const& c) {
+    switch (c.numComponents()) {
+    case 1:
+        return utl::strcat(c.get().x);
+    case 2:
+        return utl::strcat("float2", c.get().xy);
+    case 3:
+        return utl::strcat("float3", c.get().xyz);
+    case 4:
+        return utl::strcat("float4", c.get());
+    default:
+        assert(false);
+    }
+}
 
 struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
     MetalCodeGenerator(Context const& ctx, MaterialGraph const& graph,
@@ -101,8 +118,21 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
     void defineFragmentFunction();
 
     void codegenImpl(Value const&) { assert(false); }
-    void codegenImpl(VectorConstant const& value);
+    void codegenImpl(VectorConstant const&) {}
     void codegenImpl(AggregateBuilder const& value);
+
+    std::string getName(Value const* value) {
+        if (auto* c = dyncast<VectorConstant const*>(value);
+            c && !valueNameGen.contains(c))
+        {
+            valueNameGen.setName(c, makeConstantName(*c));
+        }
+        return valueNameGen.get(value);
+    }
+
+    void setName(Value const* value, std::string name) {
+        return valueNameGen.setName(value, std::move(name));
+    }
 
     Context const& ctx;
     MaterialGraph const& graph;
@@ -150,11 +180,18 @@ static std::vector<Value const*> topsort(std::span<Value const* const> values) {
 }
 
 std::string MetalCodeGenerator::run() {
+    if (!graph.root()) {
+        throw std::runtime_error("Material graph has no root");
+    }
     returnType = graph.root()->type();
     auto order = topsort(graph.values() | ranges::to<std::vector>);
     sstr << R"(
 #include "Shader/PBRShader.h"
 #include "Shader/SharedTypes.h"
+#include "Shader/Vertex.h"
+
+using namespace metal;
+using namespace bloom;
 
 )";
     for (auto* type: ctx.types()) {
@@ -184,27 +221,53 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
         return;
     }
     // TODO: This does not handle nested structs
-    sstr << "struct " << typeNameGen(type);
+    sstr << "struct " << typeNameGen.get(type);
     pushScope();
     for (auto [index, member]: type->elements() | enumerate) {
-        sstr << beginLine() << typeNameGen(member) << " _" << index << ";\n";
+        sstr << beginLine() << typeNameGen.get(member) << " _" << index
+             << ";\n";
     }
     popScope(";");
     sstr << "\n";
 }
 
 void MetalCodeGenerator::beginFunction() {
-    sstr << "static " << typeNameGen(returnType) << " " << "material() ";
+    sstr << "static " << typeNameGen.get(returnType) << " " << "material() ";
     pushScope();
 }
 
 void MetalCodeGenerator::endFunction() {
-    sstr << beginLine() << "return " << valueNameGen(graph.root()) << ";\n";
+    sstr << beginLine() << "return " << getName(graph.root()) << ";\n";
     popScope();
 }
 
 void MetalCodeGenerator::defineFragmentFunction() {
     sstr << R"(
+struct MainPassData {
+    float4 positionCS [[position]];
+    float3 normalWS;
+    float3 positionWS;
+    float3 color;
+};
+
+vertex MainPassData materialVertexShader(
+    CameraInput device const& cameraBuffer [[buffer(0)]],
+    Vertex3D device const* vertices [[buffer(1)]],
+    float4x4 device const& transform [[buffer(2)]],
+    unsigned vertexID [[vertex_id]])
+{
+    Vertex3D v = vertices[vertexID];
+    float4 vertexPositionMS = float4(v.position, 1);
+    float4 vertexNormalMS = float4(v.normal, 0);
+    float4 vertexPositionWS = transform * vertexPositionMS;
+    MainPassData result;
+    result.positionCS = cameraBuffer.camera * vertexPositionWS;
+    result.normalWS = (transform * vertexNormalMS).xyz;
+    result.positionWS = vertexPositionWS.xyz;
+    result.color = v.color.rgb;
+    return result;
+}
+
 struct MainPassFragmentData {
     float4 color [[color(0)]];
     uint32_t entityID [[color(1)]];
@@ -226,35 +289,18 @@ fragment MainPassFragmentData materialFragmentShader(
                          lights, shadowMetadata, shadowMaps);
     return { float4(color, 1), entityID };
 }
+
+#include "Shader/PBRShader.metal"
+
 )";
 }
 
-void MetalCodeGenerator::codegenImpl(VectorConstant const& value) {
-    sstr << beginLine() << typeNameGen(value.type()) << " "
-         << valueNameGen(&value);
-    if (value.numComponents() == 1) {
-        sstr << " = " << value.get().x << ";\n";
-    }
-    else {
-        pushScope();
-        sstr << beginLine();
-        for (int i = 0; i < value.numComponents(); ++i) {
-            if (i != 0) {
-                sstr << ", ";
-            }
-            sstr << value.get()[i];
-        }
-        sstr << "\n";
-        popScope(";");
-    }
-}
-
 void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {
-    sstr << beginLine() << typeNameGen(value.type()) << " "
-         << valueNameGen(&value);
+    sstr << beginLine() << typeNameGen.get(value.type()) << " "
+         << getName(&value);
     pushScope();
     for (auto* operand: value.operands()) {
-        sstr << beginLine() << valueNameGen(operand) << ",\n";
+        sstr << beginLine() << getName(operand) << ",\n";
     }
     popScope(";");
 }

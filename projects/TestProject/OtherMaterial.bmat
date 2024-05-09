@@ -1,27 +1,27 @@
 Nodes:
-  - ID: 55677fce d8e9104 e1a2cf46 36a04a1
-    Name: Constant
+  - ID: b242d7aa a063b718 7b459357 7e23ee26
+    Name: Float3 Constant
     Position:
-      - 1994.4281
-      - -320.403625
+      - 1884.42822
+      - -489.403625
     Size:
-      - 74
-      - 55
+      - 147
+      - 61
     Controller:
       Type: Constant
-      DataType: Float
+      DataType: Float3
       Value:
-        - 0
-        - 0
-        - 0
-        - 0
-  - ID: 74abf884 bec689c3 7c0d98f3 e75c2731
-    Name: Constant
+        - 0.5
+        - 0.5
+        - 0.5
+        - 0.5
+  - ID: 88dd3868 feb5d2b6 9c76f739 6c846f5c
+    Name: Float Constant
     Position:
-      - 1975.4281
-      - -420.403625
+      - 1894.42822
+      - -361.403625
     Size:
-      - 74
+      - 111
       - 55
     Controller:
       Type: Constant
@@ -42,11 +42,11 @@ Nodes:
     Controller:
       Type: Output
 Links:
-  - FromID: 74abf884 bec689c3 7c0d98f3 e75c2731
+  - FromID: b242d7aa a063b718 7b459357 7e23ee26
     FromIndex: 0
     ToID: e7947b c75bc6d9 462ceb81 dbcb4213
-    ToIndex: 1
-  - FromID: 55677fce d8e9104 e1a2cf46 36a04a1
+    ToIndex: 0
+  - FromID: 88dd3868 feb5d2b6 9c76f739 6c846f5c
     FromIndex: 0
     ToID: e7947b c75bc6d9 462ceb81 dbcb4213
-    ToIndex: 2
+    ToIndex: 3

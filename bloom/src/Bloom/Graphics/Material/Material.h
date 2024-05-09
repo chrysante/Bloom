@@ -2,6 +2,7 @@
 #define BLOOM_GRAPHICS_MATERIAL_MATERIAL_H
 
 #include <memory>
+#include <string>
 
 #include <yaml-cpp/yaml.h>
 
@@ -17,7 +18,7 @@ struct MaterialModel {
     virtual ~MaterialModel() = default;
     virtual YAML::Node serialize() const = 0;
     virtual void deserialize(YAML::Node const&) = 0;
-    virtual void compile(Material&) const = 0;
+    virtual std::string generateSource() const = 0;
 };
 
 __attribute__((weak)) std::unique_ptr<MaterialModel> makeMaterialModel();
@@ -30,6 +31,9 @@ public:
     /// We will probably change this in the future but for now the default
     /// material is the only material there really is
     void makeDefault(HardwareDevice& device);
+
+    void compile(HardwareDevice& device, ShaderFunctionHandle vertexFunction,
+                 ShaderFunctionHandle fragmentFunction);
 
     std::unique_ptr<MaterialModel> model;
 

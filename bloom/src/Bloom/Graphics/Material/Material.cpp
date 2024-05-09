@@ -12,14 +12,21 @@ Material::Material(AssetHandle handle, std::string name):
     model = makeMaterialModel();
 }
 
-void Material::makeDefault(HardwareDevice& device) {
+void Material::compile(HardwareDevice& device,
+                       ShaderFunctionHandle vertexFunction,
+                       ShaderFunctionHandle fragmentFunction) {
     rgMainPass = device.createRenderPipeline(
         { .colorAttachments = { { .pixelFormat = PixelFormat::RGBA32Float },
                                 { .pixelFormat = PixelFormat::R32Uint } },
           .depthAttachmentPixelFormat = PixelFormat::Depth32Float,
-          .vertexFunction = device.createFunction("rgMainPassVS"),
-          .fragmentFunction = device.createFunction("rgMainPassFS") });
+          .vertexFunction = vertexFunction,
+          .fragmentFunction = fragmentFunction });
     depthStencil = device.createDepthStencil(
         { .depthWrite = true,
           .depthCompareFunction = CompareFunction::LessEqual });
+}
+
+void Material::makeDefault(HardwareDevice& device) {
+    compile(device, device.createFunction("rgMainPassVS"),
+            device.createFunction("rgMainPassFS"));
 }

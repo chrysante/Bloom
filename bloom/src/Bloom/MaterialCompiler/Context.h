@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <utl/hashtable.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/MaterialCompiler/Fwd.h"
 
@@ -22,6 +23,8 @@ public:
     VectorType const* float2Type() const { return vectorType(2); }
     VectorType const* float3Type() const { return vectorType(3); }
     VectorType const* float4Type() const { return vectorType(4); }
+
+    VectorConstant* vectorConstant(int numComponents, vml::float4 value);
 
     AggregateType const* aggregateType(std::span<Type const* const> elements);
 

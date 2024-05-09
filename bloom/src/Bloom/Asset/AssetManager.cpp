@@ -15,6 +15,7 @@
 #include "Bloom/Core/Core.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/ShaderCompiler.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Bloom/Graphics/StaticMesh.h"
@@ -650,7 +651,21 @@ bool Impl::makeAvailImpl(Material& mat, RegistryEntry const& entry,
             if (mat.rgMainPass && !forceReload) {
                 return;
             }
-            mat.makeDefault(assetManager->device());
+            try {
+                auto source = mat.model->generateSource();
+                std::vector<std::string> functionNames = {
+                    "materialVertexShader", "materialFragmentShader"
+                };
+                auto functions = shaderCompiler->compile(source, functionNames);
+                BL_ASSERT(functions.size() == 2);
+                mat.compile(assetManager->device(),
+                            functions[0], functions[1]);
+            }
+            catch (std::exception const& e) {
+                Logger::Error("Failed to compile material: ", e.what());
+                Logger::Trace("Resorting to default material");
+                mat.makeDefault(assetManager->device());
+            }
         },
     }); // clang-format on
     return true;

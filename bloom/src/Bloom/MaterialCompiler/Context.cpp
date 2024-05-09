@@ -6,10 +6,12 @@
 
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/MaterialCompiler/Types.h"
+#include "Bloom/MaterialCompiler/Values.h"
 
 using namespace bloom;
 using namespace ranges::views;
 using namespace matc;
+using namespace vml::short_types;
 
 using Impl = Context::Impl;
 
@@ -37,11 +39,15 @@ struct Context::Impl {
         return cast<T const*>(typeOwners.back().get());
     }
 
+    // Types
     std::vector<DynUniquePtr<Type>> typeOwners;
     VectorType const* vectorType[4]{};
     utl::hashmap<utl::small_vector<Type const*>, AggregateType const*,
                  AggregateHash, AggregateEqual>
         aggTypes;
+    // Values
+    std::vector<DynUniquePtr<Value>> valueOwners;
+    utl::hashmap<std::pair<int, float4>, VectorConstant*> vectorConstants;
 };
 
 Context::Context(): impl(std::make_unique<Impl>()) {}
@@ -75,6 +81,18 @@ VectorType const* Context::vectorType(int numComponents) const {
     assert(numComponents >= 1);
     assert(numComponents <= 4);
     return impl->vectorType[numComponents - 1];
+}
+
+VectorConstant* Context::vectorConstant(int numComponents, float4 value) {
+    auto itr = impl->vectorConstants.find({ numComponents, value });
+    if (itr != impl->vectorConstants.end()) {
+        return itr->second;
+    }
+    impl->valueOwners.push_back(
+        allocate<VectorConstant>(*this, numComponents, value));
+    auto* result = cast<VectorConstant*>(impl->valueOwners.back().get());
+    impl->vectorConstants.insert({ { numComponents, value }, result });
+    return result;
 }
 
 std::vector<Type const*> Context::types() const {

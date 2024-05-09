@@ -84,8 +84,6 @@ set(poppy_sources
 
 set(poppy_shader_sources
   src/Poppy/Shaders/BloomShader.metal
-  src/Poppy/Shaders/Lights.h
-  src/Poppy/Shaders/Lights.metal
   src/Poppy/Shaders/PBRShader.h
   src/Poppy/Shaders/PBRShader.metal
   src/Poppy/Shaders/PCSSTest.metal

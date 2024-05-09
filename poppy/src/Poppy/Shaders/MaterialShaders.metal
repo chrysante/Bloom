@@ -3,7 +3,6 @@
 #include "Bloom/Graphics/Material/MaterialParameters.h"
 #include "Bloom/Graphics/Vertex.h"
 #include "Bloom/Shader/SharedTypes.h"
-#include "Lights.h"
 #include "PBRShader.h"
 
 using namespace metal;
@@ -20,78 +19,6 @@ struct MainPassFragmentData {
     float4 color [[color(0)]];
     uint32_t entityID [[color(1)]];
 };
-
-static float3 computePointLights(PBRData pbr, float3 N, float3 V,
-                                 float3 worldPosition, uint numLights,
-                                 PointLight device const* lights)
-{
-    float3 lightAcc{};
-    for (uint i = 0; i < numLights; ++i) {
-        lightAcc += calculatePointLight(pbr, lights[i], V, N, worldPosition);
-    }
-    return lightAcc;
-}
-
-static float3 computeSpotLights(PBRData pbr, float3 N, float3 V,
-                                float3 worldPosition, uint numLights,
-                                SpotLight device const* lights)
-{
-    float3 lightAcc{};
-    for (uint i = 0; i < numLights; ++i) {
-        lightAcc += calculateSpotlight(pbr, lights[i], V, N, worldPosition);
-    }
-    return lightAcc;
-}
-
-static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
-                               float3 worldPosition,
-                               float4x4 const device* lightSpaceTransforms,
-                               uint numLights,
-                               DirectionalLight device const* lights,
-                               ShadowRenderMetadata const device& shadowData,
-                               sampler shadowMapSampler,
-                               texture2d_array<float> shadowMaps)
-{
-    float3 lightAcc{};
-    for (uint i = 0, shadowCasterIndex = 0, shadowMapOffset = 0; i < numLights;
-         ++i)
-    {
-        auto light = lights[i];
-        float3 dirLight = calculateDirectionalLight(pbr, light, V, N);
-        if (!light.castsShadows) {
-            lightAcc += dirLight;
-            continue;
-        }
-        int numCascades = shadowData.numCascades[shadowCasterIndex];
-        float shadow =
-            calculateDirLightCascadedShadow(shadowMaps, shadowMapSampler,
-                                            shadowMapOffset, numCascades,
-                                            lightSpaceTransforms,
-                                            float4(worldPosition, 1),
-                                            dot(N, light.direction));
-        shadowMapOffset += numCascades;
-        ++shadowCasterIndex;
-        lightAcc += shadow * dirLight;
-    }
-    return lightAcc;
-}
-
-static float3 computeSkyLights(PBRData pbr, uint numLights,
-                               SkyLight device const* lights)
-{
-    float3 lightAcc{};
-    for (uint i = 0; i < numLights; ++i) {
-        SkyLight light = lights[i];
-        lightAcc +=
-            pbr.albedo * pbr.ao * light.common.color * light.common.intensity;
-    }
-    return lightAcc;
-}
-
-static float3 computeEmissive(MaterialParameters materialParams)
-{
-    return materialParams.emissive * materialParams.emissiveIntensity;
-}
 
 vertex MainPassData rgMainPassVS(CameraInput device const& cameraBuffer
                                  [[buffer(0)]],
@@ -119,26 +46,15 @@ fragment MainPassFragmentData rgMainPassFS(
     ShadowRenderMetadata device const& shadowMetadata [[buffer(3)]],
     MaterialParameters device const& materialParams [[buffer(4)]],
     uint32_t device const& entityID [[buffer(5)]],
-    texture2d_array<float> shadowMaps [[texture(0)]],
-    sampler shadowMapSampler [[sampler(0)]])
+    texture2d_array<float> shadowMaps [[texture(0)]])
 {
     PBRData pbr{ .albedo = materialParams.baseColor,
                  .metallic = materialParams.metallic,
                  .roughness = materialParams.roughness,
                  .ao = 1 };
-    float3 worldPosition = in.positionWS;
-    float3 N = normalize(in.normalWS.xyz);
-    float3 V = normalize(cameraBuffer.cameraPosition - worldPosition);
-    float3 lightAcc = 0;
-    lightAcc += computePointLights(pbr, N, V, worldPosition,
-                                   lights.numPointLights, lights.pointLights);
-    lightAcc += computeSpotLights(pbr, N, V, worldPosition,
-                                  lights.numSpotLights, lights.spotLights);
-    lightAcc += computeDirLights(pbr, N, V, worldPosition, lightSpaceTransforms,
-                                 lights.numDirLights, lights.dirLights,
-                                 shadowMetadata, shadowMapSampler, shadowMaps);
-    lightAcc += computeSkyLights(pbr, lights.numSkyLights, lights.skyLights);
-    lightAcc += computeEmissive(materialParams);
-    return MainPassFragmentData{ .color = float4(lightAcc, 1),
-                                 .entityID = entityID };
+    float3 color =
+        PBRForwardShader(pbr, in.positionWS, normalize(in.normalWS.xyz),
+                         cameraBuffer.cameraPosition, lightSpaceTransforms,
+                         lights, shadowMetadata, shadowMaps);
+    return { float4(color, 1), entityID };
 }

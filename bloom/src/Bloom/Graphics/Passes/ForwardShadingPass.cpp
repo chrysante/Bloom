@@ -23,8 +23,6 @@ struct ForwardShadingPass: PassImpl<ForwardShadingPass> {
 
     void doExecute(FrameParameters const& params,
                    CommandBuffer& commandBuffer) override;
-    void doAllocateResources(FrameParameters const& params,
-                             HardwareDevice& device) override;
 
     // Sinks
     GeometryResource* geometry;
@@ -38,9 +36,6 @@ struct ForwardShadingPass: PassImpl<ForwardShadingPass> {
     TextureHandle rawColor;
     TextureHandle depth;
     TextureHandle idMap;
-
-    // Internal resources
-    SamplerHandle shadowMapSampler;
 };
 
 } // namespace
@@ -146,7 +141,6 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
     encoder->setFragmentBuffer(shadowMetadata, 3);
     encoder->setFragmentBuffer(geometry->IDBuffer(), 5);
     encoder->setFragmentTexture(shadowMaps, 0);
-    encoder->setFragmentSampler(shadowMapSampler, 0);
     if (params.drawWireframe) {
         encoder->setTriangleFillMode(TriangleFillMode::Lines);
     }
@@ -183,10 +177,4 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
         ++index;
     }
     encoder->end();
-}
-
-void ForwardShadingPass::doAllocateResources(FrameParameters const&,
-                                             HardwareDevice& device) {
-
-    shadowMapSampler = device.createSampler({});
 }

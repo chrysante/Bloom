@@ -3,7 +3,6 @@
 #include "Bloom/Graphics/MaterialProperties.h"
 #include "Bloom/Graphics/Vertex.h"
 #include "Bloom/Shader/SharedTypes.h"
-#include "Poppy/Shaders/Lights.h"
 
 using namespace metal;
 using namespace bloom;

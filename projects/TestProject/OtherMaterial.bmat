@@ -1,52 +1,79 @@
 Nodes:
-  - ID: b242d7aa a063b718 7b459357 7e23ee26
+  - ID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
     Name: Float3 Constant
+    MinSize:
+      - 200
+      - 200
     Position:
-      - 1884.42822
-      - -489.403625
+      - 1803.42822
+      - -776.403564
+    Resizable: true
     Size:
-      - 147
-      - 61
+      - 240
+      - 295
     Controller:
       Type: Constant
       DataType: Float3
       Value:
+        - 0.334291369
+        - 0.819767475
+        - 0.247836694
         - 0.5
-        - 0.5
-        - 0.5
-        - 0.5
-  - ID: 88dd3868 feb5d2b6 9c76f739 6c846f5c
+  - ID: d0fca01d c9fd5869 d7ee52a4 f818ad8a
     Name: Float Constant
+    MinSize:
+      - 100
+      - 50
     Position:
-      - 1894.42822
-      - -361.403625
-    Size:
-      - 111
-      - 55
+      - 1840.42822
+      - -324.403564
+    Resizable: false
     Controller:
       Type: Constant
       DataType: Float
       Value:
-        - 0
-        - 0
-        - 0
-        - 0
-  - ID: e7947b c75bc6d9 462ceb81 dbcb4213
-    Name: Output
+        - 1.48899996
+        - 0.5
+        - 0.5
+        - 0.5
+  - ID: b398694c 7c59820f 2c43ef6c 30628767
+    Name: Float Constant
+    MinSize:
+      - 100
+      - 50
     Position:
-      - 2174.42822
-      - -422.403625
-    Size:
-      - 153
-      - 135
+      - 1826.42822
+      - -423.403564
+    Resizable: false
+    Controller:
+      Type: Constant
+      DataType: Float
+      Value:
+        - 0.226999998
+        - 0.5
+        - 0.5
+        - 0.5
+  - ID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
+    Name: Output
+    MinSize:
+      - 0
+      - 0
+    Position:
+      - 2176.42822
+      - -572.403625
+    Resizable: false
     Controller:
       Type: Output
 Links:
-  - FromID: b242d7aa a063b718 7b459357 7e23ee26
+  - FromID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
     FromIndex: 0
-    ToID: e7947b c75bc6d9 462ceb81 dbcb4213
+    ToID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
     ToIndex: 0
-  - FromID: 88dd3868 feb5d2b6 9c76f739 6c846f5c
+  - FromID: b398694c 7c59820f 2c43ef6c 30628767
     FromIndex: 0
-    ToID: e7947b c75bc6d9 462ceb81 dbcb4213
+    ToID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
+    ToIndex: 2
+  - FromID: d0fca01d c9fd5869 d7ee52a4 f818ad8a
+    FromIndex: 0
+    ToID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
     ToIndex: 3

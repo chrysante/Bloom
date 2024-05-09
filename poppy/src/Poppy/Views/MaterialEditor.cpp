@@ -119,9 +119,22 @@ struct OutputNodeController: MaterialNodeController {
 
 struct ConstantController: MaterialNodeController {
     static NodeDesc Make(float2 position, DataType dataType) {
+        using enum DataType;
+        auto minSize = [&]() -> float2 {
+            if (dataType == Float || dataType == Float2) {
+                return { 100, 50 };
+            }
+            if (dataType == Float3 || dataType == Float4) {
+                return { 200, 200 };
+            }
+            return { 200, 200 };
+        }();
         return { .name =
                      utl::strcat(magic_enum::enum_name(dataType), " Constant"),
                  .position = position,
+                 .minSize = minSize,
+                 .resizable = dataType == Float3 || dataType == Float4 ||
+                              dataType == Texture,
                  .controller = std::make_unique<ConstantController>(dataType) };
     }
 
@@ -153,9 +166,33 @@ struct ConstantController: MaterialNodeController {
 
     bool alwaysDisplayInputNames() const override { return false; }
 
-    bool alwaysDisplayOutputNames() const override { return true; }
+    bool alwaysDisplayOutputNames() const override { return false; }
 
     float4 nodeColor() override { return { 0.2, .8, .2, 1 }; }
+
+    void bodyContent() override {
+        auto colFlags =
+            ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoLabel |
+            ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder |
+            ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoOptions;
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        switch (dataType) {
+        case DataType::Float:
+            ImGui::DragFloat("###Value", &value.x, 0.001, 0.0f, 0.0f, "%.3f");
+            break;
+        case DataType::Float2:
+            ImGui::DragFloat2("###Value", value.data());
+            break;
+        case DataType::Float3:
+            ImGui::ColorPicker3("###Value", value.data(), colFlags);
+            break;
+        case DataType::Float4:
+            ImGui::ColorPicker4("###Value", value.data(), colFlags);
+            break;
+        case DataType::Texture:
+            BL_UNIMPLEMENTED();
+        }
+    }
 
     DataType dataType;
     float4 value = .5;
@@ -275,6 +312,8 @@ static std::unique_ptr<NodeController> deserializeNodeController(
 }
 
 struct MaterialModelImpl: bloom::MaterialModel {
+    bool hasCPURepr() const override { return !model.empty(); }
+
     YAML::Node serialize() const override { return model.serialize(); }
 
     void deserialize(YAML::Node const& node) override {

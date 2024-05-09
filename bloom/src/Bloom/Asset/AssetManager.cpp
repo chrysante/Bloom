@@ -642,6 +642,10 @@ bool Impl::makeAvailImpl(SkeletalMesh&, RegistryEntry const&,
 
 bool Impl::makeAvailImpl(Material& mat, RegistryEntry const& entry,
                          AssetRepresentation repr, bool forceReload) {
+    if (test(repr & AssetRepresentation::GPU) && !mat.model->hasCPURepr()) {
+        /// We need the CPU representation to compile the shaders
+        repr |= AssetRepresentation::CPU;
+    }
     // clang-format off
     visitRepr(repr, utl::overload{
         [&](Tag<AssetRepresentation::CPU>) {

@@ -109,8 +109,11 @@ struct NodeDesc {
     /// The position at which the node will be created
     vml::float2 position;
 
-    /// The size with which the node will be created.
-    vml::float2 size;
+    ///
+    vml::float2 minSize;
+
+    ///
+    bool resizable = false;
 
     /// The controller that will be added to the node
     std::unique_ptr<NodeController> controller;
@@ -272,10 +275,10 @@ public:
     std::string const& name() const { return desc().name; }
 
     /// \Returns the size of this node
-    vml::float2 size() const { return desc().size; }
+    vml::float2 size() const { return _size; }
 
     /// Sets the size of this node to \p size
-    void setSize(vml::float2 size) { _desc.size = size; }
+    void setSize(vml::float2 size) { _size = size; }
 
     /// \Returns the position of this node
     vml::float2 position() const { return desc().position; }
@@ -297,6 +300,7 @@ private:
 
     NodeDesc _desc;
     vml::float4 _color = {};
+    vml::float2 _size;
     std::unique_ptr<LayoutData> _layoutData;
     std::vector<bloom::DynUniquePtr<nodeEditor::InputPin>> _inputs;
     std::vector<bloom::DynUniquePtr<nodeEditor::OutputPin>> _outputs;
@@ -355,7 +359,7 @@ public:
         YAML::Node const& node,
         utl::function_view<
             std::unique_ptr<nodeEditor::NodeController>(YAML::Node const&)>
-            deserializeController = {});
+            deserializeController);
 
     /// Deletes all nodes for which \p predicate returns true
     void deleteIf(utl::function_view<bool(Node const&)> predicate);

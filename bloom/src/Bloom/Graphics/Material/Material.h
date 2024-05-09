@@ -16,6 +16,7 @@ namespace bloom {
 
 struct MaterialModel {
     virtual ~MaterialModel() = default;
+    virtual bool hasCPURepr() const = 0;
     virtual YAML::Node serialize() const = 0;
     virtual void deserialize(YAML::Node const&) = 0;
     virtual std::string generateSource() const = 0;

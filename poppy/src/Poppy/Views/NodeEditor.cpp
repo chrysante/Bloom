@@ -415,11 +415,13 @@ static YAML::Node serializeNode(Node const& node) {
     YAML::Node root;
     root["ID"] = desc.ID;
     root["Name"] = desc.name;
+    root["MinSize"] = desc.minSize;
     root["Position"] = desc.position;
-    root["Size"] = desc.size;
-    if (desc.controller) {
-        root["Controller"] = desc.controller->serialize();
+    root["Resizable"] = desc.resizable;
+    if (desc.resizable) {
+        root["Size"] = node.size();
     }
+    root["Controller"] = desc.controller->serialize();
     return root;
 }
 
@@ -454,12 +456,15 @@ static std::unique_ptr<Node> deserializeNode(
     NodeDesc desc{};
     desc.ID = source["ID"].as<utl::uuid>();
     desc.name = source["Name"].as<std::string>();
+    desc.minSize = source["MinSize"].as<vml::float2>();
     desc.position = source["Position"].as<vml::float2>();
-    desc.size = source["Size"].as<vml::float2>();
-    if (deserializeController) {
-        desc.controller = deserializeController(source["Controller"]);
+    bool resizable = desc.resizable = source["Resizable"].as<bool>();
+    desc.controller = deserializeController(source["Controller"]);
+    auto node = std::make_unique<Node>(std::move(desc));
+    if (resizable) {
+        node->setSize(source["Size"].as<vml::float2>());
     }
-    return std::make_unique<Node>(std::move(desc));
+    return node;
 }
 
 static Node* findNode(utl::hashmap<utl::uuid, Node*> const& map, utl::uuid ID) {
@@ -617,6 +622,7 @@ private:
 struct FrameViewData {
     ImRect clipRect = {};
     bool windowHovered = false;
+    bool disableBackgroundScrolling = false;
     HoverItem<Pin*> hoveredPin;
     HoverItem<Node*> hoveredNode;
     HoverItem<Link> hoveredLink;
@@ -627,6 +633,8 @@ struct FrameViewData {
         hoveredPin.update();
         hoveredNode.update();
         hoveredLink.update();
+        windowHovered = false;
+        disableBackgroundScrolling = false;
     }
 };
 
@@ -992,7 +1000,7 @@ void Impl::onInput(InputEvent& event) {
         return true;
     });
     event.dispatch<ScrollWheel>([&](ScrollEvent event) {
-        if (!event.isTrackpad ||
+        if (!event.isTrackpad || viewData.disableBackgroundScrolling ||
             !viewData.clipRect.Contains(ImGui::GetMousePos()))
         {
             return false;
@@ -1416,7 +1424,7 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
 static float2 computeNodeMinSize(Node const& node, float2 bodyPadding) {
     float pinHeight = styleVars().PinAreaSize *
                       std::max(node.inputs().size(), node.outputs().size());
-    return vml::max(node.layoutData().minSize,
+    return vml::max(node.desc().minSize, node.layoutData().minSize,
                     float2(0, pinHeight + styleVars().NodeBodyTitleHeight +
                                   bodyPadding.y)) +
            2 * bodyPadding + float2(0, styleVars().NodeBodyBottomPadding);
@@ -1545,14 +1553,15 @@ static ImRect drawNodeBody(Node const& node, float zoom, bool selected) {
     ImGui::PopClipRect();
     ImGui::PopFont();
     float2 contentRectMin =
-        pos + (bodyPadding + float2(0, labelSize.y + bodyPadding.y));
+        pos + (bodyPadding + float2(0, labelSize.y + 2 * bodyPadding.y));
     float2 contentRectMax = pos + scaledSize - bodyPadding;
     return ImRect(contentRectMin, contentRectMax);
 }
 
 /// \Returns true if the background has been clicked with the left or right
 /// mouse button
-static bool displayNodeContent(ImRect contentRect, Node const& node) {
+static bool displayNodeContent(ViewData& viewData, ImRect contentRect,
+                               Node const& node) {
     if (!beginInvisibleWindow("Content", contentRect.Min,
                               contentRect.GetSize()))
     {
@@ -1567,9 +1576,12 @@ static bool displayNodeContent(ImRect contentRect, Node const& node) {
                                    ImGuiButtonFlags_MouseButtonLeft |
                                    ImGuiButtonFlags_MouseButtonRight);
     ImGui::SetCursorPos({});
-
     if (node.controller()) {
         node.controller()->bodyContent();
+        auto* window = ImGui::GetCurrentWindowRead();
+        if (ImGui::IsWindowHovered() && (float2)window->ScrollMax != float2{}) {
+            viewData.disableBackgroundScrolling = true;
+        }
     }
     ImGui::EndChild();
     return bgPressed;
@@ -1650,11 +1662,13 @@ void Impl::displayNodeBody(Node& node) {
     bool bgClickedLeft = ImGui::IsItemClicked(ImGuiMouseButton_Left);
     bool bgClickedRight = ImGui::IsItemClicked(ImGuiMouseButton_Right);
     displayPins(node);
-    if (displayNodeContent(contentRect, node)) {
+    if (displayNodeContent(viewData, contentRect, node)) {
         bgClickedLeft |= ImGui::IsMouseDown(ImGuiMouseButton_Left);
         bgClickedRight |= ImGui::IsMouseDown(ImGuiMouseButton_Right);
     }
-    displayNodeResizeGrip(viewData, node);
+    if (node.desc().resizable) {
+        displayNodeResizeGrip(viewData, node);
+    }
     if (bgClickedLeft || bgClickedRight) {
         defer([this, node = &node] { orderFront(node); });
         viewData.activeNode = &node;
@@ -1698,8 +1712,13 @@ void Impl::displayNodeBody(Node& node) {
 }
 
 void Impl::displayNode(Node& node) {
-    node.setSize(
-        vml::max(node.size(), computeNodeMinSize(node, NodeBodyPadding())));
+    if (node.desc().resizable) {
+        node.setSize(
+            vml::max(node.size(), computeNodeMinSize(node, NodeBodyPadding())));
+    }
+    else {
+        node.setSize(computeNodeMinSize(node, NodeBodyPadding()));
+    }
     ImGui::PushID(&node);
     displayNodeBody(node);
     ImGui::PopID();

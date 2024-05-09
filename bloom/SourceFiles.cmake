@@ -33,6 +33,8 @@ set(bloom_sources
   src/Bloom/Asset/MeshImport.cpp
   src/Bloom/Asset/MeshImport.h
   src/Bloom/Asset/Serialization.h
+  src/Bloom/Asset/STBImage.c
+  src/Bloom/Asset/STBImage.h
 
   src/Bloom/Core.h
   src/Bloom/Core/Autorelease.h

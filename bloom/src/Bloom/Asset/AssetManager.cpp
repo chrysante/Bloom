@@ -23,6 +23,7 @@
 #include "Bloom/Runtime/ScriptSystem.h"
 
 using namespace bloom;
+using namespace vml::short_types;
 using namespace ranges::views;
 
 namespace {
@@ -280,6 +281,8 @@ struct AssetManager::Impl {
     void doImportImpl(Asset const&, std::filesystem::path const&) const {
         BL_UNIMPLEMENTED();
     }
+    void doImportImpl(Texture2D& dest,
+                      std::filesystem::path const& source) const;
     void doImportImpl(StaticMesh& dest,
                       std::filesystem::path const& source) const;
 
@@ -500,9 +503,8 @@ AssetHandle AssetManager::importAsset(std::string name,
     std::optional type =
         impl->deduceImportedAssetType(source.extension().string());
     /// Only static meshes can be imported for now
-    if (!type || *type != AssetType::StaticMesh) {
+    if (!type) {
         Logger::Error("Failed to import resource ", source);
-        Logger::Trace("Note only static mesh import is supported for now");
         return {};
     }
     auto diskLocation = dest / append(name, toExtension(*type));
@@ -895,11 +897,26 @@ struct StaticMeshHeader {
     size_t indexDataSize;
 };
 
+struct Texture2DHeader {
+    TexturePixelFormat pixelFormat;
+    usize2 dimensions;
+    size_t numBytes;
+};
+
 } // namespace
 
 static std::optional<StaticMeshHeader> readStaticMeshHeader(
     std::fstream& file) {
     StaticMeshHeader header{};
+    file.read((char*)&header, sizeof header);
+    if (!file.good()) {
+        return std::nullopt;
+    }
+    return header;
+}
+
+static std::optional<Texture2DHeader> readTexture2DHeader(std::fstream& file) {
+    Texture2DHeader header{};
     file.read((char*)&header, sizeof header);
     if (!file.good()) {
         return std::nullopt;
@@ -948,7 +965,23 @@ void Impl::loadMaterialInstanceFromDisk(MaterialInstance& inst,
 
 void Impl::loadTextureFromDisk(Texture2D& texture,
                                std::filesystem::path const& source) {
-    BL_UNIMPLEMENTED();
+    BL_EXPECT(toExtension(source) == FileExtension::Btex);
+    auto file = openFile(makeAbsolute(source), std::ios::in | std::ios::binary);
+    auto header = readTexture2DHeader(file);
+    if (!header) {
+        Logger::Error("File was not a texture: ", source);
+        return;
+    }
+    std::vector<uint8_t> buffer;
+    buffer.resize(header->numBytes);
+    file.read((char*)buffer.data(), buffer.size());
+    if (!file.good()) {
+        Logger::Error("Failed to read texture: ", source);
+        return;
+    }
+    texture.data = std::move(buffer);
+    texture.pixelFormat = header->pixelFormat;
+    texture.size = header->dimensions;
 }
 
 void Impl::loadSceneFromDisk(Scene& scene,
@@ -1048,8 +1081,21 @@ void Impl::flushToDiskImpl(MaterialInstance const& inst,
 }
 
 void Impl::flushToDiskImpl(Texture2D const& texture,
-                           std::filesystem::path const&) {
-    Logger::Warn("Not saving texture to disk: ", texture.name());
+                           std::filesystem::path const& dest) {
+    if (texture.data.empty()) {
+        Logger::Warn("Could not write texture to disk: no data");
+        return;
+    }
+    Texture2DHeader header{
+        .pixelFormat = texture.pixelFormat,
+        .dimensions = texture.size,
+        .numBytes = texture.data.size(),
+    };
+    std::ios::sync_with_stdio(false);
+    auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
+                                           std::ios::binary);
+    file.write((char*)&header, sizeof header);
+    file.write((char*)texture.data.data(), texture.data.size());
 }
 
 void Impl::flushToDiskImpl(Scene const& scene,
@@ -1080,11 +1126,21 @@ std::optional<AssetType> Impl::deduceImportedAssetType(
     if (ext == ".FBX") {
         return AssetType::StaticMesh;
     }
+    if (ext == ".TGA" || ext == ".PNG") {
+        return AssetType::Texture2D;
+    }
     return std::nullopt;
 }
 
 void Impl::doImport(Asset& asset, std::filesystem::path const& source) const {
     visit(asset, [&](auto& asset) { doImportImpl(asset, source); });
+}
+
+void Impl::doImportImpl(Texture2D& dest,
+                        std::filesystem::path const& source) const {
+    BL_EXPECT(source.has_filename());
+    BL_EXPECT(source.has_extension());
+    importTexture(dest, source);
 }
 
 void Impl::doImportImpl(StaticMesh& dest,

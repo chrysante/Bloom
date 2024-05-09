@@ -9,7 +9,9 @@
 #include <utl/strcat.hpp>
 #include <vml/vml.hpp>
 
+#include "Bloom/Asset/STBImage.h"
 #include "Bloom/Graphics/StaticMesh.h"
+#include "Bloom/Graphics/Texture.h"
 
 using namespace bloom;
 using namespace vml::short_types;
@@ -84,7 +86,18 @@ StaticMeshData bloom::importStaticMesh(std::filesystem::path const& path) {
     return result;
 }
 
-void bloom::importTexture(std::filesystem::path const& path) {
-    auto buffer = readFileToMemory(path);
-    (void)buffer;
+void bloom::importTexture(Texture2D& texture,
+                          std::filesystem::path const& path) {
+    int2 size{};
+    int channelsInFile = 0;
+    auto* buffer =
+        stbi_load(path.c_str(), &size.x, &size.y, &channelsInFile, 4);
+    if (!buffer) {
+        throw std::runtime_error("Failed to import texture");
+    }
+    size_t bufferSize = size.x * size.y * 4;
+    texture.size = size;
+    texture.data.assign(buffer, buffer + bufferSize);
+    texture.pixelFormat = TexturePixelFormat::RGBA8;
+    stbi_image_free(buffer);
 }

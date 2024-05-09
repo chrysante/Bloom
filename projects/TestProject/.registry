@@ -9,6 +9,11 @@
   Name: CubeBeveledLowPoly
   Location: ./CubeBeveledLowPoly.bmesh
 - Handle:
+    AssetType: Texture2D
+    AssetID: ab480757 430a9f18 d9c90058 644712f9
+  Name: Tiles074_2K-PNG_Color
+  Location: ./Tiles074_2K-PNG_Color.btex
+- Handle:
     AssetType: StaticMesh
     AssetID: 90b1b43 2375ea9f 57454596 8acaac4d
   Name: Cube
@@ -68,6 +73,11 @@
     AssetID: e26ba1dc b9fd446e f9e537ac c56ff427
   Name: RedPlastic
   Location: RedPlastic.bmatinst
+- Handle:
+    AssetType: Texture2D
+    AssetID: 783906f9 3a10c913 7df8c08b 5fee32a7
+  Name: Tiles074_2K-PNG_Color
+  Location: Tiles074_2K-PNG_Color.btex
 - Handle:
     AssetType: StaticMesh
     AssetID: 2cee2aa3 57f81268 d88f389f aa81a117

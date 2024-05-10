@@ -629,6 +629,7 @@ private:
 /// This is reset at the start of each new frame
 struct FrameViewData {
     ImRect clipRect = {};
+    vml::rectangle<float> nodeRectUnion = {};
     bool windowHovered = false;
     bool disableBackgroundScrolling = false;
     HoverItem<Pin*> hoveredPin;
@@ -714,6 +715,8 @@ static void displayDebugger(ViewData const& viewData,
     ITEM(activeNode);
     ITEM(activeResize);
     ITEM(activePin);
+    ITEM(nodeRectUnion.lower_bound());
+    ITEM(nodeRectUnion.upper_bound());
     ImGui::SeparatorText("Frame Data");
     ITEM(hoveredPin);
     ITEM(hoveredNode);
@@ -859,7 +862,7 @@ static void drawLines(float begin, float end, float dist, Axis axis,
     DL->AddLine(center - float2(0, size), center + float2(0, size), col);
 }
 
-static void drawBackground(float2 viewPos, float zoom) {
+static void drawBackground(ViewData const& viewData, float zoom) {
     while (zoom <= 0.5) {
         zoom *= 2;
     }
@@ -868,13 +871,19 @@ static void drawBackground(float2 viewPos, float zoom) {
     }
     float4 color = styleColors().backgroundGridline;
     float2 dist = styleVars().BackgroundLineDist * zoom;
-    float2 begin = vml::fmod(-viewPos, dist);
+    float2 begin = vml::fmod(-viewData.position, dist);
     drawLines(begin.x, ImGui::GetWindowWidth(), dist.x, Axis::Horizontal,
               color);
     drawLines(begin.y, ImGui::GetWindowHeight(), dist.y, Axis::Vertical, color);
-
     if (drawDebugHelpers) {
-        drawCross((float2)ImGui::GetWindowPos() - viewPos, 250, IM_COL32_WHITE);
+        float2 viewPosSS = (float2)ImGui::GetWindowPos() - viewData.position;
+        drawCross(viewPosSS, 250, IM_COL32_WHITE);
+        auto* DL = ImGui::GetWindowDrawList();
+        DL->AddRect(viewPosSS +
+                        viewData.nodeRectUnion.lower_bound() * viewData.zoom,
+                    viewPosSS +
+                        viewData.nodeRectUnion.upper_bound() * viewData.zoom,
+                    IM_COL32(255, 0, 255, 255));
     }
 }
 
@@ -1661,6 +1670,13 @@ void Impl::nodeBodyPopup(Node& node, bool show) {
     ImGui::EndPopup();
 }
 
+template <typename T, size_t Dim, vml::vector_options O>
+static vml::AABB<T, Dim, O> union_(vml::AABB<T, Dim, O> a,
+                                   vml::AABB<T, Dim, O> b) {
+    return vml::AABB<T, Dim, O>(vml::min(a.lower_bound(), b.lower_bound()),
+                                vml::max(a.upper_bound(), b.upper_bound()));
+}
+
 void Impl::displayNodeBody(Node& node) {
     float2 padding = NodeOuterPadding() * viewData.zoom;
     float2 pos = (float2)ImGui::GetWindowPos() - viewData.position +
@@ -1681,6 +1697,11 @@ void Impl::displayNodeBody(Node& node) {
     ImRect bb(pos, pos + scaledNodeSize);
     ImGui::ItemSize(scaledNodeSize);
     ImGui::ItemAdd(bb, id);
+    vml::rectangle<float> nodeRect(node.position(),
+                                   node.position() + node.size());
+    viewData.nodeRectUnion = vml::area(viewData.nodeRectUnion) == 0 ?
+                                 nodeRect :
+                                 union_(viewData.nodeRectUnion, nodeRect);
     if (ImGui::IsMouseHoveringRect(windowPos + 2, windowPos + windowSize - 4)) {
         viewData.hoveredLink.set({});
         viewData.hoveredNode.set(&node);
@@ -1758,7 +1779,7 @@ void Impl::display() {
         return;
     }
     viewData.beginFrame();
-    drawBackground(viewData.position, viewData.zoom);
+    drawBackground(viewData, viewData.zoom);
     viewData.windowHovered =
         ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow) &&
         ImGui::GetCurrentWindow()->Rect().Contains(ImGui::GetMousePos());
@@ -1767,6 +1788,7 @@ void Impl::display() {
             displayLinks(*node);
         }
         displayDraggingLink();
+        viewData.nodeRectUnion = {};
         for (auto* node: model->nodes()) {
             displayNode(*node);
         }

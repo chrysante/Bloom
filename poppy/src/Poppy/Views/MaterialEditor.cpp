@@ -45,36 +45,44 @@ enum class InputKind { TextureCoords };
 enum class ArithmeticOp { Add, Sub, Mul, Div, LAST = Div };
 
 struct MaterialNodeController: NodeController {
-    struct ValueMap: utl::hashmap<Node*, Value*> {
-        Value* get(Node* node) const {
+    struct ValueMap: utl::hashmap<Node*, utl::small_vector<Value*>> {
+        std::span<Value* const> get(Node* node) const {
             auto itr = find(node);
             BL_ASSERT(itr != end());
             return itr->second;
         }
-        template <typename T>
-        T* get(Node* node) const {
-            return dyncast<T*>(get(node));
+        template <typename T = Value>
+        T* get(Node* node, size_t index) const {
+            return dyncast<T*>(get(node)[index]);
         }
     };
 
-    virtual Value* createGraphNode(Context& ctx,
-                                   MaterialGraph& graph) const = 0;
+    virtual utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& graph) const = 0;
 
     virtual void linkGraphNode(Context& ctx, ValueMap const& map) const {
-        auto* user = map.get<User>(node());
-        if (!user) {
-            return;
-        }
-        for (auto [index, input]: node()->inputs() | enumerate) {
-            if (input->origin()) {
-                // FIXME: This only works for nodes with single outputs
-                auto* operand = map.get(&input->origin()->parent());
-                user->setOperand(index, operand);
+        auto values = map.get(node());
+        for (auto [valueIndex, value]: values | enumerate) {
+            auto* user = dyncast<User*>(value);
+            if (!user) {
+                continue;
             }
-            else {
-                int numComponents =
-                    (int)input->userType() - (int)DataType::Float + 1;
-                user->setOperand(index, ctx.vectorConstant(numComponents, {}));
+            for (auto [inputIndex, input]: node()->inputs() | enumerate) {
+                if (inputIndex >= user->numOperands() ||
+                    user->operand(inputIndex))
+                {
+                    continue;
+                }
+                auto* operand = [&]() -> Value* {
+                    if (input->origin()) {
+                        auto* o = input->origin();
+                        return map.get(&o->parent(), o->indexInParent());
+                    }
+                    int numComponents =
+                        (int)input->userType() - (int)DataType::Float + 1;
+                    return ctx.vectorConstant(numComponents, {});
+                }();
+                user->setOperand(inputIndex, operand);
             }
         }
     }
@@ -117,7 +125,8 @@ struct OutputNodeController: MaterialNodeController {
         };
     }
 
-    Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& graph) const override {
         auto* type = ctx.aggregateType(std::array<Type const*, 5>{
             ctx.float3Type(),
             ctx.float3Type(),
@@ -125,7 +134,7 @@ struct OutputNodeController: MaterialNodeController {
             ctx.floatType(),
             ctx.floatType(),
         });
-        return graph.setRoot(allocate<AggregateBuilder>(type));
+        return { graph.setRoot(allocate<AggregateBuilder>(type)) };
     }
 
     vml::float4 nodeColor() override { return { 0.1, 0.1, 0.1, 1 }; }
@@ -230,7 +239,8 @@ struct ConstantController: MaterialNodeController {
         }
     }
 
-    Value* createGraphNode(Context& ctx, MaterialGraph&) const override {
+    utl::small_vector<Value*> createGraphNodes(Context& ctx,
+                                               MaterialGraph&) const override {
         using enum DataType;
         switch (dataType) {
         case DataType::Float:
@@ -241,7 +251,7 @@ struct ConstantController: MaterialNodeController {
             [[fallthrough]];
         case DataType::Float4: {
             int numComponents = (int)dataType - (int)DataType::Float + 1;
-            return ctx.vectorConstant(numComponents, value);
+            return { ctx.vectorConstant(numComponents, value) };
         }
         case Texture:
             BL_UNIMPLEMENTED();
@@ -262,13 +272,13 @@ struct ConstantController: MaterialNodeController {
         switch (dataType) {
         case DataType::Float:
             ImGui::SetNextItemWidth(-FLT_MIN);
-            ImGui::DragFloat("###Value", &value.x);
+            ImGui::DragFloat("###Value", &value.x, 0.001);
             break;
         case DataType::Float2:
             ImGui::SetNextItemWidth(-FLT_MIN);
-            ImGui::DragFloat("###ValueR", &value.x);
+            ImGui::DragFloat("###ValueR", &value.x, 0.001);
             ImGui::SetNextItemWidth(-FLT_MIN);
-            ImGui::DragFloat("###ValueG", &value.y);
+            ImGui::DragFloat("###ValueG", &value.y, 0.001);
             break;
         case DataType::Float3:
             ImGui::SetNextItemWidth(-FLT_MIN);
@@ -336,10 +346,15 @@ struct InputNodeController: MaterialNodeController {
         }
     }
 
-    Value* createGraphNode(Context& ctx, MaterialGraph&) const override {
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& g) const override {
         switch (kind) {
-        case InputKind::TextureCoords:
-            return ctx.textureCoords();
+        case InputKind::TextureCoords: {
+            auto* coords = ctx.textureCoords();
+            return { coords,
+                     g.addValue(allocate<VectorElement>(ctx, 0, coords)),
+                     g.addValue(allocate<VectorElement>(ctx, 1, coords)) };
+        }
         }
     }
 
@@ -372,29 +387,28 @@ struct AppendNodeController: MaterialNodeController {
     }
 
     std::vector<PinDesc> makeInputDescriptors() override {
-        return std::vector<PinDesc>(numComponents,
-                                    PinDesc{ .name = "",
-                                             .userType = (PinUserType)
-                                                 DataType::Float });
+        return iota(0, numComponents) | transform([](int index) {
+            return PinDesc{ .name = std::array{ "Red", "Green", "Blue",
+                                                "Alpha" }[index],
+                            .userType = (PinUserType)DataType::Float,
+                            .flags = PinFlags::Optional };
+        }) | ranges::to<std::vector>;
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
         return {
             { .name = "",
               .userType =
-                  (PinUserType)((int)DataType::Float + numComponents - 1),
-              .pinFlags = PinFlags::Optional },
+                  (PinUserType)((int)DataType::Float + numComponents - 1) },
         };
     }
 
-    Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
-        return graph.addValue(
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& graph) const override {
+        return { graph.addValue(
             allocate<VectorBuilder>(ctx.vectorType(numComponents),
-                                    numComponents));
+                                    numComponents)) };
     }
-
-    bool alwaysDisplayInputNames() const override { return false; }
-    bool alwaysDisplayOutputNames() const override { return false; }
 
     int numComponents;
 };
@@ -436,11 +450,11 @@ struct SplitNodeController: MaterialNodeController {
                                                  DataType::Float });
     }
 
-    Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
-        BL_UNIMPLEMENTED();
-        //        return iota(0, numComponents) | transform([](int i) {
-        //            return graph.addValue(allocate<VectorElement>(ctx, i));
-        //        }) | ToSmallVector<>;
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& graph) const override {
+        return iota(0, numComponents) | transform([&](int i) {
+            return graph.addValue(allocate<VectorElement>(ctx, i, nullptr));
+        }) | ToSmallVector<>;
     }
 
     bool alwaysDisplayInputNames() const override { return false; }
@@ -483,7 +497,8 @@ struct ArithmeticNodeController: MaterialNodeController {
                    .userType = (PinUserType)DataType::Float } };
     }
 
-    Value* createGraphNode(Context&, MaterialGraph&) const override {
+    utl::small_vector<Value*> createGraphNodes(Context&,
+                                               MaterialGraph&) const override {
         BL_UNIMPLEMENTED();
     }
 
@@ -541,7 +556,8 @@ struct TextureSamplerController: MaterialNodeController {
         };
     }
 
-    Value* createGraphNode(Context&, MaterialGraph&) const override {
+    utl::small_vector<Value*> createGraphNodes(Context&,
+                                               MaterialGraph&) const override {
         BL_UNIMPLEMENTED();
     }
 
@@ -589,8 +605,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
         MaterialNodeController::ValueMap map;
         for (auto* node: model.nodes()) {
             auto* controller = getController(node);
-            auto* value = controller->createGraphNode(ctx, graph);
-            map[node] = value;
+            map[node] = controller->createGraphNodes(ctx, graph);
         }
         for (auto* node: model.nodes()) {
             getController(node)->linkGraphNode(ctx, map);

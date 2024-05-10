@@ -225,6 +225,9 @@ struct FragmentIn {
     }
     beginFunction();
     for (auto* value: order) {
+        if (!value) {
+            throw std::runtime_error("Encountered NULL value");
+        }
         codegen(*value);
     }
     endFunction();
@@ -327,7 +330,7 @@ void MetalCodeGenerator::codegenImpl(VectorBuilder const& value) {
         first = false;
         sstr << getName(operand);
     }
-    sstr << ");";
+    sstr << ");\n";
 }
 
 void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {

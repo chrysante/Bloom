@@ -1,72 +1,64 @@
 Nodes:
-  - ID: b398694c 7c59820f 2c43ef6c 30628767
-    Name: Float Constant
-    MinSize:
-      - 100
-      - 50
-    Position:
-      - 1826.42822
-      - -423.403564
-    Resizable: false
-    Controller:
-      Type: Constant
-      DataType: Float
-      Value:
-        - 0.226999998
-        - 0.5
-        - 0.5
-        - 0.5
-  - ID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
+  - ID: b4347589 6e37eb4a 39b7c239 27847e6a
     Name: Output
     MinSize:
       - 0
       - 0
     Position:
-      - 2146.42822
-      - -650.403625
+      - 2153.42822
+      - -373.403564
     Resizable: false
     Controller:
       Type: Output
-  - ID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
-    Name: Float3 Constant
+  - ID: b0d345c2 c7a75e02 ad8d924d 85cb33a6
+    Name: Append
     MinSize:
-      - 200
-      - 200
+      - 50
+      - 0
     Position:
-      - 1788.42822
-      - -778.403564
-    Resizable: true
-    Size:
-      - 225
-      - 292
+      - 1960.42822
+      - -427.403564
+    Resizable: false
     Controller:
-      Type: Constant
-      DataType: Float3
-      Value:
-        - 0.224513233
-        - 0.416362196
-        - 0.941860437
-        - 0.5
-  - ID: 220cf112 cb7ee1db 20ac3007 54710f3e
+      Type: Append
+      NumComponents: 3
+  - ID: fa446a13 60952803 48bd0bb7 d704dc32
     Name: TextureCoords
     MinSize:
       - 100
       - 0
     Position:
-      - 1790.4281
-      - -231.403564
+      - 1814.4281
+      - -448.403564
     Resizable: false
     Controller:
       Type: Input
       Kind: TextureCoords
-  - ID: d0fca01d c9fd5869 d7ee52a4 f818ad8a
+  - ID: cfd8dade 3be1d3ae 2b786b16 ec0688c
     Name: Float Constant
     MinSize:
       - 100
       - 50
     Position:
-      - 1840.42822
-      - -324.403564
+      - 1925.42822
+      - -317.403564
+    Resizable: false
+    Controller:
+      Type: Constant
+      DataType: Float
+      Value:
+        - 0.254999995
+        - 0.5
+        - 0.5
+        - 0.5
+  - ID: d7212d2 21e6134b b1e64cf0 8404a5d0
+    Name: Float Constant
+    MinSize:
+      - 100
+      - 50
+    Position:
+      - 1925.42822
+      - -238.403564
     Resizable: false
     Controller:
       Type: Constant
@@ -76,32 +68,64 @@ Nodes:
         - 0.5
         - 0.5
         - 0.5
-  - ID: 339c6b63 d965c21c d042181c 5959d822
+  - ID: 8315e9e0 b8a85b02 a995f67f 54c6a9be
+    Name: Split
+    MinSize:
+      - 50
+      - 0
+    Position:
+      - 1913.42822
+      - -75.4035645
+    Resizable: false
+    Controller:
+      Type: Split
+      NumComponents: 3
+  - ID: cb069d2 861bec5f d4c58cc8 a8d41b43
     Name: Append
     MinSize:
       - 50
       - 0
     Position:
-      - 2000.42822
-      - -235.403564
+      - 2018.42822
+      - -76.4035645
     Resizable: false
     Controller:
       Type: Append
       NumComponents: 3
 Links:
-  - FromID: 339c6b63 d965c21c d042181c 5959d822
+  - FromID: cb069d2 861bec5f d4c58cc8 a8d41b43
     FromIndex: 0
-    ToID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
+    ToID: b4347589 6e37eb4a 39b7c239 27847e6a
     ToIndex: 0
-  - FromID: 220cf112 cb7ee1db 20ac3007 54710f3e
+  - FromID: cfd8dade 3be1d3ae 2b786b16 ec0688c
+    FromIndex: 0
+    ToID: b4347589 6e37eb4a 39b7c239 27847e6a
+    ToIndex: 2
+  - FromID: d7212d2 21e6134b b1e64cf0 8404a5d0
+    FromIndex: 0
+    ToID: b4347589 6e37eb4a 39b7c239 27847e6a
+    ToIndex: 3
+  - FromID: fa446a13 60952803 48bd0bb7 d704dc32
     FromIndex: 1
-    ToID: 339c6b63 d965c21c d042181c 5959d822
+    ToID: b0d345c2 c7a75e02 ad8d924d 85cb33a6
     ToIndex: 0
-  - FromID: 220cf112 cb7ee1db 20ac3007 54710f3e
+  - FromID: fa446a13 60952803 48bd0bb7 d704dc32
     FromIndex: 2
-    ToID: 339c6b63 d965c21c d042181c 5959d822
+    ToID: b0d345c2 c7a75e02 ad8d924d 85cb33a6
     ToIndex: 1
-  - FromID: d0fca01d c9fd5869 d7ee52a4 f818ad8a
+  - FromID: b0d345c2 c7a75e02 ad8d924d 85cb33a6
     FromIndex: 0
-    ToID: 339c6b63 d965c21c d042181c 5959d822
+    ToID: 8315e9e0 b8a85b02 a995f67f 54c6a9be
+    ToIndex: 0
+  - FromID: 8315e9e0 b8a85b02 a995f67f 54c6a9be
+    FromIndex: 2
+    ToID: cb069d2 861bec5f d4c58cc8 a8d41b43
+    ToIndex: 0
+  - FromID: 8315e9e0 b8a85b02 a995f67f 54c6a9be
+    FromIndex: 0
+    ToID: cb069d2 861bec5f d4c58cc8 a8d41b43
+    ToIndex: 1
+  - FromID: 8315e9e0 b8a85b02 a995f67f 54c6a9be
+    FromIndex: 1
+    ToID: cb069d2 861bec5f d4c58cc8 a8d41b43
     ToIndex: 2

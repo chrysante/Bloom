@@ -125,7 +125,10 @@ void View::doFrame() {
     if (_toolbar) {
         flags |= ImGuiWindowFlags_NoTitleBar;
     }
-    if (!isDocked(imguiWindow)) {
+    /// If we are not docked we don't allow movement because otherwise we would
+    /// be able to move windows by dragging anywhere in its area. We allow
+    /// dragging separately in the title bar area
+    if (!isDocked(imguiWindow) && imguiWindow && !imguiWindow->ParentWindow) {
         flags |= ImGuiWindowFlags_NoMove;
     }
     if (toolbar()) {

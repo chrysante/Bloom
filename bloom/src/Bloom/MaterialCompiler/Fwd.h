@@ -40,4 +40,15 @@ using NoParent = void;
                        bloom::matc::Parent, Corporeality)
 #include "Bloom/MaterialCompiler/Lists.def"
 
+namespace bloom::matc {
+
+enum RasterizerInputKind {
+    TextureCoords,
+    VertexNormals,
+    VertexTangents,
+    VertexBinormals
+};
+
+} // namespace bloom::matc
+
 #endif // BLOOM_MATERIALCOMPILER_FWD_H

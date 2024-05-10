@@ -85,6 +85,9 @@ public:
     /// See `makeInputDescriptors()`
     virtual std::vector<PinDesc> makeOutputDescriptors() { return {}; }
 
+    /// The content size of the node will at least this large
+    virtual vml::float2 preferredContentSize() const { return { 0, 0 }; }
+
     /// The color of the node body
     virtual vml::float4 nodeColor() { return { 1, 0, 0.5, 1 }; }
 

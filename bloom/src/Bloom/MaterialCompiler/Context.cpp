@@ -56,7 +56,7 @@ struct Context::Impl {
     // Values
     std::vector<DynUniquePtr<Value>> valueOwners;
     utl::hashmap<std::pair<int, float4>, VectorConstant*> vectorConstants;
-    utl::hashmap<int, TextureCoords*> textureCoords;
+    utl::hashmap<RasterizerInputKind, RasterizerInput*> rasterizerInputs;
     utl::hashmap<utl::uuid, TextureConstant*> textureConstants;
 };
 
@@ -116,14 +116,13 @@ TextureConstant* Context::textureConstant(AssetHandle asset) {
     return result;
 }
 
-TextureCoords* Context::textureCoords() {
-    int index = 0;
-    auto itr = impl->textureCoords.find(index);
-    if (itr != impl->textureCoords.end()) {
+RasterizerInput* Context::rasterizerInput(RasterizerInputKind kind) {
+    auto itr = impl->rasterizerInputs.find(kind);
+    if (itr != impl->rasterizerInputs.end()) {
         return itr->second;
     }
-    auto* result = impl->addValue<TextureCoords>(*this);
-    impl->textureCoords.insert({ index, result });
+    auto* result = impl->addValue<RasterizerInput>(*this, kind);
+    impl->rasterizerInputs.insert({ kind, result });
     return result;
 }
 

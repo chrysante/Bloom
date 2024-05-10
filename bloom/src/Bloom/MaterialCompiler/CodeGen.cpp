@@ -125,7 +125,7 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
     void codegenImpl(Value const&) { assert(false); }
     void codegenImpl(VectorConstant const&) {}
     void codegenImpl(TextureConstant const&) {}
-    void codegenImpl(TextureCoords const&) {}
+    void codegenImpl(RasterizerInput const&) {}
     void codegenImpl(TextureSampler const& value);
     void codegenImpl(VectorBuilder const& value);
     void codegenImpl(VectorElement const&) {}
@@ -141,8 +141,18 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
                 [&](TextureConstant const& c) {
                     return utl::strcat("Texture_", textureIndexMap[&c]);
                 },
-                [&](TextureCoords const&) {
-                    return "in.textureCoords";
+                [&](RasterizerInput const& input) {
+                    using enum RasterizerInputKind;
+                    switch (input.kind()) {
+                    case TextureCoords:
+                        return "in.textureCoords";
+                    case VertexNormals:
+                        return "in.normalWS.xyz";
+                    case VertexTangents:
+                        return "in.tangentWS.xyz";
+                    case VertexBinormals:
+                        return "in.binormalWS.xyz";
+                    }
                 },
                 [&](VectorElement const& e) {
                     return utl::strcat(getName(e.operand()), ".",
@@ -293,7 +303,12 @@ void MetalCodeGenerator::beginFunction() {
 }
 
 void MetalCodeGenerator::endFunction() {
-    sstr << beginLine() << "return " << getName(graph.root()) << ";\n";
+    std::string valueName = getName(graph.root());
+    sstr << beginLine() << valueName << ".albedo = max(float3(), " << valueName
+         << ".albedo);\n";
+    sstr << beginLine() << valueName << ".emissive = max(float3(), "
+         << valueName << ".emissive);\n";
+    sstr << beginLine() << "return " << valueName << ";\n";
     popScope();
 }
 
@@ -341,17 +356,19 @@ fragment MainPassFragmentData materialFragmentShader(
     }
     sstr << R"()
 {
-    float3 normalWS = normalize(in.normalWS.xyz);
-    float3 tangentWS = normalize(in.tangentWS.xyz);
-    float3 binormalWS = normalize(in.binormalWS.xyz);
+    in.normalWS.xyz = normalize(in.normalWS.xyz);
+    in.tangentWS.xyz = normalize(in.tangentWS.xyz);
+    in.binormalWS.xyz = normalize(in.binormalWS.xyz);
     PBRData pbr = material(in)";
     for (auto [tex, index]: textureIndexMap) {
         sstr << ",\n        " << getName(tex);
     }
     sstr << R"(
     );
-    float3x3 TBN(tangentWS, binormalWS, normalWS);
-    pbr.normal = TBN * pbr.normal;
+    float3x3 TBN(in.tangentWS.xyz,
+                 in.binormalWS.xyz,
+                 in.normalWS.xyz);
+    pbr.normal = TBN * normalize(pbr.normal);
     float3 color =
         PBRForwardShader(pbr, in.positionWS,
                          cameraBuffer.cameraPosition, lightSpaceTransforms,

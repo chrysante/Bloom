@@ -55,6 +55,7 @@ StaticMeshData bloom::importStaticMesh(std::filesystem::path const& path) {
     BL_ASSERT(position);
     auto* normal = mesh->mNormals;
     auto* tangent = mesh->mTangents;
+    auto* binormal = mesh->mBitangents;
     auto* color = mesh->mColors[0];
     std::array uv = { mesh->mTextureCoords[0], mesh->mTextureCoords[1],
                       mesh->mTextureCoords[2], mesh->mTextureCoords[3] };
@@ -66,8 +67,15 @@ StaticMeshData bloom::importStaticMesh(std::filesystem::path const& path) {
             v.position =
                 BaseWorldScale() *
                 vml::float3{ position[i].x, position[i].y, position[i].z };
-        if (normal) v.normal = { normal[i].x, normal[i].y, normal[i].z };
-        if (tangent) v.tangent = { tangent[i].x, tangent[i].y, tangent[i].z };
+        if (normal) {
+            v.normal = { normal[i].x, normal[i].y, normal[i].z };
+        }
+        if (tangent) {
+            v.tangent = { tangent[i].x, tangent[i].y, tangent[i].z };
+        }
+        if (binormal) {
+            v.binormal = { binormal[i].x, binormal[i].y, binormal[i].z };
+        }
         if (color) v.color = { color[i].r, color[i].g, color[i].b, color[i].a };
         for (int j = 0; j < 4; ++j) {
             if (uv[j]) v.textureCoordinates[j] = { uv[j][i].x, uv[j][i].y };

@@ -22,8 +22,23 @@ TextureConstant::TextureConstant(Context& ctx, AssetHandle asset):
     Constant(ValueNodeType::TextureConstant, ctx.textureType()),
     _asset(asset) {}
 
-TextureCoords::TextureCoords(Context& ctx):
-    Constant(ValueNodeType::TextureCoords, ctx.vectorType(2)) {}
+static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
+    using enum RasterizerInputKind;
+    switch (kind) {
+    case TextureCoords:
+        return ctx.vectorType(2);
+    case VertexNormals:
+        [[fallthrough]];
+    case VertexTangents:
+        [[fallthrough]];
+    case VertexBinormals:
+        return ctx.vectorType(3);
+    }
+}
+
+RasterizerInput::RasterizerInput(Context& ctx, RasterizerInputKind kind):
+    Constant(ValueNodeType::RasterizerInput, selectType(ctx, kind)),
+    _kind(kind) {}
 
 Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
     assert(lhs == rhs);

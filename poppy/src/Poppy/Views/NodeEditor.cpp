@@ -1440,13 +1440,13 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
 
 static float2 computeNodeMinSize(Node const& node) {
     float2 bodyPadding = NodeBodyPadding();
-
     float pinHeight = styleVars().PinAreaSize *
                       std::max(node.inputs().size(), node.outputs().size());
+    float2 contentSize = vml::max(node.controller()->preferredContentSize(),
+                                  float2(0, pinHeight));
+    contentSize += float2(0, styleVars().NodeBodyTitleHeight + bodyPadding.y);
     float2 result =
-        vml::max(node.desc().minSize, node.layoutData().minSize,
-                 float2(0, pinHeight + styleVars().NodeBodyTitleHeight +
-                               bodyPadding.y));
+        vml::max(node.desc().minSize, node.layoutData().minSize, contentSize);
     result.y += styleVars().NodeBodyBottomPadding + 2 * bodyPadding.y;
     float leftInset = node.inputs().empty() ? bodyPadding.x :
                                               styleVars().PinAreaSize;

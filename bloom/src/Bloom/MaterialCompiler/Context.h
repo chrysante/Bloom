@@ -29,7 +29,7 @@ public:
 
     TextureConstant* textureConstant(AssetHandle asset);
 
-    TextureCoords* textureCoords();
+    RasterizerInput* rasterizerInput(RasterizerInputKind kind);
 
     AggregateType const* aggregateType(std::span<Type const* const> elements);
 

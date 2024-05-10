@@ -56,9 +56,14 @@ private:
     AssetHandle _asset;
 };
 
-class TextureCoords: public Constant {
+class RasterizerInput: public Constant {
 public:
-    explicit TextureCoords(Context& ctx);
+    explicit RasterizerInput(Context& ctx, RasterizerInputKind kind);
+
+    RasterizerInputKind kind() const { return _kind; }
+
+private:
+    RasterizerInputKind _kind;
 };
 
 class User: public Value {

@@ -27,6 +27,7 @@ static RenderPipelineHandle createPipeline(
 }
 
 void Material::compile(HardwareDevice& device, AssetManager& AM) {
+    BL_PROFILE_FUNCTION();
     try {
         auto sourceData = model->generateSource();
         std::vector<std::string> functionNames = { "materialVertexShader",

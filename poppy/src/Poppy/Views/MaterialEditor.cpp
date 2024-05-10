@@ -46,7 +46,7 @@ enum class NodeType {
     TextureSampler
 };
 
-enum class InputKind { TextureCoords };
+enum class InputKind { TextureCoords, Normals, Tangents, Binormals };
 
 enum class ArithmeticOp { Add, Sub, Mul, Div, LAST = Div };
 
@@ -160,21 +160,16 @@ struct ConstantController: MaterialNodeController {
         };
         switch (dataType) {
         case Float:
-            desc.minSize = { 100, 50 };
             break;
         case Float2:
-            desc.minSize = { 100, 50 };
             break;
         case Float3:
-            desc.minSize = { 200, 200 };
             desc.resizable = true;
             break;
         case Float4:
-            desc.minSize = { 200, 200 };
             desc.resizable = true;
             break;
         case Texture:
-            desc.minSize = { 200, 200 };
             desc.resizable = true;
             break;
         }
@@ -276,6 +271,22 @@ struct ConstantController: MaterialNodeController {
 
     float4 nodeColor() override { return { 0.2, .8, .2, 1 }; }
 
+    float2 preferredContentSize() const override {
+        using enum DataType;
+        switch (dataType) {
+        case Float:
+            return { 100, 50 };
+        case Float2:
+            return { 100, 50 };
+        case Float3:
+            return { 200, 200 };
+        case Float4:
+            return { 200, 200 };
+        case Texture:
+            return { 200, 200 };
+        }
+    }
+
     void bodyContent() override {
         auto colFlags =
             ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoLabel |
@@ -335,7 +346,7 @@ struct ConstantController: MaterialNodeController {
 
 /// Any fragment shader input, i.e., rasterizer data
 struct InputNodeController: MaterialNodeController {
-    static NodeDesc Make(InputKind kind, float2 position) {
+    static NodeDesc Make(float2 position, InputKind kind) {
         return { .name = std::string(magic_enum::enum_name(kind)),
                  .position = position,
                  .minSize = { 100, 0 },
@@ -355,12 +366,7 @@ struct InputNodeController: MaterialNodeController {
         return root;
     }
 
-    std::vector<PinDesc> makeInputDescriptors() override {
-        switch (kind) {
-        case InputKind::TextureCoords:
-            return {};
-        }
-    }
+    std::vector<PinDesc> makeInputDescriptors() override { return {}; }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
         switch (kind) {
@@ -374,6 +380,14 @@ struct InputNodeController: MaterialNodeController {
                   .userType = (PinUserType)DataType::Float,
                   .color = PinChannelColors[1] },
             };
+
+        case InputKind::Normals:
+            [[fallthrough]];
+        case InputKind::Tangents:
+            [[fallthrough]];
+        case InputKind::Binormals:
+            return { { .name = "Vector",
+                       .userType = (PinUserType)DataType::Float3 } };
         }
     }
 
@@ -381,11 +395,19 @@ struct InputNodeController: MaterialNodeController {
         Context& ctx, MaterialGraph& g) const override {
         switch (kind) {
         case InputKind::TextureCoords: {
-            auto* coords = ctx.textureCoords();
+            auto* coords =
+                ctx.rasterizerInput(RasterizerInputKind::TextureCoords);
             return { coords,
                      g.addValue(allocate<VectorElement>(ctx, 0, coords)),
                      g.addValue(allocate<VectorElement>(ctx, 1, coords)) };
         }
+        case InputKind::Normals:
+            return { ctx.rasterizerInput(RasterizerInputKind::VertexNormals) };
+        case InputKind::Tangents:;
+            return { ctx.rasterizerInput(RasterizerInputKind::VertexTangents) };
+        case InputKind::Binormals:
+            return { ctx.rasterizerInput(
+                RasterizerInputKind::VertexBinormals) };
         }
     }
 
@@ -714,9 +736,15 @@ struct Delegate: NodeEditorDelegate {
         if (ImGui::MenuItem("Output")) {
             model->addNode(OutputNodeController::Make(position));
         }
-        if (ImGui::MenuItem("Texture Coords")) {
-            model->addNode(
-                InputNodeController::Make(InputKind::TextureCoords, position));
+        if (ImGui::BeginMenu("Inputs")) {
+            for (auto kind: magic_enum::enum_values<InputKind>()) {
+                if (ImGui::MenuItem(
+                        std::string(magic_enum::enum_name(kind)).c_str()))
+                {
+                    model->addNode(InputNodeController::Make(position, kind));
+                }
+            }
+            ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Append")) {
             for (int i = 2; i <= 4; ++i) {

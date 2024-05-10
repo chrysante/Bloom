@@ -11,6 +11,8 @@ using namespace bloom;
 struct MainPassData {
     float4 positionCS [[position]];
     float3 normalWS;
+    float3 tangentWS;
+    float3 binormalWS;
     float3 positionWS;
     float3 vertexColor;
     float2 textureCoords;
@@ -30,10 +32,14 @@ vertex MainPassData rgMainPassVS(CameraInput device const& cameraBuffer
     Vertex3D v = vertices[vertexID];
     float4 vertexPositionMS = float4(v.position, 1);
     float4 vertexNormalMS = float4(v.normal, 0);
+    float4 vertexTangentMS = float4(v.tangent, 0);
+    float4 vertexBitangentMS = float4(v.binormal, 0);
     float4 vertexPositionWS = transform * vertexPositionMS;
     return {
         .positionCS = cameraBuffer.camera * vertexPositionWS,
         .normalWS = (transform * vertexNormalMS).xyz,
+        .tangentWS = (transform * vertexTangentMS).xyz,
+        .binormalWS = (transform * vertexBitangentMS).xyz,
         .positionWS = vertexPositionWS.xyz,
         .vertexColor = v.color.rgb,
         .textureCoords = v.textureCoordinates[0]

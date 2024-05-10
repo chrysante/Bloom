@@ -568,10 +568,13 @@ std::vector<ShaderFunctionHandle> MetalShaderCompiler::compile(
     NSError* error = nil;
     MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
     options.libraryType = MTLLibraryTypeExecutable;
-    id<MTLLibrary> lib = [device
-        newLibraryWithSource:[NSString stringWithUTF8String:source.c_str()]
-                     options:options
-                       error:&error];
+    id<MTLLibrary> lib = [&] {
+        BL_PROFILE_FUNCTION("Shader compilation");
+        return [device
+            newLibraryWithSource:[NSString stringWithUTF8String:source.c_str()]
+                         options:options
+                           error:&error];
+    }();
     if (error != nil) {
         throw std::runtime_error(
             utl::strcat("Failed to compile shader library: ",

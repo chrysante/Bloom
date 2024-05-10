@@ -16,6 +16,7 @@
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/Messages.h"
 #include "Poppy/Renderer/EditorSceneRenderer.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/Toolbar.h"
@@ -192,6 +193,10 @@ void Viewport::drawScenes() {
     };
     auto* renderGraph = RenderGraphManager::get();
     if (!renderGraph) {
+        [[maybe_unused]] static int _ = [this] {
+            dispatch(DispatchToken::Now, CompileRenderGraph{});
+            return 0;
+        }();
         displayEmptyWithError("No Render Graph Found");
         return;
     }

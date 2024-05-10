@@ -14,6 +14,7 @@
 #include "Bloom/Graphics/Renderer.h"
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/Messages.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
@@ -378,7 +379,10 @@ RenderGraphEditor::RenderGraphEditor(): nodeEditor(commandPaletteWrite()) {
     }); // clang-format on
 }
 
-void RenderGraphEditor::init() { setPadding({ 0, 0 }); }
+void RenderGraphEditor::init() {
+    setPadding({ 0, 0 });
+    listen([this](CompileRenderGraph) { compile(); });
+}
 
 void RenderGraphEditor::onInput(InputEvent& event) {
     nodeEditor.onInput(event);

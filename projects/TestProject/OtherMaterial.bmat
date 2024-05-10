@@ -64,8 +64,48 @@ Nodes:
         - 0.267441988
         - 1
         - 0.5
+  - ID: 4ffe2dc1 262fc82 bcc6ebc 5bafe2e0
+    Name: TextureCoords
+    MinSize:
+      - 100
+      - 0
+    Position:
+      - 1795.4281
+      - -195.403564
+    Resizable: false
+    Controller:
+      Type: Input
+      Kind: TextureCoords
+  - ID: 857ada33 2805cea2 446725d9 79307327
+    Name: Float Constant
+    MinSize:
+      - 100
+      - 50
+    Position:
+      - 1805.42822
+      - -58.4035645
+    Resizable: false
+    Controller:
+      Type: Constant
+      DataType: Float
+      Value:
+        - 0
+        - 0.5
+        - 0.5
+        - 0.5
+  - ID: 997b813a 6e33de0d d97dc8f f5ffb81a
+    Name: Append
+    MinSize:
+      - 50
+      - 0
+    Position:
+      - 2040.4281
+      - -185.403564
+    Resizable: false
+    Controller:
+      Type: Append
 Links:
-  - FromID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
+  - FromID: 997b813a 6e33de0d d97dc8f f5ffb81a
     FromIndex: 0
     ToID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
     ToIndex: 0
@@ -77,3 +117,11 @@ Links:
     FromIndex: 0
     ToID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
     ToIndex: 3
+  - FromID: 4ffe2dc1 262fc82 bcc6ebc 5bafe2e0
+    FromIndex: 0
+    ToID: 997b813a 6e33de0d d97dc8f f5ffb81a
+    ToIndex: 0
+  - FromID: 857ada33 2805cea2 446725d9 79307327
+    FromIndex: 0
+    ToID: 997b813a 6e33de0d d97dc8f f5ffb81a
+    ToIndex: 1

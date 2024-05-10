@@ -16,8 +16,10 @@ BL_MATGRAPH_TYPE(AggregateType, Type, Concrete)
 BL_MATGRAPH_VALUE(Value, NoParent, Abstract)
 BL_MATGRAPH_VALUE(Constant, Value, Abstract)
 BL_MATGRAPH_VALUE(VectorConstant, Constant, Concrete)
+BL_MATGRAPH_VALUE(TextureCoords, Constant, Concrete)
 BL_MATGRAPH_VALUE(User, Value, Abstract)
 BL_MATGRAPH_VALUE(ArithmeticOperation, User, Concrete)
+BL_MATGRAPH_VALUE(VectorBuilder, User, Concrete)
 BL_MATGRAPH_VALUE(AggregateBuilder, User, Concrete)
 
 #undef BL_MATGRAPH_VALUE

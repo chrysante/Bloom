@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <utl/hashtable.hpp>
+#include <utl/overload.hpp>
 #include <utl/strcat.hpp>
 #include <utl/streammanip.hpp>
 
@@ -119,13 +120,22 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
 
     void codegenImpl(Value const&) { assert(false); }
     void codegenImpl(VectorConstant const&) {}
+    void codegenImpl(TextureCoords const&) {}
+    void codegenImpl(VectorBuilder const& value);
     void codegenImpl(AggregateBuilder const& value);
 
     std::string getName(Value const* value) {
-        if (auto* c = dyncast<VectorConstant const*>(value);
-            c && !valueNameGen.contains(c))
-        {
-            valueNameGen.setName(c, makeConstantName(*c));
+        if (!valueNameGen.contains(value)) {
+            // clang-format off
+            visit(*value, utl::overload{
+                [&](VectorConstant const& c) {
+                    valueNameGen.setName(&c, makeConstantName(c));
+                },
+                [&](TextureCoords const& t) {
+                    valueNameGen.setName(&t, "in.textureCoords");
+                }, 
+                [](Value const&) {}
+            }); // clang-format on
         }
         return valueNameGen.get(value);
     }
@@ -193,6 +203,14 @@ std::string MetalCodeGenerator::run() {
 using namespace metal;
 using namespace bloom;
 
+struct FragmentIn {
+    float4 positionCS [[position]];
+    float3 normalWS;
+    float3 positionWS;
+    float3 vertexColor;
+    float2 textureCoords;
+};
+
 )";
     for (auto* type: ctx.types()) {
         declareType(type);
@@ -232,7 +250,8 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
 }
 
 void MetalCodeGenerator::beginFunction() {
-    sstr << "static " << typeNameGen.get(returnType) << " " << "material() ";
+    sstr << "static " << typeNameGen.get(returnType) << " "
+         << "material(FragmentIn in) ";
     pushScope();
 }
 
@@ -243,14 +262,7 @@ void MetalCodeGenerator::endFunction() {
 
 void MetalCodeGenerator::defineFragmentFunction() {
     sstr << R"(
-struct MainPassData {
-    float4 positionCS [[position]];
-    float3 normalWS;
-    float3 positionWS;
-    float3 color;
-};
-
-vertex MainPassData materialVertexShader(
+vertex FragmentIn materialVertexShader(
     CameraInput device const& cameraBuffer [[buffer(0)]],
     Vertex3D device const* vertices [[buffer(1)]],
     float4x4 device const& transform [[buffer(2)]],
@@ -260,12 +272,13 @@ vertex MainPassData materialVertexShader(
     float4 vertexPositionMS = float4(v.position, 1);
     float4 vertexNormalMS = float4(v.normal, 0);
     float4 vertexPositionWS = transform * vertexPositionMS;
-    MainPassData result;
-    result.positionCS = cameraBuffer.camera * vertexPositionWS;
-    result.normalWS = (transform * vertexNormalMS).xyz;
-    result.positionWS = vertexPositionWS.xyz;
-    result.color = v.color.rgb;
-    return result;
+    return {
+        .positionCS = cameraBuffer.camera * vertexPositionWS,
+        .normalWS = (transform * vertexNormalMS).xyz,
+        .positionWS = vertexPositionWS.xyz,
+        .vertexColor = v.color.rgb,
+        .textureCoords = v.textureCoordinates[0]
+    };
 }
 
 struct MainPassFragmentData {
@@ -274,7 +287,7 @@ struct MainPassFragmentData {
 };
 
 fragment MainPassFragmentData materialFragmentShader(
-    MainPassData in [[stage_in]],
+    FragmentIn in [[stage_in]],
     CameraInput device const& cameraBuffer [[buffer(0)]],
     LightBufferContents device const& lights [[buffer(1)]],
     float4x4 device const* lightSpaceTransforms [[buffer(2)]],
@@ -282,7 +295,7 @@ fragment MainPassFragmentData materialFragmentShader(
     uint32_t device const& entityID [[buffer(5)]],
     texture2d_array<float> shadowMaps [[texture(0)]])
 {
-    PBRData pbr = material();
+    PBRData pbr = material(in);
     float3 color =
         PBRForwardShader(pbr, in.positionWS, normalize(in.normalWS.xyz),
                          cameraBuffer.cameraPosition, lightSpaceTransforms,
@@ -293,6 +306,20 @@ fragment MainPassFragmentData materialFragmentShader(
 #include "Shader/PBRShader.metal"
 
 )";
+}
+
+void MetalCodeGenerator::codegenImpl(VectorBuilder const& value) {
+    sstr << beginLine() << typeNameGen.get(value.type()) << " "
+         << getName(&value) << "(";
+    bool first = true;
+    for (auto* operand: value.operands()) {
+        if (!first) {
+            sstr << ", ";
+        }
+        first = false;
+        sstr << getName(operand);
+    }
+    sstr << ");";
 }
 
 void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {

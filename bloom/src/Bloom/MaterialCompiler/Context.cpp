@@ -39,6 +39,13 @@ struct Context::Impl {
         return cast<T const*>(typeOwners.back().get());
     }
 
+    template <typename T, typename... Args>
+    T* addValue(Args&&... args) {
+        valueOwners.push_back(
+            DynUniquePtr<T>(new T(std::forward<Args>(args)...)));
+        return cast<T*>(valueOwners.back().get());
+    }
+
     // Types
     std::vector<DynUniquePtr<Type>> typeOwners;
     VectorType const* vectorType[4]{};
@@ -48,6 +55,7 @@ struct Context::Impl {
     // Values
     std::vector<DynUniquePtr<Value>> valueOwners;
     utl::hashmap<std::pair<int, float4>, VectorConstant*> vectorConstants;
+    utl::hashmap<int, TextureCoords*> textureCoords;
 };
 
 Context::Context(): impl(std::make_unique<Impl>()) {}
@@ -88,10 +96,19 @@ VectorConstant* Context::vectorConstant(int numComponents, float4 value) {
     if (itr != impl->vectorConstants.end()) {
         return itr->second;
     }
-    impl->valueOwners.push_back(
-        allocate<VectorConstant>(*this, numComponents, value));
-    auto* result = cast<VectorConstant*>(impl->valueOwners.back().get());
+    auto* result = impl->addValue<VectorConstant>(*this, numComponents, value);
     impl->vectorConstants.insert({ { numComponents, value }, result });
+    return result;
+}
+
+TextureCoords* Context::textureCoords() {
+    int index = 0;
+    auto itr = impl->textureCoords.find(index);
+    if (itr != impl->textureCoords.end()) {
+        return itr->second;
+    }
+    auto* result = impl->addValue<TextureCoords>(*this);
+    impl->textureCoords.insert({ index, result });
     return result;
 }
 

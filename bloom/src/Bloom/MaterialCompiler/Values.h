@@ -45,6 +45,11 @@ private:
     int numc;
 };
 
+class TextureCoords: public Constant {
+public:
+    explicit TextureCoords(Context& ctx);
+};
+
 class User: public Value {
 public:
     std::span<Value* const> operands() const { return _operands; }
@@ -88,6 +93,13 @@ public:
 
 private:
     Kind _kind;
+};
+
+class VectorBuilder: public User {
+public:
+    explicit VectorBuilder(Context& ctx, std::vector<Value*> values);
+
+    explicit VectorBuilder(VectorType const* type, int numInputs);
 };
 
 class AggregateBuilder: public User {

@@ -30,7 +30,16 @@ static constexpr std::array<float4, 3> PinChannelColors = {
 
 enum class DataType { Float, Float2, Float3, Float4, Texture };
 
-enum class NodeType { Output, Constant, Arithmetic, TextureSampler };
+enum class NodeType {
+    Output,
+    Input,
+    Constant,
+    Append,
+    Arithmetic,
+    TextureSampler
+};
+
+enum class InputKind { TextureCoords };
 
 enum class ArithmeticOp { Add, Sub, Mul, Div, LAST = Div };
 
@@ -282,6 +291,102 @@ struct ConstantController: MaterialNodeController {
     TextureHandle texture; // FIXME: This is not correct
 };
 
+/// Any fragment shader input, i.e., rasterizer data
+struct InputNodeController: MaterialNodeController {
+    static NodeDesc Make(InputKind kind, float2 position) {
+        return { .name = std::string(magic_enum::enum_name(kind)),
+                 .position = position,
+                 .minSize = { 100, 0 },
+                 .controller = std::make_unique<InputNodeController>(kind) };
+    }
+
+    InputNodeController(InputKind kind): kind(kind) {}
+
+    explicit InputNodeController(YAML::Node const& root) {
+        kind = root["Kind"].as<InputKind>();
+    }
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["Type"] = NodeType::Input;
+        root["Kind"] = kind;
+        return root;
+    }
+
+    std::vector<PinDesc> makeInputDescriptors() override {
+        switch (kind) {
+        case InputKind::TextureCoords:
+            return {};
+        }
+    }
+
+    std::vector<PinDesc> makeOutputDescriptors() override {
+        switch (kind) {
+        case InputKind::TextureCoords:
+            return {
+                { .name = "Coords", .userType = (PinUserType)DataType::Float2 },
+                { .name = "U",
+                  .userType = (PinUserType)DataType::Float,
+                  .color = PinChannelColors[0] },
+                { .name = "V",
+                  .userType = (PinUserType)DataType::Float,
+                  .color = PinChannelColors[1] },
+            };
+        }
+    }
+
+    Value* createGraphNode(Context& ctx, MaterialGraph&) const override {
+        switch (kind) {
+        case InputKind::TextureCoords:
+            return ctx.textureCoords();
+        }
+    }
+
+    bool alwaysDisplayInputNames() const override { return false; }
+    bool alwaysDisplayOutputNames() const override { return true; }
+
+    InputKind kind;
+};
+
+struct AppendNodeController: MaterialNodeController {
+    static NodeDesc Make(float2 position) {
+        return { .name = "Append",
+                 .position = position,
+                 .minSize = { 50, 0 },
+                 .controller = std::make_unique<AppendNodeController>() };
+    }
+
+    AppendNodeController() = default;
+
+    explicit AppendNodeController(YAML::Node const&) {}
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["Type"] = NodeType::Append;
+        return root;
+    }
+
+    std::vector<PinDesc> makeInputDescriptors() override {
+        return {
+            { .name = "", .userType = (PinUserType)DataType::Float2 },
+            { .name = "", .userType = (PinUserType)DataType::Float },
+        };
+    }
+
+    std::vector<PinDesc> makeOutputDescriptors() override {
+        return {
+            { .name = "", .userType = (PinUserType)DataType::Float3 },
+        };
+    }
+
+    Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
+        return graph.addValue(allocate<VectorBuilder>(ctx.vectorType(3), 2));
+    }
+
+    bool alwaysDisplayInputNames() const override { return false; }
+    bool alwaysDisplayOutputNames() const override { return false; }
+};
+
 struct ArithmeticNodeController: MaterialNodeController {
     static NodeDesc Make(ArithmeticOp op, float2 position) {
         return { .name = std::string(magic_enum::enum_name(op)),
@@ -386,8 +491,12 @@ static std::unique_ptr<NodeController> deserializeNodeController(
     switch (type) {
     case NodeType::Output:
         return std::make_unique<OutputNodeController>(node);
+    case NodeType::Input:
+        return std::make_unique<InputNodeController>(node);
     case NodeType::Constant:
         return std::make_unique<ConstantController>(node);
+    case NodeType::Append:
+        return std::make_unique<AppendNodeController>(node);
     case NodeType::Arithmetic:
         return std::make_unique<ArithmeticNodeController>(node);
     case NodeType::TextureSampler:
@@ -478,6 +587,13 @@ struct Delegate: NodeEditorDelegate {
         }
         if (ImGui::MenuItem("Output")) {
             model->addNode(OutputNodeController::Make(position));
+        }
+        if (ImGui::MenuItem("Texture Coords")) {
+            model->addNode(
+                InputNodeController::Make(InputKind::TextureCoords, position));
+        }
+        if (ImGui::MenuItem("Append")) {
+            model->addNode(AppendNodeController::Make(position));
         }
         if (ImGui::BeginMenu("Constant")) {
             for (auto type: magic_enum::enum_values<DataType>()) {

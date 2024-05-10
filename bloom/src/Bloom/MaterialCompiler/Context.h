@@ -26,6 +26,8 @@ public:
 
     VectorConstant* vectorConstant(int numComponents, vml::float4 value);
 
+    TextureCoords* textureCoords();
+
     AggregateType const* aggregateType(std::span<Type const* const> elements);
 
     ///  \Returns a list of all existing types

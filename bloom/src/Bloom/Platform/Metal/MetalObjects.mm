@@ -564,6 +564,7 @@ MetalShaderCompiler::MetalShaderCompiler(id<MTLDevice> device):
 std::vector<ShaderFunctionHandle> MetalShaderCompiler::compile(
     std::string source, std::span<std::string const> functionNames) {
     source = preprocessIncludes(std::move(source), std::array{ resourceDir() });
+    Logger::Trace(source);
     NSError* error = nil;
     MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
     options.libraryType = MTLLibraryTypeExecutable;

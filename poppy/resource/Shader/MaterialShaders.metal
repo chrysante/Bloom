@@ -51,11 +51,13 @@ fragment MainPassFragmentData rgMainPassFS(
     texture2d_array<float> shadowMaps [[texture(0)]])
 {
     PBRData pbr{ .albedo = materialParams.baseColor,
-                 .metallic = materialParams.metallic,
-                 .roughness = materialParams.roughness,
-                 .ao = 1 };
+            .metallic = materialParams.metallic,
+            .roughness = materialParams.roughness,
+            .ao = 1,
+            .normal = normalize(in.normalWS.xyz)
+    };
     float3 color =
-        PBRForwardShader(pbr, in.positionWS, normalize(in.normalWS.xyz),
+        PBRForwardShader(pbr, in.positionWS,
                          cameraBuffer.cameraPosition, lightSpaceTransforms,
                          lights, shadowMetadata, shadowMaps);
     return { float4(color, 1), entityID };

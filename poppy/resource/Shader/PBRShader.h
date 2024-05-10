@@ -13,10 +13,11 @@ struct PBRData {
     float roughness;
     float metallic;
     float ao;
+    metal::float3 normal;
 };
 
 metal::float3 PBRForwardShader(
-    PBRData pbr, metal::float3 worldPosition, metal::float3 worldNormal,
+    PBRData pbr, metal::float3 worldPosition,
     metal::float3 cameraPosition,
     device const metal::float4x4* lightSpaceTransforms,
     device const LightBufferContents& lights,

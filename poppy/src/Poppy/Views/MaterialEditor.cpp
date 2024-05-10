@@ -128,17 +128,21 @@ struct OutputNodeController: MaterialNodeController {
             { .name = "Ambient Occlusion",
               .flags = PinFlags::Optional,
               .userType = (PinUserType)DataType::Float },
+            { .name = "Normal",
+              .flags = PinFlags::Optional,
+              .userType = (PinUserType)DataType::Float3 },
         };
     }
 
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& graph) const override {
-        auto* type = ctx.aggregateType(std::array<Type const*, 5>{
+        auto* type = ctx.aggregateType(std::vector<Type const*>{
             ctx.float3Type(),
             ctx.float3Type(),
             ctx.floatType(),
             ctx.floatType(),
             ctx.floatType(),
+            ctx.float3Type(),
         });
         return { graph.setRoot(allocate<AggregateBuilder>(type)) };
     }

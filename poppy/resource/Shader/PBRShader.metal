@@ -242,13 +242,13 @@ static float3 computeSkyLights(PBRData pbr, uint numLights,
 }
 
 float3 bloom::PBRForwardShader(
-    PBRData pbr, float3 worldPosition, float3 worldNormal,
+    PBRData pbr, float3 worldPosition,
     float3 cameraPosition, device const float4x4* lightSpaceTransforms,
     device const LightBufferContents& lights,
     device const ShadowRenderMetadata& shadowMetadata,
     texture2d_array<float> shadowMaps)
 {
-    float3 N = worldNormal;
+    float3 N = pbr.normal;
     float3 V = normalize(cameraPosition - worldPosition);
     float3 lightAcc = 0;
     lightAcc += computePointLights(pbr, N, V, worldPosition,

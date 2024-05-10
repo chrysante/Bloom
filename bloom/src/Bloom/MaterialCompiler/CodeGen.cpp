@@ -227,6 +227,8 @@ using namespace bloom;
 struct FragmentIn {
     float4 positionCS [[position]];
     float3 normalWS;
+    float3 tangentWS;
+    float3 binormalWS;
     float3 positionWS;
     float3 vertexColor;
     float2 textureCoords;
@@ -306,10 +308,14 @@ vertex FragmentIn materialVertexShader(
     Vertex3D v = vertices[vertexID];
     float4 vertexPositionMS = float4(v.position, 1);
     float4 vertexNormalMS = float4(v.normal, 0);
+    float4 vertexTangentMS = float4(v.tangent, 0);
+    float4 vertexBitangentMS = float4(v.binormal, 0);
     float4 vertexPositionWS = transform * vertexPositionMS;
     return {
         .positionCS = cameraBuffer.camera * vertexPositionWS,
         .normalWS = (transform * vertexNormalMS).xyz,
+        .tangentWS = (transform * vertexTangentMS).xyz,
+        .binormalWS = (transform * vertexBitangentMS).xyz,
         .positionWS = vertexPositionWS.xyz,
         .vertexColor = v.color.rgb,
         .textureCoords = v.textureCoordinates[0]
@@ -335,14 +341,19 @@ fragment MainPassFragmentData materialFragmentShader(
     }
     sstr << R"()
 {
+    float3 normalWS = normalize(in.normalWS.xyz);
+    float3 tangentWS = normalize(in.tangentWS.xyz);
+    float3 binormalWS = normalize(in.binormalWS.xyz);
     PBRData pbr = material(in)";
     for (auto [tex, index]: textureIndexMap) {
-        sstr << ",\n" << getName(tex);
+        sstr << ",\n        " << getName(tex);
     }
     sstr << R"(
     );
+    float3x3 TBN(tangentWS, binormalWS, normalWS);
+    pbr.normal = TBN * pbr.normal;
     float3 color =
-        PBRForwardShader(pbr, in.positionWS, normalize(in.normalWS.xyz),
+        PBRForwardShader(pbr, in.positionWS,
                          cameraBuffer.cameraPosition, lightSpaceTransforms,
                          lights, shadowMetadata, shadowMaps);
     return { float4(color, 1), entityID };
@@ -359,7 +370,8 @@ void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
      const half4 colorSample = colorTexture.sample(textureSampler,
      in.textureCoordinate);
      */
-    std::string samplerName = utl::strcat(getName(&sample), "_Sampler");
+    std::string samplerName =
+        utl::strcat(getName(sample.texture()), "_Sampler");
     std::string sampleTypeName = typeNameGen.get(sample.type());
     sstr << beginLine() << "constexpr sampler " << samplerName
          << "(mag_filter::linear, min_filter::linear);\n";

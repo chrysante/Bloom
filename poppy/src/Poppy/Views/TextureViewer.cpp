@@ -1,5 +1,6 @@
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <magic_enum.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Asset/AssetManager.h"
@@ -7,6 +8,7 @@
 #include "Bloom/Graphics/Texture.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 
@@ -88,7 +90,23 @@ void TextureViewer::displayTexture() {
     }
 }
 
-void TextureViewer::displayInfo() {}
+void TextureViewer::displayInfo() {
+    BL_ASSERT(texture);
+    using namespace propertiesView;
+    if (beginSection("Info")) {
+        beginProperty("Pixel Format");
+        auto str = magic_enum::enum_name(texture->pixelFormat);
+        ImGui::TextEx(std::to_address(str.begin()), std::to_address(str.end()));
+
+        beginProperty("Width");
+        ImGui::Text("%d", (int)texture->size.x);
+        beginProperty("Height");
+        ImGui::Text("%d", (int)texture->size.y);
+        beginProperty("Byte Size");
+        ImGui::Text("%d", (int)texture->data.size());
+        endSection();
+    }
+}
 
 void TextureViewer::doOpenData(std::any data) {
     auto* tex = std::any_cast<Reference<Texture2D>>(&data);

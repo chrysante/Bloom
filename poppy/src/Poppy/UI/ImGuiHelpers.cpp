@@ -173,12 +173,13 @@ void poppy::splitView(
     std::string_view strID,
     std::initializer_list<utl::function_view<void()>> contents) {
     ImGuiID ID = ImGui::GetID(strID.data(), strID.data() + strID.size());
-    static float totalWidth = ImGui::GetContentRegionAvail().x;
+    float2 contentSize = ImGui::GetContentRegionAvail();
+    static float totalWidth = contentSize.x;
     static std::vector<float> widths;
     if (widths.size() != contents.size()) {
         widths.resize(contents.size(), totalWidth / contents.size());
     }
-    float newWidth = ImGui::GetContentRegionAvail().x;
+    float newWidth = contentSize.x;
     if (totalWidth != newWidth) {
         float factor = newWidth / totalWidth;
         for (auto& width: widths) {
@@ -191,6 +192,7 @@ void poppy::splitView(
     auto* window = ImGui::GetCurrentWindow();
     float acc = 0;
     float height = ImGui::GetContentRegionAvail().y;
+    float2 padding = ImGui::GetStyle().WindowPadding;
     for (auto [index, width, content]: zip(iota(0), widths, contents)) {
         float widthCopy = width;
         float2 pos = cursorPos + float2(acc, 0);
@@ -210,8 +212,10 @@ void poppy::splitView(
         if (index < (int)contents.size() - 1) {
             widthCopy -= 2 * halfSplitterWidth;
         }
-        ImGui::SetNextWindowPos(pos);
-        if (ImGui::BeginChild(window->GetID(index), { widthCopy, 0 })) {
+        ImRect windowBB(pos, pos + float2(widthCopy, contentSize.y));
+        windowBB.Expand(-padding);
+        ImGui::SetNextWindowPos(windowBB.Min);
+        if (ImGui::BeginChild(window->GetID(index), windowBB.GetSize())) {
             content();
         }
         ImGui::EndChild();

@@ -56,6 +56,8 @@ using VoidParent = void;
 
 namespace bloom {
 
+class AssetManager;
+
 /// Constructs a UUID by hashing \p text
 /// TODO: This should be private and ideally should not exist
 utl::uuid toUUID(std::string_view text);

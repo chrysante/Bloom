@@ -5,16 +5,24 @@
 #include <memory>
 #include <string>
 
+#include <utl/hashtable.hpp>
+
+#include "Bloom/Asset/AssetHandle.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
 
 namespace bloom::matc {
 
+struct CodegenResult {
+    std::string source;
+    utl::hashmap<int, AssetHandle> fragmentTextures;
+};
+
 class CodeGenerator {
 public:
     virtual ~CodeGenerator() = default;
 
-    virtual std::string run() = 0;
+    virtual CodegenResult run() = 0;
 
 protected:
     CodeGenerator() = default;

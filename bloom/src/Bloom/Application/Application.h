@@ -37,7 +37,7 @@ enum class RunLoopMode {
 
 /// Base class of user application. Users are expected to derive from this class
 /// to implement their application
-class BLOOM_API Application: protected Receiver, protected Emitter {
+class BLOOM_API Application: protected Receiver, public Emitter {
 public:
     Application(Application const&) = delete;
     Application& operator=(Application const&) = delete;

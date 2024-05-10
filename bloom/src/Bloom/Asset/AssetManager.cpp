@@ -350,7 +350,16 @@ AssetManager::AssetManager() {}
 
 AssetManager::~AssetManager() = default;
 
-void AssetManager::doInit() { impl = std::make_unique<Impl>(this); }
+void AssetManager::doInit() {
+    impl = std::make_unique<Impl>(this);
+    listen([this](AMGetAsset const& msg) {
+        BL_ASSERT(msg.asset);
+        if (msg.handle) {
+            *msg.asset = get(msg.handle);
+            makeAvailable(msg.handle, msg.makeAvailable);
+        }
+    });
+}
 
 HardwareDevice& AssetManager::device() const { return application().device(); };
 
@@ -624,6 +633,9 @@ std::filesystem::path AssetManager::getRelativeFilepath(
 
 bool AssetManager::makeAvailable(AssetHandle handle, AssetRepresentation repr,
                                  bool forceReload) {
+    if (repr == AssetRepresentation::None) {
+        return false;
+    }
     static constexpr std::string_view ErrorPrelude =
         "Failed to make asset available: ";
     auto* entry = impl->find(handle);
@@ -684,21 +696,7 @@ bool Impl::makeAvailImpl(Material& mat, RegistryEntry const& entry,
             if (mat.rgMainPass && !forceReload) {
                 return;
             }
-            try {
-                auto source = mat.model->generateSource();
-                std::vector<std::string> functionNames = {
-                    "materialVertexShader", "materialFragmentShader"
-                };
-                auto functions = shaderCompiler->compile(source, functionNames);
-                BL_ASSERT(functions.size() == 2);
-                mat.compile(assetManager->device(),
-                            functions[0], functions[1]);
-            }
-            catch (std::exception const& e) {
-                Logger::Error("Failed to compile material: ", e.what());
-                Logger::Trace("Resorting to default material");
-                mat.makeDefault(assetManager->device());
-            }
+            mat.compile(assetManager->device(), *assetManager);
         },
     }); // clang-format on
     return true;

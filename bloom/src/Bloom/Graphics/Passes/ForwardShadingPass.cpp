@@ -9,6 +9,7 @@
 #include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Graphics/StaticMesh.h"
+#include "Bloom/Graphics/Texture.h"
 #include "Bloom/Shader/SharedTypes.h"
 
 using namespace bloom;
@@ -154,6 +155,11 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
             encoder->setPipeline(currentMaterial->rgMainPass);
             encoder->setTriangleCullMode(currentMaterial->cullMode);
             encoder->setDepthStencil(currentMaterial->depthStencil);
+            for (auto& [index, texture]: currentMaterial->fragmentTextures) {
+                if (texture) {
+                    encoder->setFragmentTexture(texture->GPUHandle, index);
+                }
+            }
         }
         if (object.materialInstance.get() != currentMaterialInstance) {
             auto paramBuffer = object.materialInstance->parameterBuffer();

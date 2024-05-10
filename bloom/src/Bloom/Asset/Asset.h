@@ -11,6 +11,7 @@
 #include "Bloom/Asset/Fwd.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Reference.h"
 
 /// Defines the constructor for the derived asset type \p Type
 #define BL_DEFINE_ASSET_CTOR(Type, Parent)                                     \
@@ -46,6 +47,17 @@ private:
 inline AssetType dyncast_get_type(std::derived_from<Asset> auto const& asset) {
     return asset.handle().type();
 }
+
+/// Asset manager events
+
+/// This message instructs the asset manager to retrieve the asset with
+/// \p handle and assign it to \p asset The representation \p makeAvailable is
+/// made available
+struct BLOOM_API AMGetAsset {
+    AssetHandle handle;
+    Reference<Asset>* asset = nullptr;
+    AssetRepresentation makeAvailable = AssetRepresentation::None;
+};
 
 /// Represents a script source file
 /// TODO: Move this to its own file

@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include <utl/hashtable.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include "Bloom/Asset/Asset.h"
@@ -14,12 +15,17 @@
 
 namespace bloom {
 
+struct MaterialSourceData {
+    std::string source;
+    utl::hashmap<int, AssetHandle> fragmentTextures;
+};
+
 struct MaterialModel {
     virtual ~MaterialModel() = default;
     virtual bool hasCPURepr() const = 0;
     virtual YAML::Node serialize() const = 0;
     virtual void deserialize(YAML::Node const&) = 0;
-    virtual std::string generateSource() const = 0;
+    virtual MaterialSourceData generateSource() const = 0;
 };
 
 __attribute__((weak)) std::unique_ptr<MaterialModel> makeMaterialModel();
@@ -28,13 +34,7 @@ class BLOOM_API Material: public Asset {
 public:
     explicit Material(AssetHandle handle, std::string name);
 
-    /// Reset this material to be the default material.
-    /// We will probably change this in the future but for now the default
-    /// material is the only material there really is
-    void makeDefault(HardwareDevice& device);
-
-    void compile(HardwareDevice& device, ShaderFunctionHandle vertexFunction,
-                 ShaderFunctionHandle fragmentFunction);
+    void compile(HardwareDevice& device, AssetManager& AM);
 
     std::unique_ptr<MaterialModel> model;
 
@@ -42,6 +42,7 @@ public:
     RenderPipelineHandle rgMainPass;
     TriangleCullMode cullMode = TriangleCullMode::Back;
     DepthStencilHandle depthStencil;
+    utl::hashmap<int, Reference<Texture2D>> fragmentTextures;
 };
 
 } // namespace bloom

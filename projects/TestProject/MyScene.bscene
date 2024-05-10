@@ -309,18 +309,18 @@
     name: Cube
   Transform:
     position:
-      - 3.67159919e-06
-      - 1.49009324e-07
-      - 148.269882
+      - -213.714996
+      - -545.981812
+      - 148.270554
     orientation:
-      - 0.695915043
-      - -0.132382303
-      - 0.693142653
-      - 0.133155689
+      - 1
+      - -1.52532102e-11
+      - 0
+      - 0
     scale:
-      - 1.99999475
-      - 1.99998951
-      - 1.99999535
+      - 1.99999356
+      - 1.99998128
+      - 1.99999523
   Hierarchy:
     parent: -1
     prevSibling: -1
@@ -336,7 +336,7 @@
       AssetID: 94812734 2da111d0 d27f1d2c bcc5fc0
     Mesh:
       AssetType: StaticMesh
-      AssetID: 7bbf14ee ab50f97c 860de249 7bbd5e17
+      AssetID: c055c3ca abeca471 e589446 8d4d0fc6
   Visibility:
     value: true
 - EntityID: 1

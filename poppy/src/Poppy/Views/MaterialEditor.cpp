@@ -1,11 +1,14 @@
 #include <vector>
 
+#include <imgui.h>
+#include <imgui_internal.h>
 #include <magic_enum.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/Graphics/Material/Material.h"
+#include "Bloom/Graphics/Texture.h"
 #include "Bloom/MaterialCompiler/CodeGen.h"
 #include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
@@ -13,6 +16,7 @@
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
+#include "Poppy/Views/AssetDragDrop.h"
 #include "Poppy/Views/NodeEditor.h"
 
 using namespace poppy;
@@ -21,6 +25,8 @@ using namespace nodeEditor;
 using namespace matc;
 using namespace vml::short_types;
 using namespace ranges::views;
+
+static Editor* gEditor = nullptr;
 
 namespace {
 
@@ -176,6 +182,7 @@ struct ConstantController: MaterialNodeController {
     explicit ConstantController(YAML::Node const& node) {
         dataType = node["DataType"].as<DataType>();
         value = node["Value"].as<float4>();
+        textureAsset = node["Texture"].as<AssetHandle>();
     }
 
     YAML::Node serialize() const override {
@@ -183,6 +190,7 @@ struct ConstantController: MaterialNodeController {
         node["Type"] = NodeType::Constant;
         node["DataType"] = dataType;
         node["Value"] = value;
+        node["Texture"] = textureAsset;
         return node;
     }
 
@@ -254,7 +262,7 @@ struct ConstantController: MaterialNodeController {
             return { ctx.vectorConstant(numComponents, value) };
         }
         case Texture:
-            BL_UNIMPLEMENTED();
+            return { ctx.textureConstant(textureAsset) };
         }
     }
 
@@ -289,8 +297,25 @@ struct ConstantController: MaterialNodeController {
             ImGui::ColorPicker4("###Value", value.data(), colFlags);
             break;
         case DataType::Texture:
-            if (texture) {
-                ImGui::Image(texture.nativeHandle(),
+            if (auto asset = acceptAssetDragDrop({ AssetType::Texture2D })) {
+                textureAsset = *asset;
+                texHandle = {};
+                triedToGetTexture = false;
+            }
+            if (!texHandle && !triedToGetTexture) {
+                Reference<Asset> asset;
+                gEditor->dispatch(DispatchToken::Now,
+                                  AMGetAsset{ .handle = textureAsset,
+                                              .asset = &asset,
+                                              .makeAvailable =
+                                                  AssetRepresentation::GPU });
+                if (asset) {
+                    texHandle = as<Texture2D>(asset)->GPUHandle;
+                }
+                triedToGetTexture = true;
+            }
+            if (texHandle && texHandle.nativeHandle()) {
+                ImGui::Image(texHandle.nativeHandle(),
                              ImGui::GetContentRegionAvail());
             }
             break;
@@ -299,7 +324,9 @@ struct ConstantController: MaterialNodeController {
 
     DataType dataType;
     float4 value = .5;
-    TextureHandle texture; // FIXME: This is not correct
+    AssetHandle textureAsset;
+    TextureHandle texHandle;
+    bool triedToGetTexture = false;
 };
 
 /// Any fragment shader input, i.e., rasterizer data
@@ -556,9 +583,21 @@ struct TextureSamplerController: MaterialNodeController {
         };
     }
 
-    utl::small_vector<Value*> createGraphNodes(Context&,
-                                               MaterialGraph&) const override {
-        BL_UNIMPLEMENTED();
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& graph) const override {
+        auto* sample =
+            graph.addValue(allocate<TextureSampler>(ctx, nullptr, nullptr));
+        auto* r = graph.addValue(allocate<VectorElement>(ctx, 0, sample));
+        auto* g = graph.addValue(allocate<VectorElement>(ctx, 1, sample));
+        auto* b = graph.addValue(allocate<VectorElement>(ctx, 2, sample));
+        auto* a = graph.addValue(allocate<VectorElement>(ctx, 3, sample));
+        auto* rgb = graph.addValue(
+            allocate<VectorBuilder>(ctx, std::vector<Value*>{ r, g, b }));
+        return {
+            rgb,   r, g, b, a,
+            sample // This is hacky but we put sample here so it will be linked,
+                   // even though there is no corresponding output pin
+        };
     }
 
     vml::float4 nodeColor() override { return { 0.2, 0.4, 1, 1 }; }
@@ -599,7 +638,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
         return dynamic_cast<MaterialNodeController*>(node->controller());
     }
 
-    std::string generateSource() const override {
+    MaterialSourceData generateSource() const override {
         Context ctx;
         MaterialGraph graph;
         MaterialNodeController::ValueMap map;
@@ -611,7 +650,11 @@ struct MaterialModelImpl: bloom::MaterialModel {
             getController(node)->linkGraphNode(ctx, map);
         }
         auto codegen = makeCodeGenerator(ctx, graph, {});
-        return codegen->run();
+        auto result = codegen->run();
+        return {
+            .source = std::move(result.source),
+            .fragmentTextures = std::move(result.fragmentTextures),
+        };
     }
 
     mutable NodeEditorGraph model;
@@ -738,6 +781,7 @@ MaterialEditor::MaterialEditor(): nodeEditor(commandPaletteWrite()) {
 }
 
 void MaterialEditor::display() {
+    gEditor = &editor();
     if (!material) {
         displayEmptyWithReason("No Material Open");
         return;

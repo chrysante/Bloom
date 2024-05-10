@@ -7,6 +7,7 @@
 #include <utl/hashtable.hpp>
 #include <vml/vml.hpp>
 
+#include "Bloom/Asset/AssetHandle.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
 
 namespace bloom::matc {
@@ -26,12 +27,19 @@ public:
 
     VectorConstant* vectorConstant(int numComponents, vml::float4 value);
 
+    TextureConstant* textureConstant(AssetHandle asset);
+
     TextureCoords* textureCoords();
 
     AggregateType const* aggregateType(std::span<Type const* const> elements);
 
+    TextureType const* textureType();
+
     ///  \Returns a list of all existing types
     std::vector<Type const*> types() const;
+
+    ///  \Returns a list of all existing texture constants
+    std::vector<TextureConstant const*> textureConstants() const;
 
     struct Impl;
 

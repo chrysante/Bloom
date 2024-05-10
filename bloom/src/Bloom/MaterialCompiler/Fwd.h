@@ -14,7 +14,7 @@ class Context;
 enum class TypeCategory {
 #define BL_MATGRAPH_TYPE(Name, ...) Name,
 #include "Bloom/MaterialCompiler/Lists.def"
-    LAST = AggregateType
+    LAST = TextureType
 };
 
 #define BL_MATGRAPH_VALUE(Name, ...) class Name;

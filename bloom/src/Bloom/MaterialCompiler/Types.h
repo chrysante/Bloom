@@ -46,6 +46,11 @@ private:
     std::vector<Type const*> _elements;
 };
 
+class TextureType: public Type {
+public:
+    TextureType(): Type(TypeCategory::TextureType, "Texture") {}
+};
+
 } // namespace bloom::matc
 
 #endif // BLOOM_MATERIALCOMPILER_TYPES_H

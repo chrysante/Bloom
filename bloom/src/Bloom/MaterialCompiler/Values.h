@@ -5,6 +5,7 @@
 
 #include <vml/vml.hpp>
 
+#include "Bloom/Asset/AssetHandle.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
 
@@ -43,6 +44,16 @@ public:
 private:
     vml::float4 _value;
     int numc;
+};
+
+class TextureConstant: public Constant {
+public:
+    explicit TextureConstant(Context& ctx, AssetHandle asset);
+
+    AssetHandle asset() const { return _asset; }
+
+private:
+    AssetHandle _asset;
 };
 
 class TextureCoords: public Constant {
@@ -93,6 +104,15 @@ public:
 
 private:
     Kind _kind;
+};
+
+class TextureSampler: public User {
+public:
+    TextureSampler(Context& ctx, TextureConstant* texture, Value* coords);
+
+    TextureConstant* texture() const;
+
+    Value* coords() const { return operand(1); }
 };
 
 class VectorBuilder: public User {

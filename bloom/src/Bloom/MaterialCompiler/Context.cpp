@@ -52,10 +52,12 @@ struct Context::Impl {
     utl::hashmap<utl::small_vector<Type const*>, AggregateType const*,
                  AggregateHash, AggregateEqual>
         aggTypes;
+    TextureType const* textureType = nullptr;
     // Values
     std::vector<DynUniquePtr<Value>> valueOwners;
     utl::hashmap<std::pair<int, float4>, VectorConstant*> vectorConstants;
     utl::hashmap<int, TextureCoords*> textureCoords;
+    utl::hashmap<utl::uuid, TextureConstant*> textureConstants;
 };
 
 Context::Context(): impl(std::make_unique<Impl>()) {}
@@ -71,6 +73,7 @@ Impl::Impl() {
     vectorType[1] = addType<VectorType>(2);
     vectorType[2] = addType<VectorType>(3);
     vectorType[3] = addType<VectorType>(4);
+    textureType = addType<TextureType>();
 }
 
 AggregateType const* Context::aggregateType(
@@ -84,6 +87,8 @@ AggregateType const* Context::aggregateType(
     impl->aggTypes.insert({ elements | ToSmallVector<>, type });
     return type;
 }
+
+TextureType const* Context::textureType() { return impl->textureType; }
 
 VectorType const* Context::vectorType(int numComponents) const {
     assert(numComponents >= 1);
@@ -101,6 +106,16 @@ VectorConstant* Context::vectorConstant(int numComponents, float4 value) {
     return result;
 }
 
+TextureConstant* Context::textureConstant(AssetHandle asset) {
+    auto itr = impl->textureConstants.find(asset.ID());
+    if (itr != impl->textureConstants.end()) {
+        return itr->second;
+    }
+    auto* result = impl->addValue<TextureConstant>(*this, asset);
+    impl->textureConstants.insert({ asset.ID(), result });
+    return result;
+}
+
 TextureCoords* Context::textureCoords() {
     int index = 0;
     auto itr = impl->textureCoords.find(index);
@@ -114,4 +129,9 @@ TextureCoords* Context::textureCoords() {
 
 std::vector<Type const*> Context::types() const {
     return impl->typeOwners | ToAddress<Type const> | ranges::to<std::vector>;
+}
+
+std::vector<TextureConstant const*> Context::textureConstants() const {
+    return impl->textureConstants | values |
+           ranges::to<std::vector<TextureConstant const*>>;
 }

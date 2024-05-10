@@ -452,18 +452,24 @@ static std::unique_ptr<Node> deserializeNode(
     YAML::Node const& source,
     utl::function_view<std::unique_ptr<NodeController>(YAML::Node const&)>
         deserializeController) {
-    NodeDesc desc{};
-    desc.ID = source["ID"].as<utl::uuid>();
-    desc.name = source["Name"].as<std::string>();
-    desc.minSize = source["MinSize"].as<vml::float2>();
-    desc.position = source["Position"].as<vml::float2>();
-    bool resizable = desc.resizable = source["Resizable"].as<bool>();
-    desc.controller = deserializeController(source["Controller"]);
-    auto node = std::make_unique<Node>(std::move(desc));
-    if (resizable) {
-        node->setSize(source["Size"].as<vml::float2>());
+    try {
+        NodeDesc desc{};
+        desc.ID = source["ID"].as<utl::uuid>();
+        desc.name = source["Name"].as<std::string>();
+        desc.minSize = source["MinSize"].as<vml::float2>();
+        desc.position = source["Position"].as<vml::float2>();
+        bool resizable = desc.resizable = source["Resizable"].as<bool>();
+        desc.controller = deserializeController(source["Controller"]);
+        auto node = std::make_unique<Node>(std::move(desc));
+        if (resizable) {
+            node->setSize(source["Size"].as<vml::float2>());
+        }
+        return node;
     }
-    return node;
+    catch (YAML::Exception const& e) {
+        Logger::Error("Failed to deserialize node: ", e.what());
+        return nullptr;
+    }
 }
 
 static Node* findNode(utl::hashmap<utl::uuid, Node*> const& map, utl::uuid ID) {
@@ -507,6 +513,9 @@ bool NodeEditorGraph::deserialize(
         utl::hashmap<utl::uuid, Node*> map;
         for (auto& nodeSource: source["Nodes"]) {
             auto node = deserializeNode(nodeSource, deserializeController);
+            if (!node) {
+                continue;
+            }
             if (!utl::is_null(node->ID())) {
                 map[node->ID()] = node.get();
             }

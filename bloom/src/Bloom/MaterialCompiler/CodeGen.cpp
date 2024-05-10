@@ -100,7 +100,11 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
                        CodeGenOptions const& options):
         Indenter(sstr), ctx(ctx), graph(graph), options(options) {}
 
-    std::string run() override;
+    CodegenResult run() override;
+
+    void declareTexture(TextureConstant const* tex) {
+        textureIndexMap[tex] = ReservedTextureSlots + textureIndexCounter++;
+    }
 
     void declareType(Type const* type) {
         visit(*type, [this](auto& type) { declareTypeImpl(&type); });
@@ -120,7 +124,9 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
 
     void codegenImpl(Value const&) { assert(false); }
     void codegenImpl(VectorConstant const&) {}
+    void codegenImpl(TextureConstant const&) {}
     void codegenImpl(TextureCoords const&) {}
+    void codegenImpl(TextureSampler const& value);
     void codegenImpl(VectorBuilder const& value);
     void codegenImpl(VectorElement const&) {}
     void codegenImpl(AggregateBuilder const& value);
@@ -131,6 +137,9 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
             auto name = visit<std::optional<std::string>>(*value, utl::overload{
                 [&](VectorConstant const& c) {
                     return makeConstantName(c);
+                },
+                [&](TextureConstant const& c) {
+                    return utl::strcat("Texture_", textureIndexMap[&c]);
                 },
                 [&](TextureCoords const&) {
                     return "in.textureCoords";
@@ -156,9 +165,13 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
     MaterialGraph const& graph;
     CodeGenOptions options;
 
+    static constexpr int ReservedTextureSlots = 8;
+    int textureIndexCounter = 0;
+
     Type const* returnType;
     NameGenerator<Type const*> typeNameGen{ "Type_" };
     NameGenerator<Value const*> valueNameGen{ "Value_" };
+    utl::hashmap<TextureConstant const*, int> textureIndexMap;
     std::stringstream sstr;
 };
 
@@ -197,7 +210,7 @@ static std::vector<Value const*> topsort(std::span<Value const* const> values) {
     return sorted;
 }
 
-std::string MetalCodeGenerator::run() {
+CodegenResult MetalCodeGenerator::run() {
     if (!graph.root()) {
         throw std::runtime_error("Material graph has no root");
     }
@@ -223,6 +236,9 @@ struct FragmentIn {
     for (auto* type: ctx.types()) {
         declareType(type);
     }
+    for (auto tex: ctx.textureConstants()) {
+        declareTexture(tex);
+    }
     beginFunction();
     for (auto* value: order) {
         if (!value) {
@@ -232,7 +248,11 @@ struct FragmentIn {
     }
     endFunction();
     defineFragmentFunction();
-    return std::move(sstr).str();
+    return { .source = std::move(sstr).str(),
+             .fragmentTextures = textureIndexMap | transform([](auto& p) {
+        auto [tex, index] = p;
+        return std::pair{ index, tex->asset() };
+    }) | ranges::to<utl::hashmap<int, AssetHandle>> };
 }
 
 void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
@@ -262,7 +282,11 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
 
 void MetalCodeGenerator::beginFunction() {
     sstr << "static " << typeNameGen.get(returnType) << " "
-         << "material(FragmentIn in) ";
+         << "material(FragmentIn in";
+    for (auto [tex, index]: textureIndexMap) {
+        sstr << ",\n    texture2d<half>" << getName(tex) << "\n";
+    }
+    sstr << "    ) ";
     pushScope();
 }
 
@@ -304,9 +328,19 @@ fragment MainPassFragmentData materialFragmentShader(
     float4x4 device const* lightSpaceTransforms [[buffer(2)]],
     ShadowRenderMetadata device const& shadowMetadata [[buffer(3)]],
     uint32_t device const& entityID [[buffer(5)]],
-    texture2d_array<float> shadowMaps [[texture(0)]])
+    texture2d_array<float> shadowMaps [[texture(0)]])";
+    for (auto [tex, index]: textureIndexMap) {
+        sstr << ",\n    texture2d<half> " << getName(tex) << " [[texture("
+             << index << ")]]";
+    }
+    sstr << R"()
 {
-    PBRData pbr = material(in);
+    PBRData pbr = material(in)";
+    for (auto [tex, index]: textureIndexMap) {
+        sstr << ",\n" << getName(tex);
+    }
+    sstr << R"(
+    );
     float3 color =
         PBRForwardShader(pbr, in.positionWS, normalize(in.normalWS.xyz),
                          cameraBuffer.cameraPosition, lightSpaceTransforms,
@@ -317,6 +351,21 @@ fragment MainPassFragmentData materialFragmentShader(
 #include "Shader/PBRShader.metal"
 
 )";
+}
+
+void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
+    /*
+     constexpr sampler textureSampler (mag_filter::linear, min_filter::linear);
+     const half4 colorSample = colorTexture.sample(textureSampler,
+     in.textureCoordinate);
+     */
+    std::string samplerName = utl::strcat(getName(&sample), "_Sampler");
+    std::string sampleTypeName = typeNameGen.get(sample.type());
+    sstr << beginLine() << "constexpr sampler " << samplerName
+         << "(mag_filter::linear, min_filter::linear);\n";
+    sstr << beginLine() << sampleTypeName << " " << getName(&sample) << " = "
+         << sampleTypeName << "(" << getName(sample.texture()) << ".sample("
+         << samplerName << ", " << getName(sample.coords()) << "));\n";
 }
 
 void MetalCodeGenerator::codegenImpl(VectorBuilder const& value) {

@@ -18,12 +18,25 @@ VectorConstant::VectorConstant(Context& ctx, int numComponents, float4 value):
     _value(value),
     numc(numComponents) {}
 
+TextureConstant::TextureConstant(Context& ctx, AssetHandle asset):
+    Constant(ValueNodeType::TextureConstant, ctx.textureType()),
+    _asset(asset) {}
+
 TextureCoords::TextureCoords(Context& ctx):
     Constant(ValueNodeType::TextureCoords, ctx.vectorType(2)) {}
 
 Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
     assert(lhs == rhs);
     return lhs;
+}
+
+TextureSampler::TextureSampler(Context& ctx, TextureConstant* texture,
+                               Value* coords):
+    User(ValueNodeType::TextureSampler, ctx.float4Type(), { texture, coords }) {
+}
+
+TextureConstant* TextureSampler::texture() const {
+    return cast<TextureConstant*>(operand(0));
 }
 
 static int accNumComponents(std::span<Value const* const> values) {

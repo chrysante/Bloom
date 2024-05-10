@@ -9,6 +9,11 @@
   Name: CubeBeveledLowPoly
   Location: ./CubeBeveledLowPoly.bmesh
 - Handle:
+    AssetType: StaticMesh
+    AssetID: 8a64abd8 13d9000e 546d90c3 77c7c611
+  Name: Sphere
+  Location: ./Sphere.bmesh
+- Handle:
     AssetType: Texture2D
     AssetID: ab480757 430a9f18 d9c90058 644712f9
   Name: Tiles074_2K-PNG_Color
@@ -73,6 +78,11 @@
     AssetID: e26ba1dc b9fd446e f9e537ac c56ff427
   Name: RedPlastic
   Location: RedPlastic.bmatinst
+- Handle:
+    AssetType: StaticMesh
+    AssetID: c055c3ca abeca471 e589446 8d4d0fc6
+  Name: Sphere
+  Location: Sphere.bmesh
 - Handle:
     AssetType: Texture2D
     AssetID: 783906f9 3a10c913 7df8c08b 5fee32a7

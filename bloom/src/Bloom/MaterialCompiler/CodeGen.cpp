@@ -122,20 +122,28 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
     void codegenImpl(VectorConstant const&) {}
     void codegenImpl(TextureCoords const&) {}
     void codegenImpl(VectorBuilder const& value);
+    void codegenImpl(VectorElement const&) {}
     void codegenImpl(AggregateBuilder const& value);
 
     std::string getName(Value const* value) {
         if (!valueNameGen.contains(value)) {
             // clang-format off
-            visit(*value, utl::overload{
+            auto name = visit<std::optional<std::string>>(*value, utl::overload{
                 [&](VectorConstant const& c) {
-                    valueNameGen.setName(&c, makeConstantName(c));
+                    return makeConstantName(c);
                 },
-                [&](TextureCoords const& t) {
-                    valueNameGen.setName(&t, "in.textureCoords");
-                }, 
-                [](Value const&) {}
+                [&](TextureCoords const&) {
+                    return "in.textureCoords";
+                },
+                [&](VectorElement const& e) {
+                    return utl::strcat(getName(e.operand()), ".",
+                                       "xyzw"[e.index()]);
+                },
+                [](Value const&) { return std::nullopt; }
             }); // clang-format on
+            if (name) {
+                valueNameGen.setName(value, *name);
+            }
         }
         return valueNameGen.get(value);
     }

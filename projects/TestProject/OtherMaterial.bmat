@@ -16,6 +16,49 @@ Nodes:
         - 0.5
         - 0.5
         - 0.5
+  - ID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
+    Name: Output
+    MinSize:
+      - 0
+      - 0
+    Position:
+      - 2146.42822
+      - -650.403625
+    Resizable: false
+    Controller:
+      Type: Output
+  - ID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
+    Name: Float3 Constant
+    MinSize:
+      - 200
+      - 200
+    Position:
+      - 1788.42822
+      - -778.403564
+    Resizable: true
+    Size:
+      - 225
+      - 292
+    Controller:
+      Type: Constant
+      DataType: Float3
+      Value:
+        - 0.224513233
+        - 0.416362196
+        - 0.941860437
+        - 0.5
+  - ID: 220cf112 cb7ee1db 20ac3007 54710f3e
+    Name: TextureCoords
+    MinSize:
+      - 100
+      - 0
+    Position:
+      - 1790.4281
+      - -231.403564
+    Resizable: false
+    Controller:
+      Type: Input
+      Kind: TextureCoords
   - ID: d0fca01d c9fd5869 d7ee52a4 f818ad8a
     Name: Float Constant
     MinSize:
@@ -33,95 +76,32 @@ Nodes:
         - 0.5
         - 0.5
         - 0.5
-  - ID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
-    Name: Output
-    MinSize:
-      - 0
-      - 0
-    Position:
-      - 2176.42822
-      - -572.403625
-    Resizable: false
-    Controller:
-      Type: Output
-  - ID: f4cf8e4c e128d0c7 90ea9c91 8adc5bd5
-    Name: Float3 Constant
-    MinSize:
-      - 200
-      - 200
-    Position:
-      - 1803.42822
-      - -776.403564
-    Resizable: true
-    Size:
-      - 225
-      - 292
-    Controller:
-      Type: Constant
-      DataType: Float3
-      Value:
-        - 0
-        - 0.267441988
-        - 1
-        - 0.5
-  - ID: 4ffe2dc1 262fc82 bcc6ebc 5bafe2e0
-    Name: TextureCoords
-    MinSize:
-      - 100
-      - 0
-    Position:
-      - 1795.4281
-      - -195.403564
-    Resizable: false
-    Controller:
-      Type: Input
-      Kind: TextureCoords
-  - ID: 857ada33 2805cea2 446725d9 79307327
-    Name: Float Constant
-    MinSize:
-      - 100
-      - 50
-    Position:
-      - 1805.42822
-      - -58.4035645
-    Resizable: false
-    Controller:
-      Type: Constant
-      DataType: Float
-      Value:
-        - 0
-        - 0.5
-        - 0.5
-        - 0.5
-  - ID: 997b813a 6e33de0d d97dc8f f5ffb81a
+  - ID: 339c6b63 d965c21c d042181c 5959d822
     Name: Append
     MinSize:
       - 50
       - 0
     Position:
-      - 2040.4281
-      - -185.403564
+      - 2000.42822
+      - -235.403564
     Resizable: false
     Controller:
       Type: Append
+      NumComponents: 3
 Links:
-  - FromID: 997b813a 6e33de0d d97dc8f f5ffb81a
+  - FromID: 339c6b63 d965c21c d042181c 5959d822
     FromIndex: 0
     ToID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
     ToIndex: 0
-  - FromID: b398694c 7c59820f 2c43ef6c 30628767
-    FromIndex: 0
-    ToID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
-    ToIndex: 2
+  - FromID: 220cf112 cb7ee1db 20ac3007 54710f3e
+    FromIndex: 1
+    ToID: 339c6b63 d965c21c d042181c 5959d822
+    ToIndex: 0
+  - FromID: 220cf112 cb7ee1db 20ac3007 54710f3e
+    FromIndex: 2
+    ToID: 339c6b63 d965c21c d042181c 5959d822
+    ToIndex: 1
   - FromID: d0fca01d c9fd5869 d7ee52a4 f818ad8a
     FromIndex: 0
-    ToID: 77e8a8fd ea21aa2a 8132ab9c c11b5feb
-    ToIndex: 3
-  - FromID: 4ffe2dc1 262fc82 bcc6ebc 5bafe2e0
-    FromIndex: 0
-    ToID: 997b813a 6e33de0d d97dc8f f5ffb81a
-    ToIndex: 0
-  - FromID: 857ada33 2805cea2 446725d9 79307327
-    FromIndex: 0
-    ToID: 997b813a 6e33de0d d97dc8f f5ffb81a
-    ToIndex: 1
+    ToID: 339c6b63 d965c21c d042181c 5959d822
+    ToIndex: 2

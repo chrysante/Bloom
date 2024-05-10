@@ -35,6 +35,7 @@ enum class NodeType {
     Input,
     Constant,
     Append,
+    Split,
     Arithmetic,
     TextureSampler
 };
@@ -349,42 +350,103 @@ struct InputNodeController: MaterialNodeController {
 };
 
 struct AppendNodeController: MaterialNodeController {
-    static NodeDesc Make(float2 position) {
+    static NodeDesc Make(float2 position, int numComponents) {
         return { .name = "Append",
                  .position = position,
                  .minSize = { 50, 0 },
-                 .controller = std::make_unique<AppendNodeController>() };
+                 .controller =
+                     std::make_unique<AppendNodeController>(numComponents) };
     }
 
-    AppendNodeController() = default;
+    AppendNodeController(int numComponents): numComponents(numComponents) {}
 
-    explicit AppendNodeController(YAML::Node const&) {}
+    explicit AppendNodeController(YAML::Node const& node) {
+        numComponents = node["NumComponents"].as<int>();
+    }
 
     YAML::Node serialize() const override {
         YAML::Node root;
         root["Type"] = NodeType::Append;
+        root["NumComponents"] = numComponents;
+        return root;
+    }
+
+    std::vector<PinDesc> makeInputDescriptors() override {
+        return std::vector<PinDesc>(numComponents,
+                                    PinDesc{ .name = "",
+                                             .userType = (PinUserType)
+                                                 DataType::Float });
+    }
+
+    std::vector<PinDesc> makeOutputDescriptors() override {
+        return {
+            { .name = "",
+              .userType =
+                  (PinUserType)((int)DataType::Float + numComponents - 1),
+              .pinFlags = PinFlags::Optional },
+        };
+    }
+
+    Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
+        return graph.addValue(
+            allocate<VectorBuilder>(ctx.vectorType(numComponents),
+                                    numComponents));
+    }
+
+    bool alwaysDisplayInputNames() const override { return false; }
+    bool alwaysDisplayOutputNames() const override { return false; }
+
+    int numComponents;
+};
+
+struct SplitNodeController: MaterialNodeController {
+    static NodeDesc Make(float2 position, int numComponents) {
+        return { .name = "Split",
+                 .position = position,
+                 .minSize = { 50, 0 },
+                 .controller =
+                     std::make_unique<SplitNodeController>(numComponents) };
+    }
+
+    SplitNodeController(int numComponents): numComponents(numComponents) {}
+
+    explicit SplitNodeController(YAML::Node const& node) {
+        numComponents = node["NumComponents"].as<int>();
+    }
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["Type"] = NodeType::Split;
+        root["NumComponents"] = numComponents;
         return root;
     }
 
     std::vector<PinDesc> makeInputDescriptors() override {
         return {
-            { .name = "", .userType = (PinUserType)DataType::Float2 },
-            { .name = "", .userType = (PinUserType)DataType::Float },
+            { .name = "",
+              .userType =
+                  (PinUserType)((int)DataType::Float + numComponents - 1) },
         };
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
-        return {
-            { .name = "", .userType = (PinUserType)DataType::Float3 },
-        };
+        return std::vector<PinDesc>(numComponents,
+                                    PinDesc{ .name = "",
+                                             .userType = (PinUserType)
+                                                 DataType::Float });
     }
 
     Value* createGraphNode(Context& ctx, MaterialGraph& graph) const override {
-        return graph.addValue(allocate<VectorBuilder>(ctx.vectorType(3), 2));
+        BL_UNIMPLEMENTED();
+        //        return iota(0, numComponents) | transform([](int i) {
+        //            return graph.addValue(allocate<VectorElement>(ctx, i));
+        //        }) | ToSmallVector<>;
     }
 
     bool alwaysDisplayInputNames() const override { return false; }
     bool alwaysDisplayOutputNames() const override { return false; }
+
+    int numComponents;
 };
 
 struct ArithmeticNodeController: MaterialNodeController {
@@ -497,6 +559,8 @@ static std::unique_ptr<NodeController> deserializeNodeController(
         return std::make_unique<ConstantController>(node);
     case NodeType::Append:
         return std::make_unique<AppendNodeController>(node);
+    case NodeType::Split:
+        return std::make_unique<SplitNodeController>(node);
     case NodeType::Arithmetic:
         return std::make_unique<ArithmeticNodeController>(node);
     case NodeType::TextureSampler:
@@ -592,8 +656,21 @@ struct Delegate: NodeEditorDelegate {
             model->addNode(
                 InputNodeController::Make(InputKind::TextureCoords, position));
         }
-        if (ImGui::MenuItem("Append")) {
-            model->addNode(AppendNodeController::Make(position));
+        if (ImGui::BeginMenu("Append")) {
+            for (int i = 2; i <= 4; ++i) {
+                if (ImGui::MenuItem(utl::strcat("Float", i).c_str())) {
+                    model->addNode(AppendNodeController::Make(position, i));
+                }
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Split")) {
+            for (int i = 2; i <= 4; ++i) {
+                if (ImGui::MenuItem(utl::strcat("Float", i).c_str())) {
+                    model->addNode(SplitNodeController::Make(position, i));
+                }
+            }
+            ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Constant")) {
             for (auto type: magic_enum::enum_values<DataType>()) {

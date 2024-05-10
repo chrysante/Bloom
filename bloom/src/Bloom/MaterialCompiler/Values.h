@@ -102,6 +102,18 @@ public:
     explicit VectorBuilder(VectorType const* type, int numInputs);
 };
 
+class VectorElement: public User {
+public:
+    explicit VectorElement(Context& ctx, int index, Value* operand);
+
+    int index() const { return _index; }
+
+    Value* operand() const { return User::operand(0); }
+
+private:
+    int _index = -1;
+};
+
 class AggregateBuilder: public User {
 public:
     explicit AggregateBuilder(Context& ctx, std::vector<Value*> values);

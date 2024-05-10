@@ -40,6 +40,10 @@ VectorBuilder::VectorBuilder(Context& ctx, std::vector<Value*> values):
 VectorBuilder::VectorBuilder(VectorType const* type, int numInputs):
     User(ValueNodeType::VectorBuilder, type, std::vector<Value*>(numInputs)) {}
 
+VectorElement::VectorElement(Context& ctx, int index, Value* operand):
+    User(ValueNodeType::VectorElement, ctx.floatType(), { operand }),
+    _index(index) {}
+
 AggregateBuilder::AggregateBuilder(Context& ctx, std::vector<Value*> values):
     User(ValueNodeType::AggregateBuilder,
          ctx.aggregateType(values | ranges::views::transform(&Value::type) |

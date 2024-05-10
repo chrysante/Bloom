@@ -20,6 +20,7 @@ BL_MATGRAPH_VALUE(TextureCoords, Constant, Concrete)
 BL_MATGRAPH_VALUE(User, Value, Abstract)
 BL_MATGRAPH_VALUE(ArithmeticOperation, User, Concrete)
 BL_MATGRAPH_VALUE(VectorBuilder, User, Concrete)
+BL_MATGRAPH_VALUE(VectorElement, User, Concrete)
 BL_MATGRAPH_VALUE(AggregateBuilder, User, Concrete)
 
 #undef BL_MATGRAPH_VALUE

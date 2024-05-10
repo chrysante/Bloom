@@ -229,6 +229,8 @@ struct AssetManager::Impl {
     /// absolute, in which case it must be in the current project directory
     RegistryEntry* findByDiskLocation(std::filesystem::path location);
 
+    bool makeAvail(Asset& asset, RegistryEntry const& entry,
+                   AssetRepresentation repr, bool forceReload);
     bool makeAvailImpl(StaticMesh&, RegistryEntry const& entry,
                        AssetRepresentation repr, bool force);
     bool makeAvailImpl(SkeletalMesh&, RegistryEntry const& entry,
@@ -355,8 +357,7 @@ void AssetManager::doInit() {
     listen([this](AMGetAsset const& msg) {
         BL_ASSERT(msg.asset);
         if (msg.handle) {
-            *msg.asset = get(msg.handle);
-            makeAvailable(msg.handle, msg.makeAvailable);
+            *msg.asset = get(msg.handle, msg.representation);
         }
     });
 }
@@ -595,7 +596,8 @@ AssetHandle AssetManager::findAsset(std::string_view name) {
     return itr != entries.end() ? itr->handle : AssetHandle{};
 }
 
-Reference<Asset> AssetManager::get(AssetHandle handle) {
+Reference<Asset> AssetManager::get(AssetHandle handle,
+                                   AssetRepresentation repr) {
     auto itr = impl->assets.find(handle.ID());
     if (itr == impl->assets.end()) {
         Logger::Error("Failed to find asset ", handle);
@@ -607,6 +609,9 @@ Reference<Asset> AssetManager::get(AssetHandle handle) {
     }
     auto asset = impl->allocateAsset(handle, entry.name);
     entry.asset = asset;
+    if (repr != AssetRepresentation::None) {
+        impl->makeAvail(*asset, entry, repr, false);
+    }
     return asset;
 }
 
@@ -631,30 +636,37 @@ std::filesystem::path AssetManager::getRelativeFilepath(
     return std::filesystem::path{};
 }
 
+static constexpr std::string_view MakeAvailErrorPrelude =
+    "Failed to make asset available: ";
+
 bool AssetManager::makeAvailable(AssetHandle handle, AssetRepresentation repr,
                                  bool forceReload) {
     if (repr == AssetRepresentation::None) {
         return false;
     }
-    static constexpr std::string_view ErrorPrelude =
-        "Failed to make asset available: ";
     auto* entry = impl->find(handle);
     if (!entry) {
-        Logger::Error(ErrorPrelude, "ID not found: ", handle.ID());
+        Logger::Error(MakeAvailErrorPrelude, "ID not found: ", handle.ID());
         return false;
     }
     auto asset = entry->asset.lock();
     if (!asset) {
-        Logger::Error(ErrorPrelude, "No references to asset: ", entry->name);
+        Logger::Error(MakeAvailErrorPrelude,
+                      "No references to asset: ", entry->name);
         return false;
     }
+    return impl->makeAvail(*asset, *entry, repr, forceReload);
+}
+
+bool Impl::makeAvail(Asset& asset, RegistryEntry const& entry,
+                     AssetRepresentation repr, bool forceReload) {
     try {
-        return visit(*asset, [&](auto& asset) {
-            return impl->makeAvailImpl(asset, *entry, repr, forceReload);
+        return visit(asset, [&](auto& asset) {
+            return makeAvailImpl(asset, entry, repr, forceReload);
         });
     }
     catch (std::exception const& e) {
-        Logger::Error(ErrorPrelude, e.what());
+        Logger::Error(MakeAvailErrorPrelude, e.what());
         return false;
     }
 }

@@ -95,7 +95,9 @@ public:
     /// we return null.
     ///
     /// \Returns Reference to the Asset or null if handle was null or invalid.
-    Reference<Asset> get(AssetHandle handle);
+    /// Makes the representation \p repr available
+    Reference<Asset> get(AssetHandle handle,
+                         AssetRepresentation repr = AssetRepresentation::None);
 
     /// \Returns the name of the asset handle \p handle or an empty string if
     /// the asset does not exist

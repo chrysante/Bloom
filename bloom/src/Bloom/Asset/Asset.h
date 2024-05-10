@@ -56,7 +56,7 @@ inline AssetType dyncast_get_type(std::derived_from<Asset> auto const& asset) {
 struct BLOOM_API AMGetAsset {
     AssetHandle handle;
     Reference<Asset>* asset = nullptr;
-    AssetRepresentation makeAvailable = AssetRepresentation::None;
+    AssetRepresentation representation = AssetRepresentation::None;
 };
 
 /// Represents a script source file

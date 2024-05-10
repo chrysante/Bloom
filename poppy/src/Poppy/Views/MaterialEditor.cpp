@@ -307,7 +307,7 @@ struct ConstantController: MaterialNodeController {
                 gEditor->dispatch(DispatchToken::Now,
                                   AMGetAsset{ .handle = textureAsset,
                                               .asset = &asset,
-                                              .makeAvailable =
+                                              .representation =
                                                   AssetRepresentation::GPU });
                 if (asset) {
                     texHandle = as<Texture2D>(asset)->GPUHandle;

@@ -37,7 +37,8 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
         BL_ASSERT(functions.size() == 2);
         rgMainPass = createPipeline(device, functions[0], functions[1]);
         for (auto [index, assetHandle]: sourceData.fragmentTextures) {
-            fragmentTextures[index] = as<Texture2D>(AM.get(assetHandle));
+            fragmentTextures[index] =
+                as<Texture2D>(AM.get(assetHandle, AssetRepresentation::GPU));
         }
     }
     catch (std::exception const& e) {

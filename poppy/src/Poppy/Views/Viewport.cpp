@@ -129,7 +129,13 @@ void Viewport::init() {
     setPadding({ 0, 0 });
     setToolbar(makeToolbar());
     if (auto* defaultScene = std::getenv("DEFAULT_SCENE")) {
-        openScene(assetManager().findAsset(defaultScene));
+        AssetHandle handle = assetManager().findAsset(defaultScene);
+        if (handle) {
+            openScene(handle);
+        }
+        else {
+            Logger::Warn("Failed to find default scene: ", defaultScene);
+        }
     }
 }
 

@@ -1,6 +1,9 @@
 #include "Poppy/UI/ViewManager.h"
 
+#include <imgui.h>
+#include <imgui_internal.h>
 #include <range/v3/algorithm.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Application/InputEvent.h"
 #include "Poppy/Editor/Editor.h"
@@ -9,12 +12,42 @@
 
 using namespace poppy;
 using namespace bloom;
+using namespace vml::short_types;
 
 struct ViewManager::Impl {
     static void populate(View& view, Editor& editor) {
         view.data.editor = &editor;
         view.assignEmitter(editor.makeEmitter());
         view.assignReceiver(editor.makeReceiver());
+    }
+
+    static void displayDebugInfo(View const& view) {
+        auto* imWindow = (ImGuiWindow*)view.data.imguiWindow;
+        auto* window = view.data.window;
+        if (!imWindow || !window) {
+            return;
+        }
+        auto* DL = imWindow->DrawList;
+        float2 pos =
+            (float2)imWindow->Pos + (float2)ImGui::GetStyle().WindowPadding;
+        pos.y += window->titlebarHeight();
+        ImU32 color = IM_COL32(255, 0, 255, 255);
+        auto field = [&](std::string_view label, auto const&... args) {
+            DL->AddText(pos, color, utl::strcat(label, ": ", args...).c_str());
+            pos.y += ImGui::GetFontSize();
+        };
+        field("System window position: ", window->position());
+        field("System window size: ", window->size());
+        field("ImGui window position: ", (float2)imWindow->Pos);
+        field("ImGui window size: ", (float2)imWindow->Size);
+        field("Title: ", view.data.title);
+        field("Docked: ", view.data.docked ? "YES" : "NO");
+        field("Padding X: ", view.data.padding.x ?
+                                 utl::strcat(*view.data.padding.x) :
+                                 "Default");
+        field("Padding X: ", view.data.padding.y ?
+                                 utl::strcat(*view.data.padding.y) :
+                                 "Default");
     }
 };
 

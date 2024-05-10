@@ -114,7 +114,7 @@ void View::doInit() {
 }
 
 static bool isDocked(ImGuiWindow* window) {
-    return window && window->ParentWindow;
+    return window && window->DockIsActive;
 }
 
 void View::doFrame() {
@@ -162,8 +162,7 @@ void View::doFrame() {
     if (data.ID != 0) {
         displayTitle += utl::strcat("_", data.ID);
     }
-    bool docked = isDocked(imguiWindow);
-    bool* beginOpenFlag = docked ? &data.open : nullptr;
+    bool* beginOpenFlag = isDocked(imguiWindow) ? &data.open : nullptr;
     bool open = ImGui::Begin(displayTitle.data(), beginOpenFlag, flags);
     data.nextFrameFlags = 0;
     if (data.bgColor) {
@@ -179,7 +178,7 @@ void View::doFrame() {
         data.imguiWindow = imguiWindow;
         data.position = imguiWindow->WorkRect.Min;
         data.size = imguiWindow->Size;
-        data.docked = docked;
+        data.docked = isDocked(imguiWindow);
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
         data.window = (Window*)viewport->PlatformHandle;
         if (data.window && GImGui->CurrentViewport->Window == imguiWindow) {

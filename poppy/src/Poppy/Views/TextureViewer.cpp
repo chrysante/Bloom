@@ -20,9 +20,11 @@ struct TextureViewer: View {
     TextureViewer();
     void display() override;
     void displayTexture();
+    void displayInfo();
     void doOpenData(std::any data) override;
 
     Reference<Texture2D> texture;
+    std::optional<float4> hoverColor;
 };
 
 } // namespace
@@ -47,7 +49,7 @@ void TextureViewer::display() {
     // clang-format off
     splitView("SplitView", {
         [&] { displayTexture(); },
-        [&] {},
+        [&] { displayInfo(); },
     }); // clang-format on
 }
 
@@ -65,8 +67,28 @@ void TextureViewer::displayTexture() {
     float2 displaySize = { minSize, minSize };
     auto* DL = ImGui::GetWindowDrawList();
     float2 displayPos = pos + (availSize - displaySize) / 2;
-    DL->AddImage(native, displayPos, displayPos + displaySize);
+    ImRect BB(displayPos, displayPos + displaySize);
+    DL->AddImage(native, BB.Min, BB.Max);
+    ImGui::ItemAdd(BB, ImGui::GetID("Texture Preview"));
+    ImGui::ItemSize(BB.GetSize());
+    if (ImGui::IsItemHovered()) {
+        float2 coord = (float2(ImGui::GetMousePos()) - displayPos) /
+                       displaySize * texture->size;
+        vml::vector<uint8_t, 4> rgba{};
+        vml::AABB<uint32_t, 3> region = { uint3(coord, 0),
+                                          uint3(coord, 0) + uint3(1) };
+        copyTextureToMemory(RenderAPI::Metal, texture->GPUHandle, &rgba, 4,
+                            region, 0);
+        float4 color =
+            rgba.map([](uint8_t value) { return float(value) / 255; });
+        ImGui::ColorTooltip(utl::strcat("X: ", coord.x, " Y: ", coord.y,
+                                        "###Color")
+                                .c_str(),
+                            color.data(), ImGuiColorEditFlags_Float);
+    }
 }
+
+void TextureViewer::displayInfo() {}
 
 void TextureViewer::doOpenData(std::any data) {
     auto* tex = std::any_cast<Reference<Texture2D>>(&data);

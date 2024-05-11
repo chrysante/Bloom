@@ -121,8 +121,15 @@ public:
         return this->asDerived();
     }
 
+    Derived& buttonFlags(int flags) {
+        _buttonFlags |= flags;
+        return this->asDerived();
+    }
+
 protected:
     void doAction() const;
+
+    int _buttonFlags = 0;
 
 private:
     std::function<void()> _action;
@@ -283,6 +290,31 @@ private:
     float calcWidth(float height) const override;
 
     float _width = 0;
+};
+
+/// Draws user defined content in a toolbar
+class CustomToolbarElement: public ToolbarItem {
+public:
+    CustomToolbarElement(std::function<void(vml::float2 size)> content):
+        _content(std::move(content)) {}
+
+    CustomToolbarElement& width(float width) {
+        _customWidth = width;
+        return *this;
+    }
+
+    /// Makes this element behave like a spacer
+    CustomToolbarElement& useWidthAvail() {
+        _customWidth = 0;
+        return *this;
+    }
+
+private:
+    virtual void display(ToolbarStyle const&) {}
+    virtual float calcWidth(float height) const { return _customWidth; }
+
+    std::function<void(vml::float2 size)> _content;
+    float _customWidth = 0;
 };
 
 ///

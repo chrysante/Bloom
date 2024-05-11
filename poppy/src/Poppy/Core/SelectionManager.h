@@ -44,19 +44,22 @@ public:
     }
 
     /// Calls `set`, `add` or `toggle` depending on \p mode
-    void amend(T const& elem, SelectionMode mode) {
+    /// \Returns `true` if \p elem is selected after the call
+    bool amend(T const& elem, SelectionMode mode) {
         switch (mode) {
         case SelectionMode::Replace:
             set(elem);
-            break;
+            return true;
         case SelectionMode::Add:
             add(elem);
-            break;
+            return true;
         case SelectionMode::Toggle:
-            toggle(elem);
-            break;
+            return toggle(elem);
         }
     }
+
+    /// \Returns `amend(elem, getSelectionMode())`
+    bool amend(T const& elem) { return amend(elem, getSelectionMode()); }
 
     /// Adds \p elem to the selection
     void add(T const& elem) { _elems.insert(elem); }
@@ -81,6 +84,7 @@ public:
 
     /// If \p elem is not selected, adds \p elem to the selection. Otherwise
     /// removes \p elem from the selection
+    /// \Returns `true` if \p elem is selected after the call
     bool toggle(T const& elem) {
         auto itr = _elems.find(elem);
         if (itr != _elems.end()) {
@@ -104,7 +108,9 @@ public:
     }
 
     /// \overload for ranges
-    void set(ranges::range auto&& rng) {
+    void set(ranges::range auto&& rng)
+        requires(!std::convertible_to<decltype(rng), T const&>)
+    {
         set(ranges::begin(rng), ranges::end(rng));
     }
 

@@ -22,7 +22,7 @@ static float2 computePadding(std::optional<float2> padding) {
 }
 
 static bool tbButtonImpl(ToolbarStyle const& style, char const* label, int ID,
-                         float2 size, bool enabled, bool open) {
+                         int flags, float2 size, bool enabled, bool open) {
     ImGui::BeginDisabled(!enabled);
     float4 color =
         GImGui->Style.Colors[open ? ImGuiCol_ButtonActive : ImGuiCol_Button];
@@ -38,7 +38,7 @@ static bool tbButtonImpl(ToolbarStyle const& style, char const* label, int ID,
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, colorActive);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
     ImGui::PushID(ID);
-    bool result = ImGui::Button(label, size);
+    bool result = ImGui::ButtonEx(label, size, flags);
     ImGui::PopID();
     ImGui::PopStyleColor(3);
     ImGui::PopStyleVar();
@@ -46,18 +46,19 @@ static bool tbButtonImpl(ToolbarStyle const& style, char const* label, int ID,
     return result;
 }
 
-bool tbButton(ToolbarStyle const& style, char const* label, int ID, float2 size,
-              bool enabled = true, bool open = false) {
+bool tbButton(ToolbarStyle const& style, char const* label, int ID, int flags,
+              float2 size, bool enabled = true, bool open = false) {
     return withFont(FontWeight::Semibold, FontStyle::Roman, [&] {
-        return tbButtonImpl(style, label, ID, size, enabled, open);
+        return tbButtonImpl(style, label, ID, flags, size, enabled, open);
     });
 }
 
-bool tbIconButton(ToolbarStyle const& style, IconData icon, int ID, float2 size,
-                  char const* tooltip, bool enabled = true, bool open = false) {
+bool tbIconButton(ToolbarStyle const& style, IconData icon, int ID, int flags,
+                  float2 size, char const* tooltip, bool enabled = true,
+                  bool open = false) {
     bool result = withFont(icon.font, [&] {
-        return tbButtonImpl(style, icon.utf8Rep.data(), ID, size, enabled,
-                            open);
+        return tbButtonImpl(style, icon.utf8Rep.data(), ID, flags, size,
+                            enabled, open);
     });
     static float tooltipTimer = 1.0f;
     if (tooltip && ImGui::IsItemHovered()) {
@@ -82,7 +83,7 @@ void ToolbarButtonMixin<Derived>::doAction() const {
 }
 
 void ToolbarButton::display(ToolbarStyle const& style) {
-    if (tbButton(style, _label.c_str(), ID(),
+    if (tbButton(style, _label.c_str(), ID(), _buttonFlags,
                  float2(getWidth(), style.actualHeight)))
     {
         doAction();
@@ -110,7 +111,8 @@ ToolbarIconButton::ToolbarIconButton(Command const* command,
 
 void ToolbarIconButton::display(ToolbarStyle const& style) {
     if (tbIconButton(style, FontManager::get({ IconSize::_16 }, _icon()), ID(),
-                     float2(getWidth(), style.actualHeight), getTooltip()))
+                     _buttonFlags, float2(getWidth(), style.actualHeight),
+                     getTooltip()))
     {
         doAction();
     }
@@ -138,13 +140,13 @@ bool ToolbarDropdownMenu::beginCombo(ToolbarStyle const& style) {
     bool popup_open = IsPopupOpen(popup_id, ImGuiPopupFlags_None);
     bool pressed = false;
     if (_preview) {
-        pressed = tbButton(style, _preview().c_str(), ID(), size, isEnabled(),
-                           popup_open);
+        pressed = tbButton(style, _preview().c_str(), ID(), 0, size,
+                           isEnabled(), popup_open);
     }
     else {
         char const* icon = _icon ? _icon() : "down-open";
         pressed = tbIconButton(style, FontManager::get({ IconSize::_16 }, icon),
-                               ID(), size, getTooltip(), isEnabled(),
+                               ID(), 0, size, getTooltip(), isEnabled(),
                                popup_open);
     }
     if (pressed && !popup_open) {

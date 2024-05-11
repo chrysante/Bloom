@@ -53,6 +53,8 @@ static void applyStyle(poppy::StyleDescription const& style) {
     colors[ImGuiCol_ResizeGrip] = style.colors.separator;
     colors[ImGuiCol_ResizeGripHovered] = style.colors.separator;
     colors[ImGuiCol_ResizeGripActive] = style.colors.separator;
+    colors[ImGuiCol_TableBorderLight] = style.colors.separator;
+    colors[ImGuiCol_TableBorderStrong] = style.colors.separator;
     colors[ImGuiCol_Tab] = style.colors.tab;
     colors[ImGuiCol_TabHovered] = style.colors.tabHovered;
     colors[ImGuiCol_TabActive] = style.colors.tabActive;

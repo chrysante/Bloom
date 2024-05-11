@@ -15,6 +15,7 @@
 #include "Bloom/Core/Debug.h"
 #include "Poppy/Core/SelectionManager.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/Toolbar.h"
@@ -46,6 +47,30 @@ struct DirViewTest: View {
 POPPY_REGISTER_VIEW(DirViewTest, "DirViewTest");
 
 namespace {
+
+struct Style {
+    struct Colors {
+        float4 itemInactiveSelected;
+    };
+
+    EnumArray<AppearanceType, Colors> colors = {
+        /* Light: */ Colors{
+            .itemInactiveSelected = { 0, 0, 0, .15 },
+        },
+        /* Dark: */
+        Colors{
+            .itemInactiveSelected = { 1, 1, 1, .15 },
+        }
+    };
+};
+
+static Style style;
+
+static Style::Colors const& getStyleColors() {
+    return style.colors[Appearance::get().type()];
+}
+
+using Rect = vml::rectangle<float>;
 
 struct DirectoryItemDescription {
     std::string label;
@@ -125,6 +150,12 @@ struct DirectoryLine {
         return true;
     }
 
+    void rescan() {
+        for (auto& directory: line) {
+            directory.rescan();
+        }
+    }
+
     bool canGoUp() const { return line.size() > 1; }
 
     bool goUp() {
@@ -184,10 +215,16 @@ struct DirectoryView2::Impl: Emitter {
     void displayPreviewColumn();
 
     void displayEntry(ScannedDirectory& directory, size_t directoryIndex,
-                      size_t entryIndex, vml::rectangle<float> itemBB,
-                      vml::rectangle<float> labelBB,
-                      vml::rectangle<float> iconBB, TextAlign textAlign,
-                      int frameDrawFlags);
+                      size_t entryIndex, Rect itemBB, Rect labelBB, Rect iconBB,
+                      TextAlign textAlign, int frameDrawFlags);
+    void itemDragSource(ScannedDirectory const& directory,
+                        utl::function_view<void(
+                            std::filesystem::directory_entry const&, float2)>
+                            drawFn);
+    void itemDragTarget(ScannedDirectory const& directory, size_t entryIndex);
+
+    DirectoryItemDescription makeItemDesc(
+        std::filesystem::directory_entry const& entry) const;
 
     /// Navigation
 
@@ -327,15 +364,12 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
     float2 itemSize = float2(itemWidth, itemHeight);
     float2 framePadding = style.FramePadding;
     float2 cursorPos = window->DC.CursorPos;
-    auto itemBB = vml::rectangle<float>::from_size(cursorPos, itemSize);
-    auto iconBB =
-        vml::rectangle<float>::from_size(cursorPos + framePadding +
-                                             float2(3, 0),
-                                         float2(itemHeight) - 2 * framePadding);
-    auto labelBB =
-        vml::rectangle<float>(float2(iconBB.upper_bound().x + framePadding.x,
-                                     iconBB.lower_bound().y),
-                              float2(itemBB.upper_bound() - framePadding));
+    auto itemBB = Rect::from_size(cursorPos, itemSize);
+    auto iconBB = Rect::from_size(cursorPos + framePadding + float2(3, 0),
+                                  float2(itemHeight) - 2 * framePadding);
+    auto labelBB = Rect(float2(iconBB.upper_bound().x + framePadding.x,
+                               iconBB.lower_bound().y),
+                        float2(itemBB.upper_bound() - framePadding));
     auto& entry = directory.entries[entryIndex];
     bool selected = directory.selection.contains(entry.path());
     ImDrawFlags frameDrawFlags = 0;
@@ -377,15 +411,13 @@ void Impl::displayPreviewColumn() {
     ImGui::EndChild();
 }
 
-static void drawEntryFrame(vml::rectangle<float> BB, ImU32 color,
-                           ImDrawFlags drawFlags) {
+static void drawEntryFrame(Rect BB, ImU32 color, ImDrawFlags drawFlags) {
     auto* DL = ImGui::GetWindowDrawList();
     DL->AddRectFilled(BB.lower_bound(), BB.upper_bound(), color,
                       ImGui::GetStyle().FrameRounding, drawFlags);
 }
 
-static void drawEntry(vml::rectangle<float> labelBB,
-                      vml::rectangle<float> iconBB, TextAlign align,
+static void drawEntry(Rect labelBB, Rect iconBB, TextAlign align,
                       std::string const& label, std::string const& icon,
                       ImU32 textColor, bool renaming) {
     auto* DL = ImGui::GetWindowDrawList();
@@ -448,18 +480,14 @@ static void drawEntry(vml::rectangle<float> labelBB,
 }
 
 void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
-                        size_t entryIndex, vml::rectangle<float> itemBB,
-                        vml::rectangle<float> labelBB,
-                        vml::rectangle<float> iconBB, TextAlign textAlign,
-                        int frameDrawFlags) {
+                        size_t entryIndex, Rect itemBB, Rect labelBB,
+                        Rect iconBB, TextAlign textAlign, int frameDrawFlags) {
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems) {
         return;
     }
     auto& entry = directory.entries[entryIndex];
-    DirectoryItemDescription itemDesc = { .label =
-                                              entry.path().filename().string(),
-                                          .iconName = "doc" };
+    auto itemDesc = makeItemDesc(entry);
     bool entrySelected = directory.selection.contains(entry.path());
     auto& g = *GImGui;
     auto& style = g.Style;
@@ -503,26 +531,26 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
             !buttonState.selected && !buttonState.activated;
         return buttonState;
     }();
-
-#if 0
-    itemDragSource(entry, [&](Entry const& entry, float2 position) {
-        // Preview Drawing Code
-        ImGui::SetCursorPos((ImVec2)position - ImGui::GetWindowPos());
+    itemDragSource(directory,
+                   [&](std::filesystem::directory_entry const& draggingItem,
+                       float2 position) {
+        /// Preview drawing Code
+        ImGui::SetCursorPos(position - (float2)ImGui::GetWindowPos());
         ImGui::ItemSize(itemBB.size(), style.FramePadding.y);
-        auto const ddItemDesc = delegate->makeItemDescription(entry);
-        
-        auto localItemBB = vml::rectangle<float>::from_size(position, itemBB.size());
-        auto localLabelBB = vml::rectangle<float>::from_size(position - itemBB.lower_bound() + labelBB.lower_bound(), labelBB.size());
-        auto localIconBB = vml::rectangle<float>::from_size(position - itemBB.lower_bound() + iconBB.lower_bound(), iconBB.size());
-        drawEntryFrame(localItemBB, ImGui::GetColorU32(ImGuiCol_Header));
-        drawEntry(localItemBB, localLabelBB, localIconBB, textAlign,
-                 ddItemDesc.label,
-                 ddItemDesc.iconName.data(),
-                 IM_COL32_WHITE,
-                 ddItemDesc.displayImage);
+        auto ddItemDesc = makeItemDesc(draggingItem);
+        auto localItemBB = Rect::from_size(position, itemBB.size());
+        auto localLabelBB = Rect::from_size(position - itemBB.lower_bound() +
+                                                labelBB.lower_bound(),
+                                            labelBB.size());
+        auto localIconBB = Rect::from_size(position - itemBB.lower_bound() +
+                                               iconBB.lower_bound(),
+                                           iconBB.size());
+        drawEntryFrame(localItemBB, ImGui::GetColorU32(ImGuiCol_Header),
+                       ImDrawFlags_None);
+        drawEntry(localLabelBB, localIconBB, textAlign, ddItemDesc.label,
+                  ddItemDesc.iconName, IM_COL32_WHITE, false);
     });
-    itemDragTarget(entry);
-#endif
+    itemDragTarget(directory, entryIndex);
     // Draw Frame
     auto [frameColor, textColor] = [&]() -> std::pair<ImU32, ImU32> {
         if (!entrySelected) {
@@ -531,7 +559,8 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
         if (directoryIndex == activeDirectoryIndex) {
             return { ImGui::GetColorU32(ImGuiCol_Header), IM_COL32_WHITE };
         }
-        return { ImGui::GetColorU32(ImGuiCol_TextDisabled),
+        return { ImGui::ColorConvertFloat4ToU32(
+                     getStyleColors().itemInactiveSelected),
                  ImGui::GetColorU32(ImGuiCol_Text) };
     }();
     if (entrySelected) {
@@ -544,8 +573,8 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
                         itemBB.size().x);
     }
 #endif
-    drawEntry(labelBB, iconBB, textAlign, itemDesc.label,
-              itemDesc.iconName.data(), textColor,
+    drawEntry(labelBB, iconBB, textAlign, itemDesc.label, itemDesc.iconName,
+              textColor,
               /* renaming: */ false);
 #if 0
     itemPopup(entry, itemDesc);
@@ -557,6 +586,129 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
             activeDirectoryIndex = directoryIndex;
         });
     }
+}
+
+static std::vector<char> packDragDropPayload(
+    BasicSelectionManager<std::filesystem::path> const& selection) {
+    std::vector<char> result;
+    for (auto& path: selection.elements()) {
+        auto str = path.string();
+        result.insert(result.end(), str.begin(), str.end());
+        result.push_back('\0');
+    }
+    return result;
+}
+
+static std::vector<std::filesystem::path> unpackDragDropPayload(
+    char const* data, size_t size) {
+    std::vector<std::filesystem::path> result;
+    size_t j = 0;
+    for (size_t i = 0; i < size; ++i) {
+        if (data[i] == '\0') {
+            result.push_back(std::filesystem::path(data + j, data + i));
+            j = i + 1;
+        }
+    }
+    return result;
+}
+
+void Impl::itemDragSource(
+    ScannedDirectory const& directory,
+    utl::function_view<void(std::filesystem::directory_entry const&, float2)>
+        drawFn) {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
+    ImGui::PushStyleVar(ImGuiStyleVar_PopupBorderSize, 0);
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, 0x0);
+    if (ImGui::BeginDragDropSource()) {
+        bool havePayload = ImGui::GetDragDropPayload() &&
+                           ImGui::GetDragDropPayload()->Data;
+        if (!havePayload) {
+            auto payload = packDragDropPayload(directory.selection);
+            ImGui::SetDragDropPayload("FILE_DRAG_DROP", payload.data(),
+                                      payload.size(), ImGuiCond_Once);
+        }
+        if (auto* payload = ImGui::GetDragDropPayload();
+            payload && payload->DataType == std::string_view("FILE_DRAG_DROP"))
+        {
+            float2 pos = ImGui::GetCurrentWindow()->DC.CursorPos;
+            auto paths = unpackDragDropPayload((char const*)payload->Data,
+                                               payload->DataSize);
+            for (auto [index, path]: paths | enumerate) {
+                drawFn(std::filesystem::directory_entry(path),
+                       pos + index * float2(10, 10));
+            }
+        }
+        ImGui::EndDragDropSource();
+    }
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
+}
+
+static bool moveElement(std::filesystem::path const& element,
+                        std::filesystem::path const& to) {
+    BL_EXPECT(std::filesystem::is_directory(to));
+    if (element.parent_path() == to) {
+        return false;
+    }
+    try {
+        std::filesystem::rename(element, to / element.filename());
+        Logger::Trace("Moved entry to ", to);
+        return true;
+    }
+    catch (std::filesystem::filesystem_error const& e) {
+        Logger::Error("Failed to move file ", element, ": ", e.what());
+        return false;
+    }
+}
+
+void Impl::itemDragTarget(ScannedDirectory const& directory,
+                          size_t entryIndex) {
+    auto& entry = directory.entries[entryIndex];
+    if (!entry.is_directory()) {
+        return;
+    }
+    std::vector<std::filesystem::path> paths;
+    if (auto* payload = ImGui::GetDragDropPayload();
+        payload && payload->DataType == std::string_view("FILE_DRAG_DROP"))
+    {
+        paths = unpackDragDropPayload((char const*)payload->Data,
+                                      payload->DataSize);
+        if (ranges::contains(paths, entry.path())) {
+            return;
+        }
+    }
+    if (!ImGui::BeginDragDropTarget()) {
+        return;
+    }
+    ImGuiPayload const* payload =
+        ImGui::AcceptDragDropPayload("FILE_DRAG_DROP");
+    if (!payload) {
+        ImGui::EndDragDropTarget();
+        return;
+    }
+    for (auto& path: paths) {
+        if (!path.has_parent_path() || path.parent_path() == entry.path()) {
+            continue;
+        }
+        dispatch(DispatchToken::NextFrame, [=, this] {
+            if (moveElement(path, entry.path())) {
+                directoryLine.rescan();
+            }
+        });
+    }
+    ImGui::EndDragDropTarget();
+}
+
+DirectoryItemDescription Impl::makeItemDesc(
+    std::filesystem::directory_entry const& entry) const {
+    std::string iconName = [&]() -> std::string {
+        if (!entry.is_directory()) {
+            return "doc";
+        }
+        return "folder-open-empty";
+    }();
+    return { .label = entry.path().filename(),
+             .iconName = std::move(iconName) };
 }
 
 void Impl::goUp() {

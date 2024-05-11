@@ -390,11 +390,16 @@ void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
     std::string samplerName =
         utl::strcat(getName(sample.texture()), "_Sampler");
     std::string sampleTypeName = typeNameGen.get(sample.type());
+    std::string sampleName = getName(&sample);
     sstr << beginLine() << "constexpr sampler " << samplerName
          << "(mag_filter::linear, min_filter::linear);\n";
-    sstr << beginLine() << sampleTypeName << " " << getName(&sample) << " = "
+    sstr << beginLine() << sampleTypeName << " " << sampleName << " = "
          << sampleTypeName << "(" << getName(sample.texture()) << ".sample("
          << samplerName << ", " << getName(sample.coords()) << "));\n";
+    if (sample.mode() == SampleMode::Normal) {
+        sstr << beginLine() << sampleName << ".xy = (" << sampleName
+             << ".xy - 0.5f) * 2.0f;\n";
+    }
 }
 
 void MetalCodeGenerator::codegenImpl(VectorBuilder const& value) {

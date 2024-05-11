@@ -42,12 +42,14 @@ using NoParent = void;
 
 namespace bloom::matc {
 
-enum RasterizerInputKind {
+enum class RasterizerInputKind {
     TextureCoords,
     VertexNormals,
     VertexTangents,
     VertexBinormals
 };
+
+enum class SampleMode { Color, Normal };
 
 } // namespace bloom::matc
 

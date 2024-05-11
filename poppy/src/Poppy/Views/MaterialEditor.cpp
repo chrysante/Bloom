@@ -84,9 +84,14 @@ struct MaterialNodeController: NodeController {
                         auto* o = input->origin();
                         return map.get(&o->parent(), o->indexInParent());
                     }
-                    int numComponents =
-                        (int)input->userType() - (int)DataType::Float + 1;
-                    return ctx.vectorConstant(numComponents, {});
+                    if ((int)input->userType() >= (int)DataType::Float &&
+                        (int)input->userType() <= (int)DataType::Float4)
+                    {
+                        int numComponents =
+                            (int)input->userType() - (int)DataType::Float + 1;
+                        return ctx.vectorConstant(numComponents, {});
+                    }
+                    return nullptr;
                 }();
                 user->setOperand(inputIndex, operand);
             }
@@ -279,11 +284,11 @@ struct ConstantController: MaterialNodeController {
         case Float2:
             return { 100, 50 };
         case Float3:
-            return { 200, 200 };
+            return { 150, 180 };
         case Float4:
-            return { 200, 200 };
+            return { 150, 180 };
         case Texture:
-            return { 200, 200 };
+            return { 100, 100 };
         }
     }
 
@@ -330,8 +335,11 @@ struct ConstantController: MaterialNodeController {
                 triedToGetTexture = true;
             }
             if (texHandle && texHandle.nativeHandle()) {
-                ImGui::Image(texHandle.nativeHandle(),
-                             ImGui::GetContentRegionAvail());
+                float2 pos = ImGui::GetCursorScreenPos();
+                float2 size = ImGui::GetContentRegionAvail();
+                auto* DL = ImGui::GetWindowDrawList();
+                DL->AddImageRounded(texHandle.nativeHandle(), pos, pos + size,
+                                    { 0, 0 }, { 1, 1 }, IM_COL32_WHITE, 5);
             }
             break;
         }
@@ -566,16 +574,20 @@ struct TextureSamplerController: MaterialNodeController {
     static NodeDesc Make(float2 position) {
         return { .name = "Texture Sample",
                  .position = position,
+                 .minSize = { 100, 0 },
                  .controller = std::make_unique<TextureSamplerController>() };
     }
 
     TextureSamplerController() = default;
 
-    explicit TextureSamplerController(YAML::Node const&) {}
+    explicit TextureSamplerController(YAML::Node const& node) {
+        mode = node["Mode"].as<SampleMode>();
+    }
 
     YAML::Node serialize() const override {
         YAML::Node node;
         node["Type"] = NodeType::TextureSampler;
+        node["Mode"] = mode;
         return node;
     }
 
@@ -609,10 +621,17 @@ struct TextureSamplerController: MaterialNodeController {
         };
     }
 
+    void bodyContent() override {
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::SetCursorPos({ 0, 40 });
+        char const* items[2] = { "Color", "Normal" };
+        ImGui::Combo("###Mode", (int*)&mode, items, 2);
+    }
+
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& graph) const override {
-        auto* sample =
-            graph.addValue(allocate<TextureSampler>(ctx, nullptr, nullptr));
+        auto* sample = graph.addValue(
+            allocate<TextureSampler>(ctx, nullptr, nullptr, mode));
         auto* r = graph.addValue(allocate<VectorElement>(ctx, 0, sample));
         auto* g = graph.addValue(allocate<VectorElement>(ctx, 1, sample));
         auto* b = graph.addValue(allocate<VectorElement>(ctx, 2, sample));
@@ -627,6 +646,8 @@ struct TextureSamplerController: MaterialNodeController {
     }
 
     vml::float4 nodeColor() override { return { 0.2, 0.4, 1, 1 }; }
+
+    SampleMode mode = SampleMode::Color;
 };
 
 static std::unique_ptr<NodeController> deserializeNodeController(

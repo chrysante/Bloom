@@ -113,11 +113,17 @@ private:
 
 class TextureSampler: public User {
 public:
-    TextureSampler(Context& ctx, TextureConstant* texture, Value* coords);
+    TextureSampler(Context& ctx, TextureConstant* texture, Value* coords,
+                   SampleMode mode);
 
     TextureConstant* texture() const;
 
     Value* coords() const { return operand(1); }
+
+    SampleMode mode() const { return _mode; }
+
+private:
+    SampleMode _mode;
 };
 
 class VectorBuilder: public User {

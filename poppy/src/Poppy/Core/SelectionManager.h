@@ -45,21 +45,22 @@ public:
 
     /// Calls `set`, `add` or `toggle` depending on \p mode
     /// \Returns `true` if \p elem is selected after the call
-    bool amend(T const& elem, SelectionMode mode) {
-        switch (mode) {
-        case SelectionMode::Replace:
-            set(elem);
-            return true;
-        case SelectionMode::Add:
-            add(elem);
-            return true;
-        case SelectionMode::Toggle:
-            return toggle(elem);
-        }
+    bool amend(T const& elem, SelectionMode mode = getSelectionMode()) {
+        return amendImpl(mode, elem);
     }
 
-    /// \Returns `amend(elem, getSelectionMode())`
-    bool amend(T const& elem) { return amend(elem, getSelectionMode()); }
+    template <typename Itr, typename Sentinel>
+    void amend(Itr first, Sentinel last,
+               SelectionMode mode = getSelectionMode()) {
+        amendImpl(mode, first, last);
+    }
+
+    void amend(ranges::range auto&& rng,
+               SelectionMode mode = getSelectionMode())
+        requires(!std::convertible_to<decltype(rng), T const&>)
+    {
+        amendImpl(mode, std::forward<decltype(rng)>(rng));
+    }
 
     /// Adds \p elem to the selection
     void add(T const& elem) { _elems.insert(elem); }
@@ -70,15 +71,10 @@ public:
         _elems.insert(first, last);
     }
 
-    /// Erases \p elem from the selection
-    /// \Returns `true` if the element was selected
-    template <typename U>
-    bool erase(U const& elem) {
-        return _elems.erase(elem);
-    }
-
     /// \overload for ranges
-    void add(ranges::range auto&& rng) {
+    void add(ranges::range auto&& rng)
+        requires(!std::convertible_to<decltype(rng), T const&>)
+    {
         add(ranges::begin(rng), ranges::end(rng));
     }
 
@@ -97,6 +93,19 @@ public:
         }
     }
 
+    template <typename Itr, typename Sentinel>
+    void toggle(Itr first, Sentinel last) {
+        for (; first != last; ++first) {
+            toggle(*first);
+        }
+    }
+
+    void toggle(ranges::range auto&& rng)
+        requires(!std::convertible_to<decltype(rng), T const&>)
+    {
+        toggle(ranges::begin(rng), ranges::end(rng));
+    }
+
     /// Clears the selection and selects \p elem
     void set(T const& elem) { set(&elem, &elem + 1); }
 
@@ -112,6 +121,13 @@ public:
         requires(!std::convertible_to<decltype(rng), T const&>)
     {
         set(ranges::begin(rng), ranges::end(rng));
+    }
+
+    /// Erases \p elem from the selection
+    /// \Returns `true` if the element was selected
+    template <typename U>
+    bool erase(U const& elem) {
+        return _elems.erase(elem);
     }
 
     /// Unselectes all elements
@@ -173,6 +189,29 @@ public:
     }
 
 private:
+    template <typename... Args>
+    bool amendImpl(SelectionMode mode, Args&&... args) {
+        switch (mode) {
+        case SelectionMode::Replace:
+            set(std::forward<Args>(args)...);
+            return true;
+        case SelectionMode::Add:
+            add(std::forward<Args>(args)...);
+            return true;
+        case SelectionMode::Toggle:
+            if constexpr (std::is_same_v<decltype(toggle(
+                                             std::forward<Args>(args)...)),
+                                         void>)
+            {
+                toggle(std::forward<Args>(args)...);
+                return bool{};
+            }
+            else {
+                return toggle(std::forward<Args>(args)...);
+            }
+        }
+    }
+
     utl::hashset<T> _elems;
     utl::hashset<T> _candidates;
     std::optional<SelectionMode> _candidateMode;

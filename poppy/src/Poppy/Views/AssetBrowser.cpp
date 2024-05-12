@@ -29,6 +29,7 @@
 #include "Poppy/Views/AssetDragDrop.h"
 #include "Poppy/Views/DirectoryView2.h"
 #include "Poppy/Views/MaterialInstanceViewer.h"
+#include "Poppy/Views/TextureViewer.h"
 
 using namespace bloom;
 using namespace vml::short_types;
@@ -85,11 +86,12 @@ struct AssetBrowser: View {
             return This->assetManager->getHandleFromFile(entry.path());
         }
         void entryContextMenu(DirectoryEntry2 const&) override {}
-
+        bool displayPreview(DirectoryEntry2 const& entry) override {
+            return This->displayPreview(entry);
+        }
         std::string makeDragDropType() override {
             return std::string(AssetDragDropType);
         }
-
         std::vector<uint8_t> makeDragDropUserData(
             std::span<DirectoryEntry2 const> entries) override {
             if (entries.size() == 1) {
@@ -121,6 +123,7 @@ struct AssetBrowser: View {
     void openProject(std::filesystem::path const&);
     void openSubdirectory(std::filesystem::path const&);
     void refreshFilesystem();
+    bool displayPreview(DirectoryEntry2 const& entry);
 
     /// The applications asset manager
     bloom::AssetManager* assetManager = nullptr;
@@ -128,6 +131,7 @@ struct AssetBrowser: View {
     std::filesystem::path currentDir;
     AssetBrowserData data;
     DirectoryView2 dirView;
+    Reference<Asset> previewAsset;
 };
 
 } // namespace
@@ -371,6 +375,21 @@ void AssetBrowser::openSubdirectory(std::filesystem::path const& path) {
 void AssetBrowser::refreshFilesystem() {
     assetManager->refreshProject();
     dirView.openDirectory(data.currentDir);
+}
+
+bool AssetBrowser::displayPreview(DirectoryEntry2 const& entry) {
+    AssetHandle handle = getHandle(entry);
+    if (!handle) {
+        return false;
+    }
+    if (!previewAsset || previewAsset->handle() != handle) {
+        previewAsset = assetManager->get(handle, AssetRepresentation::GPU);
+    }
+    if (auto texture = as<Texture2D>(previewAsset)) {
+        previewTexture(*texture);
+        return true;
+    }
+    return false;
 }
 
 UI_TEST("Content Browser", "Open Scene") {

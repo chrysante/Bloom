@@ -366,7 +366,6 @@ void DirectoryView2::display() {
     }
 
     impl->viewData.updateLate();
-    impl->displayDebugger();
 }
 
 void DirectoryView2::openDirectory(std::filesystem::path directory) {
@@ -534,7 +533,18 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
 
 void Impl::displayPreviewColumn() {
     ImGui::BeginChild("preview-column", contentSizeWithoutScrollbar());
-    displayEmptyWithReason("No Preview");
+    auto& dir = directoryLine[activeDirectoryIndex];
+    if (dir.selection.empty()) {
+        displayEmptyWithError("No entry selected");
+    }
+    else if (dir.selection.size() == 1) {
+        if (!delegate->displayPreview(*dir.selection.begin())) {
+            displayEmptyWithReason("No Preview");
+        }
+    }
+    else {
+        displayEmptyWithReason(utl::strcat(dir.selection.size(), " objects"));
+    }
     ImGui::EndChild();
 }
 

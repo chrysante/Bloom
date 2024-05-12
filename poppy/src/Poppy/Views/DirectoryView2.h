@@ -80,6 +80,8 @@ class DirectoryView2 {
 public:
     enum class Layout { Columns, Table, List, LAST = List };
 
+    enum class SortCondition { Name, Extension, LAST = Extension };
+
     DirectoryView2();
     ~DirectoryView2();
 
@@ -91,6 +93,10 @@ public:
     void display();
 
     void openDirectory(std::filesystem::path directory);
+
+    SortCondition sortCondition() const;
+
+    void setSortCondition(SortCondition condition) const;
 
     struct Impl;
 

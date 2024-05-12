@@ -72,6 +72,7 @@ static Style::Colors const& getStyleColors() {
 }
 
 using Rect = vml::rectangle<float>;
+using SortCondition = DirectoryView2::SortCondition;
 
 struct DirectoryItemDescription {
     std::string label;
@@ -108,19 +109,36 @@ using SelectionManager =
 
 struct ScannedDirectory {
     static ScannedDirectory Build(DirectoryViewDelegate2& delegate,
+                                  SortCondition condition,
                                   std::filesystem::path path) {
         ScannedDirectory result;
         result.path = path;
-        result.rescan(delegate);
+        result.rescan(delegate, condition);
         return result;
     }
 
-    void rescan(DirectoryViewDelegate2& delegate) {
+    void rescan(DirectoryViewDelegate2& delegate, SortCondition condition) {
         entries.clear();
         for (auto entry: std::filesystem::directory_iterator(path)) {
             if (!utl::is_hidden(entry.path())) {
                 entries.push_back({ entry, delegate.makeUserData(entry) });
             }
+        }
+        sort(condition);
+    }
+
+    void sort(SortCondition condition) {
+        switch (condition) {
+        case SortCondition::Name:
+            ranges::sort(entries, [&](auto& a, auto& b) {
+                return a.path().filename() < b.path().filename();
+            });
+            break;
+        case SortCondition::Extension:
+            ranges::sort(entries, [&](auto& a, auto& b) {
+                return a.path().extension() < b.path().extension();
+            });
+            break;
         }
     }
 
@@ -138,7 +156,8 @@ struct DirectoryLine {
     void setRoot(std::filesystem::path const& directory) {
         _root = directory;
         line.clear();
-        line.push_back(ScannedDirectory::Build(*delegate, directory));
+        line.push_back(
+            ScannedDirectory::Build(*delegate, sortCondition, directory));
         activeIndex = 0;
     }
 
@@ -168,7 +187,8 @@ struct DirectoryLine {
                 map.erase(itr);
             }
             else {
-                line.push_back(ScannedDirectory::Build(*delegate, path));
+                line.push_back(
+                    ScannedDirectory::Build(*delegate, sortCondition, path));
             }
         }
         for (auto [line, next]: zip(line, line | drop(1))) {
@@ -182,7 +202,7 @@ struct DirectoryLine {
 
     void rescan() {
         for (auto& directory: line) {
-            directory.rescan(*delegate);
+            directory.rescan(*delegate, sortCondition);
         }
     }
 
@@ -217,6 +237,15 @@ struct DirectoryLine {
 
     void setCurrentIndex(size_t index) { activeIndex = index; }
 
+    void setSortCondition(SortCondition condition) {
+        sortCondition = condition;
+        for (auto& directory: line) {
+            directory.sort(condition);
+        }
+    }
+
+    SortCondition getSortCondition() const { return sortCondition; }
+
     ScannedDirectory& current() { return line[activeIndex]; }
     ScannedDirectory const& current() const { return line[activeIndex]; }
     ScannedDirectory& root() { return front(); }
@@ -245,6 +274,7 @@ private:
     std::filesystem::path _root;
     std::vector<ScannedDirectory> line;
     size_t activeIndex = ~size_t{};
+    SortCondition sortCondition{};
 };
 
 enum class TextAlign { Left, Right, Center };
@@ -408,6 +438,14 @@ void DirectoryView2::display() {
 void DirectoryView2::openDirectory(std::filesystem::path directory) {
     impl->directoryLine.setRoot(directory);
     impl->history.push(directory);
+}
+
+SortCondition DirectoryView2::sortCondition() const {
+    return impl->directoryLine.getSortCondition();
+}
+
+void DirectoryView2::setSortCondition(SortCondition condition) const {
+    impl->directoryLine.setSortCondition(condition);
 }
 
 Toolbar Impl::makeToolbar() {

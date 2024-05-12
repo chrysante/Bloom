@@ -24,8 +24,10 @@ Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
 
 void RenderGraph::addLink(PassSource* source, PassSink* sink) {
     BL_EXPECT(!isCompiled());
-    BL_EXPECT(source);
-    BL_EXPECT(sink);
+    if (!source || !sink) {
+        Logger::Error("Cannot add link, terminal is null");
+        return;
+    }
     if (sink->source()) {
         Logger::Error("Pass sink is already linked: ", sink->qualifiedName());
         return;

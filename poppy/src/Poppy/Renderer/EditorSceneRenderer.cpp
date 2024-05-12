@@ -95,6 +95,9 @@ EditorSceneRenderer::EditorSceneRenderer(
 
 void EditorSceneRenderer::begin(bloom::FrameParameters const& frameParams,
                                 bloom::Camera const& camera) {
+    if (!mRenderer) {
+        return;
+    }
     mRenderer->begin(frameParams, camera);
     if (selectedGeometry) {
         selectedGeometry->clear();
@@ -123,6 +126,9 @@ static void submitSelectedGeometry(
 
 void EditorSceneRenderer::submit(
     bloom::Scene const& scene, EntitySelectionManager const& selectionManager) {
+    if (!mRenderer) {
+        return;
+    }
     mRenderer->submit(scene);
     if (selectedGeometry) {
         submitSelectedGeometry(scene, *selectedGeometry, selectionManager);
@@ -130,6 +136,9 @@ void EditorSceneRenderer::submit(
 }
 
 void EditorSceneRenderer::draw(bloom::CommandQueue& commandQueue) {
+    if (!mRenderer) {
+        return;
+    }
     mRenderGraph->allocateResources(mRenderer->getFrameParams(),
                                     mRenderGraph->device());
     if (selectedGeometry) {

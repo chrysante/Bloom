@@ -45,16 +45,7 @@ View::View(ViewDescription data):
           .minSize = data.minSize,
           .padding = { std::nullopt, std::nullopt } } {}
 
-bool View::focused() const {
-    auto* w = GImGui->NavWindow;
-    while (w) {
-        if (w == data.imguiWindow) {
-            return true;
-        }
-        w = w->ParentWindow;
-    }
-    return false;
-}
+bool View::focused() const { return data.isFocused; }
 
 vml::float2 View::padding() const {
     auto& style = ImGui::GetStyle();
@@ -182,6 +173,7 @@ void View::doFrame() {
         data.position = imguiWindow->WorkRect.Min;
         data.size = imguiWindow->Size;
         data.docked = isDocked(imguiWindow);
+        data.isFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
         data.window = (Window*)viewport->PlatformHandle;
         if (data.window && GImGui->CurrentViewport->Window == imguiWindow) {

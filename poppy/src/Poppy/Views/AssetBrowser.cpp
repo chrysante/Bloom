@@ -84,7 +84,7 @@ struct AssetBrowser: View {
             std::filesystem::directory_entry const& entry) override {
             return This->assetManager->getHandleFromFile(entry.path());
         }
-        void popupMenu(DirectoryEntry2 const&) override {}
+        void entryContextMenu(DirectoryEntry2 const&) override {}
 
         std::string makeDragDropType() override {
             return std::string(AssetDragDropType);

@@ -256,6 +256,7 @@ struct ViewData: ActiveViewData, FrameData {
 using Impl = DirectoryView2::Impl;
 
 struct DirectoryView2::Impl: Emitter {
+    void assignCommands(CommandPalette& commandPalette);
     Toolbar makeToolbar();
 
     void displayBackground(ScannedDirectory& directory, size_t dirIndex);
@@ -268,6 +269,7 @@ struct DirectoryView2::Impl: Emitter {
     void displayEntry(ScannedDirectory& directory, size_t directoryIndex,
                       size_t entryIndex, Rect itemBB, Rect labelBB, Rect iconBB,
                       TextAlign textAlign, int frameDrawFlags);
+    void entryContextMenu(DirectoryEntry2 const& entry);
     void itemDragSource(
         ScannedDirectory const& directory,
         utl::function_view<void(DirectoryEntry2 const&, float2)> drawFn);
@@ -275,6 +277,8 @@ struct DirectoryView2::Impl: Emitter {
     void beginDragSelection(size_t directoryIndex);
     void updateDragSelection(size_t directoryIndex);
 
+    void activateEntry(DirectoryEntry2 const& entry);
+    void activateSelectedEntries();
     DirectoryItemDescription makeItemDesc(DirectoryEntry2 const& entry) const;
 
     /// Navigation
@@ -308,20 +312,26 @@ void DirectoryView2::init(std::unique_ptr<DirectoryViewDelegate2> delegate,
                                 std::make_unique<DirectoryViewDelegate2>();
     impl->directoryLine.setDelegate(impl->delegate.get());
     impl->assignEmitter(std::move(emitter));
+    impl->assignCommands(commandPalette);
+}
+
+void Impl::assignCommands(CommandPalette& commandPalette) {
     commandPalette.add("Go Up",
                        { .key = Key::UpArrow, .modFlags = ModFlags::Control },
-                       [this] { impl->goUp(); },
-                       [this] { return impl->canGoUp(); });
+                       [this] { goUp(); }, [this] { return canGoUp(); });
     commandPalette.add("Go Back",
                        { .key = Key::LeftArrow, .modFlags = ModFlags::Control },
-                       [this] { impl->goBack(); },
-                       [this] { return impl->canGoBack(); });
+                       [this] { goBack(); }, [this] { return canGoBack(); });
     commandPalette.add("Go Forward",
                        { .key = Key::RightArrow,
                          .modFlags = ModFlags::Control },
-                       [this] { impl->goForward(); },
-                       [this] { return impl->canGoForward(); });
-    commandPalette.add("Rescan", {}, [this] { impl->directoryLine.rescan(); });
+                       [this] { goForward(); },
+                       [this] { return canGoForward(); });
+    commandPalette.add("Rescan", {}, [this] { directoryLine.rescan(); });
+    commandPalette.add("Open", { .key = Key::O, .modFlags = ModFlags::Control },
+                       [this] { activateSelectedEntries(); }, [this] {
+        return !directoryLine[activeDirectoryIndex].selection.empty();
+    });
 }
 
 Toolbar DirectoryView2::makeToolbar() { return impl->makeToolbar(); }
@@ -341,8 +351,8 @@ void DirectoryView2::display() {
         if (!dispatched && directory.selectionModified) {
             auto& sel = directory.selection;
             auto toOpen = [&] {
-                if (sel.size() == 1 && sel.elements().front().is_directory()) {
-                    return sel.elements().front().path();
+                if (sel.size() == 1 && sel.begin()->is_directory()) {
+                    return sel.begin()->path();
                 }
                 return directory.path;
             }();
@@ -519,6 +529,7 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
     displayEntry(directory, directoryIndex, entryIndex, itemBB, labelBB, iconBB,
                  TextAlign::Left, frameDrawFlags);
     ImGui::PopStyleVar(2);
+    entryContextMenu(directory.entries[entryIndex]);
 }
 
 void Impl::displayPreviewColumn() {
@@ -624,7 +635,9 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
         auto buttonFlags = ImGuiButtonFlags_PressedOnDoubleClick |
                            ImGuiButtonFlags_PressedOnDragDropHold |
                            ImGuiButtonFlags_PressedOnClick |
-                           ImGuiButtonFlags_PressedOnRelease;
+                           ImGuiButtonFlags_PressedOnRelease |
+                           ImGuiButtonFlags_MouseButtonLeft |
+                           ImGuiButtonFlags_MouseButtonRight;
         bool buttonActive = ImGui::ButtonBehavior(BB, ID, &buttonState.hovered,
                                                   &buttonState.held,
                                                   buttonFlags);
@@ -634,21 +647,33 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
         if (!buttonActive) {
             return buttonState;
         }
+        bool wantSelectEntry = false;
+        SelectionMode selectionMode = getSelectionMode();
         if (!entrySelected) {
-            if (g.IO.MouseClicked[ImGuiMouseButton_Left]) {
-                buttonState.selected = directory.selection.amend(entry);
-                viewData.haveSelectedItem = true;
-                directory.selectionModified = true;
+            wantSelectEntry |= ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+        }
+        else if (!viewData.haveSelectedItem && !g.DragDropActive) {
+            wantSelectEntry |= ImGui::IsMouseReleased(ImGuiMouseButton_Left);
+        }
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+            wantSelectEntry = true;
+            if (selectionMode == SelectionMode::Replace &&
+                directory.selection.contains(entry))
+            {
+                selectionMode = SelectionMode::Add;
             }
         }
-        else if (!viewData.haveSelectedItem) {
-            if (g.IO.MouseReleased[ImGuiMouseButton_Left]) {
-                buttonState.selected = directory.selection.amend(entry);
-                directory.selectionModified = true;
-            }
+        if (wantSelectEntry) {
+            buttonState.selected =
+                directory.selection.amend(entry, selectionMode);
+            directory.selectionModified = true;
+            viewData.haveSelectedItem = true;
         }
-        buttonState.activated = g.IO.MouseClickedCount[ImGuiMouseButton_Left] ==
-                                2;
+        buttonState.activated =
+            ImGui::GetMouseClickedCount(ImGuiMouseButton_Left) == 2;
+        if (buttonState.activated) {
+            activateEntry(entry);
+        }
         buttonState.activatedByDragDrop =
             !g.IO.MouseReleased[ImGuiMouseButton_Left] &&
             !buttonState.selected && !buttonState.activated;
@@ -714,9 +739,23 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
     drawEntry(labelBB, iconBB, textAlign, itemDesc.label, itemDesc.iconName,
               textColor,
               /* renaming: */ false);
-#if 0
-    itemPopup(entry, itemDesc);
-#endif
+}
+
+void Impl::entryContextMenu(DirectoryEntry2 const& entry) {
+    std::string popupID = utl::strcat("EntryPopup-", entry.path());
+    ImGui::OpenPopupOnItemClick(popupID.c_str());
+    if (ImGui::BeginPopup(popupID.c_str())) {
+        if (!entry.is_directory() && ImGui::MenuItem("Open")) {
+            activateEntry(entry);
+        }
+        if (ImGui::MenuItem("Rename")) {
+        }
+        if (ImGui::MenuItem("Delete")) {
+        }
+        ImGui::Separator();
+        delegate->entryContextMenu(entry);
+        ImGui::EndPopup();
+    }
 }
 
 static std::vector<char> packDragDropPayload(
@@ -725,7 +764,7 @@ static std::vector<char> packDragDropPayload(
     uint32_t userDataSize = (uint32_t)userData.size();
     std::memcpy(result.data(), &userDataSize, 4);
     result.insert(result.end(), userData.begin(), userData.end());
-    for (auto& entry: selection.elements()) {
+    for (auto& entry: selection) {
         auto str = entry.path().string();
         result.insert(result.end(), str.begin(), str.end());
         result.push_back('\0');
@@ -908,6 +947,18 @@ void Impl::updateDragSelection(size_t directoryIndex) {
     DL->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_Border));
 }
 
+void Impl::activateEntry(DirectoryEntry2 const& entry) {
+    if (entry.is_directory()) {
+        delegate->openFile(entry);
+    }
+}
+
+void Impl::activateSelectedEntries() {
+    for (auto& entry: directoryLine[activeDirectoryIndex].selection) {
+        activateEntry(entry);
+    }
+}
+
 DirectoryItemDescription Impl::makeItemDesc(
     DirectoryEntry2 const& entry) const {
     std::string iconName = [&]() -> std::string {
@@ -985,7 +1036,7 @@ void Impl::displayDebugger() {
                 ImGui::Text("%s", entry.path().c_str());
             }
             ImGui::SeparatorText("Selection");
-            for (auto& entry: dir.selection.elements()) {
+            for (auto& entry: dir.selection) {
                 ImGui::Text("%s", entry.path().c_str());
             }
             ImGui::TreePop();

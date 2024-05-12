@@ -57,7 +57,7 @@ struct DirectoryViewDelegate2 {
 
     /// Use this callback to draw ImGui menu item into the popup menu for the
     /// given file
-    virtual void popupMenu(DirectoryEntry2 const&) {}
+    virtual void entryContextMenu(DirectoryEntry2 const&) {}
 
     /// Display a preview of the directory entry in the preview pane. Return
     /// true if a preview is drawn

@@ -175,6 +175,7 @@ private:
         std::optional<vml::float4> bgColor;
         bool maximized = false;
         bool open = true;
+        bool isFocused = false;
         /// `ImGuiWindowFlags` to use on the next frame. This is reset after the
         /// call to `Begin()`
         int nextFrameFlags = 0;

@@ -27,7 +27,7 @@
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetDragDrop.h"
-#include "Poppy/Views/DirectoryView.h"
+#include "Poppy/Views/DirectoryView2.h"
 #include "Poppy/Views/MaterialInstanceViewer.h"
 
 using namespace bloom;
@@ -41,67 +41,25 @@ struct AssetBrowserData {
     std::filesystem::path currentDir; // absolute path
 };
 
-struct AssetBrowser: View {
-    AssetBrowser();
-
-    void openAsset(bloom::AssetHandle);
-
-    void init() override;
-    void displayToolbar() override;
-    void display() override;
-    void onInput(bloom::InputEvent& event) override { dirView.onInput(event); }
-
-    YAML::Node serialize() const override;
-    void deserialize(YAML::Node) override;
-
-    void newAssetPopup();
-    void displayNoOpenProject();
-
-    void importAsset(std::filesystem::path);
-
-    void openProject(std::filesystem::path const&);
-    void openSubdirectory(std::filesystem::path const&);
-    void refreshFilesystem();
-
-    /// The applications asset manager
-    bloom::AssetManager* assetManager = nullptr;
-    /// The current directory relative to the project directory
-    std::filesystem::path currentDir;
-    AssetBrowserData data;
-    DirectoryView dirView;
-};
-
-} // namespace
-
-POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser");
-
-BLOOM_MAKE_TEXT_SERIALIZER(AssetBrowserData, projectDir, currentDir);
-
-static AssetHandle getHandle(DirectoryEntry const& entry) {
+static AssetHandle getHandle(DirectoryEntry2 const& entry) {
     auto* handle = std::any_cast<AssetHandle>(&entry.userData);
     return handle ? *handle : AssetHandle();
 }
 
-AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
-    // clang-format off
-    dirView.setDelegate({
-        .openFile = [this](DirectoryEntry const& entry) {
+struct AssetBrowser: View {
+    struct DirViewDelegate: DirectoryViewDelegate2 {
+        AssetBrowser* This;
+
+        explicit DirViewDelegate(AssetBrowser* This): This(This) {}
+
+        void openFile(DirectoryEntry2 const& entry) override {
             auto handle = getHandle(entry);
             if (!handle) {
                 return;
             }
-            openAsset(handle);
-        },
-        .renameEntry = [this](DirectoryEntry const& entry, 
-                              std::string newName) {
-            auto handle = getHandle(entry);
-            /// Kinda hacky but the asset manager expects a name without
-            /// extension for renaming, so we just discard the extension here
-            auto name = std::filesystem::path(newName).replace_extension()
-                            .string();
-            assetManager->renameAsset(handle, name);
-        },
-        .selectIcon = [](DirectoryEntry const& entry) {
+            This->openAsset(handle);
+        }
+        std::string selectIcon(DirectoryEntry2 const& entry) override {
             auto handle = getHandle(entry);
             switch (handle.type()) {
             case AssetType::StaticMesh:
@@ -121,21 +79,64 @@ AssetBrowser::AssetBrowser(): dirView(commandPaletteWrite()) {
             default:
                 return "doc";
             }
-        },
-        .shallDisplay = [](DirectoryEntry const& entry) {
-            return getHandle(entry).isValid();
-        },
-        .makeUserData = [this](std::filesystem::path const& path) {
-            return assetManager->getHandleFromFile(path);
-        },
-        .popupMenu = [](DirectoryEntry const&) {},
-        .dragdropPayload = [](DirectoryEntry const& entry) {
-            if (auto handle = getHandle(entry)) {
-                ImGui::SetDragDropPayload(toDragDropType(handle.type()).data(),
-                                          &handle, sizeof handle);
+        }
+        std::any makeUserData(
+            std::filesystem::directory_entry const& entry) override {
+            return This->assetManager->getHandleFromFile(entry.path());
+        }
+        void popupMenu(DirectoryEntry2 const&) override {}
+
+        std::string makeDragDropType() override {
+            return std::string(AssetDragDropType);
+        }
+
+        std::vector<uint8_t> makeDragDropUserData(
+            std::span<DirectoryEntry2 const> entries) override {
+            if (entries.size() == 1) {
+                auto handle = getHandle(entries.front());
+                std::vector<uint8_t> result(sizeof handle);
+                std::memcpy(result.data(), &handle, sizeof handle);
+                return result;
             }
-        },
-    });   // clang-format on
+            return {};
+        }
+    };
+
+    AssetBrowser();
+
+    void openAsset(bloom::AssetHandle);
+
+    void init() override;
+    void displayToolbar() override;
+    void display() override;
+
+    YAML::Node serialize() const override;
+    void deserialize(YAML::Node) override;
+
+    void newAssetPopup();
+    void displayNoOpenProject();
+
+    void importAsset(std::filesystem::path);
+
+    void openProject(std::filesystem::path const&);
+    void openSubdirectory(std::filesystem::path const&);
+    void refreshFilesystem();
+
+    /// The applications asset manager
+    bloom::AssetManager* assetManager = nullptr;
+    /// The current directory relative to the project directory
+    std::filesystem::path currentDir;
+    AssetBrowserData data;
+    DirectoryView2 dirView;
+};
+
+} // namespace
+
+POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser");
+
+BLOOM_MAKE_TEXT_SERIALIZER(AssetBrowserData, projectDir, currentDir);
+
+AssetBrowser::AssetBrowser() {
     // clang-format off
     setToolbar({
         ToolbarIconButton("up-open")
@@ -319,6 +320,8 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
 
 void AssetBrowser::init() {
     assetManager = &editor().coreSystems().assetManager();
+    dirView.init(std::make_unique<DirViewDelegate>(this),
+                 editor().makeEmitter(), commandPaletteWrite());
     if (!data.projectDir.empty()) {
         openProject(data.projectDir);
     }

@@ -8,8 +8,7 @@
 
 namespace poppy {
 
-// FIXME: This should not be exposed
-std::string toDragDropType(bloom::AssetType type);
+inline constexpr auto AssetDragDropType = "ASSET_DRAG_DROP";
 
 ///
 std::optional<bloom::AssetHandle> acceptAssetDragDrop(

@@ -34,7 +34,7 @@ namespace {
 struct DirViewTest: View {
     DirViewTest() {}
     void init() override {
-        impl.init(editor().makeEmitter(), commandPaletteWrite());
+        impl.init(nullptr, editor().makeEmitter(), commandPaletteWrite());
         impl.openDirectory("/Users/indigo/dev/bloom/projects");
         setToolbar(impl.makeToolbar());
         setPadding({ 0, 0 });
@@ -86,26 +86,47 @@ struct ItemButtonState {
     bool activatedByDragDrop = false;
 };
 
+struct DirEntryHash {
+    using is_transparent = void;
+
+    size_t operator()(DirectoryEntry2 const& entry) const {
+        return utl::hash<std::filesystem::path>{}(entry.path());
+    }
+};
+
+struct DirEntryEqual {
+    using is_transparent = void;
+
+    bool operator()(std::filesystem::directory_entry const& a,
+                    std::filesystem::directory_entry const& b) const {
+        return a == b;
+    }
+};
+
+using SelectionManager =
+    BasicSelectionManager<DirectoryEntry2, DirEntryHash, DirEntryEqual>;
+
 struct ScannedDirectory {
-    static ScannedDirectory Build(std::filesystem::path path) {
+    static ScannedDirectory Build(DirectoryViewDelegate2& delegate,
+                                  std::filesystem::path path) {
         ScannedDirectory result;
         result.path = path;
-        result.rescan();
+        result.rescan(delegate);
         return result;
     }
 
-    void rescan() {
+    void rescan(DirectoryViewDelegate2& delegate) {
         entries.clear();
         for (auto entry: std::filesystem::directory_iterator(path)) {
             if (!utl::is_hidden(entry.path())) {
-                entries.push_back(entry);
+                entries.push_back({ entry, delegate.makeUserData(entry) });
             }
         }
     }
 
     std::filesystem::path path;
-    std::vector<std::filesystem::directory_entry> entries;
-    BasicSelectionManager<std::filesystem::path> selection;
+    std::vector<DirectoryEntry2> entries;
+    SelectionManager selection;
     /// Tested at the end of each frame to update view layout
     bool selectionModified = false;
 
@@ -117,7 +138,7 @@ struct DirectoryLine {
     void setRoot(std::filesystem::path const& directory) {
         _root = directory;
         line.clear();
-        line.push_back(ScannedDirectory::Build(directory));
+        line.push_back(ScannedDirectory::Build(*delegate, directory));
     }
 
     bool makeCurrent(std::filesystem::path leafDirectory) {
@@ -146,18 +167,20 @@ struct DirectoryLine {
                 map.erase(itr);
             }
             else {
-                line.push_back(ScannedDirectory::Build(path));
+                line.push_back(ScannedDirectory::Build(*delegate, path));
             }
         }
         for (auto [line, next]: zip(line, line | drop(1))) {
-            line.selection.set(next.path);
+            std::filesystem::directory_entry entry(next.path);
+            line.selection.set(
+                DirectoryEntry2(entry, delegate->makeUserData(entry)));
         }
         return true;
     }
 
     void rescan() {
         for (auto& directory: line) {
-            directory.rescan();
+            directory.rescan(*delegate);
         }
     }
 
@@ -191,7 +214,12 @@ struct DirectoryLine {
     auto end() { return line.end(); }
     auto end() const { return line.end(); }
 
+    void setDelegate(DirectoryViewDelegate2* delegate) {
+        this->delegate = delegate;
+    }
+
 private:
+    DirectoryViewDelegate2* delegate = nullptr;
     std::filesystem::path _root;
     std::vector<ScannedDirectory> line;
 };
@@ -240,16 +268,14 @@ struct DirectoryView2::Impl: Emitter {
     void displayEntry(ScannedDirectory& directory, size_t directoryIndex,
                       size_t entryIndex, Rect itemBB, Rect labelBB, Rect iconBB,
                       TextAlign textAlign, int frameDrawFlags);
-    void itemDragSource(ScannedDirectory const& directory,
-                        utl::function_view<void(
-                            std::filesystem::directory_entry const&, float2)>
-                            drawFn);
-    void itemDragTarget(std::filesystem::directory_entry const& entry);
+    void itemDragSource(
+        ScannedDirectory const& directory,
+        utl::function_view<void(DirectoryEntry2 const&, float2)> drawFn);
+    void itemDragTarget(DirectoryEntry2 const& entry);
     void beginDragSelection(size_t directoryIndex);
     void updateDragSelection(size_t directoryIndex);
 
-    DirectoryItemDescription makeItemDesc(
-        std::filesystem::directory_entry const& entry) const;
+    DirectoryItemDescription makeItemDesc(DirectoryEntry2 const& entry) const;
 
     /// Navigation
 
@@ -264,6 +290,7 @@ struct DirectoryView2::Impl: Emitter {
 
     void displayDebugger();
 
+    std::unique_ptr<DirectoryViewDelegate2> delegate;
     Layout layout = Layout::Columns;
     DirectoryLine directoryLine;
     FilesystemHistory history;
@@ -273,7 +300,13 @@ struct DirectoryView2::Impl: Emitter {
 
 DirectoryView2::DirectoryView2(): impl(std::make_unique<Impl>()) {}
 
-void DirectoryView2::init(Emitter emitter, CommandPalette& commandPalette) {
+DirectoryView2::~DirectoryView2() = default;
+
+void DirectoryView2::init(std::unique_ptr<DirectoryViewDelegate2> delegate,
+                          Emitter emitter, CommandPalette& commandPalette) {
+    impl->delegate = delegate ? std::move(delegate) :
+                                std::make_unique<DirectoryViewDelegate2>();
+    impl->directoryLine.setDelegate(impl->delegate.get());
     impl->assignEmitter(std::move(emitter));
     commandPalette.add("Go Up",
                        { .key = Key::UpArrow, .modFlags = ModFlags::Control },
@@ -308,10 +341,8 @@ void DirectoryView2::display() {
         if (!dispatched && directory.selectionModified) {
             auto& sel = directory.selection;
             auto toOpen = [&] {
-                if (sel.size() == 1 &&
-                    std::filesystem::is_directory(sel.elements().front()))
-                {
-                    return sel.elements().front();
+                if (sel.size() == 1 && sel.elements().front().is_directory()) {
+                    return sel.elements().front().path();
                 }
                 return directory.path;
             }();
@@ -369,10 +400,10 @@ void Impl::displayBackground(ScannedDirectory& directory, size_t dirIndex) {
     ImGui::SetNextItemAllowOverlap();
     bool active = ImGui::InvisibleButton("###background-button", size);
     if (active && viewData.hoveredEntry.empty()) {
-        directory.selection.amend(std::vector<std::filesystem::path>{});
+        directory.selection.amend(std::vector<DirectoryEntry2>{});
         directory.selectionModified = true;
     }
-    itemDragTarget(std::filesystem::directory_entry(directory.path));
+    itemDragTarget(DirectoryEntry2(directory.path));
 #if 0
     backgroundContextMenu(directory);
 #endif
@@ -463,15 +494,15 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
                                iconBB.lower_bound().y),
                         float2(itemBB.upper_bound() - framePadding));
     auto& entry = directory.entries[entryIndex];
-    bool selected = directory.selection.contains(entry.path());
+    bool selected = directory.selection.contains(entry);
     ImDrawFlags frameDrawFlags = 0;
     if (selected) {
-        bool prevSelected = entryIndex > 0 &&
-                            directory.selection.contains(
-                                directory.entries[entryIndex - 1].path());
-        bool nextSelected = entryIndex < directory.entries.size() - 1 &&
-                            directory.selection.contains(
-                                directory.entries[entryIndex + 1].path());
+        bool prevSelected =
+            entryIndex > 0 &&
+            directory.selection.contains(directory.entries[entryIndex - 1]);
+        bool nextSelected =
+            entryIndex < directory.entries.size() - 1 &&
+            directory.selection.contains(directory.entries[entryIndex + 1]);
         if (prevSelected && nextSelected) {
             frameDrawFlags = ImDrawFlags_RoundCornersNone;
         }
@@ -573,7 +604,7 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
     }
     auto& entry = directory.entries[entryIndex];
     auto itemDesc = makeItemDesc(entry);
-    bool entrySelected = directory.selection.contains(entry.path());
+    bool entrySelected = directory.selection.contains(entry);
     auto& g = *GImGui;
     auto& style = g.Style;
     if (viewData.isSelectionDragging &&
@@ -605,14 +636,14 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
         }
         if (!entrySelected) {
             if (g.IO.MouseClicked[ImGuiMouseButton_Left]) {
-                buttonState.selected = directory.selection.amend(entry.path());
+                buttonState.selected = directory.selection.amend(entry);
                 viewData.haveSelectedItem = true;
                 directory.selectionModified = true;
             }
         }
         else if (!viewData.haveSelectedItem) {
             if (g.IO.MouseReleased[ImGuiMouseButton_Left]) {
-                buttonState.selected = directory.selection.amend(entry.path());
+                buttonState.selected = directory.selection.amend(entry);
                 directory.selectionModified = true;
             }
         }
@@ -623,12 +654,16 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
             !buttonState.selected && !buttonState.activated;
         return buttonState;
     }();
+    if (buttonState.activated) {
+        if (!entry.is_directory()) {
+            delegate->openFile(entry);
+        }
+    }
     if (ImGui::IsItemHovered()) {
         viewData.hoveredEntry = entry.path();
     }
     itemDragSource(directory,
-                   [&](std::filesystem::directory_entry const& draggingItem,
-                       float2 position) {
+                   [&](DirectoryEntry2 const& draggingItem, float2 position) {
         /// Preview drawing Code
         ImGui::SetCursorPos(position - (float2)ImGui::GetWindowPos());
         ImGui::ItemSize(itemBB.size(), style.FramePadding.y);
@@ -685,33 +720,62 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
 }
 
 static std::vector<char> packDragDropPayload(
-    BasicSelectionManager<std::filesystem::path> const& selection) {
-    std::vector<char> result;
-    for (auto& path: selection.elements()) {
-        auto str = path.string();
+    std::span<uint8_t const> userData, SelectionManager const& selection) {
+    std::vector<char> result(4);
+    uint32_t userDataSize = (uint32_t)userData.size();
+    std::memcpy(result.data(), &userDataSize, 4);
+    result.insert(result.end(), userData.begin(), userData.end());
+    for (auto& entry: selection.elements()) {
+        auto str = entry.path().string();
         result.insert(result.end(), str.begin(), str.end());
         result.push_back('\0');
     }
     return result;
 }
 
-static std::vector<std::filesystem::path> unpackDragDropPayload(
-    char const* data, size_t size) {
-    std::vector<std::filesystem::path> result;
-    size_t j = 0;
-    for (size_t i = 0; i < size; ++i) {
-        if (data[i] == '\0') {
-            result.push_back(std::filesystem::path(data + j, data + i));
-            j = i + 1;
+namespace {
+
+struct DragDropDelivery {
+    std::span<uint8_t const> userData;
+    std::vector<std::filesystem::path> paths;
+};
+
+} // namespace
+
+static DragDropDelivery unpackDragDropPayload(char const* data, size_t size,
+                                              bool userDataOnly = false) {
+    DragDropDelivery result;
+    BL_ASSERT(size >= 4);
+    uint32_t userDataSize = 0;
+    std::memcpy(&userDataSize, data, 4);
+    size_t i = 4 + userDataSize;
+    result.userData =
+        std::span((uint8_t const*)data + 4, (uint8_t const*)data + i);
+    if (userDataOnly) {
+        return result;
+    }
+    size_t j = i;
+    for (; i < size; ++i) {
+        if (data[i] != '\0') {
+            continue;
         }
+        result.paths.push_back(std::filesystem::path(data + j, data + i));
+        j = i + 1;
     }
     return result;
 }
 
+std::span<uint8_t const> poppy::peekFileDragDropUserData() {
+    auto* payload = ImGui::GetDragDropPayload();
+    auto result = unpackDragDropPayload((char const*)payload->Data,
+                                        payload->DataSize,
+                                        /* userDataOnly: */ true);
+    return result.userData;
+}
+
 void Impl::itemDragSource(
     ScannedDirectory const& directory,
-    utl::function_view<void(std::filesystem::directory_entry const&, float2)>
-        drawFn) {
+    utl::function_view<void(DirectoryEntry2 const&, float2)> drawFn) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
     ImGui::PushStyleVar(ImGuiStyleVar_PopupBorderSize, 0);
     ImGui::PushStyleColor(ImGuiCol_PopupBg, 0x0);
@@ -719,19 +783,22 @@ void Impl::itemDragSource(
         bool havePayload = ImGui::GetDragDropPayload() &&
                            ImGui::GetDragDropPayload()->Data;
         if (!havePayload) {
-            auto payload = packDragDropPayload(directory.selection);
-            ImGui::SetDragDropPayload("FILE_DRAG_DROP", payload.data(),
-                                      payload.size(), ImGuiCond_Once);
+            auto userData =
+                delegate->makeDragDropUserData(directory.selection.elements());
+            auto payload =
+                packDragDropPayload(std::move(userData), directory.selection);
+            ImGui::SetDragDropPayload(delegate->makeDragDropType().c_str(),
+                                      payload.data(), payload.size(),
+                                      ImGuiCond_Once);
         }
         if (auto* payload = ImGui::GetDragDropPayload();
-            payload && payload->DataType == std::string_view("FILE_DRAG_DROP"))
+            payload && payload->DataType == delegate->makeDragDropType())
         {
             float2 pos = ImGui::GetCurrentWindow()->DC.CursorPos;
-            auto paths = unpackDragDropPayload((char const*)payload->Data,
-                                               payload->DataSize);
-            for (auto [index, path]: paths | enumerate) {
-                drawFn(std::filesystem::directory_entry(path),
-                       pos + index * float2(10, 10));
+            auto delivery = unpackDragDropPayload((char const*)payload->Data,
+                                                  payload->DataSize);
+            for (auto [index, path]: delivery.paths | enumerate) {
+                drawFn(DirectoryEntry2(path), pos + index * float2(10, 10));
             }
         }
         ImGui::EndDragDropSource();
@@ -757,25 +824,25 @@ static bool moveElement(std::filesystem::path const& element,
     }
 }
 
-void Impl::itemDragTarget(std::filesystem::directory_entry const& entry) {
+void Impl::itemDragTarget(DirectoryEntry2 const& entry) {
     if (!entry.is_directory()) {
         return;
     }
-    std::vector<std::filesystem::path> paths;
+    DragDropDelivery delivery;
     if (auto* payload = ImGui::GetDragDropPayload();
-        payload && payload->DataType == std::string_view("FILE_DRAG_DROP"))
+        payload && payload->DataType == delegate->makeDragDropType().c_str())
     {
-        paths = unpackDragDropPayload((char const*)payload->Data,
-                                      payload->DataSize);
-        if (paths.empty()) {
+        delivery = unpackDragDropPayload((char const*)payload->Data,
+                                         payload->DataSize);
+        if (delivery.paths.empty()) {
             return;
         }
         /// Not drop into ourself
-        if (ranges::contains(paths, entry.path())) {
+        if (ranges::contains(delivery.paths, entry.path())) {
             return;
         }
         /// Not drop into parent directory
-        if (paths.front().parent_path() == entry) {
+        if (delivery.paths.front().parent_path() == entry) {
             return;
         }
     }
@@ -788,7 +855,7 @@ void Impl::itemDragTarget(std::filesystem::directory_entry const& entry) {
         ImGui::EndDragDropTarget();
         return;
     }
-    for (auto& path: paths) {
+    for (auto& path: delivery.paths) {
         if (!path.has_parent_path() || path.parent_path() == entry.path()) {
             continue;
         }
@@ -820,10 +887,10 @@ void Impl::updateDragSelection(size_t directoryIndex) {
     float2 pos2 = ImGui::GetMousePos();
     Rect rect(pos1, pos2);
     auto& dir = directoryLine[directoryIndex];
-    utl::hashset<std::filesystem::path> candidates;
+    SelectionManager::SetType candidates;
     for (auto& entry: dir.entries) {
         if (vml::do_intersect(rect, viewData.entryBBs[entry.path()])) {
-            candidates.insert(entry.path());
+            candidates.insert(entry);
         }
     }
     dir.selection.setCandidates(candidates);
@@ -842,10 +909,10 @@ void Impl::updateDragSelection(size_t directoryIndex) {
 }
 
 DirectoryItemDescription Impl::makeItemDesc(
-    std::filesystem::directory_entry const& entry) const {
+    DirectoryEntry2 const& entry) const {
     std::string iconName = [&]() -> std::string {
         if (!entry.is_directory()) {
-            return "doc";
+            return delegate->selectIcon(entry);
         }
         return "folder-open-empty";
     }();
@@ -918,8 +985,8 @@ void Impl::displayDebugger() {
                 ImGui::Text("%s", entry.path().c_str());
             }
             ImGui::SeparatorText("Selection");
-            for (auto& path: dir.selection.elements()) {
-                ImGui::Text("%s", path.c_str());
+            for (auto& entry: dir.selection.elements()) {
+                ImGui::Text("%s", entry.path().c_str());
             }
             ImGui::TreePop();
         }

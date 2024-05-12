@@ -24,9 +24,12 @@ SelectionMode getSelectionMode();
 
 /// Generic selection manager that supports replace-, add-, toggle- and multiple
 /// seletion
-template <typename T>
+template <typename T, typename Hash = utl::hash<T>,
+          typename KeyEq = std::equal_to<>>
 class BasicSelectionManager {
 public:
+    using SetType = utl::hashset<T, Hash, KeyEq>;
+
     /// \Returns `true` if \p elem is selected
     template <typename U>
     bool contains(U const& elem) const {
@@ -146,9 +149,7 @@ public:
     void beginCandidates(SelectionMode mode) { this->_candidateMode = mode; }
 
     /// Update multi selection
-    void setCandidates(utl::hashset<T> elems) {
-        _candidates = std::move(elems);
-    }
+    void setCandidates(SetType elems) { _candidates = std::move(elems); }
 
     /// Finish multi selection
     void applyCandidates() {
@@ -212,8 +213,8 @@ private:
         }
     }
 
-    utl::hashset<T> _elems;
-    utl::hashset<T> _candidates;
+    SetType _elems;
+    SetType _candidates;
     std::optional<SelectionMode> _candidateMode;
 };
 

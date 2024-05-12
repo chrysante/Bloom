@@ -139,6 +139,7 @@ struct DirectoryLine {
         _root = directory;
         line.clear();
         line.push_back(ScannedDirectory::Build(*delegate, directory));
+        activeIndex = 0;
     }
 
     bool makeCurrent(std::filesystem::path leafDirectory) {
@@ -175,6 +176,7 @@ struct DirectoryLine {
             line.selection.set(
                 DirectoryEntry2(entry, delegate->makeUserData(entry)));
         }
+        activeIndex = size() - 1;
         return true;
     }
 
@@ -186,17 +188,37 @@ struct DirectoryLine {
 
     bool canGoUp() const { return line.size() > 1; }
 
+    bool canGoDown() const {
+        return current().selection.size() == 1 &&
+               current().selection.begin()->is_directory();
+    }
+
     bool goUp() {
         if (!canGoUp()) {
             Logger::Error("Cannot go up, already in root directory");
             return false;
         }
         line.pop_back();
+        --activeIndex;
         return true;
     }
 
-    ScannedDirectory& current() { return back(); }
-    ScannedDirectory const& current() const { return back(); }
+    bool goDown() {
+        if (!canGoDown()) {
+            Logger::Error("Cannot go down");
+            return false;
+        }
+        makeCurrent(current().selection.begin()->path());
+        if (!current().entries.empty()) {
+            current().selection.set(current().entries.front());
+        }
+        return true;
+    }
+
+    void setCurrentIndex(size_t index) { activeIndex = index; }
+
+    ScannedDirectory& current() { return line[activeIndex]; }
+    ScannedDirectory const& current() const { return line[activeIndex]; }
     ScannedDirectory& root() { return front(); }
     ScannedDirectory const& root() const { return front(); }
 
@@ -222,6 +244,7 @@ private:
     DirectoryViewDelegate2* delegate = nullptr;
     std::filesystem::path _root;
     std::vector<ScannedDirectory> line;
+    size_t activeIndex = ~size_t{};
 };
 
 enum class TextAlign { Left, Right, Center };
@@ -284,13 +307,17 @@ struct DirectoryView2::Impl: Emitter {
     /// Navigation
 
     void goUp();
+    void goDown();
     void goBack();
     void goForward();
     bool canGoUp() const;
+    bool canGoDown() const;
     bool canGoBack() const;
     bool canGoForward() const;
     void makeDirectoryCurrent(std::filesystem::path const& path,
                               bool pushHistory = true);
+
+    void moveSelection(int offset, SelectionMode mode);
 
     void displayDebugger();
 
@@ -299,7 +326,6 @@ struct DirectoryView2::Impl: Emitter {
     DirectoryLine directoryLine;
     FilesystemHistory history;
     ViewData viewData;
-    size_t activeDirectoryIndex = 0;
 };
 
 DirectoryView2::DirectoryView2(): impl(std::make_unique<Impl>()) {}
@@ -316,9 +342,10 @@ void DirectoryView2::init(std::unique_ptr<DirectoryViewDelegate2> delegate,
 }
 
 void Impl::assignCommands(CommandPalette& commandPalette) {
-    commandPalette.add("Go Up",
-                       { .key = Key::UpArrow, .modFlags = ModFlags::Control },
-                       [this] { goUp(); }, [this] { return canGoUp(); });
+    commandPalette.add("Go up", { .key = Key::LeftArrow }, [this] { goUp(); },
+                       [this] { return canGoUp(); });
+    commandPalette.add("Go down", { .key = Key::RightArrow },
+                       [this] { goDown(); }, [this] { return canGoDown(); });
     commandPalette.add("Go Back",
                        { .key = Key::LeftArrow, .modFlags = ModFlags::Control },
                        [this] { goBack(); }, [this] { return canGoBack(); });
@@ -330,8 +357,18 @@ void Impl::assignCommands(CommandPalette& commandPalette) {
     commandPalette.add("Rescan", {}, [this] { directoryLine.rescan(); });
     commandPalette.add("Open", { .key = Key::O, .modFlags = ModFlags::Control },
                        [this] { activateSelectedEntries(); }, [this] {
-        return !directoryLine[activeDirectoryIndex].selection.empty();
+        return !directoryLine.current().selection.empty();
     });
+    commandPalette.add("Select up", { .key = Key::UpArrow },
+                       [this] { moveSelection(-1, SelectionMode::Replace); });
+    commandPalette.add("Select down", { .key = Key::DownArrow },
+                       [this] { moveSelection(1, SelectionMode::Replace); });
+    commandPalette.add("Expand selection up",
+                       { .key = Key::UpArrow, .modFlags = ModFlags::Shift },
+                       [this] { moveSelection(-1, SelectionMode::Toggle); });
+    commandPalette.add("Expand selection down",
+                       { .key = Key::DownArrow, .modFlags = ModFlags::Shift },
+                       [this] { moveSelection(1, SelectionMode::Toggle); });
 }
 
 Toolbar DirectoryView2::makeToolbar() { return impl->makeToolbar(); }
@@ -358,7 +395,7 @@ void DirectoryView2::display() {
             }();
             impl->dispatch(DispatchToken::NextFrame, [=, impl = impl.get()] {
                 impl->makeDirectoryCurrent(toOpen);
-                impl->activeDirectoryIndex = index;
+                impl->directoryLine.setCurrentIndex(index);
             });
             dispatched = true;
         }
@@ -533,7 +570,7 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
 
 void Impl::displayPreviewColumn() {
     ImGui::BeginChild("preview-column", contentSizeWithoutScrollbar());
-    auto& dir = directoryLine[activeDirectoryIndex];
+    auto& dir = directoryLine.current();
     if (dir.selection.empty()) {
         displayEmptyWithError("No entry selected");
     }
@@ -731,7 +768,7 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
         if (!entrySelected) {
             return noFrame;
         }
-        if (directoryIndex == activeDirectoryIndex) {
+        if (&directory == &directoryLine.current()) {
             return selectedActive;
         }
         return selectedInactive;
@@ -964,7 +1001,7 @@ void Impl::activateEntry(DirectoryEntry2 const& entry) {
 }
 
 void Impl::activateSelectedEntries() {
-    for (auto& entry: directoryLine[activeDirectoryIndex].selection) {
+    for (auto& entry: directoryLine.current().selection) {
         activateEntry(entry);
     }
 }
@@ -984,7 +1021,12 @@ DirectoryItemDescription Impl::makeItemDesc(
 void Impl::goUp() {
     if (directoryLine.goUp()) {
         history.push(directoryLine.current().path);
-        activeDirectoryIndex = directoryLine.size() - 1;
+    }
+}
+
+void Impl::goDown() {
+    if (directoryLine.goDown()) {
+        history.push(directoryLine.current().path);
     }
 }
 
@@ -1000,6 +1042,8 @@ void Impl::goForward() {
 
 bool Impl::canGoUp() const { return directoryLine.canGoUp(); }
 
+bool Impl::canGoDown() const { return directoryLine.canGoDown(); }
+
 bool Impl::canGoBack() const { return history.canPop(); }
 
 bool Impl::canGoForward() const { return history.canUnpop(); }
@@ -1010,24 +1054,31 @@ void Impl::makeDirectoryCurrent(std::filesystem::path const& path,
         return;
     }
     if (directoryLine.makeCurrent(path)) {
-        activeDirectoryIndex = directoryLine.size() - 1;
         if (pushHistory) {
             history.push(path);
         }
     }
 }
 
+void Impl::moveSelection(int offset, SelectionMode mode) {
+    auto& dir = directoryLine.current();
+    BL_ASSERT(mode != SelectionMode::Add);
+    if (dir.selection.empty()) {
+        return;
+    }
+    auto last = dir.selection.last();
+    BL_ASSERT(last);
+    auto itr = ranges::find(dir.entries, *last);
+    BL_ASSERT(itr != dir.entries.end());
+    auto index = itr - dir.entries.begin() + offset;
+    if (index >= 0 && index < (ssize_t)dir.entries.size()) {
+        dir.selection.amend(dir.entries[index], mode);
+    }
+}
+
 void Impl::displayDebugger() {
     ImGui::Begin("DirViewDebugger");
-    if (activeDirectoryIndex < directoryLine.size()) {
-        ImGui::Text("Active Directory: %s",
-                    directoryLine[activeDirectoryIndex].path.c_str());
-    }
-    else {
-        ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0, 0, 1 });
-        ImGui::Text("Active Directory: INVALID INDEX");
-        ImGui::PopStyleColor();
-    }
+    ImGui::Text("Current directory: %s", directoryLine.current().path.c_str());
     ImGui::Text("Hovered entry: %s", viewData.hoveredEntry.c_str());
     if (viewData.isSelectionDragging) {
         ImGui::SeparatorText("Selection dragging");

@@ -66,12 +66,18 @@ public:
     }
 
     /// Adds \p elem to the selection
-    void add(T const& elem) { _elems.insert(elem); }
+    void add(T const& elem) {
+        _elems.insert(elem);
+        _last = elem;
+    }
 
     /// \overload for ranges
     template <typename Itr, typename Sentinel>
     void add(Itr first, Sentinel last) {
         _elems.insert(first, last);
+        if (first != last) {
+            _last = *std::prev(last);
+        }
     }
 
     /// \overload for ranges
@@ -88,10 +94,12 @@ public:
         auto itr = _elems.find(elem);
         if (itr != _elems.end()) {
             _elems.erase(itr);
+            _last = std::nullopt;
             return false;
         }
         else {
             add(elem);
+            _last = elem;
             return true;
         }
     }
@@ -110,7 +118,10 @@ public:
     }
 
     /// Clears the selection and selects \p elem
-    void set(T const& elem) { set(&elem, &elem + 1); }
+    void set(T const& elem) {
+        set(&elem, &elem + 1);
+        _last = elem;
+    }
 
     /// \overload for ranges
     template <typename Itr, typename Sentinel>
@@ -130,11 +141,17 @@ public:
     /// \Returns `true` if the element was selected
     template <typename U>
     bool erase(U const& elem) {
+        if (_last == elem) {
+            _last = std::nullopt;
+        }
         return _elems.erase(elem);
     }
 
     /// Unselectes all elements
-    void clear() { _elems.clear(); }
+    void clear() {
+        _elems.clear();
+        _last = std::nullopt;
+    }
 
     /// \Returns a view over all selected elements
     std::span<T const> elements() const { return _elems.values(); }
@@ -160,27 +177,8 @@ public:
         if (!_candidateMode) {
             return;
         }
-        switch (*_candidateMode) {
-        case SelectionMode::Replace:
-            _elems = std::move(_candidates);
-            break;
-        case SelectionMode::Add:
-            _elems.insert(_candidates.begin(), _candidates.end());
-            _candidates.clear();
-            break;
-        case SelectionMode::Toggle: {
-            for (auto const& elem: _candidates) {
-                auto itr = _elems.find(elem);
-                if (itr != _elems.end()) {
-                    _elems.erase(itr);
-                }
-                else {
-                    _elems.insert(elem);
-                }
-            }
-            break;
-        }
-        }
+        amend(std::move(_candidates), *_candidateMode);
+        _candidates.clear();
         _candidateMode = std::nullopt;
     }
 
@@ -191,7 +189,13 @@ public:
         for (auto& elem: values) {
             _elems.insert(std::invoke(fn, elem));
         }
+        if (_last) {
+            _last = std::invoke(fn, *_last);
+        }
     }
+
+    /// \Returns the last selected element
+    std::optional<T> last() const { return _last; }
 
 private:
     template <typename... Args>
@@ -219,6 +223,7 @@ private:
 
     SetType _elems;
     SetType _candidates;
+    std::optional<T> _last;
     std::optional<SelectionMode> _candidateMode;
 };
 

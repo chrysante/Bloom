@@ -8,6 +8,7 @@
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 #include <utl/filesystem_ext.hpp>
+#include <utl/functional.hpp> // For utl::min
 #include <utl/hashset.hpp>
 #include <utl/scope_guard.hpp>
 #include <utl/strcat.hpp>
@@ -20,32 +21,12 @@
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/Toolbar.h"
-#include "Poppy/UI/View.h"
-#include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/FilesystemHistory_Merge.hpp"
 
 using namespace bloom;
 using namespace poppy;
 using namespace vml::short_types;
 using namespace ranges::views;
-
-namespace {
-
-struct DirViewTest: View {
-    DirViewTest() {}
-    void init() override {
-        impl.init(nullptr, editor().makeEmitter(), commandPaletteWrite());
-        impl.openDirectory("/Users/indigo/dev/bloom/projects");
-        setToolbar(impl.makeToolbar());
-        setPadding({ 0, 0 });
-    }
-    void display() override { impl.display(); }
-    DirectoryView2 impl;
-};
-
-} // namespace
-
-POPPY_REGISTER_VIEW(DirViewTest, "DirViewTest");
 
 namespace {
 

@@ -66,8 +66,10 @@ void CommandPalette::onInput(InputEvent& event) const {
             return false;
         }
         auto& list = listItr->second;
+        /// Sometimes numlock gets set even if not held
+        auto modFlags = event.modifierFlags & ~ModFlags::NumLock;
         auto itr = ranges::find_if(list, [&](auto& p) {
-            return p.modFlags == event.modifierFlags;
+            return p.modFlags == modFlags;
         });
         if (itr == list.end()) {
             return false;

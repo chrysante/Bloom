@@ -27,7 +27,13 @@ struct ViewManager::Impl {
         if (!imWindow || !window) {
             return;
         }
-        auto* DL = imWindow->DrawList;
+        ImGui::Begin(view.data.titleID.c_str());
+        ImGui::SetCursorPos({});
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, 0);
+        ImGui::BeginChild("Debug Overlay", {}, ImGuiChildFlags_None,
+                          ImGuiWindowFlags_NoInputs);
+        ImGui::PopStyleColor();
+        auto* DL = ImGui::GetWindowDrawList();
         float2 pos =
             (float2)imWindow->Pos + (float2)ImGui::GetStyle().WindowPadding;
         pos.y += window->titlebarHeight();
@@ -48,6 +54,9 @@ struct ViewManager::Impl {
         field("Padding X: ", view.data.padding.y ?
                                  utl::strcat(*view.data.padding.y) :
                                  "Default");
+        field("Is focused: ", view.data.isFocused ? "YES" : "NO");
+        ImGui::EndChild();
+        ImGui::End();
     }
 };
 

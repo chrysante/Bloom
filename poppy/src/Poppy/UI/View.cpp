@@ -149,15 +149,15 @@ void View::doFrame() {
     if (data.bgColor) {
         ImGui::PushStyleColor(ImGuiCol_WindowBg, *data.bgColor);
     }
-    std::string displayTitle = utl::strcat(title(), "###", staticName());
+    data.titleID = utl::strcat(title(), "###", staticName());
     if (data.maximized) {
-        displayTitle += "_FS";
+        data.titleID += "_FS";
     }
     if (data.ID != 0) {
-        displayTitle += utl::strcat("_", data.ID);
+        data.titleID += utl::strcat("_", data.ID);
     }
     bool* beginOpenFlag = isDocked(imguiWindow) ? &data.open : nullptr;
-    bool open = ImGui::Begin(displayTitle.data(), beginOpenFlag, flags);
+    bool open = ImGui::Begin(data.titleID.c_str(), beginOpenFlag, flags);
     data.nextFrameFlags = 0;
     if (data.bgColor) {
         ImGui::PopStyleColor();

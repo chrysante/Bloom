@@ -958,7 +958,7 @@ void Impl::updateDragSelection(size_t directoryIndex) {
 }
 
 void Impl::activateEntry(DirectoryEntry2 const& entry) {
-    if (entry.is_directory()) {
+    if (!entry.is_directory()) {
         delegate->openFile(entry);
     }
 }

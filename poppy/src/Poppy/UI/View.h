@@ -168,6 +168,7 @@ private:
         vml::float2 minSize;
         bool docked = false;
         std::string title;
+        std::string titleID;
         void* imguiWindow = nullptr;
         Editor* editor = nullptr;
         bloom::Window* window = nullptr;

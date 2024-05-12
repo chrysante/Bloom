@@ -303,7 +303,14 @@ struct ViewData: ActiveViewData, FrameData {
         {
             static_cast<ActiveViewData&>(*this) = {};
         }
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape) ||
+            !ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+        {
+            renamingEntry = std::nullopt;
+        }
     }
+    std::optional<DirectoryEntry2> renamingEntry;
+    bool startRenaming = false;
 };
 
 using Impl = DirectoryView2::Impl;
@@ -322,6 +329,8 @@ struct DirectoryView2::Impl: Emitter {
     void displayEntry(ScannedDirectory& directory, size_t directoryIndex,
                       size_t entryIndex, Rect itemBB, Rect labelBB, Rect iconBB,
                       TextAlign textAlign, int frameDrawFlags);
+    void displayEntryRenameField(DirectoryEntry2 const& entry, Rect labelBB);
+    void applyRenaming();
     void entryContextMenu(DirectoryEntry2 const& entry);
     void itemDragSource(
         ScannedDirectory const& directory,
@@ -340,6 +349,8 @@ struct DirectoryView2::Impl: Emitter {
     void goDown();
     void goBack();
     void goForward();
+    bool navEnabled() const { return !viewData.renamingEntry; }
+    void didNavigate() { viewData.renamingEntry = std::nullopt; }
     bool canGoUp() const;
     bool canGoDown() const;
     bool canGoBack() const;
@@ -399,6 +410,9 @@ void Impl::assignCommands(CommandPalette& commandPalette) {
     commandPalette.add("Expand selection down",
                        { .key = Key::DownArrow, .modFlags = ModFlags::Shift },
                        [this] { moveSelection(1, SelectionMode::Toggle); });
+
+    commandPalette.add("Apply rename", { .key = Key::Enter },
+                       [this] { applyRenaming(); });
 }
 
 Toolbar DirectoryView2::makeToolbar() { return impl->makeToolbar(); }
@@ -416,6 +430,7 @@ void DirectoryView2::display() {
     bool dispatched = false;
     for (auto [index, directory]: impl->directoryLine | enumerate) {
         if (!dispatched && directory.selectionModified) {
+            impl->viewData.renamingEntry = std::nullopt;
             auto& sel = directory.selection;
             auto toOpen = [&] {
                 if (sel.size() == 1 && sel.begin()->is_directory()) {
@@ -814,16 +829,45 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
     if (entrySelected) {
         drawEntryFrame(itemBB, frameColor, frameDrawFlags);
     }
-#if 0
-    if (entry->renaming) {
-        itemRenameField(entry.index(), entry,
-                        (ImVec2)labelBB.lower_bound() + window->Scroll - window->Pos,
-                        itemBB.size().x);
+    bool isRenamingEntry = viewData.renamingEntry == entry;
+    if (isRenamingEntry) {
+        displayEntryRenameField(entry, labelBB);
     }
-#endif
     drawEntry(labelBB, iconBB, textAlign, itemDesc.label, itemDesc.iconName,
-              textColor,
-              /* renaming: */ false);
+              textColor, isRenamingEntry);
+}
+
+static std::array<char, 512> RenameBuffer{};
+
+void Impl::displayEntryRenameField(DirectoryEntry2 const& entry, Rect labelBB) {
+    if (viewData.startRenaming) {
+        std::string filename = entry.path().filename().string();
+        if (filename.size() >= RenameBuffer.size()) {
+            Logger::Error("Cannot rename file: name exceeds buffer size");
+            viewData.renamingEntry = std::nullopt;
+            return;
+        }
+        ImGui::SetKeyboardFocusHere();
+        std::strncpy(RenameBuffer.data(), filename.c_str(),
+                     RenameBuffer.size());
+    }
+    float2 stashedCursor = ImGui::GetCursorPos();
+    ImGui::SetCursorScreenPos(labelBB.lower_bound() -
+                              (float2)ImGui::GetStyle().FramePadding);
+    ImGui::SetNextItemWidth(labelBB.size().x);
+    ImGui::InputText("###Rename field", RenameBuffer.data(),
+                     RenameBuffer.size());
+    ImGui::SetCursorPos(stashedCursor);
+    viewData.startRenaming = false;
+}
+
+void Impl::applyRenaming() {
+    if (!viewData.renamingEntry) {
+        return;
+    }
+    auto& entry = *viewData.renamingEntry;
+    delegate->entryRenamed(entry, std::string(RenameBuffer.data()));
+    viewData.renamingEntry = std::nullopt;
 }
 
 void Impl::entryContextMenu(DirectoryEntry2 const& entry) {
@@ -834,6 +878,8 @@ void Impl::entryContextMenu(DirectoryEntry2 const& entry) {
             activateEntry(entry);
         }
         if (ImGui::MenuItem("Rename")) {
+            viewData.renamingEntry = entry;
+            viewData.startRenaming = true;
         }
         if (ImGui::MenuItem("Delete")) {
         }
@@ -1057,25 +1103,33 @@ DirectoryItemDescription Impl::makeItemDesc(
 }
 
 void Impl::goUp() {
-    if (directoryLine.goUp()) {
+    if (navEnabled() && directoryLine.goUp()) {
         history.push(directoryLine.current().path);
+        didNavigate();
     }
 }
 
 void Impl::goDown() {
-    if (directoryLine.goDown()) {
+    if (navEnabled() && directoryLine.goDown()) {
         history.push(directoryLine.current().path);
+        didNavigate();
     }
 }
 
 void Impl::goBack() {
-    history.pop();
-    makeDirectoryCurrent(history.current(), /*pushHistory: */ false);
+    if (navEnabled() && history.canPop()) {
+        history.pop();
+        makeDirectoryCurrent(history.current(), /*pushHistory: */ false);
+        didNavigate();
+    }
 }
 
 void Impl::goForward() {
-    history.unpop();
-    makeDirectoryCurrent(history.current(), /*pushHistory: */ false);
+    if (navEnabled() && history.canUnpop()) {
+        history.unpop();
+        makeDirectoryCurrent(history.current(), /*pushHistory: */ false);
+        didNavigate();
+    }
 }
 
 bool Impl::canGoUp() const { return directoryLine.canGoUp(); }
@@ -1099,6 +1153,9 @@ void Impl::makeDirectoryCurrent(std::filesystem::path const& path,
 }
 
 void Impl::moveSelection(int offset, SelectionMode mode) {
+    if (!navEnabled()) {
+        return;
+    }
     auto& dir = directoryLine.current();
     BL_ASSERT(mode != SelectionMode::Add);
     if (dir.selection.empty()) {
@@ -1111,6 +1168,7 @@ void Impl::moveSelection(int offset, SelectionMode mode) {
     auto index = itr - dir.entries.begin() + offset;
     if (index >= 0 && index < (ssize_t)dir.entries.size()) {
         dir.selection.amend(dir.entries[index], mode);
+        dir.selectionModified = true;
     }
 }
 

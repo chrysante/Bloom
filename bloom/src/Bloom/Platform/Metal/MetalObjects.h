@@ -19,6 +19,13 @@ void metalCopyTextureToMemory(TextureView source, void* dest,
 void metalCopyMemoryToTexture(TextureView dest, void* data, size_t bytesPerRow,
                               vml::AABB<uint32_t, 3> region, size_t mipLevel);
 
+TextureHandle metalCreateSharedTextureView(TextureView texture,
+                                           TextureType newType,
+                                           PixelFormat newFormat,
+                                           size_t firstMipLevel,
+                                           size_t numMipLevels,
+                                           size_t firstSlice, size_t numSlices);
+
 } // namespace bloom
 
 #ifdef __OBJC__
@@ -40,13 +47,6 @@ public:
     BufferHandle createBuffer(BufferDescription const&) override;
     TextureHandle createTexture(TextureDescription const&) override;
     SamplerHandle createSampler(SamplerDescription const&) override;
-
-    TextureHandle createSharedTextureView(TextureView texture, TextureType,
-                                          PixelFormat,
-                                          std::size_t firstMipLevel = 0,
-                                          std::size_t numMipLevels = 1,
-                                          std::size_t firstSlice = 0,
-                                          std::size_t numSlices = 1) override;
 
     DepthStencilHandle createDepthStencil(
         DepthStencilDescription const&) override;

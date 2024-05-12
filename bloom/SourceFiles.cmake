@@ -28,6 +28,8 @@ set(bloom_sources
   src/Bloom/Asset/Assets.def
   src/Bloom/Asset/AssetManager.cpp
   src/Bloom/Asset/AssetManager.h
+  src/Bloom/Asset/CubemapRenderer.cpp
+  src/Bloom/Asset/CubemapRenderer.h
   src/Bloom/Asset/Fwd.cpp
   src/Bloom/Asset/Fwd.h
   src/Bloom/Asset/MeshImport.cpp

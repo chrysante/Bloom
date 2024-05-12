@@ -12,8 +12,6 @@ void bloom::copyTextureToMemory(RenderAPI api, TextureView source, void* dest,
     case RenderAPI::Metal:
         metalCopyTextureToMemory(source, dest, bytesPerRow, region, mipLevel);
         break;
-    default:
-        break;
     }
 }
 
@@ -25,7 +23,18 @@ void bloom::copyMemoryToTexture(RenderAPI api, TextureView dest, void* data,
     case RenderAPI::Metal:
         metalCopyMemoryToTexture(dest, data, bytesPerRow, region, mipLevel);
         break;
-    default:
+    }
+}
+
+TextureHandle bloom::createSharedTextureView(
+    RenderAPI api, TextureView texture, TextureType newType,
+    PixelFormat newFormat, size_t firstMipLevel, size_t numMipLevels,
+    size_t firstSlice, size_t numSlices) {
+    switch (api) {
+    case RenderAPI::Metal:
+        return metalCreateSharedTextureView(texture, newType, newFormat,
+                                            firstMipLevel, numMipLevels,
+                                            firstSlice, numSlices);
         break;
     }
 }

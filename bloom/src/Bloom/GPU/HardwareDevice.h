@@ -42,12 +42,6 @@ public:
     virtual SamplerHandle createSampler(SamplerDescription const& desc) = 0;
 
     ///
-    virtual TextureHandle createSharedTextureView(
-        TextureView texture, TextureType newType, PixelFormat newFormat,
-        std::size_t firstMipLevel = 0, std::size_t numMipLevels = 1,
-        std::size_t firstSlice = 0, std::size_t numSlices = 1) = 0;
-
-    ///
     virtual DepthStencilHandle createDepthStencil(
         DepthStencilDescription const& desc) = 0;
 

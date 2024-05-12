@@ -179,22 +179,23 @@ void BloomPass::doAllocateResources(FrameParameters const& params,
     upsample = device.createTexture(desc);
     /// Upsample texture is created by the render graph framework
     for (int i = 0; i < (int)NumDownsampleMips; ++i) {
-        downsampleMips[i] =
-            device.createSharedTextureView(downsample, TextureType::Texture2D,
-                                           PixelFormat::RG11B10Float,
-                                           /* firstMipLevel: */ i,
-                                           /* numMipLevels: */ 1,
-                                           /* firstSlice: */ 0,
-                                           /* numSlices: */ 1);
+        downsampleMips[i] = createSharedTextureView(RenderAPI::Metal,
+                                                    downsample,
+                                                    TextureType::Texture2D,
+                                                    PixelFormat::RG11B10Float,
+                                                    /* firstMipLevel: */ i,
+                                                    /* numMipLevels: */ 1,
+                                                    /* firstSlice: */ 0,
+                                                    /* numSlices: */ 1);
     }
     for (int i = 0; i < (int)NumUpsampleMips; ++i) {
-        upsampleMips[i] =
-            device.createSharedTextureView(upsample, TextureType::Texture2D,
-                                           PixelFormat::RG11B10Float,
-                                           /* firstMipLevel: */ i,
-                                           /* numMipLevels: */ 1,
-                                           /* firstSlice: */ 0,
-                                           /* numSlices: */ 1);
+        upsampleMips[i] = createSharedTextureView(RenderAPI::Metal, upsample,
+                                                  TextureType::Texture2D,
+                                                  PixelFormat::RG11B10Float,
+                                                  /* firstMipLevel: */ i,
+                                                  /* numMipLevels: */ 1,
+                                                  /* firstSlice: */ 0,
+                                                  /* numSlices: */ 1);
     }
     /// Pipelines
     downsamplePipeline = device.createComputePipeline(

@@ -378,9 +378,17 @@ void copyTextureToMemory(RenderAPI api, TextureView source, void* dest,
                          size_t bytesPerRow, vml::AABB<uint32_t, 3> region,
                          size_t mipLevel);
 
+///
 void copyMemoryToTexture(RenderAPI api, TextureView dest, void* data,
                          size_t bytesPerRow, vml::AABB<uint32_t, 3> region,
                          size_t mipLevel);
+
+///
+TextureHandle createSharedTextureView(RenderAPI api, TextureView texture,
+                                      TextureType newType,
+                                      PixelFormat newFormat,
+                                      size_t firstMipLevel, size_t numMipLevels,
+                                      size_t firstSlice, size_t numSlices);
 
 class ShaderFunctionHandle: public HardwareResourceHandle {
 public:

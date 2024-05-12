@@ -55,6 +55,23 @@ void bloom::metalCopyMemoryToTexture(TextureView dest, void* data,
               bytesPerRow:bytesPerRow];
 }
 
+TextureHandle bloom::metalCreateSharedTextureView(
+    TextureView texture, TextureType newType, PixelFormat newFormat,
+    size_t firstMipLevel, size_t numMipLevels, size_t firstSlice,
+    size_t numSlices) {
+    id<MTLTexture> sharedView = [getNative(texture)
+        newTextureViewWithPixelFormat:(MTLPixelFormat)newFormat
+                          textureType:(MTLTextureType)newType
+                               levels:NSRange{ firstMipLevel, numMipLevels }
+                               slices:NSRange{ firstSlice, numSlices }];
+    TextureDescription desc = texture.description();
+    desc.type = newType;
+    desc.pixelFormat = newFormat;
+    desc.mipmapLevelCount = numMipLevels;
+    desc.arrayLength = numSlices;
+    return TextureHandle(bloom_retain(sharedView), bloom_release, desc);
+}
+
 // MARK: MetalDevice
 
 /// TODO: Expose this through the UI
@@ -152,23 +169,6 @@ SamplerHandle MetalDevice::createSampler(SamplerDescription const& desc) {
     id<MTLSamplerState> sampler =
         [device newSamplerStateWithDescriptor:mtlDesc];
     return SamplerHandle(bloom_retain(sampler), bloom_release);
-}
-
-TextureHandle MetalDevice::createSharedTextureView(
-    TextureView texture, TextureType newType, PixelFormat newFormat,
-    size_t firstMipLevel, size_t numMipLevels, size_t firstSlice,
-    size_t numSlices) {
-    id<MTLTexture> sharedView = [getNative(texture)
-        newTextureViewWithPixelFormat:(MTLPixelFormat)newFormat
-                          textureType:(MTLTextureType)newType
-                               levels:NSRange{ firstMipLevel, numMipLevels }
-                               slices:NSRange{ firstSlice, numSlices }];
-    TextureDescription desc = texture.description();
-    desc.type = newType;
-    desc.pixelFormat = newFormat;
-    desc.mipmapLevelCount = numMipLevels;
-    desc.arrayLength = numSlices;
-    return TextureHandle(bloom_retain(sharedView), bloom_release, desc);
 }
 
 static MTLStencilDescriptor* toMTL(StencilDescription const& desc) {

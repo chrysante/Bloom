@@ -16,6 +16,7 @@
 #include "Poppy/Core/SelectionManager.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Appearance.h"
+#include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/Toolbar.h"
@@ -33,7 +34,7 @@ namespace {
 struct DirViewTest: View {
     DirViewTest() {}
     void init() override {
-        impl.init(editor().makeEmitter());
+        impl.init(editor().makeEmitter(), commandPaletteWrite());
         impl.openDirectory("/Users/indigo/dev/bloom/projects");
         setToolbar(impl.makeToolbar());
         setPadding({ 0, 0 });
@@ -270,8 +271,22 @@ struct DirectoryView2::Impl: Emitter {
 
 DirectoryView2::DirectoryView2(): impl(std::make_unique<Impl>()) {}
 
-void DirectoryView2::init(Emitter emitter) {
+void DirectoryView2::init(Emitter emitter, CommandPalette& commandPalette) {
     impl->assignEmitter(std::move(emitter));
+    commandPalette.add("Go Up",
+                       { .key = Key::UpArrow, .modFlags = ModFlags::Control },
+                       [this] { impl->goUp(); },
+                       [this] { return impl->canGoUp(); });
+    commandPalette.add("Go Back",
+                       { .key = Key::LeftArrow, .modFlags = ModFlags::Control },
+                       [this] { impl->goBack(); },
+                       [this] { return impl->canGoBack(); });
+    commandPalette.add("Go Forward",
+                       { .key = Key::RightArrow,
+                         .modFlags = ModFlags::Control },
+                       [this] { impl->goForward(); },
+                       [this] { return impl->canGoForward(); });
+    commandPalette.add("Rescan", {}, [this] { impl->directoryLine.rescan(); });
 }
 
 Toolbar DirectoryView2::makeToolbar() { return impl->makeToolbar(); }
@@ -316,24 +331,15 @@ Toolbar Impl::makeToolbar() {
             .enabled([this] { return canGoForward(); })
             .tooltip("Go Forward")
             .buttonFlags(navButtonFlags),
-        CustomToolbarElement([this](float2 size) {
-//            addressbar(size);
-        }),
-        ToolbarDropdownMenu()
-            .content([this]{
-//                enumCombo(desc.layout);
-            })
-            .tooltip("Layout"),
         ToolbarIconButton("cw")
-            .onClick([this]{
-//                rescan();
+            .onClick([this] {
+                directoryLine.rescan();
             })
             .tooltip("Rescan")
     }; // clang-format on
 }
 
 void Impl::displayBackground(ScannedDirectory& directory, size_t dirIndex) {
-
     ImGui::SetCursorPos({ ImGui::GetScrollX(), ImGui::GetScrollY() });
     float2 size =
         (float2)ImGui::GetCursorPos() + (float2)ImGui::GetContentRegionAvail();
@@ -359,13 +365,13 @@ void Impl::displayBackground(ScannedDirectory& directory, size_t dirIndex) {
 }
 
 void Impl::displayColumns() {
-    ImGuiTableFlags tableFlags = ImGuiTableFlags_Resizable |
-                                 ImGuiTableFlags_ScrollX |
-                                 ImGuiTableFlags_SizingFixedFit;
-    int numColumns = (int)directoryLine.size() + 1;
-    if (!ImGui::BeginTable("column-view", numColumns, tableFlags,
-                           (float2)ImGui::GetContentRegionAvail()))
-    {
+    ImGuiTableFlags tableFlags =
+        ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX |
+        ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoClip;
+    bool hasPreviewColumn = !directoryLine.back().selection.empty();
+    int numColumns = (int)directoryLine.size() + hasPreviewColumn;
+
+    if (!ImGui::BeginTable("column-view", numColumns, tableFlags)) {
         return;
     }
     // Setup
@@ -374,16 +380,30 @@ void Impl::displayColumns() {
         ImGui::TableSetupColumn(directory.path.c_str(),
                                 ImGuiTableColumnFlags_WidthFixed, defaultWidth);
     }
-    ImGui::TableSetupColumn("##preview-column",
-                            ImGuiTableColumnFlags_WidthFixed, defaultWidth);
+    if (hasPreviewColumn) {
+        ImGui::TableSetupColumn("##preview-column",
+                                ImGuiTableColumnFlags_WidthFixed, defaultWidth);
+    }
     // Display
     for (auto&& [index, directory]: directoryLine | enumerate) {
         ImGui::TableNextColumn();
         displayColumn(directory, index);
     }
-    ImGui::TableNextColumn();
-    displayPreviewColumn();
+    if (hasPreviewColumn) {
+        ImGui::TableNextColumn();
+        displayPreviewColumn();
+    }
     ImGui::EndTable();
+}
+
+static float2 contentSizeWithoutScrollbar() {
+    float2 windowSize = ImGui::GetContentRegionAvail();
+    auto* window = ImGui::GetCurrentWindowRead();
+    if (window->ScrollbarX) {
+        windowSize.y =
+            window->ClipRect.GetHeight() - 2 * ImGui::GetStyle().FramePadding.y;
+    }
+    return windowSize;
 }
 
 void Impl::displayColumn(ScannedDirectory& directory, size_t lineIndex) {
@@ -391,8 +411,10 @@ void Impl::displayColumn(ScannedDirectory& directory, size_t lineIndex) {
         ImGui::SetCursorPosX(ImGui::GetStyle().WindowPadding.x);
     }
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
-    ImGui::BeginChild(directory.path.c_str());
+    auto clipRect = ImGui::GetCurrentWindowRead()->ClipRect;
+    ImGui::BeginChild(directory.path.c_str(), contentSizeWithoutScrollbar());
     ImGui::PopStyleVar();
+    ImGui::PushClipRect(clipRect.Min, clipRect.Max, false);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() +
                          ImGui::GetStyle().WindowPadding.y);
     for (size_t i = 0; i < directory.entries.size(); ++i) {
@@ -401,6 +423,7 @@ void Impl::displayColumn(ScannedDirectory& directory, size_t lineIndex) {
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() +
                          ImGui::GetStyle().WindowPadding.y);
     displayBackground(directory, lineIndex);
+    ImGui::PopClipRect();
     ImGui::EndChild();
 }
 
@@ -445,17 +468,10 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
     displayEntry(directory, directoryIndex, entryIndex, itemBB, labelBB, iconBB,
                  TextAlign::Left, frameDrawFlags);
     ImGui::PopStyleVar(2);
-    //    handleItemButtonState(buttonState, entry);
-    //    if (buttonState.selected &&
-    //    ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-    //        gotoNextFrame(entry->is_directory() ? entry->path() :
-    //        entry->path().parent_path());
-    //    }
 }
 
 void Impl::displayPreviewColumn() {
-    ImGui::BeginChild("preview-column",
-                      { 0, -2 /* to prevent mini scroll y */ });
+    ImGui::BeginChild("preview-column", contentSizeWithoutScrollbar());
     displayEmptyWithReason("No Preview");
     ImGui::EndChild();
 }
@@ -816,6 +832,7 @@ DirectoryItemDescription Impl::makeItemDesc(
 void Impl::goUp() {
     if (directoryLine.goUp()) {
         history.push(directoryLine.current().path);
+        activeDirectoryIndex = directoryLine.size() - 1;
     }
 }
 

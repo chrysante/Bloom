@@ -106,6 +106,8 @@ struct ScannedDirectory {
     std::filesystem::path path;
     std::vector<std::filesystem::directory_entry> entries;
     BasicSelectionManager<std::filesystem::path> selection;
+    /// Tested at the end of each frame to update view layout
+    bool selectionModified = false;
 
 private:
     ScannedDirectory() = default;
@@ -118,7 +120,7 @@ struct DirectoryLine {
         line.push_back(ScannedDirectory::Build(directory));
     }
 
-    bool open(std::filesystem::path leafDirectory) {
+    bool makeCurrent(std::filesystem::path leafDirectory) {
         if (!std::filesystem::is_directory(leafDirectory)) {
             Logger::Error("Path is not a Directory: ", leafDirectory);
             return false;
@@ -257,8 +259,8 @@ struct DirectoryView2::Impl: Emitter {
     bool canGoUp() const;
     bool canGoBack() const;
     bool canGoForward() const;
-    void openDirectory(std::filesystem::path const& path,
-                       bool pushHistory = true);
+    void makeDirectoryCurrent(std::filesystem::path const& path,
+                              bool pushHistory = true);
 
     void displayDebugger();
 
@@ -301,6 +303,27 @@ void DirectoryView2::display() {
         BL_UNIMPLEMENTED();
         break;
     }
+    bool dispatched = false;
+    for (auto [index, directory]: impl->directoryLine | enumerate) {
+        if (!dispatched && directory.selectionModified) {
+            auto& sel = directory.selection;
+            auto toOpen = [&] {
+                if (sel.size() == 1 &&
+                    std::filesystem::is_directory(sel.elements().front()))
+                {
+                    return sel.elements().front();
+                }
+                return directory.path;
+            }();
+            impl->dispatch(DispatchToken::NextFrame, [=, impl = impl.get()] {
+                impl->makeDirectoryCurrent(toOpen);
+                impl->activeDirectoryIndex = index;
+            });
+            dispatched = true;
+        }
+        directory.selectionModified = false;
+    }
+
     impl->viewData.updateLate();
     impl->displayDebugger();
 }
@@ -347,10 +370,7 @@ void Impl::displayBackground(ScannedDirectory& directory, size_t dirIndex) {
     bool active = ImGui::InvisibleButton("###background-button", size);
     if (active && viewData.hoveredEntry.empty()) {
         directory.selection.amend(std::vector<std::filesystem::path>{});
-        if (directory.path != directoryLine.current().path) {
-            dispatch(DispatchToken::NextFrame,
-                     [path = directory.path, this] { openDirectory(path); });
-        };
+        directory.selectionModified = true;
     }
     itemDragTarget(std::filesystem::directory_entry(directory.path));
 #if 0
@@ -587,11 +607,13 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
             if (g.IO.MouseClicked[ImGuiMouseButton_Left]) {
                 buttonState.selected = directory.selection.amend(entry.path());
                 viewData.haveSelectedItem = true;
+                directory.selectionModified = true;
             }
         }
         else if (!viewData.haveSelectedItem) {
             if (g.IO.MouseReleased[ImGuiMouseButton_Left]) {
                 buttonState.selected = directory.selection.amend(entry.path());
+                directory.selectionModified = true;
             }
         }
         buttonState.activated = g.IO.MouseClickedCount[ImGuiMouseButton_Left] ==
@@ -626,15 +648,23 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
     itemDragTarget(entry);
     // Draw Frame
     auto [frameColor, textColor] = [&]() -> std::pair<ImU32, ImU32> {
+        std::pair<ImU32, ImU32> const noFrame = { 0, ImGui::GetColorU32(
+                                                         ImGuiCol_Text) };
+        std::pair<ImU32, ImU32> const selectedActive = {
+            ImGui::GetColorU32(ImGuiCol_Header), IM_COL32_WHITE
+        };
+        std::pair<ImU32, ImU32> const selectedInactive = {
+            ImGui::ColorConvertFloat4ToU32(
+                getStyleColors().itemInactiveSelected),
+            ImGui::GetColorU32(ImGuiCol_Text)
+        };
         if (!entrySelected) {
-            return { 0, ImGui::GetColorU32(ImGuiCol_Text) };
+            return noFrame;
         }
         if (directoryIndex == activeDirectoryIndex) {
-            return { ImGui::GetColorU32(ImGuiCol_Header), IM_COL32_WHITE };
+            return selectedActive;
         }
-        return { ImGui::ColorConvertFloat4ToU32(
-                     getStyleColors().itemInactiveSelected),
-                 ImGui::GetColorU32(ImGuiCol_Text) };
+        return selectedInactive;
     }();
     if (entrySelected) {
         drawEntryFrame(itemBB, frameColor, frameDrawFlags);
@@ -652,13 +682,6 @@ void Impl::displayEntry(ScannedDirectory& directory, size_t directoryIndex,
 #if 0
     itemPopup(entry, itemDesc);
 #endif
-    if (buttonState.hovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-        dispatch(DispatchToken::NextFrame, [=, this] {
-            openDirectory(entry.is_directory() ? entry.path() :
-                                                 entry.path().parent_path());
-            activeDirectoryIndex = directoryIndex;
-        });
-    }
 }
 
 static std::vector<char> packDragDropPayload(
@@ -806,6 +829,7 @@ void Impl::updateDragSelection(size_t directoryIndex) {
     dir.selection.setCandidates(candidates);
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
         dir.selection.applyCandidates();
+        dir.selectionModified = true;
     }
     ImRect windowRect = window.Rect();
     float2 min = vml::max(rect.lower_bound(), (float2)windowRect.Min);
@@ -838,12 +862,12 @@ void Impl::goUp() {
 
 void Impl::goBack() {
     history.pop();
-    openDirectory(history.current(), /*pushHistory: */ false);
+    makeDirectoryCurrent(history.current(), /*pushHistory: */ false);
 }
 
 void Impl::goForward() {
     history.unpop();
-    openDirectory(history.current(), /*pushHistory: */ false);
+    makeDirectoryCurrent(history.current(), /*pushHistory: */ false);
 }
 
 bool Impl::canGoUp() const { return directoryLine.canGoUp(); }
@@ -852,11 +876,12 @@ bool Impl::canGoBack() const { return history.canPop(); }
 
 bool Impl::canGoForward() const { return history.canUnpop(); }
 
-void Impl::openDirectory(std::filesystem::path const& path, bool pushHistory) {
+void Impl::makeDirectoryCurrent(std::filesystem::path const& path,
+                                bool pushHistory) {
     if (directoryLine.current().path == path) {
         return;
     }
-    if (directoryLine.open(path)) {
+    if (directoryLine.makeCurrent(path)) {
         activeDirectoryIndex = directoryLine.size() - 1;
         if (pushHistory) {
             history.push(path);

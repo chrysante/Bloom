@@ -100,7 +100,8 @@ static StyleDescription makeStyle(SystemAppearance s) {
         .windowTitleBar = s.windowBackgroundColor,
         .activeWindowTitleBar = s.windowBackgroundColor,
         .border = s.separatorColor,
-        .scrollbar = s.controlColor,
+        .scrollbar = s.type == AppearanceType::Light ? double4(0, 0, 0, 0.247) :
+                                                       s.controlColor,
         .separator = s.separatorColor,
         .tab = { 0, 0, 0, 0 },
         .tabHovered = s.selectedControlColor,

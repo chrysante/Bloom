@@ -177,7 +177,9 @@ void SceneOutliner::sceneContextMenu(Scene& scene) {
         ImGui::EndMenu();
     }
     if (ImGui::MenuItem("Unload")) {
-        editor().coreSystems().sceneSystem().unloadScene(scene.handle().ID());
+        dispatch(DispatchToken::NextFrame, [this, ID = scene.handle().ID()] {
+            editor().coreSystems().sceneSystem().unloadScene(ID);
+        });
         return;
     }
 }

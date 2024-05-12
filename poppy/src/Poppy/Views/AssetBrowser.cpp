@@ -27,7 +27,7 @@
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetDragDrop.h"
-#include "Poppy/Views/DirectoryView2.h"
+#include "Poppy/Views/DirectoryView.h"
 #include "Poppy/Views/MaterialInstanceViewer.h"
 #include "Poppy/Views/TextureViewer.h"
 
@@ -42,25 +42,34 @@ struct AssetBrowserData {
     std::filesystem::path currentDir; // absolute path
 };
 
-static AssetHandle getHandle(DirectoryEntry2 const& entry) {
+static AssetHandle getHandle(DirectoryEntry const& entry) {
     auto* handle = std::any_cast<AssetHandle>(&entry.userData);
     return handle ? *handle : AssetHandle();
 }
 
 struct AssetBrowser: View {
-    struct DirViewDelegate: DirectoryViewDelegate2 {
+    struct DirViewDelegate: DirectoryViewDelegate {
         AssetBrowser* This;
 
         explicit DirViewDelegate(AssetBrowser* This): This(This) {}
 
-        void openFile(DirectoryEntry2 const& entry) override {
+        void openFile(DirectoryEntry const& entry) override {
             auto handle = getHandle(entry);
             if (!handle) {
                 return;
             }
             This->openAsset(handle);
         }
-        std::string selectIcon(DirectoryEntry2 const& entry) override {
+        void renameEntry(DirectoryEntry const& entry,
+                         std::string newName) override {
+            auto handle = getHandle(entry);
+            /// Kinda hacky but the asset manager expects a name without
+            /// extension for renaming, so we just discard the extension here
+            auto name =
+                std::filesystem::path(newName).replace_extension().string();
+            This->assetManager->renameAsset(handle, name);
+        }
+        std::string selectIcon(DirectoryEntry const& entry) override {
             auto handle = getHandle(entry);
             switch (handle.type()) {
             case AssetType::StaticMesh:
@@ -85,15 +94,15 @@ struct AssetBrowser: View {
             std::filesystem::directory_entry const& entry) override {
             return This->assetManager->getHandleFromFile(entry.path());
         }
-        void entryContextMenu(DirectoryEntry2 const&) override {}
-        bool displayPreview(DirectoryEntry2 const& entry) override {
+        void entryContextMenu(DirectoryEntry const&) override {}
+        bool displayPreview(DirectoryEntry const& entry) override {
             return This->displayPreview(entry);
         }
         std::string makeDragDropType() override {
             return std::string(AssetDragDropType);
         }
         std::vector<uint8_t> makeDragDropUserData(
-            std::span<DirectoryEntry2 const> entries) override {
+            std::span<DirectoryEntry const> entries) override {
             if (entries.size() == 1) {
                 auto handle = getHandle(entries.front());
                 std::vector<uint8_t> result(sizeof handle);
@@ -123,14 +132,14 @@ struct AssetBrowser: View {
     void openProject(std::filesystem::path const&);
     void openSubdirectory(std::filesystem::path const&);
     void refreshFilesystem();
-    bool displayPreview(DirectoryEntry2 const& entry);
+    bool displayPreview(DirectoryEntry const& entry);
 
     /// The applications asset manager
     bloom::AssetManager* assetManager = nullptr;
     /// The current directory relative to the project directory
     std::filesystem::path currentDir;
     AssetBrowserData data;
-    DirectoryView2 dirView;
+    DirectoryView dirView;
     Reference<Asset> previewAsset;
 };
 
@@ -377,7 +386,7 @@ void AssetBrowser::refreshFilesystem() {
     dirView.openDirectory(data.currentDir);
 }
 
-bool AssetBrowser::displayPreview(DirectoryEntry2 const& entry) {
+bool AssetBrowser::displayPreview(DirectoryEntry const& entry) {
     AssetHandle handle = getHandle(entry);
     if (!handle) {
         return false;

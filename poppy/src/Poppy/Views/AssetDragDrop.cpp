@@ -5,7 +5,7 @@
 #include <utl/scope_guard.hpp>
 #include <utl/strcat.hpp>
 
-#include "Poppy/Views/DirectoryView2.h"
+#include "Poppy/Views/DirectoryView.h"
 
 using namespace poppy;
 using namespace bloom;

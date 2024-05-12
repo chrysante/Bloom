@@ -139,6 +139,10 @@ public:
     /// \Returns a view over all selected elements
     std::span<T const> elements() const { return _elems.values(); }
 
+    auto begin() const { return elements().begin(); }
+
+    auto end() const { return elements().end(); }
+
     /// \Returns the number of selected elements
     size_t size() const { return _elems.size(); }
 

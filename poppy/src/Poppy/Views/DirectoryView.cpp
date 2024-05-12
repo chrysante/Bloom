@@ -240,7 +240,7 @@ struct DirectoryLine {
         }
     }
 
-    bool canGoUp() const { return line.size() > 1; }
+    bool canGoUp() const { return activeIndex > 0; }
 
     bool canGoDown() const {
         return current().selection.size() == 1 &&
@@ -253,6 +253,7 @@ struct DirectoryLine {
             return false;
         }
         line.pop_back();
+        BL_ASSERT(activeIndex > 0);
         --activeIndex;
         return true;
     }
@@ -403,6 +404,7 @@ struct DirectoryView::Impl: Emitter {
     DirectoryLine directoryLine;
     FilesystemHistory history;
     ViewData viewData;
+    EnumArray<CommandType, Command const*> commands{};
 };
 
 DirectoryView::DirectoryView(): impl(std::make_unique<Impl>()) {}
@@ -419,19 +421,25 @@ void DirectoryView::init(std::unique_ptr<DirectoryViewDelegate> delegate,
 }
 
 void Impl::assignCommands(CommandPalette& commandPalette) {
-    commandPalette.add("Go up", { .key = Key::LeftArrow }, [this] { goUp(); },
-                       [this] { return canGoUp(); });
-    commandPalette.add("Go down", { .key = Key::RightArrow },
-                       [this] { goDown(); }, [this] { return canGoDown(); });
-    commandPalette.add("Go Back",
-                       { .key = Key::LeftArrow, .modFlags = ModFlags::Control },
-                       [this] { goBack(); }, [this] { return canGoBack(); });
-    commandPalette.add("Go Forward",
-                       { .key = Key::RightArrow,
-                         .modFlags = ModFlags::Control },
-                       [this] { goForward(); },
-                       [this] { return canGoForward(); });
-    commandPalette.add("Rescan", {}, [this] { directoryLine.rescan(); });
+    using enum CommandType;
+    commands[GoUp] = commandPalette.add("Go up", { .key = Key::LeftArrow },
+                                        [this] { goUp(); },
+                                        [this] { return canGoUp(); });
+    commands[GoDown] = commandPalette.add("Go down", { .key = Key::RightArrow },
+                                          [this] { goDown(); },
+                                          [this] { return canGoDown(); });
+    commands[GoBack] = commandPalette.add("Go Back",
+                                          { .key = Key::LeftArrow,
+                                            .modFlags = ModFlags::Control },
+                                          [this] { goBack(); },
+                                          [this] { return canGoBack(); });
+    commands[GoForward] = commandPalette.add("Go Forward",
+                                             { .key = Key::RightArrow,
+                                               .modFlags = ModFlags::Control },
+                                             [this] { goForward(); },
+                                             [this] { return canGoForward(); });
+    commands[Rescan] =
+        commandPalette.add("Rescan", {}, [this] { directoryLine.rescan(); });
     commandPalette.add("Open", { .key = Key::O, .modFlags = ModFlags::Control },
                        [this] { activateSelectedEntries(); }, [this] {
         return !directoryLine.current().selection.empty();
@@ -489,6 +497,10 @@ void DirectoryView::display() {
 void DirectoryView::openDirectory(std::filesystem::path directory) {
     impl->directoryLine.setRoot(directory);
     impl->history.push(directory);
+}
+
+Command const* DirectoryView::getCommand(CommandType commandType) const {
+    return impl->commands[commandType];
 }
 
 SortCondition DirectoryView::sortCondition() const {

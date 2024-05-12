@@ -13,8 +13,9 @@
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/ImGuiHelpers.h"
 
-using namespace vml::short_types;
 using namespace poppy;
+using namespace bloom;
+using namespace vml::short_types;
 using namespace ranges::views;
 
 static float2 computePadding(std::optional<float2> padding) {
@@ -272,16 +273,23 @@ void Toolbar::display(std::optional<float> width) noexcept {
 void Toolbar::displayBlock(Block const& block) {
     float y = ImGui::GetCursorPos().y;
     for (size_t i = block.itemBeginIndex; i < block.itemEndIndex; ++i) {
+        bool enabled = activeItems[i]->isEnabled();
+        if (!enabled) {
+            ImGui::BeginDisabled();
+        }
         activeItems[i]->display(style);
+        if (!enabled) {
+            ImGui::EndDisabled();
+        }
         ImGui::SameLine();
         ImGui::SetCursorPosY(y);
     }
 }
 
 void Toolbar::cook() {
-    activeItems = allItems | filter(&ToolbarItem::isEnabled) |
-                  transform([](auto& item) { return item.get(); }) |
-                  ranges::to<std::vector>;
+    activeItems = allItems | ToAddress<> | filter([](auto* item) {
+        return /* !item->isHidden() */ true;
+    }) | ranges::to<std::vector>;
     blocks.clear();
     if (activeItems.empty()) {
         return;

@@ -149,29 +149,23 @@ POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser");
 
 BLOOM_MAKE_TEXT_SERIALIZER(AssetBrowserData, projectDir, currentDir);
 
-AssetBrowser::AssetBrowser() {
+AssetBrowser::AssetBrowser() = default;
+
+void AssetBrowser::init() {
+    assetManager = &editor().coreSystems().assetManager();
+    dirView.init(std::make_unique<DirViewDelegate>(this),
+                 editor().makeEmitter(), commandPaletteWrite());
+    if (!data.projectDir.empty()) {
+        openProject(data.projectDir);
+    }
+    using enum DirectoryView::CommandType;
     // clang-format off
     setToolbar({
-        ToolbarIconButton("up-open")
-            .onClick([] {
-                Logger::Trace("Going Up");
-            })
-            .tooltip("Go Up"),
-
-        ToolbarIconButton("left-open")
-            .onClick([] { Logger::Trace("Going Back"); })
-            .tooltip("Go Back"),
-
-        ToolbarIconButton("right-open")
-            .onClick([] { Logger::Trace("Going Forward"); })
-            .tooltip("Go Forward"),
-
+        ToolbarIconButton(dirView.getCommand(GoBack), "left-open"),
+        ToolbarIconButton(dirView.getCommand(GoForward), "right-open"),
+        ToolbarIconButton(dirView.getCommand(GoUp), "up-open"),
         ToolbarSpacer{},
-
-        ToolbarIconButton("cw")
-            .onClick([this] { refreshFilesystem(); })
-            .tooltip("Refresh"),
-
+        ToolbarIconButton(dirView.getCommand(Rescan), "cw"),
         ToolbarIconButton("angle-double-down")
             .onClick([this] {
                 bloom::OpenPanelDescription desc;
@@ -180,11 +174,9 @@ AssetBrowser::AssetBrowser() {
                 });
             })
             .tooltip("Import..."),
-
         ToolbarIconButton("plus")
             .onClick([] { ImGui::OpenPopup("New Asset"); })
             .tooltip("Create Asset..."),
-
         ToolbarIconButton("delicious")
             .onClick([this] {
                 assetManager->createAsset(bloom::AssetType::Material,
@@ -193,7 +185,6 @@ AssetBrowser::AssetBrowser() {
                 refreshFilesystem();
             })
             .tooltip("Create Default Material"),
-
         ToolbarButton("Compile Scripts")
             .onClick([this] {
                 assetManager->compileScripts();
@@ -328,15 +319,6 @@ void AssetBrowser::openAsset(bloom::AssetHandle handle) {
     default:
         Logger::Trace("Cannot open asset of type: ", handle.type());
         break;
-    }
-}
-
-void AssetBrowser::init() {
-    assetManager = &editor().coreSystems().assetManager();
-    dirView.init(std::make_unique<DirViewDelegate>(this),
-                 editor().makeEmitter(), commandPaletteWrite());
-    if (!data.projectDir.empty()) {
-        openProject(data.projectDir);
     }
 }
 

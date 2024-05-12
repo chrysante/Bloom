@@ -1,5 +1,5 @@
-#ifndef POPPY_VIEWS_DIRECTORYVIEW2_H
-#define POPPY_VIEWS_DIRECTORYVIEW2_H
+#ifndef POPPY_VIEWS_DIRECTORYVIEW_H
+#define POPPY_VIEWS_DIRECTORYVIEW_H
 
 #include "Bloom/Application/MessageSystem.h"
 #include "Poppy/UI/Fwd.h"
@@ -84,6 +84,16 @@ public:
 
     enum class SortCondition { Name, Extension, LAST = Extension };
 
+    /// List of commands that are added to the command palette by `init()`
+    enum class CommandType {
+        GoUp,
+        GoDown,
+        GoBack,
+        GoForward,
+        Rescan,
+        LAST = Rescan
+    };
+
     DirectoryView();
 
     ~DirectoryView();
@@ -98,6 +108,10 @@ public:
     /// Opens \p directory in this viewer
     void openDirectory(std::filesystem::path directory);
 
+    /// \Returns the corresponding command.
+    /// \Warning this must be called after `init()` to return nonnull values
+    Command const* getCommand(CommandType commandType) const;
+
     SortCondition sortCondition() const;
 
     void setSortCondition(SortCondition condition) const;
@@ -110,4 +124,4 @@ private:
 
 } // namespace poppy
 
-#endif // POPPY_VIEWS_DIRECTORYVIEW2_H
+#endif // POPPY_VIEWS_DIRECTORYVIEW_H

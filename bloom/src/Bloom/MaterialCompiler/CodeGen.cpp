@@ -276,13 +276,23 @@ void MetalCodeGenerator::writeFragmentOutput() {
     });
 }
 
+static int getBindIndex(MaterialShaderType shaderType,
+                        GlobalMaterialBindingType bindingType) {
+    return getGlobalMaterialBindingPoint(shaderType, bindingType).index;
+}
+
 void MetalCodeGenerator::writeVertexFunction() {
+    using enum GlobalMaterialBindingType;
+    using enum MaterialShaderType;
     auto fn = makeItem();
     writeRaw("vertex ", MaterialVertexOutName, " ", MaterialVertexShaderName);
     auto paramScope = makeScope(ScopeType::FuncParams);
-    writeItem("CameraInput device const& cameraBuffer [[buffer(0)]]");
-    writeItem("Vertex3D device const* vertices [[buffer(1)]]");
-    writeItem("float4x4 device const& transform [[buffer(2)]]");
+    writeItem("CameraInput device const& cameraBuffer [[buffer(",
+              getBindIndex(Vertex, Camera), ")]]");
+    writeItem("Vertex3D device const* vertices [[buffer(",
+              getBindIndex(Vertex, Geometry), ")]]");
+    writeItem("float4x4 device const& transform [[buffer(",
+              getBindIndex(Vertex, Transform), ")]]");
     writeItem("unsigned vertexID [[vertex_id]]");
     paramScope.pop();
     auto fnScope = makeScope(ScopeType::CompoundStmt);
@@ -306,18 +316,25 @@ void MetalCodeGenerator::writeVertexFunction() {
 }
 
 void MetalCodeGenerator::writeFragmentFunction() {
+    using enum GlobalMaterialBindingType;
+    using enum MaterialShaderType;
     auto fn = makeItem();
     writeRaw("fragment ", MaterialFragmentOutName, " ",
              MaterialFragmentShaderName);
     auto paramScope = makeScope(ScopeType::FuncParams);
     writeItem(MaterialVertexOutName, " in [[stage_in]]");
-    writeItem("CameraInput device const& cameraBuffer [[buffer(0)]]");
-    writeItem("LightBufferContents device const& lights [[buffer(1)]]");
-    writeItem("float4x4 device const* lightSpaceTransforms [[buffer(2)]]");
-    writeItem(
-        "ShadowRenderMetadata device const& shadowMetadata [[buffer(3)]]");
-    writeItem("uint32_t device const& entityID [[buffer(5)]]");
-    writeItem("texture2d_array<float> shadowMaps [[texture(0)]]");
+    writeItem("CameraInput device const& cameraBuffer [[buffer(",
+              getBindIndex(Fragment, Camera), ")]]");
+    writeItem("LightBufferContents device const& lights [[buffer(",
+              getBindIndex(Fragment, Lights), ")]]");
+    writeItem("float4x4 device const* lightSpaceTransforms [[buffer(",
+              getBindIndex(Fragment, LightSpaceTransforms), ")]]");
+    writeItem("ShadowRenderMetadata device const& shadowMetadata [[buffer(",
+              getBindIndex(Fragment, ShadowMetadata), ")]]");
+    writeItem("uint32_t device const& entityID [[buffer(",
+              getBindIndex(Fragment, GeometryIDBuffer), ")]]");
+    writeItem("texture2d_array<float> shadowMaps [[texture(",
+              getBindIndex(Fragment, ShadowMaps), ")]]");
     for (auto [tex, index]: textureIndexMap) {
         writeItem([&] {
             writeRaw("texture2d<half> ", getName(tex), " ");

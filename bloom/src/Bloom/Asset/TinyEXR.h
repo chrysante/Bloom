@@ -1,5 +1,5 @@
-#ifndef TINYEXR_H_
-#define TINYEXR_H_
+#ifndef BLOOM_ASSET_TINYEXR_H
+#define BLOOM_ASSET_TINYEXR_H
 /*
 Copyright (c) 2014 - 2021, Syoyo Fujita and many contributors.
 All rights reserved.
@@ -9869,4 +9869,4 @@ int SaveEXR(float const* data, int width, int height, int components,
 #endif
 
 #endif // TINYEXR_IMPLEMENTATION_DEFINED
-#endif // TINYEXR_IMPLEMENTATION
+#endif // BLOOM_ASSET_TINYEXR_H

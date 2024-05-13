@@ -23,10 +23,12 @@ struct MainPassFragmentData {
     uint32_t entityID [[color(1)]];
 };
 
+// NOTE: The buffer and texture bindings in this file are hard coded. The binding points are defined in "Material/Fwd.h"
+
 vertex MainPassData rgMainPassVS(CameraInput device const& cameraBuffer
                                  [[buffer(0)]],
-                                 Vertex3D device const* vertices [[buffer(1)]],
-                                 float4x4 device const& transform [[buffer(2)]],
+                                 Vertex3D device const* vertices [[buffer(2)]],
+                                 float4x4 device const& transform [[buffer(1)]],
                                  unsigned vertexID [[vertex_id]])
 {
     Vertex3D v = vertices[vertexID];

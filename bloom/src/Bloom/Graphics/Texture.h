@@ -8,13 +8,11 @@
 
 namespace bloom {
 
-enum class TexturePixelFormat { RGBA8 };
-
 class Texture2D: public Asset {
 public:
     BL_DEFINE_ASSET_CTOR(Texture2D, Asset)
 
-    TexturePixelFormat pixelFormat;
+    PixelFormat pixelFormat;
     vml::usize2 size;
     std::vector<uint8_t> data;
     TextureHandle GPUHandle;

@@ -20,15 +20,30 @@ std::unique_ptr<HardwareDevice> bloom::createMetalDevice() {
     return std::make_unique<MetalDevice>();
 }
 
+static MTLOrigin toMTLOrigin(usize3 pos) {
+    return MTLOrigin{ pos.x, pos.y, pos.z };
+}
+
+static MTLSize toMTLSize(usize3 size) {
+    return MTLSize{ size.x, size.y, size.z };
+}
+
 static MTLRegion toMTL(vml::AABB<uint32_t, 3> region) {
     auto pos = region.lower_bound();
     auto size = region.size();
-    return { .origin = MTLOrigin{ pos.x, pos.y, pos.z },
-             .size = MTLSize{ size.x, size.y, size.z } };
+    return { .origin = toMTLOrigin(pos), .size = toMTLSize(size) };
 }
 
 static id<MTLTexture> getNative(TextureView texture) {
     return (__bridge id<MTLTexture>)texture.nativeHandle();
+}
+
+static id<MTLBuffer> getNativeBuf(BufferView buffer) {
+    return (__bridge id<MTLBuffer>)buffer.nativeHandle();
+}
+
+static id<MTLFunction> getNativeFunc(ShaderFunctionView function) {
+    return (__bridge id<MTLFunction>)function.nativeHandle();
 }
 
 void bloom::metalCopyTextureToMemory(TextureView source, void* dest,
@@ -41,6 +56,20 @@ void bloom::metalCopyTextureToMemory(TextureView source, void* dest,
          bytesPerRow:bytesPerRow
           fromRegion:mtlRegion
          mipmapLevel:mipLevel];
+}
+
+void bloom::metalCopyTextureToMemory(TextureView source, void* dest,
+                                     size_t bytesPerRow, size_t bytesPerSlice,
+                                     vml::AABB<uint32_t, 3> region,
+                                     size_t mipLevel, size_t slice) {
+    id<MTLTexture> native = getNative(source);
+    auto mtlRegion = toMTL(region);
+    [native getBytes:dest
+          bytesPerRow:bytesPerRow
+        bytesPerImage:bytesPerSlice
+           fromRegion:mtlRegion
+          mipmapLevel:mipLevel
+                slice:slice];
 }
 
 void bloom::metalCopyMemoryToTexture(TextureView dest, void* data,
@@ -239,10 +268,8 @@ RenderPipelineHandle MetalDevice::createRenderPipeline(
     mtlDesc.rasterSampleCount = desc.rasterSampleCount;
     mtlDesc.inputPrimitiveTopology =
         (MTLPrimitiveTopologyClass)desc.inputPrimitiveTopology;
-    [mtlDesc setVertexFunction:(__bridge id<MTLFunction>)
-                                   desc.vertexFunction.nativeHandle()];
-    [mtlDesc setFragmentFunction:(__bridge id<MTLFunction>)
-                                     desc.fragmentFunction.nativeHandle()];
+    [mtlDesc setVertexFunction:getNativeFunc(desc.vertexFunction)];
+    [mtlDesc setFragmentFunction:getNativeFunc(desc.fragmentFunction)];
     NSError* error;
     id<MTLRenderPipelineState> pipelineState =
         [device newRenderPipelineStateWithDescriptor:mtlDesc error:&error];
@@ -258,8 +285,7 @@ ComputePipelineHandle MetalDevice::createComputePipeline(
     ComputePipelineDescription const& desc) {
     NSError* error;
     id<MTLComputePipelineState> pipelineState = [device
-        newComputePipelineStateWithFunction:(__bridge id<MTLFunction>)desc
-                                                .computeFunction.nativeHandle()
+        newComputePipelineStateWithFunction:getNativeFunc(desc.computeFunction)
                                       error:&error];
     if (!pipelineState) {
         Logger::Error("Failed to create Pipeline State: ",
@@ -278,10 +304,10 @@ ComputePipelineHandle MetalDevice::createComputePipeline(
 
 void MetalDevice::fillManagedBuffer(BufferView buffer, void const* data,
                                     size_t size, size_t offset) {
-    id<MTLBuffer> mtlBuffer = (__bridge id<MTLBuffer>)buffer.nativeHandle();
-    char* const contents = (char*)[mtlBuffer contents];
+    id<MTLBuffer> native = getNativeBuf(buffer);
+    char* const contents = (char*)[native contents];
     std::memcpy(contents + offset, data, size);
-    [mtlBuffer didModifyRange:NSRange{ offset, size }];
+    [native didModifyRange:NSRange{ offset, size }];
 }
 
 static std::filesystem::path getShaderLibPath() {
@@ -420,10 +446,9 @@ void MetalRenderEncoder::setDepthStencil(DepthStencilView depthStencil) {
 
 void MetalRenderEncoder::setVertexBuffer(BufferView buffer, size_t index,
                                          size_t offset) {
-    [commandEncoder
-        setVertexBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
-                 offset:offset
-                atIndex:index];
+    [commandEncoder setVertexBuffer:getNativeBuf(buffer)
+                             offset:offset
+                            atIndex:index];
 }
 
 void MetalRenderEncoder::setVertexBufferOffset(size_t index, size_t offset) {
@@ -442,10 +467,9 @@ void MetalRenderEncoder::setVertexSampler(SamplerView sampler, size_t index) {
 
 void MetalRenderEncoder::setFragmentBuffer(BufferView buffer, size_t index,
                                            size_t offset) {
-    [commandEncoder
-        setFragmentBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
-                   offset:offset
-                  atIndex:index];
+    [commandEncoder setFragmentBuffer:getNativeBuf(buffer)
+                               offset:offset
+                              atIndex:index];
 }
 
 void MetalRenderEncoder::setFragmentBufferOffset(size_t index, size_t offset) {
@@ -474,8 +498,7 @@ void MetalRenderEncoder::draw(DrawDescription const& desc) {
     [commandEncoder drawIndexedPrimitives:(MTLPrimitiveType)desc.primitiveType
                                indexCount:desc.indexCount
                                 indexType:(MTLIndexType)desc.indexType
-                              indexBuffer:(__bridge id<MTLBuffer>)
-                                              desc.indexBuffer.nativeHandle()
+                              indexBuffer:getNativeBuf(desc.indexBuffer)
                         indexBufferOffset:desc.indexBufferOffset
                             instanceCount:desc.instanceCount];
 }
@@ -499,9 +522,7 @@ void MetalComputeEncoder::setPipeline(ComputePipelineView pipeline) {
 
 void MetalComputeEncoder::setBuffer(BufferView buffer, size_t index,
                                     size_t offset) {
-    [commandEncoder setBuffer:(__bridge id<MTLBuffer>)buffer.nativeHandle()
-                       offset:offset
-                      atIndex:index];
+    [commandEncoder setBuffer:getNativeBuf(buffer) offset:offset atIndex:index];
 }
 
 void MetalComputeEncoder::setBufferOffset(size_t index, size_t offset) {
@@ -527,10 +548,6 @@ void MetalComputeEncoder::setTexture(TextureView texture, size_t index) {
     [commandEncoder setTexture:getNative(texture) atIndex:index];
 }
 
-static MTLSize toMTLSize(vml::usize3 const& size) {
-    return { size.x, size.y, size.z };
-}
-
 void MetalComputeEncoder::dispatchThreads(vml::usize3 threadsPerGrid,
                                           vml::usize3 threadsPerThreadgroup) {
     if (threadsPerGrid.map([](auto i) { return i == 0; }).any()) {
@@ -554,6 +571,22 @@ void MetalBlitEncoder::synchronizeTexture(TextureView texture, size_t slice,
     [commandEncoder synchronizeTexture:getNative(texture)
                                  slice:slice
                                  level:level];
+}
+
+void MetalBlitEncoder::copyBufferToTexture(
+    BufferView source, size_t sourceOffset, size_t sourceBytesPerRow,
+    size_t sourceBytesPerImage, usize3 sourceSize, TextureView dest,
+    size_t destinationSlice, size_t destinationLevel,
+    usize3 destinationOrigin) {
+    [commandEncoder copyFromBuffer:getNativeBuf(source)
+                      sourceOffset:sourceOffset
+                 sourceBytesPerRow:sourceBytesPerRow
+               sourceBytesPerImage:sourceBytesPerImage
+                        sourceSize:toMTLSize(sourceSize)
+                         toTexture:getNative(dest)
+                  destinationSlice:destinationSlice
+                  destinationLevel:destinationLevel
+                 destinationOrigin:toMTLOrigin(destinationOrigin)];
 }
 
 void MetalBlitEncoder::end() { [commandEncoder endEncoding]; }

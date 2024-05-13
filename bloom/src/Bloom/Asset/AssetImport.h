@@ -3,6 +3,7 @@
 
 #include "Bloom/Asset/Fwd.h"
 #include "Bloom/Core/Core.h"
+#include "Bloom/GPU/Fwd.h"
 
 #include <filesystem>
 
@@ -14,7 +15,8 @@ struct StaticMeshData;
 StaticMeshData importStaticMesh(std::filesystem::path const& path);
 
 ///
-void importTexture(Texture2D& texture, std::filesystem::path const& path);
+void importTexture(Texture2D& texture, std::filesystem::path const& path,
+                   HardwareDevice& device, CommandQueue& commandQueue);
 
 } // namespace bloom
 

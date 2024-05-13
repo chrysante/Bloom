@@ -292,7 +292,7 @@ enum class PrimitiveTopologyClass {
 
 struct BufferDescription {
     void const* data = nullptr;
-    std::size_t size = 0;
+    size_t size = 0;
     StorageMode storageMode = StorageMode::GPUOnly;
 };
 
@@ -304,7 +304,7 @@ public:
     BufferHandle(void* native, Deleter deleter, BufferDescription desc):
         HardwareResourceHandle(native, deleter), desc(desc) {}
 
-    std::size_t size() const { return desc.size; }
+    size_t size() const { return desc.size; }
     StorageMode storageMode() const { return desc.storageMode; }
 
 private:
@@ -317,7 +317,7 @@ public:
     BufferView(BufferHandle const& buffer):
         HardwareResourceView(buffer), desc(buffer.desc) {}
 
-    std::size_t size() const { return desc.size; }
+    size_t size() const { return desc.size; }
     StorageMode storageMode() const { return desc.storageMode; }
 
 public:
@@ -328,9 +328,9 @@ struct TextureDescription {
     TextureType type = TextureType::Texture2D;
     PixelFormat pixelFormat = PixelFormat::RGBA8Unorm;
     vml::usize3 size = 0;
-    std::size_t mipmapLevelCount = 1;
-    std::size_t sampleCount = 1;
-    std::size_t arrayLength = 1;
+    size_t mipmapLevelCount = 1;
+    size_t sampleCount = 1;
+    size_t arrayLength = 1;
     StorageMode storageMode = StorageMode::GPUOnly;
     TextureUsage usage = TextureUsage::ShaderRead;
 };
@@ -344,9 +344,9 @@ public:
 
     TextureDescription description() const { return desc; }
 
-    std::size_t width() const { return desc.size.x; }
-    std::size_t height() const { return desc.size.y; }
-    std::size_t depth() const { return desc.size.z; }
+    size_t width() const { return desc.size.x; }
+    size_t height() const { return desc.size.y; }
+    size_t depth() const { return desc.size.z; }
     vml::usize3 size() const { return desc.size; }
 
 private:
@@ -363,9 +363,9 @@ public:
 
     TextureDescription description() const { return desc; }
 
-    std::size_t width() const { return desc.size.x; }
-    std::size_t height() const { return desc.size.y; }
-    std::size_t depth() const { return desc.size.z; }
+    size_t width() const { return desc.size.x; }
+    size_t height() const { return desc.size.y; }
+    size_t depth() const { return desc.size.z; }
     vml::usize3 size() const { return desc.size; }
 
 private:
@@ -377,6 +377,12 @@ private:
 void copyTextureToMemory(RenderAPI api, TextureView source, void* dest,
                          size_t bytesPerRow, vml::AABB<uint32_t, 3> region,
                          size_t mipLevel);
+
+///
+void copyTextureToMemory(RenderAPI api, TextureView source, void* dest,
+                         size_t bytesPerRow, size_t bytesPerSlice,
+                         vml::AABB<uint32_t, 3> region, size_t mipLevel,
+                         size_t slice);
 
 ///
 void copyMemoryToTexture(RenderAPI api, TextureView dest, void* data,
@@ -426,7 +432,7 @@ struct RenderPipelineDescription {
     ShaderFunctionHandle vertexFunction;
     ShaderFunctionHandle fragmentFunction;
 
-    std::size_t rasterSampleCount = 1;
+    size_t rasterSampleCount = 1;
     PrimitiveTopologyClass inputPrimitiveTopology =
         PrimitiveTopologyClass::Unspecified;
 };
@@ -448,7 +454,7 @@ public:
 struct ComputePipelineDescription {
     ShaderFunctionHandle computeFunction;
     bool threadGroupSizeIsMultipleOfThreadExecutionWidth = false;
-    std::optional<std::size_t> maxTotalThreadsPerThreadgroup;
+    std::optional<size_t> maxTotalThreadsPerThreadgroup;
 };
 
 struct ComputePipelineParameters {
@@ -525,7 +531,7 @@ struct SamplerDescription {
     SamplerMinMagFilter minFilter = SamplerMinMagFilter::Nearest;
     SamplerMinMagFilter magFilter = SamplerMinMagFilter::Nearest;
     SamplerMipFilter mipFilter = SamplerMipFilter::NotMipmapped;
-    std::size_t maxAnisotropy = 1;
+    size_t maxAnisotropy = 1;
     SamplerAddressMode sAddressMode = SamplerAddressMode::ClampToEdge;
     SamplerAddressMode tAddressMode = SamplerAddressMode::ClampToEdge;
     SamplerAddressMode rAddressMode = SamplerAddressMode::ClampToEdge;

@@ -14,6 +14,7 @@
 #include <utl/strcat.hpp>
 
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Ranges.h"
 #include "Poppy/Core/SelectionManager.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Appearance.h"
@@ -159,6 +160,12 @@ struct ScannedDirectory {
             }
         }
         sort(condition);
+        auto set = entries | ranges::to<SelectionManager::SetType>;
+        /// Erase all selected elements that don't exist enymore
+        auto toErase = selection | filter([&](auto& entry) {
+            return !set.contains(entry);
+        }) | ToSmallVector<>;
+        ranges::for_each(toErase, [&](auto& entry) { selection.erase(entry); });
     }
 
     void sort(SortCondition condition) {

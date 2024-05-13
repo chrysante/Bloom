@@ -138,6 +138,15 @@ public:
     virtual void synchronizeTexture(TextureView texture, size_t slice,
                                     size_t level) = 0;
 
+    ///
+    virtual void copyBufferToTexture(BufferView source, size_t sourceOffset,
+                                     size_t sourceBytesPerRow,
+                                     size_t sourceBytesPerImage,
+                                     vml::usize3 sourceSize, TextureView dest,
+                                     size_t destinationSlice,
+                                     size_t destinationLevel,
+                                     vml::usize3 destinationOrigin) = 0;
+
 protected:
     BlitEncoder() = default;
 };

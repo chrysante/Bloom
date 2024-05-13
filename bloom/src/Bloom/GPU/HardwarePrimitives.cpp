@@ -15,6 +15,18 @@ void bloom::copyTextureToMemory(RenderAPI api, TextureView source, void* dest,
     }
 }
 
+void bloom::copyTextureToMemory(RenderAPI api, TextureView source, void* dest,
+                                size_t bytesPerRow, size_t bytesPerSlice,
+                                vml::AABB<uint32_t, 3> region, size_t mipLevel,
+                                size_t slice) {
+    switch (api) {
+    case RenderAPI::Metal:
+        metalCopyTextureToMemory(source, dest, bytesPerRow, bytesPerSlice,
+                                 region, mipLevel, slice);
+        break;
+    }
+}
+
 void bloom::copyMemoryToTexture(RenderAPI api, TextureView dest, void* data,
                                 size_t bytesPerRow,
                                 vml::AABB<uint32_t, 3> region,

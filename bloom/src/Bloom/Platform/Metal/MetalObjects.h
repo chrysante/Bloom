@@ -16,6 +16,11 @@ void metalCopyTextureToMemory(TextureView source, void* dest,
                               size_t bytesPerRow, vml::AABB<uint32_t, 3> region,
                               size_t mipLevel);
 
+void metalCopyTextureToMemory(TextureView source, void* dest,
+                              size_t bytesPerRow, size_t bytesPerSlice,
+                              vml::AABB<uint32_t, 3> region, size_t mipLevel,
+                              size_t slice);
+
 void metalCopyMemoryToTexture(TextureView dest, void* data, size_t bytesPerRow,
                               vml::AABB<uint32_t, 3> region, size_t mipLevel);
 
@@ -166,6 +171,12 @@ public:
     void copyTexture(TextureView source, TextureView dest) final;
     void synchronizeTexture(TextureView texture, size_t slice,
                             size_t level) final;
+    void copyBufferToTexture(BufferView source, size_t sourceOffset,
+                             size_t sourceBytesPerRow,
+                             size_t sourceBytesPerImage, vml::usize3 sourceSize,
+                             TextureView dest, size_t destinationSlice,
+                             size_t destinationLevel,
+                             vml::usize3 destinationOrigin) final;
     void end() final;
 
     id<MTLBlitCommandEncoder> commandEncoder;

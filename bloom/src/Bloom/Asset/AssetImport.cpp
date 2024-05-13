@@ -6,15 +6,21 @@
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
+#include <range/v3/view.hpp>
 #include <utl/strcat.hpp>
 #include <vml/vml.hpp>
 
+#include "Bloom/Asset/CubemapRenderer.h"
 #include "Bloom/Asset/STBImage.h"
+#include "Bloom/Asset/TinyEXR.h"
+#include "Bloom/GPU/CommandBuffer.h"
+#include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/Graphics/StaticMesh.h"
 #include "Bloom/Graphics/Texture.h"
 
 using namespace bloom;
 using namespace vml::short_types;
+using namespace ranges::views;
 
 /// Maybe move this somewhere else
 static float BaseWorldScale() { return 100; }
@@ -94,18 +100,102 @@ StaticMeshData bloom::importStaticMesh(std::filesystem::path const& path) {
     return result;
 }
 
-void bloom::importTexture(Texture2D& texture,
-                          std::filesystem::path const& path) {
-    int2 size{};
-    int channelsInFile = 0;
-    auto* buffer =
-        stbi_load(path.c_str(), &size.x, &size.y, &channelsInFile, 4);
-    if (!buffer) {
-        throw std::runtime_error("Failed to import texture");
+static void importTextureGeneric(Texture2D& texture,
+                                 std::filesystem::path const& path,
+                                 PixelFormat pixelFormat) {
+    switch (pixelFormat) {
+    case PixelFormat::RGBA8Unorm: {
+        int2 size{};
+        int channelsInFile = 0;
+        uint8_t* buffer =
+            stbi_load(path.c_str(), &size.x, &size.y, &channelsInFile, 4);
+        if (!buffer) {
+            Logger::Error("Failed to import texture: ", stbi_failure_reason());
+            return;
+        }
+        size_t bufferSize = size.x * size.y * 4;
+        texture.size = size;
+        texture.data.assign(buffer, buffer + bufferSize);
+        texture.pixelFormat = PixelFormat::RGBA8Unorm;
+        stbi_image_free(buffer);
+        return;
     }
-    size_t bufferSize = size.x * size.y * 4;
-    texture.size = size;
-    texture.data.assign(buffer, buffer + bufferSize);
-    texture.pixelFormat = TexturePixelFormat::RGBA8;
-    stbi_image_free(buffer);
+    case PixelFormat::RGBA32Float: {
+        if (!stbi_is_hdr(path.c_str())) {
+            Logger::Error("File is not HDR format");
+            return;
+        }
+        int2 size{};
+        int channelsInFile = 0;
+        float* buffer =
+            stbi_loadf(path.c_str(), &size.x, &size.y, &channelsInFile, 4);
+        if (!buffer) {
+            Logger::Error("Failed to import texture: ", stbi_failure_reason());
+            return;
+        }
+        size_t numPixels = size.x * size.y;
+        texture.size = size;
+        texture.data.resize(numPixels * 16);
+        std::memcpy(texture.data.data(), buffer, texture.data.size());
+        texture.pixelFormat = PixelFormat::RGBA32Float;
+        stbi_image_free(buffer);
+        return;
+    }
+    default:
+        BL_UNIMPLEMENTED();
+    }
+}
+
+[[maybe_unused]] static void importTextureEXR(Texture2D&,
+                                              std::filesystem::path const&) {
+    Logger::Error("EXR import unimplemented");
+}
+
+static void postprocessHDR(Texture2D& texture, HardwareDevice& device,
+                           CommandQueue& commandQueue) {
+    size_t size = std::min(texture.size.x, texture.size.y);
+    auto cubemap =
+        device.createTexture({ .type = TextureType::CubeTexture,
+                               .pixelFormat = PixelFormat::RGBA32Float,
+                               .size = { size, size, 1 },
+                               .usage = TextureUsage::RenderTarget,
+                               .storageMode = StorageMode::Shared });
+    auto equirectangular =
+        device.createTexture({ .type = TextureType::Texture2D,
+                               .pixelFormat = PixelFormat::RGBA32Float,
+                               .size = { texture.size, 1 },
+                               .storageMode = StorageMode::GPUOnly });
+    auto textureDataBuffer =
+        device.createBuffer({ .data = texture.data.data(),
+                              .size = texture.data.size(),
+                              .storageMode = StorageMode::Managed });
+    auto commandBuffer = commandQueue.createCommandBuffer();
+    auto toTexEncoder = commandBuffer->makeBlitEncoder();
+    toTexEncoder->copyBufferToTexture(textureDataBuffer, 0, texture.size.x * 16,
+                                 texture.data.size(), { texture.size, 1 },
+                                 equirectangular, 0, 0, { 0, 0, 0 });
+    toTexEncoder->end();
+    renderCubemap(device, *commandBuffer, cubemap, equirectangular);
+    auto syncEncoder = commandBuffer->makeBlitEncoder();
+    syncEncoder->synchronizeTexture(cubemap, 0, 0);
+    syncEncoder->end();
+    commandBuffer->commit();
+    commandBuffer->waitForCompletion();
+    texture.data.resize(size * size * 16);
+    copyTextureToMemory(RenderAPI::Metal, cubemap, texture.data.data(),
+                        size * 16, size * size * 16,
+                        { usize3{}, usize3{ size, size, 1 } }, 0, 0);
+    texture.pixelFormat = PixelFormat::RGBA32Float;
+    texture.size = { size, size };
+}
+
+void bloom::importTexture(Texture2D& texture, std::filesystem::path const& path,
+                          HardwareDevice& device, CommandQueue& commandQueue) {
+    bool isHDR = path.extension() == ".hdr";
+    importTextureGeneric(texture, path,
+                         isHDR ? PixelFormat::RGBA32Float :
+                                 PixelFormat::RGBA8Uint);
+    if (isHDR) {
+        postprocessHDR(texture, device, commandQueue);
+    }
 }

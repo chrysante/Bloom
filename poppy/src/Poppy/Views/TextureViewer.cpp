@@ -41,15 +41,32 @@ TextureViewer::TextureViewer() {
     setPadding(float2{});
 }
 
-static void displayTexture(Texture2D const& texture, float2 size,
+static TextureHandle getGPUHandle(TextureHandle texture) {
+    auto type = texture.description().type;
+    switch (type) {
+    case TextureType::Texture2D:
+        return texture;
+    case TextureType::CubeTexture:
+        return createSharedTextureView(RenderAPI::Metal, texture,
+                                       TextureType::Texture2D,
+                                       texture.description().pixelFormat, 0, 1,
+                                       0, 1);
+    default:
+        Logger::Error("Cannot display texture of type ",
+                      magic_enum::enum_name(type));
+        return nullptr;
+    }
+}
+
+static void displayTexture(Texture2D const& texture, float2 availSize,
                            float rounding) {
-    auto* native = texture.GPUHandle.nativeHandle();
+    auto handle = getGPUHandle(texture.GPUHandle);
+    auto* native = handle.nativeHandle();
     if (!native) {
         displayEmptyWithError("Texture not in GPU memory");
         return;
     }
     float2 pos = ImGui::GetCursorScreenPos();
-    float2 availSize = size;
     float minSize = std::min(availSize.x, availSize.y);
     // FIXME: We assume an aspect ratio of 1 here
     float2 displaySize = { minSize, minSize };

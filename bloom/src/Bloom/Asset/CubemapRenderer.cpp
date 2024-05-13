@@ -38,8 +38,20 @@ void bloom::renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
                                  /* up: */ float3(0.0f, -1.0f, 0.0f));
     float4x4 camera = vml::transpose(projection * view);
     auto cameraBuffer =
-        device.createBuffer({ .data = &camera, .size = sizeof camera });
+        device.createBuffer({ .data = &camera,
+                              .size = sizeof camera,
+                              .storageMode = StorageMode::Managed });
     encoder->setVertexBuffer(cameraBuffer, 0);
     encoder->setFragmentTexture(equirectangular, 0);
+    auto pipeline = device.createRenderPipeline({
+        .colorAttachments = { {
+            .pixelFormat = cubemap.description().pixelFormat,
+        } },
+        .vertexFunction = device.createFunction("cubemapRendererVS"),
+        .fragmentFunction = device.createFunction("cubemapRendererFS"),
+    });
+    encoder->setTriangleCullMode(TriangleCullMode::None);
+    encoder->setPipeline(pipeline);
     encoder->draw(PrimitiveType::TriangleStrip, 0, 4);
+    encoder->end();
 }

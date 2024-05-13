@@ -913,7 +913,7 @@ struct StaticMeshHeader {
 };
 
 struct Texture2DHeader {
-    TexturePixelFormat pixelFormat;
+    PixelFormat pixelFormat;
     usize2 dimensions;
     size_t numBytes;
 };
@@ -1029,9 +1029,26 @@ void Impl::uploadStaticMeshToGPU(StaticMesh& mesh, RegistryEntry const& entry) {
     renderer->mIndexBuffer = assetManager->device().createBuffer(desc);
 }
 
+static size_t pixelSize(PixelFormat format) {
+    using enum PixelFormat;
+    switch (format) {
+    case RGBA8Unorm:
+    case RGBA8Uint:
+    case RGBA8Sint:
+    case RGBA8Snorm:
+        return 4;
+    case RGBA32Float:
+    case RGBA32Uint:
+    case RGBA32Sint:
+        return 16;
+    default:
+        BL_UNIMPLEMENTED();
+    }
+}
+
 void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
     auto handle = assetManager->device().createTexture(
-        { .pixelFormat = PixelFormat::RGBA8Unorm,
+        { .pixelFormat = texture.pixelFormat,
           .size = usize3(texture.size, 1),
           .mipmapLevelCount = 1,
           .sampleCount = 1,
@@ -1044,9 +1061,10 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
     if (texture.data.empty()) {
         return;
     }
+    size_t bytesPerRow = texture.size.x * pixelSize(texture.pixelFormat);
     copyMemoryToTexture(RenderAPI::Metal, handle, texture.data.data(),
-                        texture.size.x * 4,
-                        { usize3{}, handle.description().size }, 0);
+                        bytesPerRow, { usize3{}, handle.description().size },
+                        0);
     texture.GPUHandle = handle;
     if (!hasMemoryRepr) {
         texture.data.clear();
@@ -1161,7 +1179,7 @@ std::optional<AssetType> Impl::deduceImportedAssetType(
     if (ext == ".FBX") {
         return AssetType::StaticMesh;
     }
-    if (ext == ".TGA" || ext == ".PNG") {
+    if (ext == ".TGA" || ext == ".PNG" || ext == ".EXR" || ext == ".HDR") {
         return AssetType::Texture2D;
     }
     return std::nullopt;
@@ -1175,7 +1193,8 @@ void Impl::doImportImpl(Texture2D& dest,
                         std::filesystem::path const& source) const {
     BL_EXPECT(source.has_filename());
     BL_EXPECT(source.has_extension());
-    importTexture(dest, source);
+    importTexture(dest, source, assetManager->device(),
+                  assetManager->commandQueue());
 }
 
 void Impl::doImportImpl(StaticMesh& dest,

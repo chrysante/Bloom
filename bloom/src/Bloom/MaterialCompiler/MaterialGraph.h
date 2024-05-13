@@ -12,6 +12,7 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/Types.h"
 #include "Bloom/MaterialCompiler/Values.h"
@@ -20,6 +21,9 @@ namespace bloom::matc {
 
 class MaterialGraph {
 public:
+    explicit MaterialGraph(MaterialShadingModel shadingModel):
+        _shadingModel(shadingModel) {}
+
     template <std::derived_from<Value> T>
     T* setRoot(DynUniquePtr<T> value) {
         assert(!_root);
@@ -48,9 +52,12 @@ public:
                              [](auto& p) -> auto const* { return p.get(); });
     }
 
+    MaterialShadingModel shadingModel() const { return _shadingModel; }
+
 private:
     std::vector<DynUniquePtr<Value>> _values;
     Value* _root = nullptr;
+    MaterialShadingModel _shadingModel;
 };
 
 } // namespace bloom::matc

@@ -3,6 +3,7 @@
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/ShaderCompiler.h"
+#include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/Graphics/Texture.h"
 
 using namespace bloom;
@@ -30,8 +31,10 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
     BL_PROFILE_FUNCTION();
     try {
         auto sourceData = model->generateSource();
-        std::vector<std::string> functionNames = { "materialVertexShader",
-                                                   "materialFragmentShader" };
+        std::vector<std::string> functionNames = {
+            std::string(MaterialVertexShaderName),
+            std::string(MaterialFragmentShaderName)
+        };
         auto shaderCompiler = device.createShaderCompiler();
         auto functions =
             shaderCompiler->compile(sourceData.source, functionNames);

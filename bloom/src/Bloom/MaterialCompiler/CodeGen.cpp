@@ -11,6 +11,7 @@
 #include <utl/strcat.hpp>
 #include <utl/streammanip.hpp>
 
+#include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
 #include "Bloom/MaterialCompiler/SourceEmitter.h"
 #include "Bloom/MaterialCompiler/Values.h"
@@ -47,6 +48,13 @@ private:
     int index = 0;
     utl::hashmap<T, std::string> map;
 };
+
+static constexpr std::string_view MaterialVertexFunctionName =
+    "materialVertexFunction";
+static constexpr std::string_view MaterialFragmentFunctionName =
+    "materialFragmentFunction";
+inline constexpr std::string_view MaterialVertexOutName = "MatVertexOut";
+inline constexpr std::string_view MaterialFragmentOutName = "MatFragmentOut";
 
 struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     MetalCodeGenerator(Context const& ctx, MaterialGraph const& graph,
@@ -205,9 +213,9 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
 
 void MetalCodeGenerator::beginFunction() {
     beginItem();
-    writeRaw("static ", getName(returnType), " material");
+    writeRaw("static ", getName(returnType), " ", MaterialFragmentFunctionName);
     beginScope(ScopeType::FuncParams);
-    writeItem("FragmentIn in");
+    writeItem(MaterialVertexOutName, " in");
     for (auto [tex, index]: textureIndexMap) {
         writeItem("texture2d<half> ", getName(tex));
     }
@@ -247,7 +255,7 @@ void MetalCodeGenerator::writeFilePrologue() {
 
 void MetalCodeGenerator::writeVertexOutput() {
     auto type = makeItem();
-    writeRaw("struct FragmentIn");
+    writeRaw("struct ", MaterialVertexOutName);
     writeScope(ScopeType::CompoundStmt, [&] {
         writeItem("float4 positionCS [[position]]");
         writeItem("float3 normalWS");
@@ -261,7 +269,7 @@ void MetalCodeGenerator::writeVertexOutput() {
 
 void MetalCodeGenerator::writeFragmentOutput() {
     auto type = makeItem();
-    writeRaw("struct MainPassFragmentData");
+    writeRaw("struct ", MaterialFragmentOutName);
     writeScope(ScopeType::CompoundStmt, [&] {
         writeItem("float4 color [[color(0)]]");
         writeItem("uint32_t entityID [[color(1)]]");
@@ -270,7 +278,7 @@ void MetalCodeGenerator::writeFragmentOutput() {
 
 void MetalCodeGenerator::writeVertexFunction() {
     auto fn = makeItem();
-    writeRaw("vertex FragmentIn materialVertexShader");
+    writeRaw("vertex ", MaterialVertexOutName, " ", MaterialVertexShaderName);
     auto paramScope = makeScope(ScopeType::FuncParams);
     writeItem("CameraInput device const& cameraBuffer [[buffer(0)]]");
     writeItem("Vertex3D device const* vertices [[buffer(1)]]");
@@ -299,9 +307,10 @@ void MetalCodeGenerator::writeVertexFunction() {
 
 void MetalCodeGenerator::writeFragmentFunction() {
     auto fn = makeItem();
-    writeRaw("fragment MainPassFragmentData materialFragmentShader");
+    writeRaw("fragment ", MaterialFragmentOutName, " ",
+             MaterialFragmentShaderName);
     auto paramScope = makeScope(ScopeType::FuncParams);
-    writeItem("FragmentIn in [[stage_in]]");
+    writeItem(MaterialVertexOutName, " in [[stage_in]]");
     writeItem("CameraInput device const& cameraBuffer [[buffer(0)]]");
     writeItem("LightBufferContents device const& lights [[buffer(1)]]");
     writeItem("float4x4 device const* lightSpaceTransforms [[buffer(2)]]");
@@ -324,7 +333,7 @@ void MetalCodeGenerator::writeFragmentFunction() {
     writeItem("in.tangentWS.xyz = normalize(in.tangentWS.xyz)");
     writeItem("in.binormalWS.xyz = normalize(in.binormalWS.xyz)");
     writeItem([&] {
-        writeRaw("PBRData pbr = material");
+        writeRaw("PBRData pbr = ", MaterialFragmentFunctionName);
         auto argScope = makeScope(ScopeType::Paran);
         writeItem("in");
         for (auto [tex, index]: textureIndexMap) {

@@ -687,7 +687,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
 
     MaterialSourceData generateSource() const override {
         Context ctx;
-        MaterialGraph graph;
+        MaterialGraph graph(MaterialShadingModel::DefaultLit);
         MaterialNodeController::ValueMap map;
         for (auto* node: model.nodes()) {
             auto* controller = getController(node);

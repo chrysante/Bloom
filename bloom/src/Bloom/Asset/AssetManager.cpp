@@ -913,6 +913,7 @@ struct StaticMeshHeader {
 };
 
 struct Texture2DHeader {
+    TextureType type;
     PixelFormat pixelFormat;
     usize2 dimensions;
     size_t numBytes;
@@ -994,9 +995,10 @@ void Impl::loadTextureFromDisk(Texture2D& texture,
         Logger::Error("Failed to read texture: ", source);
         return;
     }
-    texture.data = std::move(buffer);
+    texture.type = header->type;
     texture.pixelFormat = header->pixelFormat;
     texture.size = header->dimensions;
+    texture.data = std::move(buffer);
 }
 
 void Impl::loadSceneFromDisk(Scene& scene,
@@ -1048,7 +1050,8 @@ static size_t pixelSize(PixelFormat format) {
 
 void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
     auto handle = assetManager->device().createTexture(
-        { .pixelFormat = texture.pixelFormat,
+        { .type = texture.type,
+          .pixelFormat = texture.pixelFormat,
           .size = usize3(texture.size, 1),
           .mipmapLevelCount = 1,
           .sampleCount = 1,
@@ -1062,9 +1065,27 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
         return;
     }
     size_t bytesPerRow = texture.size.x * pixelSize(texture.pixelFormat);
-    copyMemoryToTexture(RenderAPI::Metal, handle, texture.data.data(),
-                        bytesPerRow, { usize3{}, handle.description().size },
-                        0);
+    size_t bytesPerImage =
+        texture.size.x * texture.size.y * pixelSize(texture.pixelFormat);
+    switch (texture.type) {
+    case TextureType::Texture2D:
+        copyMemoryToTexture(RenderAPI::Metal, handle, texture.data.data(),
+                            bytesPerRow,
+                            { usize3{}, handle.description().size }, 0);
+        break;
+    case TextureType::CubeTexture: {
+        uint8_t* data = texture.data.data();
+        for (size_t i = 0; i < 6; ++i) {
+            copyMemoryToTexture(RenderAPI::Metal, handle,
+                                data + bytesPerImage * i, bytesPerRow,
+                                bytesPerImage,
+                                { usize3{}, handle.description().size }, 0, i);
+        }
+        break;
+    }
+    default:
+        BL_UNIMPLEMENTED();
+    }
     texture.GPUHandle = handle;
     if (!hasMemoryRepr) {
         texture.data.clear();
@@ -1140,6 +1161,7 @@ void Impl::flushToDiskImpl(Texture2D const& texture,
         return;
     }
     Texture2DHeader header{
+        .type = texture.type,
         .pixelFormat = texture.pixelFormat,
         .dimensions = texture.size,
         .numBytes = texture.data.size(),

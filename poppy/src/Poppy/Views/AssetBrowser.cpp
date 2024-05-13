@@ -140,7 +140,7 @@ struct AssetBrowser: View {
     std::filesystem::path currentDir;
     AssetBrowserData data;
     DirectoryView dirView;
-    Reference<Asset> previewAsset;
+    TextureViewer textureViewer;
 };
 
 } // namespace
@@ -373,11 +373,17 @@ bool AssetBrowser::displayPreview(DirectoryEntry const& entry) {
     if (!handle) {
         return false;
     }
-    if (!previewAsset || previewAsset->handle() != handle) {
-        previewAsset = assetManager->get(handle, AssetRepresentation::GPU);
-    }
-    if (auto texture = as<Texture2D>(previewAsset)) {
-        previewTexture(*texture);
+    if (handle.type() == AssetType::Texture2D) {
+        if (!textureViewer.getTexture() ||
+            textureViewer.getTexture()->handle() != handle)
+        {
+            auto asset = assetManager->get(handle, AssetRepresentation::GPU);
+            textureViewer =
+                TextureViewer(as<Texture2D>(asset),
+                              { .displayMode =
+                                    TextureViewer::DisplayMode::Compact });
+        }
+        textureViewer.display();
         return true;
     }
     return false;

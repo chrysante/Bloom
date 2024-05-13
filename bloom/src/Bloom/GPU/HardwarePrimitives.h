@@ -389,6 +389,11 @@ void copyMemoryToTexture(RenderAPI api, TextureView dest, void* data,
                          size_t bytesPerRow, vml::AABB<uint32_t, 3> region,
                          size_t mipLevel);
 
+void copyMemoryToTexture(RenderAPI api, TextureView dest, void* data,
+                         size_t bytesPerRow, size_t bytesPerImage,
+                         vml::AABB<uint32_t, 3> region, size_t mipLevel,
+                         size_t slice);
+
 ///
 TextureHandle createSharedTextureView(RenderAPI api, TextureView texture,
                                       TextureType newType,

@@ -114,9 +114,10 @@ static void importTextureGeneric(Texture2D& texture,
             return;
         }
         size_t bufferSize = size.x * size.y * 4;
+        texture.type = TextureType::Texture2D;
+        texture.pixelFormat = PixelFormat::RGBA8Unorm;
         texture.size = size;
         texture.data.assign(buffer, buffer + bufferSize);
-        texture.pixelFormat = PixelFormat::RGBA8Unorm;
         stbi_image_free(buffer);
         return;
     }
@@ -133,11 +134,12 @@ static void importTextureGeneric(Texture2D& texture,
             Logger::Error("Failed to import texture: ", stbi_failure_reason());
             return;
         }
+        texture.type = TextureType::Texture2D;
+        texture.pixelFormat = PixelFormat::RGBA32Float;
         size_t numPixels = size.x * size.y;
         texture.size = size;
         texture.data.resize(numPixels * 16);
         std::memcpy(texture.data.data(), buffer, texture.data.size());
-        texture.pixelFormat = PixelFormat::RGBA32Float;
         stbi_image_free(buffer);
         return;
     }
@@ -153,17 +155,18 @@ static void importTextureGeneric(Texture2D& texture,
 
 static void postprocessHDR(Texture2D& texture, HardwareDevice& device,
                            CommandQueue& commandQueue) {
-    size_t size = std::min(texture.size.x, texture.size.y);
+    usize2 sourceSize = texture.size;
+    usize2 destSize = usize2(std::min(sourceSize.x, sourceSize.y));
     auto cubemap =
         device.createTexture({ .type = TextureType::CubeTexture,
                                .pixelFormat = PixelFormat::RGBA32Float,
-                               .size = { size, size, 1 },
+                               .size = { destSize, 1 },
                                .usage = TextureUsage::RenderTarget,
                                .storageMode = StorageMode::Shared });
     auto equirectangular =
         device.createTexture({ .type = TextureType::Texture2D,
                                .pixelFormat = PixelFormat::RGBA32Float,
-                               .size = { texture.size, 1 },
+                               .size = { sourceSize, 1 },
                                .storageMode = StorageMode::GPUOnly });
     auto textureDataBuffer =
         device.createBuffer({ .data = texture.data.data(),
@@ -171,9 +174,9 @@ static void postprocessHDR(Texture2D& texture, HardwareDevice& device,
                               .storageMode = StorageMode::Managed });
     auto commandBuffer = commandQueue.createCommandBuffer();
     auto toTexEncoder = commandBuffer->makeBlitEncoder();
-    toTexEncoder->copyBufferToTexture(textureDataBuffer, 0, texture.size.x * 16,
-                                 texture.data.size(), { texture.size, 1 },
-                                 equirectangular, 0, 0, { 0, 0, 0 });
+    toTexEncoder->copyBufferToTexture(textureDataBuffer, 0, sourceSize.x * 16,
+                                      texture.data.size(), { sourceSize, 1 },
+                                      equirectangular, 0, 0, { 0, 0, 0 });
     toTexEncoder->end();
     renderCubemap(device, *commandBuffer, cubemap, equirectangular);
     auto syncEncoder = commandBuffer->makeBlitEncoder();
@@ -181,12 +184,19 @@ static void postprocessHDR(Texture2D& texture, HardwareDevice& device,
     syncEncoder->end();
     commandBuffer->commit();
     commandBuffer->waitForCompletion();
-    texture.data.resize(size * size * 16);
-    copyTextureToMemory(RenderAPI::Metal, cubemap, texture.data.data(),
-                        size * 16, size * size * 16,
-                        { usize3{}, usize3{ size, size, 1 } }, 0, 0);
+    size_t bytesPerImage = destSize.x * destSize.y * 16;
+    texture.data.resize(bytesPerImage * 6);
+    uint8_t* destBuffer = texture.data.data();
+    for (size_t i = 0; i < 6; ++i) {
+        copyTextureToMemory(RenderAPI::Metal, cubemap,
+                            destBuffer + i * bytesPerImage,
+                            /* bytesPerRow: */ destSize.x * 16, bytesPerImage,
+                            { usize3{}, usize3{ destSize, 1 } },
+                            /* mipLevel: */ 0, /* slice: */ i);
+    }
     texture.pixelFormat = PixelFormat::RGBA32Float;
-    texture.size = { size, size };
+    texture.size = destSize;
+    texture.type = TextureType::CubeTexture;
 }
 
 void bloom::importTexture(Texture2D& texture, std::filesystem::path const& path,

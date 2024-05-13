@@ -19,49 +19,50 @@ using namespace vml::short_types;
 
 namespace {
 
-struct TextureViewer: View {
-    TextureViewer();
+struct TextureViewerWrapper: View {
+    TextureViewerWrapper();
     void display() override;
     void doOpenData(std::any data) override;
 
-    Reference<Texture2D> texture;
+    TextureViewer impl;
 };
 
 } // namespace
 
-POPPY_REGISTER_VIEW(TextureViewer, "Texture Viewer");
+POPPY_REGISTER_VIEW(TextureViewerWrapper, "Texture Viewer");
 
-TextureViewer::TextureViewer() {
-    // clang-format off
-    setToolbar({
-        ToolbarTextItem()
-            .text([this] { return texture ? texture->name().c_str() : ""; })
-            .font(FontDesc::UIDefault().setWeight(FontWeight::Bold))
-    }); // clang-format on
-    setPadding(float2{});
-}
+struct TextureViewer::Data {
+    Data(Reference<Texture2D> texture, Options options):
+        texture(texture), options(options) {}
 
-static TextureHandle getGPUHandle(TextureHandle texture) {
-    auto type = texture.description().type;
-    switch (type) {
-    case TextureType::Texture2D:
-        return texture;
-    case TextureType::CubeTexture:
-        return createSharedTextureView(RenderAPI::Metal, texture,
-                                       TextureType::Texture2D,
-                                       texture.description().pixelFormat, 0, 1,
-                                       0, 1);
-    default:
-        Logger::Error("Cannot display texture of type ",
-                      magic_enum::enum_name(type));
-        return nullptr;
-    }
-}
+    TextureView getTextureView();
 
-static void displayTexture(Texture2D const& texture, float2 availSize,
+    void displayOverlay();
+
+    Reference<Texture2D> texture;
+    TextureHandle viewHandle;
+    TextureHandle
+        lastViewHandle; // Really crappy way to extend the lifetime of the
+                        // texture to prevent crash in imgui renderer
+    int face = 0;
+    Options options;
+};
+
+TextureViewer::TextureViewer(): TextureViewer(nullptr, {}) {}
+TextureViewer::TextureViewer(Reference<Texture2D> texture, Options options):
+    data(std::make_unique<Data>(texture, options)) {}
+
+TextureViewer::TextureViewer(TextureViewer&&) noexcept = default;
+TextureViewer& TextureViewer::operator=(TextureViewer&&) noexcept = default;
+TextureViewer::~TextureViewer() = default;
+
+static void displayTexture(TextureView texture, float2 availSize,
                            float rounding) {
-    auto handle = getGPUHandle(texture.GPUHandle);
-    auto* native = handle.nativeHandle();
+    if (texture.description().type != TextureType::Texture2D) {
+        displayEmptyWithError("Texture not viewable");
+        return;
+    }
+    auto* native = texture.nativeHandle();
     if (!native) {
         displayEmptyWithError("Texture not in GPU memory");
         return;
@@ -79,12 +80,11 @@ static void displayTexture(Texture2D const& texture, float2 availSize,
     ImGui::ItemSize(BB.GetSize());
     if (ImGui::IsKeyDown(ImGuiKey_ModAlt) && ImGui::IsItemHovered()) {
         float2 coord = (float2(ImGui::GetMousePos()) - displayPos) /
-                       displaySize * texture.size;
+                       displaySize * texture.size().xy;
         vml::vector<uint8_t, 4> rgba{};
         vml::AABB<uint32_t, 3> region = { uint3(coord, 0),
                                           uint3(coord, 0) + uint3(1) };
-        copyTextureToMemory(RenderAPI::Metal, texture.GPUHandle, &rgba, 4,
-                            region, 0);
+        copyTextureToMemory(RenderAPI::Metal, texture, &rgba, 4, region, 0);
         float4 color =
             rgba.map([](uint8_t value) { return float(value) / 255; });
         ImGui::ColorTooltip(utl::strcat("X: ", coord.x, " Y: ", coord.y,
@@ -97,10 +97,14 @@ static void displayTexture(Texture2D const& texture, float2 availSize,
 static void displayInfo(Texture2D const& texture) {
     using namespace propertiesView;
     if (beginSection("Info")) {
+        beginProperty("Type");
+        auto typeName = magic_enum::enum_name(texture.type);
+        ImGui::TextEx(std::to_address(typeName.begin()),
+                      std::to_address(typeName.end()));
         beginProperty("Pixel Format");
-        auto str = magic_enum::enum_name(texture.pixelFormat);
-        ImGui::TextEx(std::to_address(str.begin()), std::to_address(str.end()));
-
+        auto pixelFmt = magic_enum::enum_name(texture.pixelFormat);
+        ImGui::TextEx(std::to_address(pixelFmt.begin()),
+                      std::to_address(pixelFmt.end()));
         beginProperty("Width");
         ImGui::Text("%d", (int)texture.size.x);
         beginProperty("Height");
@@ -111,30 +115,96 @@ static void displayInfo(Texture2D const& texture) {
     }
 }
 
+TextureView TextureViewer::Data::getTextureView() {
+    if (viewHandle) {
+        return viewHandle;
+    }
+    auto type = texture->type;
+    switch (type) {
+    case TextureType::Texture2D:
+        viewHandle = texture->GPUHandle;
+        break;
+    case TextureType::CubeTexture:
+        viewHandle =
+            createSharedTextureView(RenderAPI::Metal, texture->GPUHandle,
+                                    TextureType::Texture2D,
+                                    texture->pixelFormat, 0, 1, face, 1);
+        break;
+    default:
+        Logger::Error("Cannot display texture of type ",
+                      magic_enum::enum_name(type));
+        return {};
+    }
+    return viewHandle;
+}
+
+void TextureViewer::Data::displayOverlay() {
+    float2 stashedCursorPos = ImGui::GetCursorPos();
+    ImGui::SetCursorPos({});
+    if (texture->type == TextureType::CubeTexture) {
+        char const* names[6] = { "1", "2", "3", "4", "5", "6" };
+        if (ImGui::Combo("Face", &face, names, 6)) {
+            lastViewHandle = viewHandle;
+            viewHandle = {};
+        }
+    }
+    ImGui::SetCursorPos(stashedCursorPos);
+}
+
 void TextureViewer::display() {
-    if (!texture.get()) {
+    if (!data->texture.get()) {
         displayEmptyWithReason("No Texture Opened");
         return;
     }
-    // clang-format off
-    splitView("SplitView", {
-        [&] { displayTexture(*texture, ImGui::GetContentRegionAvail(), 0); },
-        [&] { displayInfo(*texture); },
-    }); // clang-format on
+    TextureView texview = data->getTextureView();
+    switch (data->options.displayMode) {
+    case DisplayMode::Expanded:
+        // clang-format off
+        splitView("SplitView", {
+            [&] {
+                displayTexture(texview, ImGui::GetContentRegionAvail(), 
+                               data->options.rounding);
+                data->displayOverlay();
+            },
+            [&] { displayInfo(*data->texture); },
+        }); // clang-format on
+        break;
+    case DisplayMode::Compact:
+        float2 size = ImGui::GetContentRegionAvail();
+        displayTexture(texview, float2(size.fold(utl::min)),
+                       data->options.rounding);
+        data->displayOverlay();
+        ImGui::Separator();
+        displayInfo(*data->texture);
+        break;
+    }
 }
 
-void TextureViewer::doOpenData(std::any data) {
-    auto* tex = std::any_cast<Reference<Texture2D>>(&data);
-    if (!tex || !(texture = *tex).get()) {
+Texture2D const* TextureViewer::getTexture() { return data->texture.get(); }
+
+TextureViewerWrapper::TextureViewerWrapper() {
+    // clang-format off
+    setToolbar({
+        ToolbarTextItem()
+            .text([this] {
+                auto* tex = impl.getTexture();
+                return tex ? tex->name().c_str() : "";
+            })
+            .font(FontDesc::UIDefault().setWeight(FontWeight::Bold))
+    }); // clang-format on
+    setPadding(float2{});
+}
+
+void TextureViewerWrapper::display() { impl.display(); }
+
+void TextureViewerWrapper::doOpenData(std::any data) {
+    auto* texptr = std::any_cast<Reference<Texture2D>>(&data);
+    if (!texptr) {
         return;
     }
+    Reference<Texture2D> texture = *texptr;
     auto& AM = editor().coreSystems().assetManager();
     AM.makeAvailable(texture->handle(), AssetRepresentation::GPU);
-}
-
-void poppy::previewTexture(Texture2D const& texture, float rounding) {
-    float2 size = ImGui::GetContentRegionAvail();
-    displayTexture(texture, float2(size.fold(utl::min)), rounding);
-    ImGui::Separator();
-    displayInfo(texture);
+    impl = TextureViewer(texture, { .displayMode =
+                                        TextureViewer::DisplayMode::Expanded });
 }

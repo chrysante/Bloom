@@ -12,6 +12,7 @@ class Texture2D: public Asset {
 public:
     BL_DEFINE_ASSET_CTOR(Texture2D, Asset)
 
+    TextureType type;
     PixelFormat pixelFormat;
     vml::usize2 size;
     std::vector<uint8_t> data;

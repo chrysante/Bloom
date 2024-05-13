@@ -84,6 +84,18 @@ void bloom::metalCopyMemoryToTexture(TextureView dest, void* data,
               bytesPerRow:bytesPerRow];
 }
 
+void bloom::metalCopyMemoryToTexture(TextureView dest, void* data,
+                                     size_t bytesPerRow, size_t bytesPerImage,
+                                     vml::AABB<uint32_t, 3> region,
+                                     size_t mipLevel, size_t slice) {
+    [getNative(dest) replaceRegion:toMTL(region)
+                       mipmapLevel:mipLevel
+                             slice:slice
+                         withBytes:data
+                       bytesPerRow:bytesPerRow
+                     bytesPerImage:bytesPerImage];
+}
+
 TextureHandle bloom::metalCreateSharedTextureView(
     TextureView texture, TextureType newType, PixelFormat newFormat,
     size_t firstMipLevel, size_t numMipLevels, size_t firstSlice,

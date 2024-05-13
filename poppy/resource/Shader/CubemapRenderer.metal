@@ -2,16 +2,37 @@
 
 using namespace metal;
 
-struct CRVertex {
-    float3 position;
-    float2 uv;
-};
-
-constant CRVertex vertices[] = {
-    { float3(1, -1, -1), float2(0, 0) },
-    { float3(1, -1,  1), float2(0, 1) },
-    { float3(1,  1, -1), float2(1, 0) },
-    { float3(1,  1,  1), float2(1, 1) },
+constant float3 vertices[] = {
+    // +X
+    float3(1, -1, -1),
+    float3(1, -1,  1),
+    float3(1,  1, -1),
+    float3(1,  1,  1),
+    // -X
+    float3(-1, -1, -1),
+    float3(-1, -1,  1),
+    float3(-1,  1, -1),
+    float3(-1,  1,  1),
+    // +Y
+    float3(-1, 1, -1),
+    float3(-1, 1,  1),
+    float3( 1, 1, -1),
+    float3( 1, 1,  1),
+    // -Y
+    float3(-1, -1, -1),
+    float3(-1, -1,  1),
+    float3( 1, -1, -1),
+    float3( 1, -1,  1),
+    // +Z
+    float3(-1, -1, 1),
+    float3(-1,  1, 1),
+    float3( 1, -1, 1),
+    float3( 1,  1, 1),
+    // -Z
+    float3(-1, -1, -1),
+    float3(-1,  1, -1),
+    float3( 1, -1, -1),
+    float3( 1,  1, -1),
 };
 
 struct CRVSOut {
@@ -21,12 +42,11 @@ struct CRVSOut {
 };
 
 vertex CRVSOut cubemapRendererVS(float4x4 device const& camera [[buffer(0)]],
-                                uint32_t vertexID [[vertex_id]]) {
-    CRVertex v = vertices[vertexID];
+                                 uint32_t vertexID [[vertex_id]]) {
+    float3 position = vertices[vertexID];
     return {
-        .position = camera * float4(v.position, 1),
-        .localPosition = v.position,
-        .uv = v.uv
+        .position = camera * float4(position, 1),
+        .localPosition = position
     };
 }
 

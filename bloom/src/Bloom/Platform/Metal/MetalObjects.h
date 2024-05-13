@@ -24,6 +24,11 @@ void metalCopyTextureToMemory(TextureView source, void* dest,
 void metalCopyMemoryToTexture(TextureView dest, void* data, size_t bytesPerRow,
                               vml::AABB<uint32_t, 3> region, size_t mipLevel);
 
+void metalCopyMemoryToTexture(TextureView dest, void* data, size_t bytesPerRow,
+                              size_t bytesPerImage,
+                              vml::AABB<uint32_t, 3> region, size_t mipLevel,
+                              size_t slice);
+
 TextureHandle metalCreateSharedTextureView(TextureView texture,
                                            TextureType newType,
                                            PixelFormat newFormat,

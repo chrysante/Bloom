@@ -156,7 +156,7 @@ static void importTextureGeneric(Texture2D& texture,
 static void postprocessHDR(Texture2D& texture, HardwareDevice& device,
                            CommandQueue& commandQueue) {
     usize2 sourceSize = texture.size;
-    usize2 destSize = usize2(std::min(sourceSize.x, sourceSize.y));
+    usize2 destSize = usize2(512, 512); // Hard coded for now
     auto cubemap =
         device.createTexture({ .type = TextureType::CubeTexture,
                                .pixelFormat = PixelFormat::RGBA32Float,
@@ -204,7 +204,7 @@ void bloom::importTexture(Texture2D& texture, std::filesystem::path const& path,
     bool isHDR = path.extension() == ".hdr";
     importTextureGeneric(texture, path,
                          isHDR ? PixelFormat::RGBA32Float :
-                                 PixelFormat::RGBA8Uint);
+                                 PixelFormat::RGBA8Unorm);
     if (isHDR) {
         postprocessHDR(texture, device, commandQueue);
     }

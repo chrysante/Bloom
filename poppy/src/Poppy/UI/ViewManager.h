@@ -17,6 +17,8 @@ class Editor;
 /// Creates and destroys all view instances in the application
 class ViewManager: bloom::Receiver {
 public:
+    struct ToggleDebugView {};
+
     struct OpenCommand {
         std::string name;
     };
@@ -58,6 +60,7 @@ private:
     struct Impl;
     Editor* editor; // To create emitters and receivers
     std::vector<std::unique_ptr<View>> views;
+    bool displayDebugger = false;
 };
 
 } // namespace poppy

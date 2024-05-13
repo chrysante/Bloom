@@ -286,7 +286,13 @@ void Editor::menuBar() {
         }
         ImGui::EndMenu();
     }
-    impl->debugViews.menubar();
+    if (ImGui::BeginMenu("Debug")) {
+        impl->debugViews.menubar();
+        if (ImGui::MenuItem("Display View Debug Info")) {
+            dispatch(DispatchToken::Now, ViewManager::ToggleDebugView{});
+        }
+        ImGui::EndMenu();
+    }
     if (ImGui::BeginMenu("Profile")) {
         if (ImGui::MenuItem("Profiler")) {
             Logger::Debug("Profiler view not implemented");

@@ -260,5 +260,8 @@ float3 bloom::PBRForwardShader(
                                  shadowMetadata, shadowMaps);
     lightAcc += computeSkyLights(pbr, lights.numSkyLights, lights.skyLights);
     lightAcc += pbr.emissive;
+#if 0
+    float3 ambient = 0.03 * pbr.albedo * pbr.ao;
+#endif
     return lightAcc;
 }

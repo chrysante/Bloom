@@ -63,7 +63,8 @@ struct ViewManager::Impl {
 ViewManager::ViewManager(Editor* editor, Receiver receiver):
     Receiver(std::move(receiver)), editor(editor) {
     listen([this](OpenCommand const& cmd) { openView(cmd.name); });
-    listen([this](CloseAllCommand const&) { closeAll(); });
+    listen([this](CloseAllCommand) { closeAll(); });
+    listen([this](ToggleDebugView) { displayDebugger ^= true; });
 }
 
 ViewManager::~ViewManager() = default;
@@ -113,6 +114,9 @@ void ViewManager::display() {
     }
     for (auto& view: views) {
         view->doFrame();
+        if (displayDebugger) {
+            Impl::displayDebugInfo(*view);
+        }
     }
 }
 

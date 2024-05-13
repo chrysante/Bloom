@@ -20,19 +20,16 @@ void DebugViews::display() {
 }
 
 void DebugViews::menubar() {
-    if (ImGui::BeginMenu("Debug")) {
-        if (ImGui::MenuItem("Demo Window")) {
-            showDemoWindow = true;
-        }
-        if (ImGui::MenuItem("UI Debugger")) {
-            showUIDebugger = true;
-        }
-        if (ImGui::MenuItem("Style Colors Panel")) {
-            showStylePanel = true;
-        }
-        if (ImGui::MenuItem("Reset style")) {
-            ImGui::StyleColorsDark();
-        }
-        ImGui::EndMenu();
+    if (ImGui::MenuItem("Demo Window")) {
+        showDemoWindow = true;
+    }
+    if (ImGui::MenuItem("UI Debugger")) {
+        showUIDebugger = true;
+    }
+    if (ImGui::MenuItem("Style Colors Panel")) {
+        showStylePanel = true;
+    }
+    if (ImGui::MenuItem("Reset style")) {
+        ImGui::StyleColorsDark();
     }
 }

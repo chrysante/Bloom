@@ -28,6 +28,8 @@ set(matc_sources
   src/Bloom/MaterialCompiler/MaterialGraph.h
   src/Bloom/MaterialCompiler/Preprocessor.cpp
   src/Bloom/MaterialCompiler/Preprocessor.h
+  src/Bloom/MaterialCompiler/SourceEmitter.cpp
+  src/Bloom/MaterialCompiler/SourceEmitter.h
   src/Bloom/MaterialCompiler/Types.cpp
   src/Bloom/MaterialCompiler/Types.h
   src/Bloom/MaterialCompiler/Values.cpp

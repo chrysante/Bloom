@@ -36,6 +36,11 @@ public:
         return cast<T*>(result);
     }
 
+    template <std::derived_from<Value> T, typename... Args>
+    T* addValue(Args&&... args) {
+        return addValue(allocate<T>(std::forward<Args>(args)...));
+    }
+
     Value* root() const { return _root; }
 
     auto values() const {

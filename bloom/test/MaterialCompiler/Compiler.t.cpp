@@ -9,12 +9,31 @@
 using namespace bloom;
 using namespace matc;
 
+static AssetHandle genTexture() {
+    return AssetHandle(AssetType::Texture2D, utl::uuid::generate());
+}
+
 TEST_CASE() {
     Context ctx;
     MaterialGraph g;
-    auto* c2 = ctx.vectorConstant(3, { 2, 1, 5, 0 });
-    auto* c1 = ctx.vectorConstant(1, { 1, 0, 0, 0 });
-    g.setRoot(allocate<AggregateBuilder>(ctx, std::vector<Value*>{ c1, c2 }));
+    auto* tex0 = ctx.textureConstant(genTexture());
+    auto* tex1 = ctx.textureConstant(genTexture());
+    auto* const0 = ctx.vectorConstant(1, { 1, 0, 0, 0 });
+    auto* const1 = ctx.vectorConstant(3, { 2, 1, 5, 0 });
+    auto* vec0 =
+        g.addValue<VectorBuilder>(ctx,
+                                  std::vector<Value*>{
+                                      ctx.vectorConstant(1, { 1, 0, 0, 0 }),
+                                      ctx.vectorConstant(1, { 2, 0, 0, 0 }),
+                                      ctx.vectorConstant(1, { 3, 0, 0, 0 }),
+                                  });
+    auto* coords = ctx.rasterizerInput(RasterizerInputKind::TextureCoords);
+    auto* sample0 =
+        g.addValue<TextureSampler>(ctx, tex0, coords, SampleMode::Normal);
+    g.setRoot(
+        allocate<AggregateBuilder>(ctx, std::vector<Value*>{ const0, const1,
+                                                             vec0, sample0 }));
     auto generator = makeCodeGenerator(ctx, g, {});
-    std::cout << generator->run() << std::endl;
+    auto result = generator->run();
+    std::cout << result.source << std::endl;
 }

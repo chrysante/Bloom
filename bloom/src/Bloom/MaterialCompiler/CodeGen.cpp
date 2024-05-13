@@ -12,6 +12,7 @@
 #include <utl/streammanip.hpp>
 
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
+#include "Bloom/MaterialCompiler/SourceEmitter.h"
 #include "Bloom/MaterialCompiler/Values.h"
 
 using namespace bloom;
@@ -19,37 +20,6 @@ using namespace matc;
 using namespace ranges::views;
 
 namespace {
-
-struct Indenter {
-public:
-    explicit Indenter(std::ostream& str): str(str) {}
-
-    auto beginLine() const {
-        return utl::streammanip(
-            [n = scopeNesting](std::ostream& str) { indent(str, n); });
-    }
-
-    void pushScope() {
-        ++scopeNesting;
-        str << " {\n";
-    }
-
-    void popScope(std::string_view postfix = {}) {
-        --scopeNesting;
-        str << beginLine();
-        str << "}" << postfix << "\n";
-    }
-
-private:
-    static void indent(std::ostream& str, int n) {
-        for (int i = 0; i < n; ++i) {
-            str << "    ";
-        }
-    }
-
-    int scopeNesting = 0;
-    std::ostream& str;
-};
 
 template <typename T>
 class NameGenerator {
@@ -78,8 +48,6 @@ private:
     utl::hashmap<T, std::string> map;
 };
 
-struct Data {};
-
 static std::string makeConstantName(VectorConstant const& c) {
     switch (c.numComponents()) {
     case 1:
@@ -95,10 +63,13 @@ static std::string makeConstantName(VectorConstant const& c) {
     }
 }
 
-struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
+struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     MetalCodeGenerator(Context const& ctx, MaterialGraph const& graph,
                        CodeGenOptions const& options):
-        Indenter(sstr), ctx(ctx), graph(graph), options(options) {}
+        SourceEmitter(ScopeType::CompoundStmt),
+        ctx(ctx),
+        graph(graph),
+        options(options) {}
 
     CodegenResult run() override;
 
@@ -120,7 +91,11 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
     void beginFunction();
     void endFunction();
 
-    void defineFragmentFunction();
+    void writeFilePrologue();
+    void writeVertexOutput();
+    void writeFragmentOutput();
+    void writeFragmentFunction();
+    void writeVertexFunction();
 
     void codegenImpl(Value const&) { assert(false); }
     void codegenImpl(VectorConstant const&) {}
@@ -182,7 +157,6 @@ struct MetalCodeGenerator: CodeGenerator, Data, Indenter {
     NameGenerator<Type const*> typeNameGen{ "Type_" };
     NameGenerator<Value const*> valueNameGen{ "Value_" };
     utl::hashmap<TextureConstant const*, int> textureIndexMap;
-    std::stringstream sstr;
 };
 
 } // namespace
@@ -226,25 +200,9 @@ CodegenResult MetalCodeGenerator::run() {
     }
     returnType = graph.root()->type();
     auto order = topsort(graph.values() | ranges::to<std::vector>);
-    sstr << R"(
-#include "Shader/PBRShader.h"
-#include "Shader/SharedTypes.h"
-#include "Shader/Vertex.h"
-
-using namespace metal;
-using namespace bloom;
-
-struct FragmentIn {
-    float4 positionCS [[position]];
-    float3 normalWS;
-    float3 tangentWS;
-    float3 binormalWS;
-    float3 positionWS;
-    float3 vertexColor;
-    float2 textureCoords;
-};
-
-)";
+    writeFilePrologue();
+    writeVertexOutput();
+    writeFragmentOutput();
     for (auto* type: ctx.types()) {
         declareType(type);
     }
@@ -259,8 +217,10 @@ struct FragmentIn {
         codegen(*value);
     }
     endFunction();
-    defineFragmentFunction();
-    return { .source = std::move(sstr).str(),
+    writeVertexFunction();
+    writeFragmentFunction();
+    writeInclude(IncludeType::Local, "Shader/PBRShader.metal");
+    return { .source = takeSource(),
              .fragmentTextures = textureIndexMap | transform([](auto& p) {
         auto [tex, index] = p;
         return std::pair{ index, tex->asset() };
@@ -282,146 +242,216 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
         return;
     }
     // TODO: This does not handle nested structs
-    sstr << "struct " << typeNameGen.get(type);
-    pushScope();
+    auto item = makeItem();
+    writeRaw("struct ", typeNameGen.get(type));
+    auto scope = makeScope(ScopeType::CompoundStmt);
     for (auto [index, member]: type->elements() | enumerate) {
-        sstr << beginLine() << typeNameGen.get(member) << " _" << index
-             << ";\n";
+        writeItem(typeNameGen.get(member), " _", index);
     }
-    popScope(";");
-    sstr << "\n";
 }
 
 void MetalCodeGenerator::beginFunction() {
-    sstr << "static " << typeNameGen.get(returnType) << " "
-         << "material(FragmentIn in";
+    beginItem();
+    writeRaw("static ", typeNameGen.get(returnType), " material");
+    beginScope(ScopeType::FuncParams);
+    writeItem("FragmentIn in");
     for (auto [tex, index]: textureIndexMap) {
-        sstr << ",\n    texture2d<half>" << getName(tex) << "\n";
+        writeItem("texture2d<half> ", getName(tex));
     }
-    sstr << "    ) ";
-    pushScope();
+    endScope();
+    beginScope(ScopeType::CompoundStmt);
 }
 
 void MetalCodeGenerator::endFunction() {
     std::string valueName = getName(graph.root());
-    sstr << beginLine() << valueName << ".albedo = max(float3(), " << valueName
-         << ".albedo);\n";
-    sstr << beginLine() << valueName << ".emissive = max(float3(), "
-         << valueName << ".emissive);\n";
-    sstr << beginLine() << "return " << valueName << ";\n";
-    popScope();
+    writeItem([&] {
+        writeRaw(valueName, ".albedo = max");
+        writeScope(ScopeType::Paran, [&] {
+            writeItem("float3()");
+            writeItem(valueName, ".albedo");
+        });
+    });
+    writeItem([&] {
+        writeRaw(valueName, ".emissive = max");
+        writeScope(ScopeType::Paran, [&] {
+            writeItem("float3()");
+            writeItem(valueName, ".emissive");
+        });
+    });
+    writeItem("return ", valueName);
+    endScope();
+    endItem();
 }
 
-void MetalCodeGenerator::defineFragmentFunction() {
-    sstr << R"(
-vertex FragmentIn materialVertexShader(
-    CameraInput device const& cameraBuffer [[buffer(0)]],
-    Vertex3D device const* vertices [[buffer(1)]],
-    float4x4 device const& transform [[buffer(2)]],
-    unsigned vertexID [[vertex_id]])
-{
-    Vertex3D v = vertices[vertexID];
-    float4 vertexPositionMS = float4(v.position, 1);
-    float4 vertexNormalMS = float4(v.normal, 0);
-    float4 vertexTangentMS = float4(v.tangent, 0);
-    float4 vertexBitangentMS = float4(v.binormal, 0);
-    float4 vertexPositionWS = transform * vertexPositionMS;
-    return {
-        .positionCS = cameraBuffer.camera * vertexPositionWS,
-        .normalWS = (transform * vertexNormalMS).xyz,
-        .tangentWS = (transform * vertexTangentMS).xyz,
-        .binormalWS = (transform * vertexBitangentMS).xyz,
-        .positionWS = vertexPositionWS.xyz,
-        .vertexColor = v.color.rgb,
-        .textureCoords = v.textureCoordinates[0]
-    };
+void MetalCodeGenerator::writeFilePrologue() {
+    writeInclude(IncludeType::System, "metal_stdlib");
+    writeInclude(IncludeType::Local, "Shader/PBRShader.h");
+    writeInclude(IncludeType::Local, "Shader/SharedTypes.h");
+    writeInclude(IncludeType::Local, "Shader/Vertex.h");
+    writeItem("using namespace metal");
+    writeItem("using namespace bloom");
 }
 
-struct MainPassFragmentData {
-    float4 color [[color(0)]];
-    uint32_t entityID [[color(1)]];
-};
+void MetalCodeGenerator::writeVertexOutput() {
+    auto type = makeItem();
+    writeRaw("struct FragmentIn");
+    writeScope(ScopeType::CompoundStmt, [&] {
+        writeItem("float4 positionCS [[position]]");
+        writeItem("float3 normalWS");
+        writeItem("float3 tangentWS");
+        writeItem("float3 binormalWS");
+        writeItem("float3 positionWS");
+        writeItem("float3 vertexColor");
+        writeItem("float2 textureCoords");
+    });
+}
 
-fragment MainPassFragmentData materialFragmentShader(
-    FragmentIn in [[stage_in]],
-    CameraInput device const& cameraBuffer [[buffer(0)]],
-    LightBufferContents device const& lights [[buffer(1)]],
-    float4x4 device const* lightSpaceTransforms [[buffer(2)]],
-    ShadowRenderMetadata device const& shadowMetadata [[buffer(3)]],
-    uint32_t device const& entityID [[buffer(5)]],
-    texture2d_array<float> shadowMaps [[texture(0)]])";
+void MetalCodeGenerator::writeFragmentOutput() {
+    auto type = makeItem();
+    writeRaw("struct MainPassFragmentData");
+    writeScope(ScopeType::CompoundStmt, [&] {
+        writeItem("float4 color [[color(0)]]");
+        writeItem("uint32_t entityID [[color(1)]]");
+    });
+}
+
+void MetalCodeGenerator::writeVertexFunction() {
+    auto fn = makeItem();
+    writeRaw("vertex FragmentIn materialVertexShader");
+    auto paramScope = makeScope(ScopeType::FuncParams);
+    writeItem("CameraInput device const& cameraBuffer [[buffer(0)]]");
+    writeItem("Vertex3D device const* vertices [[buffer(1)]]");
+    writeItem("float4x4 device const& transform [[buffer(2)]]");
+    writeItem("unsigned vertexID [[vertex_id]]");
+    paramScope.pop();
+    auto fnScope = makeScope(ScopeType::CompoundStmt);
+    writeItem("Vertex3D v = vertices[vertexID]");
+    writeItem("float4 vertexPositionMS = float4(v.position, 1)");
+    writeItem("float4 vertexNormalMS = float4(v.normal, 0)");
+    writeItem("float4 vertexTangentMS = float4(v.tangent, 0)");
+    writeItem("float4 vertexBitangentMS = float4(v.binormal, 0)");
+    writeItem("float4 vertexPositionWS = transform * vertexPositionMS");
+    writeItem([&] {
+        writeRaw("return ");
+        auto scope = makeScope(ScopeType::BraceList);
+        writeItem(".positionCS = cameraBuffer.camera * vertexPositionWS");
+        writeItem(".normalWS = (transform * vertexNormalMS).xyz");
+        writeItem(".tangentWS = (transform * vertexTangentMS).xyz");
+        writeItem(".binormalWS = (transform * vertexBitangentMS).xyz");
+        writeItem(".positionWS = vertexPositionWS.xyz");
+        writeItem(".vertexColor = v.color.rgb");
+        writeItem(".textureCoords = v.textureCoordinates[0]");
+    });
+}
+
+void MetalCodeGenerator::writeFragmentFunction() {
+    auto fn = makeItem();
+    writeRaw("fragment MainPassFragmentData materialFragmentShader");
+    auto paramScope = makeScope(ScopeType::FuncParams);
+    writeItem("FragmentIn in [[stage_in]]");
+    writeItem("CameraInput device const& cameraBuffer [[buffer(0)]]");
+    writeItem("LightBufferContents device const& lights [[buffer(1)]]");
+    writeItem("float4x4 device const* lightSpaceTransforms [[buffer(2)]]");
+    writeItem(
+        "ShadowRenderMetadata device const& shadowMetadata [[buffer(3)]]");
+    writeItem("uint32_t device const& entityID [[buffer(5)]]");
+    writeItem("texture2d_array<float> shadowMaps [[texture(0)]]");
     for (auto [tex, index]: textureIndexMap) {
-        sstr << ",\n    texture2d<half> " << getName(tex) << " [[texture("
-             << index << ")]]";
+        writeItem([&] {
+            writeRaw("texture2d<half> ", getName(tex), " ");
+            auto attr1 = makeScope(ScopeType::Bracket);
+            auto attr2 = makeScope(ScopeType::Bracket);
+            writeRaw("texture");
+            writeScope(ScopeType::Paran, index);
+        });
     }
-    sstr << R"()
-{
-    in.normalWS.xyz = normalize(in.normalWS.xyz);
-    in.tangentWS.xyz = normalize(in.tangentWS.xyz);
-    in.binormalWS.xyz = normalize(in.binormalWS.xyz);
-    PBRData pbr = material(in)";
-    for (auto [tex, index]: textureIndexMap) {
-        sstr << ",\n        " << getName(tex);
-    }
-    sstr << R"(
-    );
-    float3x3 TBN(in.tangentWS.xyz,
-                 in.binormalWS.xyz,
-                 in.normalWS.xyz);
-    pbr.normal = TBN * normalize(pbr.normal);
-    float3 color =
-        PBRForwardShader(pbr, in.positionWS,
-                         cameraBuffer.cameraPosition, lightSpaceTransforms,
-                         lights, shadowMetadata, shadowMaps);
-    return { float4(color, 1), entityID };
-}
-
-#include "Shader/PBRShader.metal"
-
-)";
+    paramScope.pop();
+    auto fnScope = makeScope(ScopeType::CompoundStmt);
+    writeItem("in.normalWS.xyz = normalize(in.normalWS.xyz)");
+    writeItem("in.tangentWS.xyz = normalize(in.tangentWS.xyz)");
+    writeItem("in.binormalWS.xyz = normalize(in.binormalWS.xyz)");
+    writeItem([&] {
+        writeRaw("PBRData pbr = material");
+        auto argScope = makeScope(ScopeType::Paran);
+        writeItem("in");
+        for (auto [tex, index]: textureIndexMap) {
+            writeItem(getName(tex));
+        }
+    });
+    writeItem([&] {
+        writeRaw("float3x3 TBN");
+        writeScope(ScopeType::Paran, [&] {
+            writeItem("in.tangentWS.xyz");
+            writeItem("in.binormalWS.xyz");
+            writeItem("in.normalWS.xyz");
+        });
+    });
+    writeItem("pbr.normal = TBN * normalize(pbr.normal)");
+    writeItem([&] {
+        writeRaw("float3 color = PBRForwardShader");
+        auto argScope = makeScope(ScopeType::Paran);
+        writeItem("pbr");
+        writeItem("in.positionWS");
+        writeItem("cameraBuffer.cameraPosition");
+        writeItem("lightSpaceTransforms");
+        writeItem("lights");
+        writeItem("shadowMetadata");
+        writeItem("shadowMaps");
+    });
+    writeItem("return { float4(color, 1), entityID }");
+    fnScope.pop();
 }
 
 void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
     /*
      constexpr sampler textureSampler (mag_filter::linear, min_filter::linear);
      const half4 colorSample = colorTexture.sample(textureSampler,
-     in.textureCoordinate);
+                                                   in.textureCoordinate);
      */
     std::string samplerName =
         utl::strcat(getName(sample.texture()), "_Sampler");
     std::string sampleTypeName = typeNameGen.get(sample.type());
     std::string sampleName = getName(&sample);
-    sstr << beginLine() << "constexpr sampler " << samplerName
-         << "(mag_filter::linear, min_filter::linear);\n";
-    sstr << beginLine() << sampleTypeName << " " << sampleName << " = "
-         << sampleTypeName << "(" << getName(sample.texture()) << ".sample("
-         << samplerName << ", " << getName(sample.coords()) << "));\n";
+    writeItem([&] {
+        writeRaw("constexpr sampler ", samplerName);
+        writeScope(ScopeType::Paran, [&] {
+            writeItem("min_filter::linear");
+            writeItem("mag_filter::linear");
+        });
+    });
+    writeItem([&] {
+        writeRaw(sampleTypeName, " ", sampleName, " = ", sampleTypeName);
+        auto scope = makeScope(ScopeType::Paran);
+        auto item = makeItem();
+        writeRaw(getName(sample.texture()), ".sample");
+        writeScope(ScopeType::Paran, [&] {
+            writeItem(samplerName);
+            writeItem(getName(sample.coords()));
+        });
+    });
     if (sample.mode() == SampleMode::Normal) {
-        sstr << beginLine() << sampleName << ".xy = (" << sampleName
-             << ".xy - 0.5f) * 2.0f;\n";
+        auto item = makeItem();
+        writeRaw(sampleName, ".xy = ");
+        writeScope(ScopeType::Paran,
+                   [&] { writeItem(sampleName, ".xy - 0.5f"); });
+        writeRaw(" * 2.0f");
     }
 }
 
 void MetalCodeGenerator::codegenImpl(VectorBuilder const& value) {
-    sstr << beginLine() << typeNameGen.get(value.type()) << " "
-         << getName(&value) << "(";
-    bool first = true;
+    auto item = makeItem();
+    writeRaw(typeNameGen.get(value.type()), " ", getName(&value));
+    auto scope = makeScope(ScopeType::Paran);
     for (auto* operand: value.operands()) {
-        if (!first) {
-            sstr << ", ";
-        }
-        first = false;
-        sstr << getName(operand);
+        writeItem(getName(operand));
     }
-    sstr << ");\n";
 }
 
 void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {
-    sstr << beginLine() << typeNameGen.get(value.type()) << " "
-         << getName(&value);
-    pushScope();
+    auto item = makeItem();
+    writeRaw(typeNameGen.get(value.type()), " ", getName(&value));
+    auto scope = makeScope(ScopeType::BraceList);
     for (auto* operand: value.operands()) {
-        sstr << beginLine() << getName(operand) << ",\n";
+        writeItem(getName(operand));
     }
-    popScope(";");
 }

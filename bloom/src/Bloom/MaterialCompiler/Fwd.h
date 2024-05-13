@@ -46,8 +46,11 @@ enum class RasterizerInputKind {
     TextureCoords,
     VertexNormals,
     VertexTangents,
-    VertexBinormals
+    VertexBinormals,
+    WorldPosition,
 };
+
+enum class BuiltinFunctionKind { NormalizeFloat3 };
 
 enum class SampleMode { Color, Normal };
 

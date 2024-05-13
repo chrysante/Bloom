@@ -47,7 +47,15 @@ enum class NodeType {
     TextureSampler
 };
 
-enum class InputKind { TextureCoords, Normals, Tangents, Binormals };
+enum class InputKind {
+    TextureCoords,
+    Normals,
+    Tangents,
+    Binormals,
+    WorldPosition
+};
+
+enum class FunctionType { Normalize };
 
 enum class ArithmeticOp { Add, Sub, Mul, Div, LAST = Div };
 
@@ -397,6 +405,8 @@ struct InputNodeController: MaterialNodeController {
         case InputKind::Tangents:
             [[fallthrough]];
         case InputKind::Binormals:
+            [[fallthrough]];
+        case InputKind::WorldPosition:
             return { { .name = "Vector",
                        .userType = (PinUserType)DataType::Float3 } };
         }
@@ -419,6 +429,8 @@ struct InputNodeController: MaterialNodeController {
         case InputKind::Binormals:
             return { ctx.rasterizerInput(
                 RasterizerInputKind::VertexBinormals) };
+        case InputKind::WorldPosition:
+            return { ctx.rasterizerInput(RasterizerInputKind::WorldPosition) };
         }
     }
 
@@ -426,6 +438,61 @@ struct InputNodeController: MaterialNodeController {
     bool alwaysDisplayOutputNames() const override { return true; }
 
     InputKind kind;
+};
+
+struct BuiltinFunctionController: MaterialNodeController {
+    static NodeDesc Make(float2 position, FunctionType type) {
+        return { .name = std::string(magic_enum::enum_name(type)),
+                 .position = position,
+                 .minSize = { 100, 0 },
+                 .controller =
+                     std::make_unique<BuiltinFunctionController>(type) };
+    }
+
+    BuiltinFunctionController(FunctionType type): type(type) {}
+
+    explicit BuiltinFunctionController(YAML::Node const& root) {
+        type = root["FunctionType"].as<FunctionType>();
+    }
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["Type"] = NodeType::Input;
+        root["FunctionType"] = type;
+        return root;
+    }
+
+    std::vector<PinDesc> makeInputDescriptors() override {
+        switch (type) {
+        case FunctionType::Normalize:
+            return {
+                { .name = "Vector", .userType = (PinUserType)DataType::Float3 },
+            };
+        }
+    }
+
+    std::vector<PinDesc> makeOutputDescriptors() override {
+        switch (type) {
+        case FunctionType::Normalize:
+            return {
+                { .name = "Vector", .userType = (PinUserType)DataType::Float3 },
+            };
+        }
+    }
+
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& g) const override {
+        switch (type) {
+        case FunctionType::Normalize:
+            return { g.addValue<BuiltinFunction>(
+                ctx, BuiltinFunctionKind::NormalizeFloat3) };
+        }
+    }
+
+    bool alwaysDisplayInputNames() const override { return false; }
+    bool alwaysDisplayOutputNames() const override { return true; }
+
+    FunctionType type;
 };
 
 struct AppendNodeController: MaterialNodeController {
@@ -807,6 +874,17 @@ struct Delegate: NodeEditorDelegate {
                 if (ImGui::MenuItem(utl::strcat("Float", i).c_str())) {
                     editorGraph->addNode(
                         SplitNodeController::Make(position, i));
+                }
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Functions")) {
+            for (auto type: magic_enum::enum_values<FunctionType>()) {
+                if (ImGui::MenuItem(
+                        std::string(magic_enum::enum_name(type)).c_str()))
+                {
+                    editorGraph->addNode(
+                        BuiltinFunctionController::Make(position, type));
                 }
             }
             ImGui::EndMenu();

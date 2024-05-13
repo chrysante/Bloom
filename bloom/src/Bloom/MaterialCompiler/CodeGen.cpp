@@ -91,6 +91,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void codegenImpl(VectorConstant const&) {}
     void codegenImpl(TextureConstant const&) {}
     void codegenImpl(RasterizerInput const&) {}
+    void codegenImpl(BuiltinFunction const& value);
     void codegenImpl(TextureSampler const& value);
     void codegenImpl(VectorBuilder const& value);
     void codegenImpl(VectorElement const&) {}
@@ -421,6 +422,22 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
     fnScope.pop();
 }
 
+void MetalCodeGenerator::codegenImpl(BuiltinFunction const& value) {
+    writeItem([&] {
+        writeRaw(getName(value.type()), " ", getName(&value), " = ");
+        using enum BuiltinFunctionKind;
+        switch (value.kind()) {
+        case NormalizeFloat3:
+            writeRaw("normalize");
+        }
+        writeScope(ScopeType::Paran, [&] {
+            for (auto& arg: value.operands()) {
+                writeItem(getName(arg));
+            }
+        });
+    });
+}
+
 void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
     /*
      constexpr sampler textureSampler (mag_filter::linear, min_filter::linear);
@@ -509,11 +526,13 @@ std::string MetalCodeGenerator::genNameImpl(RasterizerInput const& input) {
     case TextureCoords:
         return "in.textureCoords";
     case VertexNormals:
-        return "in.normalWS.xyz";
+        return "in.normalWS";
     case VertexTangents:
-        return "in.tangentWS.xyz";
+        return "in.tangentWS";
     case VertexBinormals:
-        return "in.binormalWS.xyz";
+        return "in.binormalWS";
+    case WorldPosition:
+        return "in.positionWS";
     }
 }
 

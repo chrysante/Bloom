@@ -91,6 +91,19 @@ private:
     std::vector<Value*> _operands;
 };
 
+class BuiltinFunction: public User {
+public:
+    BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
+                    std::vector<Value*> arguments);
+
+    BuiltinFunction(Context& ctx, BuiltinFunctionKind kind);
+
+    BuiltinFunctionKind kind() const { return _kind; }
+
+private:
+    BuiltinFunctionKind _kind;
+};
+
 class ArithmeticOperation: public User {
 public:
     enum Kind { Add, Sub, Mul, Div };

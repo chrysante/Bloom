@@ -32,6 +32,8 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     case VertexTangents:
         [[fallthrough]];
     case VertexBinormals:
+        [[fallthrough]];
+    case WorldPosition:
         return ctx.vectorType(3);
     }
 }
@@ -39,6 +41,34 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
 RasterizerInput::RasterizerInput(Context& ctx, RasterizerInputKind kind):
     Constant(ValueNodeType::RasterizerInput, selectType(ctx, kind)),
     _kind(kind) {}
+
+namespace {
+
+struct BuiltinFunctionDesc {
+    static BuiltinFunctionDesc Make(Context& ctx, BuiltinFunctionKind kind) {
+        using enum BuiltinFunctionKind;
+        switch (kind) {
+        case NormalizeFloat3:
+            return { 1, ctx.float3Type() };
+        }
+    }
+
+    size_t numArguments;
+    Type const* returnType;
+};
+
+} // namespace
+
+BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
+                                 std::vector<Value*> arguments):
+    User(ValueNodeType::BuiltinFunction,
+         BuiltinFunctionDesc::Make(ctx, kind).returnType, std::move(arguments)),
+    _kind(kind) {}
+
+BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind):
+    BuiltinFunction(ctx, kind,
+                    std::vector<Value*>(
+                        BuiltinFunctionDesc::Make(ctx, kind).numArguments)) {}
 
 Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
     assert(lhs == rhs);

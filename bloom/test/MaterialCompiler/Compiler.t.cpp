@@ -33,7 +33,10 @@ TEST_CASE() {
     auto* aggregate =
         g.addValue<AggregateBuilder>(ctx, std::vector<Value*>{ const0, const1,
                                                                vec0, sample0 });
-    auto* resultVal = g.addValue<AggregateElement>(aggregate, 1);
+    Value* resultVal = g.addValue<AggregateElement>(aggregate, 1);
+    resultVal =
+        g.addValue<BuiltinFunction>(ctx, BuiltinFunctionKind::NormalizeFloat3,
+                                    std::vector<Value*>{ resultVal });
     g.setRoot(resultVal);
     auto generator = makeCodeGenerator(ctx, g, {});
     auto result = generator->run();

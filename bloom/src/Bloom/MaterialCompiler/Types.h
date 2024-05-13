@@ -50,7 +50,12 @@ private:
 
 class TextureType: public Type {
 public:
-    TextureType(): Type(TypeCategory::TextureType, "Texture") {}
+    explicit TextureType(TextureSubType subtype);
+
+    TextureSubType subtype() const { return _subtype; }
+
+private:
+    TextureSubType _subtype;
 };
 
 } // namespace bloom::matc

@@ -48,7 +48,7 @@ private:
 
 class TextureConstant: public Constant {
 public:
-    explicit TextureConstant(Context& ctx, AssetHandle asset);
+    explicit TextureConstant(TextureType const* type, AssetHandle asset);
 
     AssetHandle asset() const { return _asset; }
 

@@ -18,9 +18,8 @@ VectorConstant::VectorConstant(Context& ctx, int numComponents, float4 value):
     _value(value),
     numc(numComponents) {}
 
-TextureConstant::TextureConstant(Context& ctx, AssetHandle asset):
-    Constant(ValueNodeType::TextureConstant, ctx.textureType()),
-    _asset(asset) {}
+TextureConstant::TextureConstant(TextureType const* type, AssetHandle asset):
+    Constant(ValueNodeType::TextureConstant, type), _asset(asset) {}
 
 static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     using enum RasterizerInputKind;

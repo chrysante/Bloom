@@ -46,9 +46,22 @@ struct Context::Impl {
         return cast<T*>(valueOwners.back().get());
     }
 
+    template <typename KeyType, typename V, typename H, typename E>
+    auto getOrInsert(utl::hashmap<KeyType, V, H, E>& map, KeyType key,
+                     auto factory) {
+        auto itr = map.find(key);
+        if (itr != map.end()) {
+            return itr->second;
+        }
+        auto result = factory();
+        map.insert({ key, result });
+        return result;
+    }
+
     // Types
     std::vector<DynUniquePtr<Type>> typeOwners;
     VectorType const* vectorType[4]{};
+    utl::hashmap<TextureSubType, TextureType const*> textureTypes;
     utl::hashmap<utl::small_vector<Type const*>, AggregateType const*,
                  AggregateHash, AggregateEqual>
         aggTypes;
@@ -73,22 +86,20 @@ Impl::Impl() {
     vectorType[1] = addType<VectorType>(2);
     vectorType[2] = addType<VectorType>(3);
     vectorType[3] = addType<VectorType>(4);
-    textureType = addType<TextureType>();
 }
 
 AggregateType const* Context::aggregateType(
     std::span<Type const* const> elements) {
-    auto itr = impl->aggTypes.find(elements);
-    if (itr != impl->aggTypes.end()) {
-        return itr->second;
-    }
-    auto* type =
-        impl->addType<AggregateType>(elements | ranges::to<std::vector>);
-    impl->aggTypes.insert({ elements | ToSmallVector<>, type });
-    return type;
+    return impl->getOrInsert(impl->aggTypes, elements | ToSmallVector<>, [&] {
+        return impl->addType<AggregateType>(elements | ranges::to<std::vector>);
+    });
 }
 
-TextureType const* Context::textureType() { return impl->textureType; }
+TextureType const* Context::textureType(TextureSubType subtype) {
+    return impl->getOrInsert(impl->textureTypes, subtype, [&] {
+        return impl->addType<TextureType>(subtype);
+    });
+}
 
 VectorType const* Context::vectorType(int numComponents) const {
     assert(numComponents >= 1);
@@ -97,33 +108,23 @@ VectorType const* Context::vectorType(int numComponents) const {
 }
 
 VectorConstant* Context::vectorConstant(int numComponents, float4 value) {
-    auto itr = impl->vectorConstants.find({ numComponents, value });
-    if (itr != impl->vectorConstants.end()) {
-        return itr->second;
-    }
-    auto* result = impl->addValue<VectorConstant>(*this, numComponents, value);
-    impl->vectorConstants.insert({ { numComponents, value }, result });
-    return result;
+    return impl->getOrInsert(impl->vectorConstants, { numComponents, value },
+                             [&] {
+        return impl->addValue<VectorConstant>(*this, numComponents, value);
+    });
 }
 
-TextureConstant* Context::textureConstant(AssetHandle asset) {
-    auto itr = impl->textureConstants.find(asset.ID());
-    if (itr != impl->textureConstants.end()) {
-        return itr->second;
-    }
-    auto* result = impl->addValue<TextureConstant>(*this, asset);
-    impl->textureConstants.insert({ asset.ID(), result });
-    return result;
+TextureConstant* Context::textureConstant(TextureSubType subtype,
+                                          AssetHandle asset) {
+    return impl->getOrInsert(impl->textureConstants, asset.ID(), [&] {
+        return impl->addValue<TextureConstant>(textureType(subtype), asset);
+    });
 }
 
 RasterizerInput* Context::rasterizerInput(RasterizerInputKind kind) {
-    auto itr = impl->rasterizerInputs.find(kind);
-    if (itr != impl->rasterizerInputs.end()) {
-        return itr->second;
-    }
-    auto* result = impl->addValue<RasterizerInput>(*this, kind);
-    impl->rasterizerInputs.insert({ kind, result });
-    return result;
+    return impl->getOrInsert(impl->rasterizerInputs, kind, [&] {
+        return impl->addValue<RasterizerInput>(*this, kind);
+    });
 }
 
 std::vector<Type const*> Context::types() const {

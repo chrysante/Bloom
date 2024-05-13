@@ -42,6 +42,8 @@ using NoParent = void;
 
 namespace bloom::matc {
 
+enum class TextureSubType { Texture2D, TextureCube };
+
 enum class RasterizerInputKind {
     TextureCoords,
     VertexNormals,

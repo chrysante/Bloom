@@ -70,6 +70,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
         visit(*type, [this](auto& type) { declareTypeImpl(&type); });
     }
     void declareTypeImpl(Type const*) {}
+    void declareTypeImpl(TextureType const* type);
     void declareTypeImpl(VectorType const* type);
     void declareTypeImpl(AggregateType const* type);
 
@@ -135,7 +136,7 @@ std::unique_ptr<CodeGenerator> matc::makeCodeGenerator(
     return std::make_unique<MetalCodeGenerator>(ctx, graph, options);
 }
 
-static std::vector<Value const*> topsort(std::span<Value const* const> values) {
+static std::vector<Value const*> topsort(Value const* root) {
     std::vector<Value const*> sorted;
     utl::hashset<Value const*> perm;
     utl::hashset<Value const*> tmp;
@@ -156,9 +157,7 @@ static std::vector<Value const*> topsort(std::span<Value const* const> values) {
         perm.insert(value);
         sorted.push_back(value);
     };
-    for (auto* value: values) {
-        visit(visit, value);
-    }
+    visit(visit, root);
     return sorted;
 }
 
@@ -167,7 +166,7 @@ CodegenResult MetalCodeGenerator::run() {
         throw std::runtime_error("Material graph has no root");
     }
     returnType = graph.root()->type();
-    auto order = topsort(graph.values() | ranges::to<std::vector>);
+    auto order = topsort(graph.root());
     for (auto* value: order) {
         genName(*value);
     }
@@ -193,6 +192,17 @@ CodegenResult MetalCodeGenerator::run() {
         auto [tex, index] = p;
         return std::pair{ index, tex->asset() };
     }) | ranges::to<utl::hashmap<int, AssetHandle>> };
+}
+
+void MetalCodeGenerator::declareTypeImpl(TextureType const* type) {
+    typeNameGen.setName(type, [&] {
+        switch (type->subtype()) {
+        case TextureSubType::Texture2D:
+            return "texture2d<float>";
+        case TextureSubType::TextureCube:
+            return "texturecube<float>";
+        }
+    }());
 }
 
 void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
@@ -224,7 +234,7 @@ void MetalCodeGenerator::beginFunction() {
     beginScope(ScopeType::FuncParams);
     writeItem(MaterialVertexOutName, " in");
     for (auto [tex, index]: textureIndexMap) {
-        writeItem("texture2d<half> ", getName(tex));
+        writeItem(getName(tex->type()), " ", getName(tex));
     }
     endScope();
     beginScope(ScopeType::CompoundStmt);
@@ -341,7 +351,7 @@ void MetalCodeGenerator::writeUnlitFragmentFunction() {
     writeItem("uint32_t device const& entityID [[buffer(",
               getBindIndex(Fragment, GeometryIDBuffer), ")]]");
     for (auto [tex, index]: textureIndexMap) {
-        writeItem("texture2d<half> ", getName(tex), " [[texture(", index,
+        writeItem(getName(tex->type()), " ", getName(tex), " [[texture(", index,
                   ")]]");
     }
     paramScope.pop();
@@ -382,7 +392,7 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
     writeItem("texture2d_array<float> shadowMaps [[texture(",
               getBindIndex(Fragment, ShadowMaps), ")]]");
     for (auto [tex, index]: textureIndexMap) {
-        writeItem("texture2d<half> ", getName(tex), " [[texture(", index,
+        writeItem(getName(tex->type()), " ", getName(tex), " [[texture(", index,
                   ")]]");
     }
     paramScope.pop();

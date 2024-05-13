@@ -43,6 +43,7 @@ enum class NodeType {
     Constant,
     Append,
     Split,
+    BuiltinFunction,
     Arithmetic,
     TextureSampler
 };
@@ -198,6 +199,7 @@ struct ConstantController: MaterialNodeController {
         dataType = node["DataType"].as<DataType>();
         value = node["Value"].as<float4>();
         textureAsset = node["Texture"].as<AssetHandle>();
+        textype = node["TextureType"].as<TextureSubType>();
     }
 
     YAML::Node serialize() const override {
@@ -206,6 +208,7 @@ struct ConstantController: MaterialNodeController {
         node["DataType"] = dataType;
         node["Value"] = value;
         node["Texture"] = textureAsset;
+        node["TextureType"] = textype;
         return node;
     }
 
@@ -277,7 +280,7 @@ struct ConstantController: MaterialNodeController {
             return { ctx.vectorConstant(numComponents, value) };
         }
         case Texture:
-            return { ctx.textureConstant(textureAsset) };
+            return { ctx.textureConstant(textype, textureAsset) };
         }
     }
 
@@ -327,7 +330,7 @@ struct ConstantController: MaterialNodeController {
             ImGui::SetNextItemWidth(-FLT_MIN);
             ImGui::ColorPicker4("###Value", value.data(), colFlags);
             break;
-        case DataType::Texture:
+        case DataType::Texture: {
             if (auto asset = acceptAssetDragDrop({ AssetType::Texture2D })) {
                 textureAsset = *asset;
                 texHandle = {};
@@ -345,6 +348,8 @@ struct ConstantController: MaterialNodeController {
                 }
                 triedToGetTexture = true;
             }
+            char const* textypenames[] = { "Texture2D", "Cubemap" };
+            ImGui::Combo("Texture Type", (int*)&textype, textypenames, 2);
             if (texHandle && texHandle.nativeHandle()) {
                 float2 pos = ImGui::GetCursorScreenPos();
                 float2 size = ImGui::GetContentRegionAvail();
@@ -354,12 +359,14 @@ struct ConstantController: MaterialNodeController {
             }
             break;
         }
+        }
     }
 
     DataType dataType;
     float4 value = .5;
     AssetHandle textureAsset;
     TextureHandle texHandle;
+    TextureSubType textype = TextureSubType::Texture2D;
     bool triedToGetTexture = false;
 };
 
@@ -457,7 +464,7 @@ struct BuiltinFunctionController: MaterialNodeController {
 
     YAML::Node serialize() const override {
         YAML::Node root;
-        root["Type"] = NodeType::Input;
+        root["Type"] = NodeType::BuiltinFunction;
         root["FunctionType"] = type;
         return root;
     }
@@ -641,22 +648,26 @@ struct ArithmeticNodeController: MaterialNodeController {
 };
 
 struct TextureSamplerController: MaterialNodeController {
-    static NodeDesc Make(float2 position) {
+    static NodeDesc Make(TextureSubType subtype, float2 position) {
         return { .name = "Texture Sample",
                  .position = position,
                  .minSize = { 100, 0 },
-                 .controller = std::make_unique<TextureSamplerController>() };
+                 .controller =
+                     std::make_unique<TextureSamplerController>(subtype) };
     }
 
-    TextureSamplerController() = default;
+    explicit TextureSamplerController(TextureSubType subtype):
+        subtype(subtype) {}
 
     explicit TextureSamplerController(YAML::Node const& node) {
         mode = node["Mode"].as<SampleMode>();
+        subtype = node["Subtype"].as<TextureSubType>();
     }
 
     YAML::Node serialize() const override {
         YAML::Node node;
         node["Type"] = NodeType::TextureSampler;
+        node["Subtype"] = subtype;
         node["Mode"] = mode;
         return node;
     }
@@ -680,6 +691,15 @@ struct TextureSamplerController: MaterialNodeController {
                    .userType = (PinUserType)DataType::Float } };
     }
 
+    static DataType getUVType(TextureSubType subtype) {
+        switch (subtype) {
+        case TextureSubType::Texture2D:
+            return DataType::Float2;
+        case TextureSubType::TextureCube:
+            return DataType::Float3;
+        }
+    }
+
     std::vector<PinDesc> makeInputDescriptors() override {
         return {
             { .name = "Texture",
@@ -687,7 +707,7 @@ struct TextureSamplerController: MaterialNodeController {
               .userType = (PinUserType)DataType::Texture },
             { .name = "UVs",
               .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Float2 },
+              .userType = (PinUserType)getUVType(subtype) },
         };
     }
 
@@ -718,6 +738,7 @@ struct TextureSamplerController: MaterialNodeController {
     vml::float4 nodeColor() override { return { 0.2, 0.4, 1, 1 }; }
 
     SampleMode mode = SampleMode::Color;
+    TextureSubType subtype;
 };
 
 static std::unique_ptr<NodeController> deserializeNodeController(
@@ -733,6 +754,8 @@ static std::unique_ptr<NodeController> deserializeNodeController(
         return std::make_unique<AppendNodeController>(node);
     case NodeType::Split:
         return std::make_unique<SplitNodeController>(node);
+    case NodeType::BuiltinFunction:
+        return std::make_unique<BuiltinFunctionController>(node);
     case NodeType::Arithmetic:
         return std::make_unique<ArithmeticNodeController>(node);
     case NodeType::TextureSampler:
@@ -901,7 +924,14 @@ struct Delegate: NodeEditorDelegate {
             ImGui::EndMenu();
         }
         if (ImGui::MenuItem("Texture Sample")) {
-            editorGraph->addNode(TextureSamplerController::Make(position));
+            editorGraph->addNode(
+                TextureSamplerController::Make(TextureSubType::Texture2D,
+                                               position));
+        }
+        if (ImGui::MenuItem("Cube Texture Sample")) {
+            editorGraph->addNode(
+                TextureSamplerController::Make(TextureSubType::TextureCube,
+                                               position));
         }
         for (size_t i = 0; i < EnumCount<ArithmeticOp>; ++i) {
             auto op = (ArithmeticOp)i;

@@ -27,13 +27,13 @@ public:
 
     VectorConstant* vectorConstant(int numComponents, vml::float4 value);
 
-    TextureConstant* textureConstant(AssetHandle asset);
+    TextureConstant* textureConstant(TextureSubType subtype, AssetHandle asset);
 
     RasterizerInput* rasterizerInput(RasterizerInputKind kind);
 
     AggregateType const* aggregateType(std::span<Type const* const> elements);
 
-    TextureType const* textureType();
+    TextureType const* textureType(TextureSubType subtype);
 
     ///  \Returns a list of all existing types
     std::vector<Type const*> types() const;

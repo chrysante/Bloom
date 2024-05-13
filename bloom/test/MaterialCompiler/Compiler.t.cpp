@@ -16,8 +16,8 @@ static AssetHandle genTexture() {
 TEST_CASE() {
     Context ctx;
     MaterialGraph g(MaterialShadingModel::Unlit);
-    auto* tex0 = ctx.textureConstant(genTexture());
-    auto* tex1 = ctx.textureConstant(genTexture());
+    auto* tex0 = ctx.textureConstant(TextureSubType::Texture2D, genTexture());
+    auto* tex1 = ctx.textureConstant(TextureSubType::TextureCube, genTexture());
     auto* const0 = ctx.vectorConstant(1, { 1, 0, 0, 0 });
     auto* const1 = ctx.vectorConstant(3, { 2, 1, 5, 0 });
     auto* vec0 =
@@ -37,7 +37,10 @@ TEST_CASE() {
     resultVal =
         g.addValue<BuiltinFunction>(ctx, BuiltinFunctionKind::NormalizeFloat3,
                                     std::vector<Value*>{ resultVal });
-    g.setRoot(resultVal);
+    auto* worldpos = ctx.rasterizerInput(RasterizerInputKind::WorldPosition);
+    auto* col =
+        g.addValue<TextureSampler>(ctx, tex1, worldpos, SampleMode::Color);
+    g.setRoot(col);
     auto generator = makeCodeGenerator(ctx, g, {});
     auto result = generator->run();
     std::cout << result.source << std::endl;

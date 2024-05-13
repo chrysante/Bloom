@@ -43,7 +43,7 @@ UTL_DYNCAST_DEFINE(poppy::nodeEditor::OutputPin,
 
 namespace poppy::nodeEditor {
 
-enum class PinFlags { Optional = 1 << 0 };
+enum class PinFlags { Optional = 1 << 0, Disabled = 1 << 1 };
 
 UTL_ENUM_OPERATORS(PinFlags)
 

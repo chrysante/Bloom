@@ -42,6 +42,8 @@ public:
 
     std::span<Type const* const> elements() const { return _elements; }
 
+    Type const* element(size_t index) const { return _elements[index]; }
+
 private:
     std::vector<Type const*> _elements;
 };

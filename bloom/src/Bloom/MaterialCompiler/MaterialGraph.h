@@ -24,13 +24,7 @@ public:
     explicit MaterialGraph(MaterialShadingModel shadingModel):
         _shadingModel(shadingModel) {}
 
-    template <std::derived_from<Value> T>
-    T* setRoot(DynUniquePtr<T> value) {
-        assert(!_root);
-        auto* result = addValue(std::move(value));
-        _root = result;
-        return result;
-    }
+    void setRoot(Value* value) { _root = value; }
 
     Value* addValue(DynUniquePtr<Value> value);
 

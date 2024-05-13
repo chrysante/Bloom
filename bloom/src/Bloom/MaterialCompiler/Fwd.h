@@ -23,7 +23,7 @@ enum class TypeCategory {
 enum class ValueNodeType {
 #define BL_MATGRAPH_VALUE(Name, ...) Name,
 #include "Bloom/MaterialCompiler/Lists.def"
-    LAST = AggregateBuilder
+    LAST = AggregateElement
 };
 
 using NoParent = void;

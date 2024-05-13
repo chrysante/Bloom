@@ -150,7 +150,9 @@ struct OutputNodeController: MaterialNodeController {
             ctx.floatType(),
             ctx.float3Type(),
         });
-        return { graph.setRoot(allocate<AggregateBuilder>(type)) };
+        auto* value = graph.addValue<AggregateBuilder>(type);
+        graph.setRoot(value);
+        return { value };
     }
 
     vml::float4 nodeColor() override { return { 0.1, 0.1, 0.1, 1 }; }
@@ -694,7 +696,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
 
     MaterialSourceData generateSource() const override {
         Context ctx;
-        MaterialGraph graph(MaterialShadingModel::DefaultLit);
+        MaterialGraph graph(shadingModel);
         MaterialNodeController::ValueMap map;
         for (auto* node: editorGraph.nodes()) {
             auto* controller = getController(node);
@@ -702,6 +704,16 @@ struct MaterialModelImpl: bloom::MaterialModel {
         }
         for (auto* node: editorGraph.nodes()) {
             getController(node)->linkGraphNode(ctx, map);
+        }
+        switch (shadingModel) {
+        case MaterialShadingModel::Unlit:
+            if (auto* root = graph.root()) {
+                auto* newRoot = graph.addValue<AggregateElement>(root, 1);
+                graph.setRoot(newRoot);
+            }
+            break;
+        case MaterialShadingModel::DefaultLit:
+            break;
         }
         auto codegen = makeCodeGenerator(ctx, graph, {});
         auto result = codegen->run();

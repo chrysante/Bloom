@@ -81,6 +81,8 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void writeFragmentOutput();
     void writeFragmentFunction();
     void writeVertexFunction();
+    void writeUnlitFragmentFunction();
+    void writeDefaultLitFragmentFunction();
 
     void codegen(Value const& value) {
         visit(value, [this](auto& value) { codegenImpl(value); });
@@ -92,6 +94,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void codegenImpl(TextureSampler const& value);
     void codegenImpl(VectorBuilder const& value);
     void codegenImpl(VectorElement const&) {}
+    void codegenImpl(AggregateElement const&) {}
     void codegenImpl(AggregateBuilder const& value);
 
     /// Called for every value that is part of the program
@@ -102,10 +105,13 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     std::string genNameImpl(TextureConstant const&);
     std::string genNameImpl(RasterizerInput const&);
     std::string genNameImpl(VectorElement const&);
+    std::string genNameImpl(AggregateElement const&);
 
     std::string getName(Value const* value) { return valueNameGen.get(value); }
 
     std::string getName(Type const* type) { return typeNameGen.get(type); }
+
+    void clampGreaterZero(Type const* type, auto const&... valueName);
 
     Context const& ctx;
     MaterialGraph const& graph;
@@ -225,20 +231,15 @@ void MetalCodeGenerator::beginFunction() {
 
 void MetalCodeGenerator::endFunction() {
     std::string valueName = getName(graph.root());
-    writeItem([&] {
-        writeRaw(valueName, ".albedo = max");
-        writeScope(ScopeType::Paran, [&] {
-            writeItem("float3()");
-            writeItem(valueName, ".albedo");
-        });
-    });
-    writeItem([&] {
-        writeRaw(valueName, ".emissive = max");
-        writeScope(ScopeType::Paran, [&] {
-            writeItem("float3()");
-            writeItem(valueName, ".emissive");
-        });
-    });
+    switch (graph.shadingModel()) {
+    case MaterialShadingModel::Unlit:
+        clampGreaterZero(returnType, valueName);
+        break;
+    case MaterialShadingModel::DefaultLit:
+        clampGreaterZero(ctx.float3Type(), valueName, ".albedo");
+        clampGreaterZero(ctx.float3Type(), valueName, ".emissive");
+        break;
+    }
     writeItem("return ", valueName);
     endScope();
     endItem();
@@ -316,6 +317,50 @@ void MetalCodeGenerator::writeVertexFunction() {
 }
 
 void MetalCodeGenerator::writeFragmentFunction() {
+    switch (graph.shadingModel()) {
+    case MaterialShadingModel::Unlit:
+        writeUnlitFragmentFunction();
+        break;
+    case MaterialShadingModel::DefaultLit:
+        writeDefaultLitFragmentFunction();
+        break;
+    }
+}
+
+void MetalCodeGenerator::writeUnlitFragmentFunction() {
+    using enum GlobalMaterialBindingType;
+    using enum MaterialShaderType;
+    auto fn = makeItem();
+    writeRaw("fragment ", MaterialFragmentOutName, " ",
+             MaterialFragmentShaderName);
+    auto paramScope = makeScope(ScopeType::FuncParams);
+    writeItem(MaterialVertexOutName, " in [[stage_in]]");
+    writeItem("CameraInput device const& cameraBuffer [[buffer(",
+              getBindIndex(Fragment, Camera), ")]]");
+    writeItem("uint32_t device const& entityID [[buffer(",
+              getBindIndex(Fragment, GeometryIDBuffer), ")]]");
+    for (auto [tex, index]: textureIndexMap) {
+        writeItem("texture2d<half> ", getName(tex), " [[texture(", index,
+                  ")]]");
+    }
+    paramScope.pop();
+    auto fnScope = makeScope(ScopeType::CompoundStmt);
+    writeItem("in.normalWS.xyz = normalize(in.normalWS.xyz)");
+    writeItem("in.tangentWS.xyz = normalize(in.tangentWS.xyz)");
+    writeItem("in.binormalWS.xyz = normalize(in.binormalWS.xyz)");
+    writeItem([&] {
+        writeRaw("float3 color = ", MaterialFragmentFunctionName);
+        auto argScope = makeScope(ScopeType::Paran);
+        writeItem("in");
+        for (auto [tex, index]: textureIndexMap) {
+            writeItem(getName(tex));
+        }
+    });
+    writeItem("return { float4(color, 1), entityID }");
+    fnScope.pop();
+}
+
+void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
     using enum GlobalMaterialBindingType;
     using enum MaterialShaderType;
     auto fn = makeItem();
@@ -336,13 +381,8 @@ void MetalCodeGenerator::writeFragmentFunction() {
     writeItem("texture2d_array<float> shadowMaps [[texture(",
               getBindIndex(Fragment, ShadowMaps), ")]]");
     for (auto [tex, index]: textureIndexMap) {
-        writeItem([&] {
-            writeRaw("texture2d<half> ", getName(tex), " ");
-            auto attr1 = makeScope(ScopeType::Bracket);
-            auto attr2 = makeScope(ScopeType::Bracket);
-            writeRaw("texture");
-            writeScope(ScopeType::Paran, index);
-        });
+        writeItem("texture2d<half> ", getName(tex), " [[texture(", index,
+                  ")]]");
     }
     paramScope.pop();
     auto fnScope = makeScope(ScopeType::CompoundStmt);
@@ -479,4 +519,19 @@ std::string MetalCodeGenerator::genNameImpl(RasterizerInput const& input) {
 
 std::string MetalCodeGenerator::genNameImpl(VectorElement const& e) {
     return utl::strcat(getName(e.operand()), ".", "xyzw"[e.index()]);
+}
+
+std::string MetalCodeGenerator::genNameImpl(AggregateElement const& e) {
+    return utl::strcat(getName(e.operand()), "._", e.index());
+}
+
+void MetalCodeGenerator::clampGreaterZero(Type const* type,
+                                          auto const&... valueName) {
+    writeItem([&] {
+        writeRaw(valueName..., " = max");
+        writeScope(ScopeType::Paran, [&] {
+            writeItem(getName(type), "()");
+            writeItem(valueName...);
+        });
+    });
 }

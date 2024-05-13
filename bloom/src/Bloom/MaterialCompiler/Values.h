@@ -152,6 +152,23 @@ public:
     explicit AggregateBuilder(AggregateType const* type);
 };
 
+/// Element access into an aggregate, i.e., `value.member`
+class AggregateElement: public User {
+public:
+    /// \p baseValue may not be null and must be of type `AggregateType`
+    explicit AggregateElement(Value* baseValue, int index);
+
+    /// \p elementType is the type of the extracted element
+    explicit AggregateElement(Type const* elementType, int index);
+
+    int index() const { return _index; }
+
+    Value* operand() const { return User::operand(0); }
+
+private:
+    int _index;
+};
+
 } // namespace bloom::matc
 
 #endif // BLOOM_MATERIALCOMPILER_VALUES_H

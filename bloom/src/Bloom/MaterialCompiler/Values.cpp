@@ -81,3 +81,13 @@ AggregateBuilder::AggregateBuilder(Context& ctx, std::vector<Value*> values):
 AggregateBuilder::AggregateBuilder(AggregateType const* type):
     User(ValueNodeType::AggregateBuilder, type,
          std::vector<Value*>(type->elements().size())) {}
+
+AggregateElement::AggregateElement(Value* baseValue, int index):
+    User(ValueNodeType::AggregateElement,
+         cast<AggregateType const*>(baseValue->type())->element(index),
+         { baseValue }),
+    _index(index) {}
+
+AggregateElement::AggregateElement(Type const* elementType, int index):
+    User(ValueNodeType::AggregateElement, elementType, std::vector<Value*>(1)),
+    _index(index) {}

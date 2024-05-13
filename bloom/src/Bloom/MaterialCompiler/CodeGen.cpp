@@ -48,21 +48,6 @@ private:
     utl::hashmap<T, std::string> map;
 };
 
-static std::string makeConstantName(VectorConstant const& c) {
-    switch (c.numComponents()) {
-    case 1:
-        return utl::strcat(c.get().x);
-    case 2:
-        return utl::strcat("float2", c.get().xy);
-    case 3:
-        return utl::strcat("float3", c.get().xyz);
-    case 4:
-        return utl::strcat("float4", c.get());
-    default:
-        assert(false);
-    }
-}
-
 struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     MetalCodeGenerator(Context const& ctx, MaterialGraph const& graph,
                        CodeGenOptions const& options):
@@ -73,20 +58,12 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
 
     CodegenResult run() override;
 
-    void declareTexture(TextureConstant const* tex) {
-        textureIndexMap[tex] = ReservedTextureSlots + textureIndexCounter++;
-    }
-
     void declareType(Type const* type) {
         visit(*type, [this](auto& type) { declareTypeImpl(&type); });
     }
     void declareTypeImpl(Type const*) {}
     void declareTypeImpl(VectorType const* type);
     void declareTypeImpl(AggregateType const* type);
-
-    void codegen(Value const& value) {
-        visit(value, [this](auto& value) { codegenImpl(value); });
-    }
 
     void beginFunction();
     void endFunction();
@@ -97,6 +74,9 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void writeFragmentFunction();
     void writeVertexFunction();
 
+    void codegen(Value const& value) {
+        visit(value, [this](auto& value) { codegenImpl(value); });
+    }
     void codegenImpl(Value const&) { assert(false); }
     void codegenImpl(VectorConstant const&) {}
     void codegenImpl(TextureConstant const&) {}
@@ -106,45 +86,18 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void codegenImpl(VectorElement const&) {}
     void codegenImpl(AggregateBuilder const& value);
 
-    std::string getName(Value const* value) {
-        if (!valueNameGen.contains(value)) {
-            // clang-format off
-            auto name = visit<std::optional<std::string>>(*value, utl::overload{
-                [&](VectorConstant const& c) {
-                    return makeConstantName(c);
-                },
-                [&](TextureConstant const& c) {
-                    return utl::strcat("Texture_", textureIndexMap[&c]);
-                },
-                [&](RasterizerInput const& input) {
-                    using enum RasterizerInputKind;
-                    switch (input.kind()) {
-                    case TextureCoords:
-                        return "in.textureCoords";
-                    case VertexNormals:
-                        return "in.normalWS.xyz";
-                    case VertexTangents:
-                        return "in.tangentWS.xyz";
-                    case VertexBinormals:
-                        return "in.binormalWS.xyz";
-                    }
-                },
-                [&](VectorElement const& e) {
-                    return utl::strcat(getName(e.operand()), ".",
-                                       "xyzw"[e.index()]);
-                },
-                [](Value const&) { return std::nullopt; }
-            }); // clang-format on
-            if (name) {
-                valueNameGen.setName(value, *name);
-            }
-        }
-        return valueNameGen.get(value);
-    }
+    /// Called for every value that is part of the program
+    /// Derived value types can overload `genNameImpl()` to generate custom
+    /// names
+    void genName(Value const& value);
+    std::string genNameImpl(VectorConstant const& c);
+    std::string genNameImpl(TextureConstant const&);
+    std::string genNameImpl(RasterizerInput const&);
+    std::string genNameImpl(VectorElement const&);
 
-    void setName(Value const* value, std::string name) {
-        return valueNameGen.setName(value, std::move(name));
-    }
+    std::string getName(Value const* value) { return valueNameGen.get(value); }
+
+    std::string getName(Type const* type) { return typeNameGen.get(type); }
 
     Context const& ctx;
     MaterialGraph const& graph;
@@ -200,14 +153,14 @@ CodegenResult MetalCodeGenerator::run() {
     }
     returnType = graph.root()->type();
     auto order = topsort(graph.values() | ranges::to<std::vector>);
+    for (auto* value: order) {
+        genName(*value);
+    }
     writeFilePrologue();
     writeVertexOutput();
     writeFragmentOutput();
     for (auto* type: ctx.types()) {
         declareType(type);
-    }
-    for (auto tex: ctx.textureConstants()) {
-        declareTexture(tex);
     }
     beginFunction();
     for (auto* value: order) {
@@ -243,16 +196,16 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
     }
     // TODO: This does not handle nested structs
     auto item = makeItem();
-    writeRaw("struct ", typeNameGen.get(type));
+    writeRaw("struct ", getName(type));
     auto scope = makeScope(ScopeType::CompoundStmt);
-    for (auto [index, member]: type->elements() | enumerate) {
-        writeItem(typeNameGen.get(member), " _", index);
+    for (auto [index, memberType]: type->elements() | enumerate) {
+        writeItem(getName(memberType), " _", index);
     }
 }
 
 void MetalCodeGenerator::beginFunction() {
     beginItem();
-    writeRaw("static ", typeNameGen.get(returnType), " material");
+    writeRaw("static ", getName(returnType), " material");
     beginScope(ScopeType::FuncParams);
     writeItem("FragmentIn in");
     for (auto [tex, index]: textureIndexMap) {
@@ -410,7 +363,7 @@ void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
      */
     std::string samplerName =
         utl::strcat(getName(sample.texture()), "_Sampler");
-    std::string sampleTypeName = typeNameGen.get(sample.type());
+    std::string sampleTypeName = getName(sample.type());
     std::string sampleName = getName(&sample);
     writeItem([&] {
         writeRaw("constexpr sampler ", samplerName);
@@ -440,7 +393,7 @@ void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
 
 void MetalCodeGenerator::codegenImpl(VectorBuilder const& value) {
     auto item = makeItem();
-    writeRaw(typeNameGen.get(value.type()), " ", getName(&value));
+    writeRaw(getName(value.type()), " ", getName(&value));
     auto scope = makeScope(ScopeType::Paran);
     for (auto* operand: value.operands()) {
         writeItem(getName(operand));
@@ -449,9 +402,55 @@ void MetalCodeGenerator::codegenImpl(VectorBuilder const& value) {
 
 void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {
     auto item = makeItem();
-    writeRaw(typeNameGen.get(value.type()), " ", getName(&value));
+    writeRaw(getName(value.type()), " ", getName(&value));
     auto scope = makeScope(ScopeType::BraceList);
     for (auto* operand: value.operands()) {
         writeItem(getName(operand));
     }
+}
+
+void MetalCodeGenerator::genName(Value const& value) {
+    visit(value, [this](auto& value) {
+        if constexpr (requires { genNameImpl(value); }) {
+            valueNameGen.setName(&value, genNameImpl(value));
+        }
+    });
+}
+
+std::string MetalCodeGenerator::genNameImpl(VectorConstant const& c) {
+    if (c.numComponents() == 1) {
+        return utl::strcat(c.get().x);
+    }
+    SourceEmitter e(ScopeType::Paran);
+    e.writeRaw("float", c.numComponents());
+    e.writeScope(ScopeType::Paran, [&] {
+        for (int i = 0; i < c.numComponents(); ++i) {
+            e.writeItem(c.get()[i]);
+        }
+    });
+    return e.takeSource();
+}
+
+std::string MetalCodeGenerator::genNameImpl(TextureConstant const& tex) {
+    int index = ReservedTextureSlots + textureIndexCounter++;
+    textureIndexMap[&tex] = index;
+    return utl::strcat("Texture_", index);
+}
+
+std::string MetalCodeGenerator::genNameImpl(RasterizerInput const& input) {
+    using enum RasterizerInputKind;
+    switch (input.kind()) {
+    case TextureCoords:
+        return "in.textureCoords";
+    case VertexNormals:
+        return "in.normalWS.xyz";
+    case VertexTangents:
+        return "in.tangentWS.xyz";
+    case VertexBinormals:
+        return "in.binormalWS.xyz";
+    }
+}
+
+std::string MetalCodeGenerator::genNameImpl(VectorElement const& e) {
+    return utl::strcat(getName(e.operand()), ".", "xyzw"[e.index()]);
 }

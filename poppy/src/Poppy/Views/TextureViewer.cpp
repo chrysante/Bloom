@@ -46,6 +46,7 @@ struct TextureViewer::Data {
                         // texture to prevent crash in imgui renderer
     int face = 0;
     Options options;
+    SplitView splitView;
 };
 
 TextureViewer::TextureViewer(): TextureViewer(nullptr, {}) {}
@@ -160,7 +161,7 @@ void TextureViewer::display() {
     switch (data->options.displayMode) {
     case DisplayMode::Expanded:
         // clang-format off
-        splitView("SplitView", {
+        data->splitView.display({
             [&] {
                 displayTexture(texview, ImGui::GetContentRegionAvail(), 
                                data->options.rounding);

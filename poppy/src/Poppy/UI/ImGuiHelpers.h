@@ -2,11 +2,12 @@
 #define POPPY_UI_IMGUIHELPERS_H
 
 #include <array>
+#include <functional>
 #include <initializer_list>
+#include <span>
 #include <string_view>
 
 #include <imgui.h>
-#include <utl/function_view.hpp>
 #include <utl/scope_guard.hpp>
 
 #include "Bloom/Core/EnumCount.h"
@@ -95,8 +96,23 @@ void displayEmptyWithReason(std::string_view reason);
 void displayEmptyWithError(std::string_view reason);
 
 /// Displays a resizable split view
-void splitView(std::string_view ID,
-               std::initializer_list<utl::function_view<void()>> contents);
+class SplitView {
+public:
+    enum Flags { None = 0, NoPadding = 1 << 0 };
+
+    explicit SplitView(std::string ID = "SplitView"): ID(ID) {}
+
+    void display(std::span<std::function<void()> const> contents,
+                 Flags flags = None);
+
+    void display(std::initializer_list<std::function<void()>> contents,
+                 Flags flags = None);
+
+private:
+    std::string ID;
+    float totalWidth = 0;
+    std::vector<float> widths;
+};
 
 } // namespace poppy
 

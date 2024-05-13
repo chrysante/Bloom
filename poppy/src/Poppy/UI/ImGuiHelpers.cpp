@@ -4,6 +4,8 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <range/v3/algorithm.hpp>
+#include <range/v3/numeric.hpp>
 #include <range/v3/view.hpp>
 #include <utl/strcat.hpp>
 #include <vml/vml.hpp>
@@ -169,25 +171,30 @@ void poppy::displayEmptyWithError(std::string_view reason) {
     displayEmptyImpl(reason, emptyPlaceholderFont(), { 1, 0, .2, 1 });
 }
 
-void poppy::splitView(
-    std::string_view strID,
-    std::initializer_list<utl::function_view<void()>> contents) {
-    ImGuiID ID = ImGui::GetID(strID.data(), strID.data() + strID.size());
+void SplitView::display(std::span<std::function<void()> const> contents,
+                        Flags flags) {
+    ImGuiID imguiID = ImGui::GetID(ID.data(), ID.data() + ID.size());
     float2 contentSize = ImGui::GetContentRegionAvail();
-    static float totalWidth = contentSize.x;
-    static std::vector<float> widths;
-    if (widths.size() != contents.size()) {
-        widths.resize(contents.size(), totalWidth / contents.size());
-    }
     float newWidth = contentSize.x;
-    if (totalWidth != newWidth) {
+    if (widths.size() != contents.size()) {
+        widths.resize(contents.size());
+    }
+    ranges::for_each(widths, [&](float& width) {
+        if (width <= 0) {
+            width = contentSize.x / contents.size();
+        }
+    });
+    float sum = ranges::accumulate(widths, 0.0f);
+    ranges::for_each(widths,
+                     [&](float& width) { width = width * newWidth / sum; });
+    if (totalWidth > 0 && totalWidth != newWidth) {
         float factor = newWidth / totalWidth;
         for (auto& width: widths) {
             width *= factor;
         }
         totalWidth = newWidth;
     }
-    ImGui::PushID(ID);
+    ImGui::PushID(imguiID);
     float2 cursorPos = ImGui::GetCursorScreenPos();
     auto* window = ImGui::GetCurrentWindow();
     float acc = 0;
@@ -213,7 +220,9 @@ void poppy::splitView(
             widthCopy -= 2 * halfSplitterWidth;
         }
         ImRect windowBB(pos, pos + float2(widthCopy, contentSize.y));
-        windowBB.Expand(-padding);
+        if ((flags & NoPadding) == 0) {
+            windowBB.Expand(-padding);
+        }
         ImGui::SetNextWindowPos(windowBB.Min);
         if (ImGui::BeginChild(window->GetID(index), windowBB.GetSize())) {
             content();
@@ -222,4 +231,9 @@ void poppy::splitView(
         acc += width;
     }
     ImGui::PopID();
+}
+
+void SplitView::display(std::initializer_list<std::function<void()>> contents,
+                        Flags flags) {
+    display(std::span(contents), flags);
 }

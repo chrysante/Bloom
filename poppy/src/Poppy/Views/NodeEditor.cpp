@@ -806,6 +806,8 @@ void NodeEditor::setDelegate(std::unique_ptr<NodeEditorDelegate> delegate) {
     impl->delegate = std::move(delegate);
 }
 
+NodeEditorDelegate* NodeEditor::getDelegate() { return impl->delegate.get(); }
+
 static bool beginInvisibleWindow(
     char const* name, float2 pos, float2 size,
     ImGuiWindowFlags flags = ImGuiWindowFlags_None) {

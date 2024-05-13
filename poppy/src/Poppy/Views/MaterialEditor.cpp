@@ -14,6 +14,7 @@
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetDragDrop.h"
@@ -671,12 +672,18 @@ static std::unique_ptr<NodeController> deserializeNodeController(
 }
 
 struct MaterialModelImpl: bloom::MaterialModel {
-    bool hasCPURepr() const override { return !model.empty(); }
+    bool hasCPURepr() const override { return !editorGraph.empty(); }
 
-    YAML::Node serialize() const override { return model.serialize(); }
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["ShadingModel"] = shadingModel;
+        root["NodeGraph"] = editorGraph.serialize();
+        return root;
+    }
 
     void deserialize(YAML::Node const& node) override {
-        model.deserialize(node, [](YAML::Node const& node) {
+        shadingModel = node["ShadingModel"].as<MaterialShadingModel>();
+        editorGraph.deserialize(node["NodeGraph"], [](YAML::Node const& node) {
             return deserializeNodeController(node["Type"].as<NodeType>(), node);
         });
     }
@@ -689,11 +696,11 @@ struct MaterialModelImpl: bloom::MaterialModel {
         Context ctx;
         MaterialGraph graph(MaterialShadingModel::DefaultLit);
         MaterialNodeController::ValueMap map;
-        for (auto* node: model.nodes()) {
+        for (auto* node: editorGraph.nodes()) {
             auto* controller = getController(node);
             map[node] = controller->createGraphNodes(ctx, graph);
         }
-        for (auto* node: model.nodes()) {
+        for (auto* node: editorGraph.nodes()) {
             getController(node)->linkGraphNode(ctx, map);
         }
         auto codegen = makeCodeGenerator(ctx, graph, {});
@@ -704,16 +711,24 @@ struct MaterialModelImpl: bloom::MaterialModel {
         };
     }
 
-    mutable NodeEditorGraph model;
+    void setShadingModel(MaterialShadingModel model) {
+        if (shadingModel == model) {
+            return;
+        }
+        shadingModel = model;
+    }
+
+    mutable NodeEditorGraph editorGraph;
+    MaterialShadingModel shadingModel;
 };
 
 } // namespace
 
-static NodeEditorGraph* getModel(Material* material) {
+static MaterialModelImpl* getModel(Material* material) {
     if (!material) {
         return nullptr;
     }
-    return &dynamic_cast<MaterialModelImpl*>(material->model.get())->model;
+    return dynamic_cast<MaterialModelImpl*>(material->model.get());
 }
 
 std::unique_ptr<bloom::MaterialModel> bloom::makeMaterialModel() {
@@ -726,43 +741,42 @@ struct MaterialEditor: View {
     MaterialEditor();
 
     void display() override;
-
+    void displayOptions();
     void onInput(InputEvent& event) override;
-
     YAML::Node serialize() const override;
-
     void deserialize(YAML::Node node) override;
-
     void doOpenData(std::any data) override {
         if (auto* mat = std::any_cast<Reference<Material>>(&data)) {
             material = *mat;
-            nodeEditor.setModel(getModel(material.get()));
+            nodeEditor.setModel(&getModel(material.get())->editorGraph);
         }
     }
-
     void compile();
 
     Reference<Material> material;
     NodeEditor nodeEditor;
+    SplitView splitView;
+    bool showOptions = false;
 };
 
 struct Delegate: NodeEditorDelegate {
     Delegate(MaterialEditor& editor): editor(editor) {}
 
     void backgroundPopupMenu(vml::float2 position) override {
-        auto* model = getModel();
-        if (!model) {
+        auto* editorGraph = &getModel()->editorGraph;
+        if (!editorGraph) {
             return;
         }
         if (ImGui::MenuItem("Output")) {
-            model->addNode(OutputNodeController::Make(position));
+            editorGraph->addNode(OutputNodeController::Make(position));
         }
         if (ImGui::BeginMenu("Inputs")) {
             for (auto kind: magic_enum::enum_values<InputKind>()) {
                 if (ImGui::MenuItem(
                         std::string(magic_enum::enum_name(kind)).c_str()))
                 {
-                    model->addNode(InputNodeController::Make(position, kind));
+                    editorGraph->addNode(
+                        InputNodeController::Make(position, kind));
                 }
             }
             ImGui::EndMenu();
@@ -770,7 +784,8 @@ struct Delegate: NodeEditorDelegate {
         if (ImGui::BeginMenu("Append")) {
             for (int i = 2; i <= 4; ++i) {
                 if (ImGui::MenuItem(utl::strcat("Float", i).c_str())) {
-                    model->addNode(AppendNodeController::Make(position, i));
+                    editorGraph->addNode(
+                        AppendNodeController::Make(position, i));
                 }
             }
             ImGui::EndMenu();
@@ -778,7 +793,8 @@ struct Delegate: NodeEditorDelegate {
         if (ImGui::BeginMenu("Split")) {
             for (int i = 2; i <= 4; ++i) {
                 if (ImGui::MenuItem(utl::strcat("Float", i).c_str())) {
-                    model->addNode(SplitNodeController::Make(position, i));
+                    editorGraph->addNode(
+                        SplitNodeController::Make(position, i));
                 }
             }
             ImGui::EndMenu();
@@ -788,24 +804,26 @@ struct Delegate: NodeEditorDelegate {
                 if (ImGui::MenuItem(
                         std::string(magic_enum::enum_name(type)).c_str()))
                 {
-                    model->addNode(ConstantController::Make(position, type));
+                    editorGraph->addNode(
+                        ConstantController::Make(position, type));
                 }
             }
             ImGui::EndMenu();
         }
         if (ImGui::MenuItem("Texture Sample")) {
-            model->addNode(TextureSamplerController::Make(position));
+            editorGraph->addNode(TextureSamplerController::Make(position));
         }
         for (size_t i = 0; i < EnumCount<ArithmeticOp>; ++i) {
             auto op = (ArithmeticOp)i;
             if (ImGui::MenuItem(std::string(magic_enum::enum_name(op)).c_str()))
             {
-                model->addNode(ArithmeticNodeController::Make(op, position));
+                editorGraph->addNode(
+                    ArithmeticNodeController::Make(op, position));
             }
         }
     }
 
-    NodeEditorGraph* getModel() { return ::getModel(editor.material.get()); }
+    MaterialModelImpl* getModel() { return ::getModel(editor.material.get()); }
 
     MaterialEditor& editor;
 };
@@ -827,7 +845,17 @@ MaterialEditor::MaterialEditor(): nodeEditor(commandPaletteWrite()) {
             .text([this] { return material ? material->name().c_str() : ""; })
             .font(FontDesc::UIDefault().setWeight(FontWeight::Bold)),
         ToolbarSpacer(),
-        ToolbarIconButton("plus")
+        ToolbarDropdownMenu()
+            .icon("plus")
+            .content([this] {
+                auto* del = nodeEditor.getDelegate();
+                if (!del) return;
+                del->backgroundPopupMenu({ 0, 0 });
+            })
+            .enabled([this] { return nodeEditor.getDelegate(); }),
+        ToolbarIconButton("cog-alt")
+            .onClick([this] { showOptions ^= true; })
+            .enabled([this] { return material != nullptr; })
     }); // clang-format on
     setPadding({ 0, 0 });
     nodeEditor.setDelegate(std::make_unique<Delegate>(*this));
@@ -839,7 +867,46 @@ void MaterialEditor::display() {
         displayEmptyWithReason("No Material Open");
         return;
     }
-    nodeEditor.display();
+    if (showOptions) {
+        // clang-format off
+        splitView.display({
+            [this] { nodeEditor.display(); },
+            [this] { displayOptions(); }
+        }, SplitView::NoPadding); // clang-format on
+    }
+    else {
+        nodeEditor.display();
+    }
+}
+
+void MaterialEditor::displayOptions() {
+    ImGui::BeginChild("PropertiesPanel", {},
+                      ImGuiChildFlags_AlwaysUseWindowPadding);
+    using namespace propertiesView;
+    auto* model = getModel(material.get());
+    BL_ASSERT(model);
+    beginSection("Properties");
+    beginProperty("Shading Model");
+    auto currentModel = model->shadingModel;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (ImGui::BeginCombo("###Shading Model",
+                          std::string(magic_enum::enum_name(currentModel))
+                              .c_str()))
+    {
+        for (auto value: magic_enum::enum_values<MaterialShadingModel>()) {
+            bool selected = value == currentModel;
+            if (ImGui::Selectable(std::string(magic_enum::enum_name(value))
+                                      .c_str(),
+                                  selected) &&
+                !selected)
+            {
+                model->setShadingModel(value);
+            }
+        }
+        ImGui::EndCombo();
+    }
+    endSection();
+    ImGui::EndChild();
 }
 
 void MaterialEditor::onInput(InputEvent& event) { nodeEditor.onInput(event); }

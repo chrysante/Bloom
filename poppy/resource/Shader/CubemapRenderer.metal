@@ -13,16 +13,16 @@ constant float3 vertices[] = {
     float3(-1, -1,  1),
     float3(-1,  1, -1),
     float3(-1,  1,  1),
-    // +Y
-    float3(-1, 1, -1),
-    float3(-1, 1,  1),
-    float3( 1, 1, -1),
-    float3( 1, 1,  1),
     // -Y
     float3(-1, -1, -1),
     float3(-1, -1,  1),
     float3( 1, -1, -1),
     float3( 1, -1,  1),
+    // +Y
+    float3(-1, 1, -1),
+    float3(-1, 1,  1),
+    float3( 1, 1, -1),
+    float3( 1, 1,  1),
     // +Z
     float3(-1, -1, 1),
     float3(-1,  1, 1),

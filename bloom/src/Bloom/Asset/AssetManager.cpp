@@ -550,6 +550,8 @@ AssetHandle AssetManager::importAsset(std::string name,
     auto handle = asset->handle();
     impl->doImport(*asset, source);
     impl->flushToDisk(handle);
+    makeAvailable(handle, AssetRepresentation::GPU,
+                  /* force: */ true);
     return handle;
 }
 
@@ -734,7 +736,6 @@ bool Impl::makeAvailImpl(MaterialInstance& inst, RegistryEntry const& entry,
 
 bool Impl::makeAvailImpl(Texture2D& texture, RegistryEntry const& entry,
                          AssetRepresentation repr, bool forceReload) {
-    loadTextureFromDisk(texture, entry.diskLocation);
     // clang-format off
     visitRepr(repr, utl::overload{
         [&](Tag<AssetRepresentation::CPU>) {

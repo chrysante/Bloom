@@ -26,18 +26,24 @@ void bloom::renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
                                            /* near: */ 0.1f,
                                            /* far: */ 10.0f);
     std::array<float4x4, 6> viewMatrices = {
+        // +X
         vml::look_at(float3(0.0f, 0.0f, 0.0f), float3(1.0f, 0.0f, 0.0f),
                      float3(0.0f, -1.0f, 0.0f)),
+        // -X
         vml::look_at(float3(0.0f, 0.0f, 0.0f), float3(-1.0f, 0.0f, 0.0f),
                      float3(0.0f, -1.0f, 0.0f)),
-        vml::look_at(float3(0.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.0f),
-                     float3(0.0f, 0.0f, 1.0f)),
+        // -Y
         vml::look_at(float3(0.0f, 0.0f, 0.0f), float3(0.0f, -1.0f, 0.0f),
                      float3(0.0f, 0.0f, -1.0f)),
+        // +Y
+        vml::look_at(float3(0.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.0f),
+                     float3(0.0f, 0.0f, 1.0f)),
+        // +Z
         vml::look_at(float3(0.0f, 0.0f, 0.0f), float3(0.0f, 0.0f, 1.0f),
                      float3(0.0f, -1.0f, 0.0f)),
+        // -Z
         vml::look_at(float3(0.0f, 0.0f, 0.0f), float3(0.0f, 0.0f, -1.0f),
-                     float3(0.0f, -1.0f, 0.0f))
+                     float3(0.0f, -1.0f, 0.0f)),
     };
     for (auto& m: viewMatrices) {
         m = vml::transpose(projection * m);

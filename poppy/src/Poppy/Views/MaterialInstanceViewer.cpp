@@ -1,25 +1,41 @@
-#include "Poppy/Views/MaterialInstanceViewer.h"
-
 #include <imgui.h>
 
 #include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Core/Core.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/PropertiesView.h"
+#include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetDragDrop.h"
 
 using namespace bloom;
 using namespace poppy;
 
+namespace {
+
+struct MaterialInstanceViewer: public View {
+    MaterialInstanceViewer();
+
+    void display() override;
+
+    void doOpenData(std::any data) override;
+
+    bloom::Reference<bloom::MaterialInstance> inst;
+};
+
+} // namespace
+
 POPPY_REGISTER_VIEW(MaterialInstanceViewer, "Material Instance Viewer");
 
 MaterialInstanceViewer::MaterialInstanceViewer() {
     // clang-format off
     setToolbar({
+        ToolbarSpacer(),
         ToolbarTextItem()
             .text([this] { return inst ? inst->name().c_str() : ""; })
-            .font(FontDesc::UIDefault().setWeight(FontWeight::Semibold))
+            .font(FontDesc::UIDefault().setWeight(FontWeight::Semibold)),
+        ToolbarSpacer(),
     }); // clang-format on
 }
 
@@ -28,24 +44,18 @@ void MaterialInstanceViewer::display() {
         displayEmptyWithReason("No Material Instance Open");
         return;
     }
-    auto materialName = inst->material() ? inst->material()->name() :
-                                           "No Material Assigned";
-    ImGui::Button(materialName.data(),
-                  { ImGui::GetContentRegionAvail().x, 30 });
-    if (auto const assetHandle = acceptAssetDragDrop({ AssetType::Material })) {
-        auto& assetManager = editor().coreSystems().assetManager();
-        auto mat = as<Material>(assetManager.get(*assetHandle));
-        assetManager.makeAvailable(*assetHandle, AssetRepresentation::GPU);
-        inst->setMaterial(std::move(mat));
-        assetManager.saveToDisk(inst->handle());
-    }
-
     using namespace propertiesView;
-
+    if (beginSection()) {
+        beginProperty("Material");
+        auto material = inst->materialRef();
+        if (assetButton(editor(), material)) {
+            inst->setMaterial(std::move(material));
+        }
+        endSection();
+    }
     auto params = inst->paramaters();
     bool edited = false;
-    header("Parameters");
-    if (beginSection()) {
+    if (beginSection("Parameters")) {
         beginProperty("Base Color");
         edited |= ImGui::ColorEdit3("##base-color", params.baseColor.data(),
                                     ImGuiColorEditFlags_NoInputs |
@@ -79,9 +89,12 @@ void MaterialInstanceViewer::display() {
     }
 }
 
-void MaterialInstanceViewer::setMaterialInstance(
-    Reference<MaterialInstance> _) {
-    inst = std::move(_);
+void MaterialInstanceViewer::doOpenData(std::any data) {
+    auto* newInst = std::any_cast<Reference<MaterialInstance>>(&data);
+    if (!newInst) {
+        return;
+    }
+    inst = *newInst;
     editor()
         .coreSystems()
         .assetManager()

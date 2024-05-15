@@ -433,7 +433,7 @@ void Viewport::acceptDragDrop() {
 }
 
 void Viewport::receiveSceneDragDrop() {
-    auto payload = acceptAssetDragDrop({ AssetType::Scene });
+    auto payload = acceptAssetDragDrop(AssetType::Scene);
     if (!payload) {
         return;
     }
@@ -567,8 +567,7 @@ void Viewport::dropdownMenu() {
         }
 
         beginProperty("IBL Texture");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        assetButton(assetManager(), iblTexture);
+        assetButton(editor(), iblTexture);
         endSection();
     }
     ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);

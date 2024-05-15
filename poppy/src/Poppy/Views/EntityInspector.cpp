@@ -306,10 +306,9 @@ void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
     auto& meshRenderer = entity.get<MeshRendererComponent>();
     disabledIf(isSimulating(), [&] {
         beginProperty("Mesh");
-        float2 size = { ImGui::GetContentRegionAvail().x, 0 };
-        assetButton(assetManager(), meshRenderer.mesh, size);
+        assetButton(editor(), meshRenderer.mesh);
         beginProperty("Material");
-        assetButton(assetManager(), meshRenderer.materialInstance, size);
+        assetButton(editor(), meshRenderer.materialInstance);
     });
     endSection();
 }

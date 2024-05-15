@@ -9,14 +9,12 @@
 #include <utl/filesystem_ext.hpp>
 #include <vml/vml.hpp>
 
-#include "Bloom/Application/Application.h"
 #include "Bloom/Application/ResourceUtil.h"
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Serialize.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/Graphics/Texture.h"
-#include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Components/Script.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
@@ -28,7 +26,6 @@
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetDragDrop.h"
 #include "Poppy/Views/DirectoryView.h"
-#include "Poppy/Views/MaterialInstanceViewer.h"
 #include "Poppy/Views/TextureViewer.h"
 
 using namespace bloom;
@@ -278,48 +275,7 @@ void AssetBrowser::displayNoOpenProject() {
 }
 
 void AssetBrowser::openAsset(bloom::AssetHandle handle) {
-    switch (handle.type()) {
-    case AssetType::Material: {
-        editor().openView("Material Editor", [=, this](View& view) {
-            view.openData(as<Material>(assetManager->get(handle)));
-            assetManager->makeAvailable(handle, AssetRepresentation::CPU);
-        });
-        break;
-    }
-    case AssetType::MaterialInstance: {
-        editor().openView("Material Instance Viewer", [=, this](View& view) {
-            auto* matInstViewer = dynamic_cast<MaterialInstanceViewer*>(&view);
-            BL_ASSERT(matInstViewer);
-            auto materialInstance =
-                as<MaterialInstance>(assetManager->get(handle));
-            matInstViewer->setMaterialInstance(std::move(materialInstance));
-        });
-        break;
-    }
-    case AssetType::Texture2D: {
-        editor().openView("Texture Viewer", [=, this](View& view) {
-            view.openData(as<Texture2D>(assetManager->get(handle)));
-        });
-        break;
-    }
-    case AssetType::Scene: {
-        auto scene = as<Scene>(assetManager->get(handle));
-        assetManager->makeAvailable(handle, AssetRepresentation::CPU);
-        auto& sceneSystem = editor().coreSystems().sceneSystem();
-        sceneSystem.unloadAll();
-        sceneSystem.loadScene(std::move(scene));
-        break;
-    }
-    case AssetType::ScriptSource: {
-        auto command =
-            utl::strcat("open ", assetManager->getAbsoluteFilepath(handle));
-        std::system(command.data());
-        break;
-    }
-    default:
-        Logger::Trace("Cannot open asset of type: ", handle.type());
-        break;
-    }
+    poppy::openAsset(editor(), handle);
 }
 
 YAML::Node AssetBrowser::serialize() const {

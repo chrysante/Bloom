@@ -331,7 +331,7 @@ struct ConstantController: MaterialNodeController {
             ImGui::ColorPicker4("###Value", value.data(), colFlags);
             break;
         case DataType::Texture: {
-            if (auto asset = acceptAssetDragDrop({ AssetType::Texture2D })) {
+            if (auto asset = acceptAssetDragDrop(AssetType::Texture2D)) {
                 textureAsset = *asset;
                 texHandle = {};
                 triedToGetTexture = false;

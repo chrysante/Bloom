@@ -76,7 +76,7 @@ std::pair<Reference<Texture2D>, TextureHandle> IBLGenTool::getTexture(
 void IBLGenTool::imgDragDropButton(Reference<Texture2D>& tex,
                                    TextureHandle& view, int side) {
     ImGui::ImageButton(view.nativeHandle(), { 400, 400 });
-    if (auto asset = acceptAssetDragDrop({ AssetType::Texture2D })) {
+    if (auto asset = acceptAssetDragDrop(AssetType::Texture2D)) {
         extendLifetime(view);
         std::tie(tex, view) = getTexture(*asset, side);
     }

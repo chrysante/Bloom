@@ -20,7 +20,8 @@ class BLOOM_API MaterialInstance: public Asset {
 public:
     BL_DEFINE_ASSET_CTOR(MaterialInstance, Asset)
 
-    Material* material() { return mMaterial.get(); }
+    Material* material() const { return mMaterial.get(); }
+    Reference<Material> materialRef() const { return mMaterial; }
     void setMaterial(Reference<Material>);
     BufferView parameterBuffer() const { return mParameterBuffer; }
 

@@ -71,7 +71,7 @@ private:
     bool drawDataValid = false;
     std::atomic_int numRenderTasks;
     ImFontAtlas* newFontAtlas = nullptr;
-
+    std::vector<std::any> renderHazardObjects;
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiTestEngine* testEngine;
     bool showTestUI = false;

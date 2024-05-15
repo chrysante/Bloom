@@ -119,8 +119,12 @@ static void submitSelectedGeometry(
         {
             return;
         }
-        geometry.add(meshRenderer.mesh->getRenderer(),
-                     meshRenderer.materialInstance, transform.matrix, 0);
+        auto impl = meshRenderer.mesh->getRenderer();
+        if (!impl) {
+            return;
+        }
+        geometry.add(std::move(impl), meshRenderer.materialInstance,
+                     transform.matrix, 0);
     });
 }
 
@@ -132,6 +136,12 @@ void EditorSceneRenderer::submit(
     mRenderer->submit(scene);
     if (selectedGeometry) {
         submitSelectedGeometry(scene, *selectedGeometry, selectionManager);
+    }
+}
+
+void EditorSceneRenderer::setIBLTexture(Reference<Texture2D> tex) {
+    if (mRenderer) {
+        mRenderer->setIBLTexture(std::move(tex));
     }
 }
 

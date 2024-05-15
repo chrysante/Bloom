@@ -131,11 +131,19 @@ void LightsResource::add(DirectionalLight const& light) {
 
 void LightsResource::add(SkyLight const& light) { skyLights.push_back(light); }
 
+void LightsResource::setIrradianceCoefficients(
+    std::span<vml::float3 const> coefficients) {
+    std::copy_n(coefficients.begin(),
+                std::min(coefficients.size(), irradianceCoefficients.size()),
+                irradianceCoefficients.begin());
+}
+
 void LightsResource::clear() {
     pointLights.clear();
     spotLights.clear();
     dirLights.clear();
     skyLights.clear();
+    irradianceCoefficients = {};
 }
 
 template <typename L>
@@ -156,6 +164,8 @@ void LightsResource::prepare(HardwareDevice& device) {
     lights.numSpotLights = copyLights(spotLights, lights.spotLights);
     lights.numDirLights = copyLights(dirLights, lights.dirLights);
     lights.numSkyLights = copyLights(skyLights, lights.skyLights);
+    ranges::copy(irradianceCoefficients,
+                 ranges::begin(lights.irradianceCoefficients));
     if (!buffer) {
         buffer = device.createBuffer(
             { .size = sizeof lights, .storageMode = StorageMode::Managed });

@@ -283,7 +283,8 @@ YAML::Node View::doSerialize() const {
     return node;
 }
 
-std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
+std::unique_ptr<View> View::doDeserialize(YAML::Node const& node,
+                                          Editor& editor) {
     try {
         int ID = node["ID"].as<int>();
         std::string staticName = node["Static Name"].as<std::string>();
@@ -296,7 +297,7 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node) {
                           staticName);
             return nullptr;
         }
-        auto view = entry->createView();
+        auto view = entry->createView(editor);
         view->data.ID = ID;
         view->data.position = node["Position"].as<float2>();
         view->data.size = node["Size"].as<float2>();

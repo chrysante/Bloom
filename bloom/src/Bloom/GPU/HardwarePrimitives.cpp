@@ -62,3 +62,14 @@ TextureHandle bloom::createSharedTextureView(
         break;
     }
 }
+
+size_t bloom::pixelByteSize(PixelFormat pixelFormat) {
+    switch (pixelFormat) {
+    case PixelFormat::RGBA8Unorm:
+        return 4;
+    case PixelFormat::RGBA32Float:
+        return 16;
+    default:
+        BL_UNIMPLEMENTED();
+    }
+}

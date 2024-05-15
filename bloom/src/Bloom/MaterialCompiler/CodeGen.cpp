@@ -141,6 +141,9 @@ static std::vector<Value const*> topsort(Value const* root) {
     utl::hashset<Value const*> perm;
     utl::hashset<Value const*> tmp;
     auto visit = [&](auto& visit, Value const* value) {
+        if (!value) {
+            throw std::runtime_error("Encountered NULL value");
+        }
         if (perm.contains(value)) {
             return;
         }

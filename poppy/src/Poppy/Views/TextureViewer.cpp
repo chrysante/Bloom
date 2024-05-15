@@ -57,6 +57,41 @@ TextureViewer::TextureViewer(TextureViewer&&) noexcept = default;
 TextureViewer& TextureViewer::operator=(TextureViewer&&) noexcept = default;
 TextureViewer::~TextureViewer() = default;
 
+float4 poppy::copyPixelColor(TextureView texture, float2 coord) {
+    auto format = texture.description().pixelFormat;
+    size_t numBytes = pixelByteSize(format);
+    utl::small_vector<uint8_t> bytes(numBytes);
+    if (uint(coord.x) >= texture.size().x || uint(coord.y) >= texture.size().y)
+    {
+        return {};
+    }
+    vml::AABB<uint32_t, 3> region = { uint3(coord, 0),
+                                      uint3(coord, 0) + uint3(1) };
+    copyTextureToMemory(RenderAPI::Metal, texture, bytes.data(), bytes.size(),
+                        region, 0);
+    switch (format) {
+    case PixelFormat::RGBA8Unorm: {
+        vml::vector<uint8_t, 4> rgba{};
+        std::memcpy(rgba.data(), bytes.data(), sizeof rgba);
+        return rgba.map([](uint8_t value) { return float(value) / 255; });
+    }
+    case PixelFormat::RGBA32Float: {
+        float4 color;
+        std::memcpy(color.data(), bytes.data(), sizeof color);
+        return color;
+    }
+    default:
+        return {};
+    }
+}
+
+void poppy::displayTextureColorTooltip(TextureView texture, float2 coord) {
+    coord = vml::floor(coord);
+    float4 color = copyPixelColor(texture, coord);
+    auto label = utl::strcat("X: ", coord.x, " Y: ", coord.y, "###Color");
+    ImGui::ColorTooltip(label.c_str(), color.data(), ImGuiColorEditFlags_Float);
+}
+
 static void displayTexture(TextureView texture, float2 availSize,
                            float rounding) {
     if (texture.description().type != TextureType::Texture2D) {
@@ -82,16 +117,7 @@ static void displayTexture(TextureView texture, float2 availSize,
     if (ImGui::IsKeyDown(ImGuiKey_ModAlt) && ImGui::IsItemHovered()) {
         float2 coord = (float2(ImGui::GetMousePos()) - displayPos) /
                        displaySize * texture.size().xy;
-        vml::vector<uint8_t, 4> rgba{};
-        vml::AABB<uint32_t, 3> region = { uint3(coord, 0),
-                                          uint3(coord, 0) + uint3(1) };
-        copyTextureToMemory(RenderAPI::Metal, texture, &rgba, 4, region, 0);
-        float4 color =
-            rgba.map([](uint8_t value) { return float(value) / 255; });
-        ImGui::ColorTooltip(utl::strcat("X: ", coord.x, " Y: ", coord.y,
-                                        "###Color")
-                                .c_str(),
-                            color.data(), ImGuiColorEditFlags_Float);
+        displayTextureColorTooltip(texture, coord);
     }
 }
 
@@ -111,7 +137,7 @@ static void displayInfo(Texture2D const& texture) {
         beginProperty("Height");
         ImGui::Text("%d", (int)texture.size.y);
         beginProperty("Byte Size");
-        ImGui::Text("%d", (int)texture.data.size());
+        ImGui::Text("%d", (int)texture.getPixelDataByteSize());
         endSection();
     }
 }

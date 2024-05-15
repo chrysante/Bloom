@@ -1,3 +1,6 @@
+#include <imgui.h>
+#include <imgui_internal.h>
+
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Asset/CubemapRenderer.h"
@@ -20,8 +23,13 @@ namespace {
 
 struct IBLGenTool: View {
     void display();
-
+    void displayFaceFillTool();
     void generateIrradiance();
+    void generateSH();
+    std::pair<Reference<Texture2D>, TextureHandle> getTexture(AssetHandle asset,
+                                                              int side);
+    void imgDragDropButton(Reference<Texture2D>& tex, TextureHandle& view,
+                           int side);
     void extendLifetime(TextureHandle tex) {
         dispatch(DispatchToken::Now, ExtendRenderLifetime{ std::move(tex) });
     }
@@ -33,6 +41,8 @@ struct IBLGenTool: View {
     int sourceside = 0;
     int sourceMipLevel = 0;
     int destside = 0;
+    bool showFaceFillTool = false;
+    std::array<float3, 9> SHCoeffs;
 };
 
 } // namespace
@@ -48,14 +58,14 @@ TextureHandle makeView(Texture2D* tex, int side, int sourceMipLevel = 0) {
                                    sourceMipLevel, 1, side, 1);
 }
 
-static std::pair<Reference<Texture2D>, TextureHandle> getTexture(
-    AssetHandle asset, Emitter& e, int side) {
+std::pair<Reference<Texture2D>, TextureHandle> IBLGenTool::getTexture(
+    AssetHandle asset, int side) {
     if (asset.type() != AssetType::Texture2D) {
         return {};
     }
     Reference<Asset> ref;
-    e.dispatch(DispatchToken::Now,
-               AMGetAsset{ asset, &ref, AssetRepresentation::GPU });
+    dispatch(DispatchToken::Now,
+             AMGetAsset{ asset, &ref, AssetRepresentation::GPU });
     auto tex = as<Texture2D>(ref);
     if (!tex || !tex->GPUHandle) {
         return { tex, {} };
@@ -63,32 +73,21 @@ static std::pair<Reference<Texture2D>, TextureHandle> getTexture(
     return { tex, makeView(tex.get(), side) };
 }
 
-void IBLGenTool::display() {
-    static float4 fillColor = { 0, 0, 0, 1 };
-    ImGui::ColorPicker4("Fill Color", fillColor.data());
-    static bool fillUVs = false;
-    ImGui::Checkbox("Fill UVs", &fillUVs);
-    if (source && ImGui::Button("Fill Face")) {
-        auto& AM = editor().coreSystems().assetManager();
-        AM.makeAvailable(source->handle(), AssetRepresentation::CPU);
-        float4* data = (float4*)source->data.data();
-        size_t imgStride = source->size.x * source->size.y;
-        if (!fillUVs) {
-            std::fill(data + imgStride * sourceside,
-                      data + imgStride * (sourceside + 1), fillColor);
-        }
-        else {
-            data += imgStride * sourceside;
-            for (size_t y = 0; y < source->size.y; ++y) {
-                for (size_t x = 0; x < source->size.x; ++x) {
-                    data[y * source->size.x + x] =
-                        float4((float)x / source->size.x,
-                               (float)y / source->size.y, 0, 1);
-                }
-            }
-        }
-        AM.makeAvailable(source->handle(), AssetRepresentation::GPU, true);
+void IBLGenTool::imgDragDropButton(Reference<Texture2D>& tex,
+                                   TextureHandle& view, int side) {
+    ImGui::ImageButton(view.nativeHandle(), { 400, 400 });
+    if (auto asset = acceptAssetDragDrop({ AssetType::Texture2D })) {
+        extendLifetime(view);
+        std::tie(tex, view) = getTexture(*asset, side);
     }
+}
+
+void IBLGenTool::display() {
+    ImGui::Checkbox("Show Face Fill Tool", &showFaceFillTool);
+    if (showFaceFillTool) {
+        displayFaceFillTool();
+    }
+    ImGui::SeparatorText("Source");
     if (source && source->GPUHandle && ImGui::Button("Generate Mipmaps")) {
         usize2 size = source->size;
         size_t expectedMipapCount =
@@ -120,50 +119,68 @@ void IBLGenTool::display() {
         extendLifetime(sourceView);
         sourceView = makeView(source.get(), sourceside, sourceMipLevel);
     }
-    ImGui::ImageButton(sourceView.nativeHandle(), { 400, 400 });
-    if (auto asset = acceptAssetDragDrop({ AssetType::Texture2D })) {
-        extendLifetime(sourceView);
-        std::tie(source, sourceView) = getTexture(*asset, *this, sourceside);
+    imgDragDropButton(source, sourceView, sourceside);
+    if (ImGui::Button("Generate Irradiance Coefficients")) {
+        generateSH();
     }
-    if (ImGui::SliderInt("Dest Side", &destside, 0, 5)) {
-        extendLifetime(destView);
-        destView = makeView(dest.get(), destside);
-    }
-    ImGui::ImageButton(destView.nativeHandle(), { 400, 400 });
-    if (auto asset = acceptAssetDragDrop({ AssetType::Texture2D })) {
-        extendLifetime(destView);
-        std::tie(dest, destView) = getTexture(*asset, *this, destside);
-    }
-    if (ImGui::Button("Generate Irradiance Map")) {
-        generateIrradiance();
+    ImGui::SeparatorText("Dest");
+    imgDragDropButton(dest, destView, destside);
+    if (dest) {
+        for (auto value: dest->irradianceSHCoefficients) {
+            ImGui::TextEx(utl::strcat(value).c_str());
+        }
+        if (ImGui::Button("Copy")) {
+            std::stringstream sstr;
+            for (auto value: dest->irradianceSHCoefficients)
+                sstr << "float3" << value << ",\n";
+            ImGui::SetClipboardText(sstr.str().c_str());
+        }
     }
 }
 
-void IBLGenTool::generateIrradiance() {
-    if (!source || !source->GPUHandle) {
-        Logger::Error("Cannot generate map: No source");
+void IBLGenTool::generateSH() {
+    if (source) {
+        auto& AM = editor().coreSystems().assetManager();
+        AM.makeAvailable(source->handle(), AssetRepresentation::CPU);
+    }
+    if (!source || !source->pixelData || !dest) {
+        Logger::Error("Cannot generate coefficients: No source or dest data");
         return;
     }
-    if (!dest) {
-        Logger::Error("Cannot generate map: No dest");
-        return;
+    auto* sourceData = reinterpret_cast<float4 const*>(source->pixelData.get());
+    auto coeffs = genLightingCoefficients(sourceData, source->size);
+    if (!dest->pixelData) {
+        dest->pixelData =
+            std::make_unique<uint8_t[]>(dest->getPixelDataByteSize());
     }
-    usize2 size = source->size;
-    auto& device = editor().device();
-    auto& commandQueue = editor().commandQueue();
-    auto destHandle =
-        device.createTexture({ .type = TextureType::CubeTexture,
-                               .pixelFormat = PixelFormat::RGBA32Float,
-                               .size = { size, 1 },
-                               .usage = TextureUsage::RenderTarget,
-                               .storageMode = StorageMode::Shared });
-    auto commandBuffer = commandQueue.createCommandBuffer();
-    renderIrradianceMap(device, *commandBuffer, destHandle, source->GPUHandle);
-    commandBuffer->commit();
-    dest->type = TextureType::CubeTexture;
-    dest->pixelFormat = source->pixelFormat;
-    dest->size = size;
-    dest->GPUHandle = destHandle;
-    extendLifetime(destView);
-    destView = makeView(dest.get(), destside);
+    dest->irradianceSHCoefficients = coeffs | ranges::to<std::vector>;
+}
+
+void IBLGenTool::displayFaceFillTool() {
+    static float4 fillColor = { 0, 0, 0, 1 };
+    ImGui::ColorPicker4("Fill Color", fillColor.data(),
+                        ImGuiColorEditFlags_HDR);
+    static bool fillUVs = false;
+    ImGui::Checkbox("Fill UVs", &fillUVs);
+    if (source && ImGui::Button("Fill Face")) {
+        auto& AM = editor().coreSystems().assetManager();
+        AM.makeAvailable(source->handle(), AssetRepresentation::CPU);
+        float4* data = (float4*)source->pixelData.get();
+        size_t imgStride = source->size.x * source->size.y;
+        if (!fillUVs) {
+            std::fill(data + imgStride * sourceside,
+                      data + imgStride * (sourceside + 1), fillColor);
+        }
+        else {
+            data += imgStride * sourceside;
+            for (size_t y = 0; y < source->size.y; ++y) {
+                for (size_t x = 0; x < source->size.x; ++x) {
+                    data[y * source->size.x + x] =
+                        float4((float)x / source->size.x,
+                               (float)y / source->size.y, 0, 1);
+                }
+            }
+        }
+        AM.makeAvailable(source->handle(), AssetRepresentation::GPU, true);
+    }
 }

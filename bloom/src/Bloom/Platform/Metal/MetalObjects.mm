@@ -578,6 +578,38 @@ void MetalBlitEncoder::copyTexture(TextureView source, TextureView dest) {
                           toTexture:getNative(dest)];
 }
 
+void MetalBlitEncoder::copyTextureRegion(TextureView source, size_t sourceSlice,
+                                         size_t sourceLevel, uint3 sourceOrigin,
+                                         uint3 sourceSize, TextureView dest,
+                                         size_t destSlice, size_t destLevel,
+                                         uint3 destOrigin) {
+    [commandEncoder copyFromTexture:getNative(source)
+                        sourceSlice:sourceSlice
+                        sourceLevel:sourceLevel
+                       sourceOrigin:toMTLOrigin(sourceOrigin)
+                         sourceSize:toMTLSize(sourceSize)
+                          toTexture:getNative(dest)
+                   destinationSlice:destSlice
+                   destinationLevel:destLevel
+                  destinationOrigin:toMTLOrigin(destOrigin)];
+}
+
+void MetalBlitEncoder::copyTextureToBuffer(
+    TextureView sourceTexture, size_t sourceSlice, size_t sourceLevel,
+    uint3 sourceOrigin, uint3 sourceSize, BufferView destBuffer,
+    size_t destOffset, size_t destBytesPerRow, size_t destBytesPerImage) {
+    [commandEncoder copyFromTexture:getNative(sourceTexture)
+                        sourceSlice:sourceSlice
+                        sourceLevel:sourceLevel
+                       sourceOrigin:toMTLOrigin(sourceOrigin)
+                         sourceSize:toMTLSize(sourceSize)
+                           toBuffer:getNativeBuf(destBuffer)
+                  destinationOffset:destOffset
+             destinationBytesPerRow:destBytesPerRow
+           destinationBytesPerImage:destBytesPerImage
+                            options:MTLBlitOptionNone];
+}
+
 void MetalBlitEncoder::synchronizeTexture(TextureView texture, size_t slice,
                                           size_t level) {
     [commandEncoder synchronizeTexture:getNative(texture)

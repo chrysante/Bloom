@@ -20,6 +20,8 @@
 
 namespace poppy {
 
+class Editor;
+
 /// Entry in the view manager that represents a concrete view class
 class ViewRegistryEntry {
 public:
@@ -32,7 +34,7 @@ public:
     std::string const& name() const { return _name; }
 
     /// Create an empty view object of this view type
-    std::unique_ptr<View> createView() const;
+    std::unique_ptr<View> createView(Editor& editor) const;
 
 private:
     std::string _name;

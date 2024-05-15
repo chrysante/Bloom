@@ -146,8 +146,10 @@ bool ToolbarDropdownMenu::beginCombo(ToolbarStyle const& style) {
     }
     else {
         char const* icon = _icon ? _icon() : "down-open";
+        int flags = ImGuiButtonFlags_PressedOnClick |
+                    ImGuiButtonFlags_PressedOnDragDropHold;
         pressed = tbIconButton(style, FontManager::get({ IconSize::_16 }, icon),
-                               ID(), 0, size, getTooltip(), isEnabled(),
+                               ID(), flags, size, getTooltip(), isEnabled(),
                                popup_open);
     }
     if (pressed && !popup_open) {

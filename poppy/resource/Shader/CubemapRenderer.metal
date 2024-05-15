@@ -55,6 +55,7 @@ static float2 sampleSphericalMap(float3 v) {
     float2 uv = { atan2(v.y, v.x), asin(v.z) };
     uv *= invAtan;
     uv += 0.5;
+    uv.y = 1 - uv.y;
     return uv;
 }
 
@@ -87,37 +88,10 @@ fragment float4 irradianceRendererFS(CRVSOut in [[stage_in]],
             float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal;
             constexpr sampler s(min_filter::linear, mag_filter::linear);
             float3 sampleColor = source.sample(s, sampleVec).rgb;
-            irradiance += sampleColor * dot(sampleVec, normal); 
+            irradiance += sampleColor * dot(sampleVec, normal);
             ++nrSamples;
         }
     }
     float3 final = PI * irradiance / float(nrSamples);
     return float4(final, 1);
 }
-
-#if 0
-
-static float3 mapUVSToN(float u, float v, int face, uint2 resolution) {
-    return {};
-}
-
-vec<float, 9> genLightingCoefficientsForNormal(float3 N, float3 L) {
-    return {};
-}
-
-kernel void genLightingCoefficients(int device const& face,
-                                    vec<float, 9> device& out,
-                                    float device& weightSum,
-                                    texture2d<float, access::read> source [[texture(0)]],
-                                    uint2 position [[thread_position_in_grid]]) {
-    float3 L = source.read(position).rgb;
-    float u = 2 * (position.x + 0.5f) / source.get_width() - 1;
-    float v = 2 * (position.y + 0.5f) / source.get_height() - 1;
-    float temp = 1.0f + u * u + v * v;
-    float weight = 4.0f / (sqrt(temp) * temp);
-    float3 N = mapUVSToN(u, v, face, { source.get_width(), source.get_height() });
-    out += genLightingCoefficientsForNormal(N, L) * weight;
-    weightSum += weight;
-}
-
-#endif

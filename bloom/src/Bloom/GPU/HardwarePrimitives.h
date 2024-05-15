@@ -237,6 +237,10 @@ enum class PixelFormat {
     BGR10_XR_sRGB = 555
 };
 
+/// \Returns the size of a single pixel with pixel format \p pixelFormat in
+/// bytes
+size_t pixelByteSize(PixelFormat pixelFormat);
+
 enum class BlendFactor {
     Zero = 0,
     One = 1,

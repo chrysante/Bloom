@@ -114,8 +114,23 @@ void bloom::renderIrradianceMap(HardwareDevice& device,
     renderCube(commandBuffer, device, pipeline, dest, source);
 }
 
-static float3 mapUVSToN(float u, float v, size_t face, uint2 resolution) {
-    return {};
+static float3 mapUVSToN(float u, float v, size_t face) {
+    switch (face) {
+    case 0: // +X
+        return vml::normalize(float3(1, -v, -u));
+    case 1: // -X
+        return vml::normalize(float3(-1, -v, u));
+    case 2: // +Y
+        return vml::normalize(float3(u, 1, v));
+    case 3: // -Y
+        return vml::normalize(float3(u, -1, -v));
+    case 4: // +Z
+        return vml::normalize(float3(u, -v, 1));
+    case 5: // -Z
+        return vml::normalize(float3(-u, -v, -1));
+    default:
+        BL_UNREACHABLE();
+    }
 }
 
 static std::array<float, 9> genSHCoefficients(float3 N) {
@@ -140,20 +155,19 @@ static std::array<float3, 9> genLightingCoefficientsForNormal(float3 N,
     return result;
 }
 
-std::array<float3, 9> genLightingCoefficients(float4* imageData,
-                                              usize2 resolution) {
+std::array<float3, 9> bloom::genLightingCoefficients(float4 const* imageData,
+                                                     usize2 resolution) {
     vml::vector<float3, 9> result{};
     float weightSum = 0;
     for (size_t s = 0; s < 6; ++s) {
-        float4* sideData = imageData + s * resolution.x * resolution.y;
+        float4 const* sideData = imageData + s * resolution.x * resolution.y;
         for (size_t y = 0; y < resolution.y; ++y) {
             for (size_t x = 0; x < resolution.x; ++x) {
                 float3 L = sideData[y * resolution.x + x].xyz;
                 float2 coords = 2 * (float2(x, y) + 0.5f) / resolution - 1;
-                auto [u, v] = coords;
-                float temp = 1.0f + u * u + v * v;
-                float weight = 4.0f / (sqrt(temp) * temp);
-                float3 N = mapUVSToN(u, v, s, resolution);
+                float temp = 1.0f + vml::length_squared(coords);
+                float weight = 4.0f / (std::sqrt(temp) * temp);
+                float3 N = mapUVSToN(coords.x, coords.y, s);
                 auto coeff = genLightingCoefficientsForNormal(N, L);
                 for (size_t i = 0; i < result.size(); ++i) {
                     result[i] += coeff[i] * weight;

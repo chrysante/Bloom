@@ -6,6 +6,8 @@
 
 #include <vml/vml.hpp>
 
+#include "Bloom/Asset/Fwd.h"
+#include "Bloom/Core/Reference.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/Renderer.h"
 #include "Poppy/Editor/EntitySelectionManager.h"
@@ -20,6 +22,7 @@ public:
                bloom::Camera const& camera);
     void submit(bloom::Scene const& scene,
                 EntitySelectionManager const& selectionManager);
+    void setIBLTexture(bloom::Reference<bloom::Texture2D> tex);
     void draw(bloom::CommandQueue& commandQueue);
 
     bloom::TextureView sceneColor() const;

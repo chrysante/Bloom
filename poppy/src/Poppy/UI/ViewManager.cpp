@@ -15,12 +15,6 @@ using namespace bloom;
 using namespace vml::short_types;
 
 struct ViewManager::Impl {
-    static void populate(View& view, Editor& editor) {
-        view.data.editor = &editor;
-        view.assignEmitter(editor.makeEmitter());
-        view.assignReceiver(editor.makeReceiver());
-    }
-
     static void displayDebugInfo(View const& view) {
         auto* imWindow = (ImGuiWindow*)view.data.imguiWindow;
         auto* window = view.data.window;
@@ -70,9 +64,8 @@ ViewManager::ViewManager(Editor* editor, Receiver receiver):
 ViewManager::~ViewManager() = default;
 
 View* ViewManager::openView(ViewRegistryEntry const& regEntry) {
-    views.push_back(regEntry.createView());
+    views.push_back(regEntry.createView(*editor));
     auto* view = views.back().get();
-    Impl::populate(*view, *editor);
     view->doInit();
     return view;
 }
@@ -153,13 +146,12 @@ YAML::Node ViewManager::serialize() const {
 void ViewManager::deserialize(YAML::Node const& node) {
     views.clear();
     for (auto viewData: node) {
-        auto owner = View::doDeserialize(viewData);
+        auto owner = View::doDeserialize(viewData, *editor);
         if (!owner) {
             continue;
         }
         views.push_back(std::move(owner));
         auto* view = views.back().get();
-        Impl::populate(*view, *editor);
         view->doInit();
     }
 }

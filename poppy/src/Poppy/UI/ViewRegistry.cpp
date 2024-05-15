@@ -1,15 +1,19 @@
 #include "Poppy/UI/ViewRegistry.h"
 
 #include "Bloom/Core/Debug.h"
+#include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/View.h"
 
 using namespace poppy;
 using namespace bloom;
 
-std::unique_ptr<View> ViewRegistryEntry::createView() const {
+std::unique_ptr<View> ViewRegistryEntry::createView(Editor& editor) const {
     auto view = factory();
     view->data.title = name();
     view->data.staticName = name();
+    view->data.editor = &editor;
+    view->assignEmitter(editor.makeEmitter());
+    view->assignReceiver(editor.makeReceiver());
     return view;
 }
 

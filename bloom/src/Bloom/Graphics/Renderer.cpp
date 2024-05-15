@@ -6,6 +6,7 @@
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
+#include "Bloom/Graphics/Texture.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Scene/Scene.h"
 #include "Bloom/Shader/SharedTypes.h"
@@ -181,6 +182,12 @@ void Renderer::submit(Scene const& scene) {
             frameParams.numShadowMaps += light.numCascades;
         });
         submitLights<SkyLightComponent>(*lights, scene);
+    }
+}
+
+void Renderer::setIBLTexture(Reference<Texture2D> tex) {
+    if (tex && lights) {
+        lights->setIrradianceCoefficients(tex->irradianceSHCoefficients);
     }
 }
 

@@ -3,8 +3,11 @@
 
 #include <memory>
 
+#include <vml/vml.hpp>
+
 #include "Bloom/Asset/Fwd.h"
 #include "Bloom/Core/Reference.h"
+#include "Bloom/GPU/Fwd.h"
 
 namespace poppy {
 
@@ -33,6 +36,10 @@ public:
 private:
     std::unique_ptr<Data> data;
 };
+
+vml::float4 copyPixelColor(bloom::TextureView texture, vml::float2 coord);
+
+void displayTextureColorTooltip(bloom::TextureView texture, vml::float2 coord);
 
 } // namespace poppy
 

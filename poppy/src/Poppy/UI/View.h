@@ -154,7 +154,8 @@ private:
     void doFrame();
     void doOnInput(bloom::InputEvent& event);
     YAML::Node doSerialize() const;
-    static std::unique_ptr<View> doDeserialize(YAML::Node const& node);
+    static std::unique_ptr<View> doDeserialize(YAML::Node const& node,
+                                               Editor& editor);
 
     struct Data {
         /// This is set by `doInit()` to a new view ID if it is -1 and by

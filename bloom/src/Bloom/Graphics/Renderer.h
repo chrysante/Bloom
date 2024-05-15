@@ -8,8 +8,10 @@
 
 #include <utl/utility.hpp>
 
+#include "Bloom/Asset/Fwd.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Reference.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
@@ -60,6 +62,9 @@ public:
 
     ///
     void submit(Scene const& scene);
+
+    ///
+    void setIBLTexture(Reference<Texture2D> tex);
 
     ///
     void draw(CommandQueue& commandQueue);

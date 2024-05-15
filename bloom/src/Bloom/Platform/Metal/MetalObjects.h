@@ -174,6 +174,16 @@ public:
         commandEncoder(commandEncoder) {}
 
     void copyTexture(TextureView source, TextureView dest) final;
+    void copyTextureRegion(TextureView source, size_t sourceSlice,
+                           size_t sourceLevel, vml::uint3 sourceOrigin,
+                           vml::uint3 sourceSize, TextureView dest,
+                           size_t destSlice, size_t destLevel,
+                           vml::uint3 destOrigin) final;
+    void copyTextureToBuffer(TextureView sourceTexture, size_t sourceSlice,
+                             size_t sourceLevel, vml::uint3 sourceOrigin,
+                             vml::uint3 sourceSize, BufferView destBuffer,
+                             size_t destOffset, size_t destBytesPerRow,
+                             size_t destBytesPerImage) final;
     void synchronizeTexture(TextureView texture, size_t slice,
                             size_t level) final;
     void copyBufferToTexture(BufferView source, size_t sourceOffset,

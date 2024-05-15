@@ -10,6 +10,12 @@ static float3 fresnelSchlick(float cosTheta, float3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+static float3 fresnelSchlickRoughness(float cosTheta, float3 F0,
+                                    float roughness) {
+    return F0 + (max(float3(1.0 - roughness), F0) - F0) *
+                 pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
 static float distributionGGX(float3 N, float3 H, float roughness)
 {
     float a = roughness * roughness;
@@ -41,11 +47,15 @@ static float geometrySmith(float3 N, float3 V, float3 L, float roughness)
     return ggx1 * ggx2;
 }
 
+static float3 computeF0(float3 albedo, float3 metallic) {
+    float3 F0_dielectric = float3(0.04);
+    return mix(F0_dielectric, albedo, metallic);
+}
+
 static float3 PBRLighting(PBRData data, float3 const radiance, float3 const N,
                           float3 const V, float3 const L, float3 const H)
 {
-    float3 F0_dielectric = float3(0.04);
-    float3 F0 = mix(F0_dielectric, data.albedo, data.metallic);
+    float3 F0 = computeF0(data.albedo, data.metallic);
     float3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
     float NDF = distributionGGX(N, H, data.roughness);
     float G = geometrySmith(N, V, L, data.roughness);
@@ -241,6 +251,32 @@ static float3 computeSkyLights(PBRData pbr, uint numLights,
     return lightAcc;
 }
 
+static float3 calcSHIrradiance(float3 N, float3 device const* SH) {
+    float A0 = 3.141593;
+    float A1 = 2.094395;
+    float A2 = 0.785398;
+    float3 color = SH[0] * 0.282095f * A0
+         + SH[1] * 0.488603f * N.y * A1
+         + SH[2] * 0.488603f * N.z * A1
+         + SH[3] * 0.488603f * N.x * A1
+         + SH[4] * 1.092548f * N.x * N.y * A2
+         + SH[5] * 1.092548f * N.y * N.z * A2
+         + SH[6] * 0.315392f * (3.0f * N.z * N.z - 1.0f) * A2
+         + SH[7] * 1.092548f * N.x * N.z * A2
+         + SH[8] * 0.546274f * (N.x * N.x - N.y * N.y) * A2;
+    float PI =  3.14159265359;
+    return color / PI;
+}
+
+static float3 computeAmbient(PBRData data, float3 N, float3 V, float3 device const* SH) {
+    float3 F0 = computeF0(data.albedo, data.metallic);
+    float3 kS = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, data.roughness);
+    float3 kD = 1.0 - kS;
+    float3 irradiance = calcSHIrradiance(N, SH);
+    float3 diffuse  = irradiance * data.albedo;
+    return kD * diffuse * data.ao;
+}
+
 float3 bloom::PBRForwardShader(
     PBRData pbr, float3 worldPosition,
     float3 cameraPosition, device const float4x4* lightSpaceTransforms,
@@ -259,9 +295,7 @@ float3 bloom::PBRForwardShader(
                                  lights.numDirLights, lights.dirLights,
                                  shadowMetadata, shadowMaps);
     lightAcc += computeSkyLights(pbr, lights.numSkyLights, lights.skyLights);
+    lightAcc += computeAmbient(pbr, N, V, lights.irradianceCoefficients);
     lightAcc += pbr.emissive;
-#if 0
-    float3 ambient = 0.03 * pbr.albedo * pbr.ao;
-#endif
     return lightAcc;
 }

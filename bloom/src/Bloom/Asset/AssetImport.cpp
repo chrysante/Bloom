@@ -117,7 +117,8 @@ static void importTextureGeneric(Texture2D& texture,
         texture.type = TextureType::Texture2D;
         texture.pixelFormat = PixelFormat::RGBA8Unorm;
         texture.size = size;
-        texture.data.assign(buffer, buffer + bufferSize);
+        texture.pixelData = std::make_unique<uint8_t[]>(bufferSize);
+        std::memcpy(texture.pixelData.get(), buffer, bufferSize);
         stbi_image_free(buffer);
         return;
     }
@@ -138,8 +139,8 @@ static void importTextureGeneric(Texture2D& texture,
         texture.pixelFormat = PixelFormat::RGBA32Float;
         size_t numPixels = size.x * size.y;
         texture.size = size;
-        texture.data.resize(numPixels * 16);
-        std::memcpy(texture.data.data(), buffer, texture.data.size());
+        texture.pixelData = std::make_unique<uint8_t[]>(numPixels * 16);
+        std::memcpy(texture.pixelData.get(), buffer, numPixels * 16);
         stbi_image_free(buffer);
         return;
     }
@@ -168,14 +169,15 @@ static void postprocessHDR(Texture2D& texture, HardwareDevice& device,
                                .pixelFormat = PixelFormat::RGBA32Float,
                                .size = { sourceSize, 1 },
                                .storageMode = StorageMode::GPUOnly });
+    size_t numPixelSourceBytes = texture.getPixelDataByteSize();
     auto textureDataBuffer =
-        device.createBuffer({ .data = texture.data.data(),
-                              .size = texture.data.size(),
+        device.createBuffer({ .data = texture.pixelData.get(),
+                              .size = numPixelSourceBytes,
                               .storageMode = StorageMode::Managed });
     auto commandBuffer = commandQueue.createCommandBuffer();
     auto toTexEncoder = commandBuffer->makeBlitEncoder();
     toTexEncoder->copyBufferToTexture(textureDataBuffer, 0, sourceSize.x * 16,
-                                      texture.data.size(), { sourceSize, 1 },
+                                      numPixelSourceBytes, { sourceSize, 1 },
                                       equirectangular, 0, 0, { 0, 0, 0 });
     toTexEncoder->end();
     renderCubemap(device, *commandBuffer, cubemap, equirectangular);
@@ -185,8 +187,8 @@ static void postprocessHDR(Texture2D& texture, HardwareDevice& device,
     commandBuffer->commit();
     commandBuffer->waitForCompletion();
     size_t bytesPerImage = destSize.x * destSize.y * 16;
-    texture.data.resize(bytesPerImage * 6);
-    uint8_t* destBuffer = texture.data.data();
+    texture.pixelData = std::make_unique<uint8_t[]>(bytesPerImage * 6);
+    uint8_t* destBuffer = texture.pixelData.get();
     for (size_t i = 0; i < 6; ++i) {
         copyTextureToMemory(RenderAPI::Metal, cubemap,
                             destBuffer + i * bytesPerImage,

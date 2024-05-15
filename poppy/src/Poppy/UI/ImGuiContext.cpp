@@ -8,6 +8,7 @@
 #include "Bloom/Core.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
+#include "Poppy/Editor/Messages.h"
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Font.h"
 
@@ -270,6 +271,9 @@ void poppy::ImGuiContext::init(Editor& editor,
     listen([this](ReloadedFontAtlasCommand cmd) {
         newFontAtlas = cmd.fontManager->getAtlas();
     });
+    listen([this](ExtendRenderLifetime msg) {
+        renderHazardObjects.push_back(std::move(msg.object));
+    });
 }
 
 void poppy::ImGuiContext::shutdown() {
@@ -286,16 +290,16 @@ void poppy::ImGuiContext::newFrame() {
     // FIXME: This is not pretty
     utl::timed_busy_wait(std::chrono::milliseconds{ 16 },
                          [&] { return numRenderTasks == 0; });
-    {
-        std::lock_guard lock(drawMutex);
-        drawDataValid = false;
-        if (newFontAtlas) {
-            context->IO.Fonts = newFontAtlas;
-            uploadCurrentFontAtlas(mEditor->device());
-            context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
-            newFontAtlas = nullptr;
-        }
+    std::unique_lock lock(drawMutex);
+    renderHazardObjects.clear();
+    drawDataValid = false;
+    if (newFontAtlas) {
+        context->IO.Fonts = newFontAtlas;
+        uploadCurrentFontAtlas(mEditor->device());
+        context->IO.FontDefault = FontManager::get(FontDesc::UIDefault());
+        newFontAtlas = nullptr;
     }
+    lock.unlock();
     auto& window = *mEditor->mainWindow();
     ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();

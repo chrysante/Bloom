@@ -11,8 +11,12 @@
 #include "Bloom/Application/Window.h"
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Serialize.h"
+#include "Bloom/GPU/CommandBuffer.h"
+#include "Bloom/GPU/HardwareDevice.h"
+#include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
+#include "Bloom/Graphics/Texture.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
@@ -25,6 +29,7 @@
 #include "Poppy/Views/AssetDragDrop.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/Gizmo.h"
+#include "Poppy/Views/TextureViewer.h"
 #include "Poppy/Views/ViewportExt.h"
 
 using namespace poppy;
@@ -104,6 +109,8 @@ struct Viewport: View, BasicSceneInspector {
     MouseState mouseState;
     EditorSceneRenderer* renderer = nullptr;
     ViewData viewData;
+    Reference<Texture2D> iblTexture;
+    TextureHandle colorPickerTmpTex;
     bool showRenderGraphDebugger = false;
     bool gameView = false;
 };
@@ -216,6 +223,11 @@ void Viewport::drawScenes() {
         renderer->submit(*scene, selection());
     }
     lock.unlock();
+    if (iblTexture && iblTexture->irradianceSHCoefficients.empty()) {
+        assetManager().makeAvailable(iblTexture->handle(),
+                                     AssetRepresentation::CPU);
+    }
+    renderer->setIBLTexture(iblTexture);
     renderer->draw(editor().commandQueue());
     if (renderGraph->sources().empty()) {
         displayEmptyWithError("Render Graph Has No Outputs");
@@ -227,7 +239,32 @@ void Viewport::drawScenes() {
         displayEmptyWithError("Render Graph Output Is Null");
         return;
     }
-    ImGui::Image(finalColor.nativeHandle(), ImGui::GetContentRegionAvail());
+    float2 size = ImGui::GetContentRegionAvail();
+    //    float2 mouseCoord = finalColor.size().xy *
+    //    ((float2)ImGui::GetMousePos() - (float2)ImGui::GetCursorScreenPos()) /
+    //    size;
+    ImGui::Image(finalColor.nativeHandle(), size);
+#if 0
+    if (ImGui::IsKeyDown(ImGuiKey_ModAlt)) {
+        auto& cmdQueue = editor().commandQueue();
+        auto cmdBuffer = cmdQueue.createCommandBuffer();
+        auto encoder = cmdBuffer->makeBlitEncoder();
+        if (!colorPickerTmpTex ||
+            colorPickerTmpTex.description().pixelFormat != finalColor.description().pixelFormat)
+        {
+            auto desc = finalColor.description();
+            desc.size = { 1, 1, 1 };
+            desc.storageMode = StorageMode::Shared;
+            colorPickerTmpTex = editor().device().createTexture(desc);
+        }
+        encoder->copyTextureRegion(finalColor, 0, 0, { mouseCoord, 0 }, { 1, 1, 1 },
+                                   colorPickerTmpTex, 0, 0, {0,0,0});
+        encoder->end();
+        cmdBuffer->commit();
+        cmdBuffer->waitForCompletion();
+        displayTextureColorTooltip(colorPickerTmpTex, {0,0});
+    }
+#endif
 }
 
 void Viewport::copyEntities(std::span<EntityHandle const> entities) {
@@ -416,11 +453,14 @@ void Viewport::onInput(bloom::InputEvent&) {}
 YAML::Node Viewport::serialize() const {
     YAML::Node root;
     root["CameraController"] = cameraController;
+    root["IBLTexture"] = iblTexture ? iblTexture->handle() : AssetHandle{};
     return root;
 }
 
 void Viewport::deserialize(YAML::Node node) {
     cameraController = node["CameraController"].as<ViewportCameraController>();
+    auto iblTexAsset = node["IBLTexture"].as<AssetHandle>();
+    iblTexture = as<Texture2D>(assetManager().get(iblTexAsset));
 }
 
 Toolbar Viewport::makeToolbar() {
@@ -519,6 +559,10 @@ void Viewport::dropdownMenu() {
         {
             cameraController.setNearClipPlane(clip);
         }
+
+        beginProperty("IBL Texture");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        assetButton(assetManager(), iblTexture);
         endSection();
     }
     ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);

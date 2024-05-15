@@ -1,0 +1,23 @@
++X -> Face 0
+  U -> -Z
+  V -> -Y
+
+-X -> Face 1
+  U -> +Z
+  V -> -Y
+
++Y -> Face 2
+  U -> +X
+  V -> +Z
+
+-Y -> Face 3
+  U -> -X
+  V -> +Z
+
++Z -> Face 4
+  U -> +X
+  V -> -Y
+
+-Z -> Face 5
+  U -> -X
+  V -> -Y

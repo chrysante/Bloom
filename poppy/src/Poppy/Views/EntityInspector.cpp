@@ -297,74 +297,21 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
     }
 }
 
-static std::string meshButtonLabel(StaticMesh const* mesh,
-                                   AssetManager& assetManager) {
-    if (!mesh) {
-        return "No Mesh Assigned";
-    }
-    return assetManager.getName(mesh->handle());
-}
-
-static std::string materialButtonLabel(MaterialInstance const* mat,
-                                       AssetManager& assetManager) {
-    if (!mat) {
-        return "No Material Assigned";
-    }
-    return assetManager.getName(mat->handle());
-}
-
 void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
     using namespace propertiesView;
-    auto& meshRenderer = entity.get<MeshRendererComponent>();
     if (!beginComponentSection<MeshRendererComponent>("Mesh Renderer", entity))
     {
         return;
     }
+    auto& meshRenderer = entity.get<MeshRendererComponent>();
     disabledIf(isSimulating(), [&] {
         beginProperty("Mesh");
-        ImGui::Button(meshButtonLabel(meshRenderer.mesh.get(), assetManager())
-                          .data(),
-                      { ImGui::GetContentRegionAvail().x, 0 });
-        receiveMeshDragDrop(entity);
+        float2 size = { ImGui::GetContentRegionAvail().x, 0 };
+        assetButton(assetManager(), meshRenderer.mesh, size);
         beginProperty("Material");
-        ImGui::Button(materialButtonLabel(meshRenderer.materialInstance.get(),
-                                          assetManager())
-                          .data(),
-                      { ImGui::GetContentRegionAvail().x, 0 });
-        receiveMaterialDragDrop(entity);
+        assetButton(assetManager(), meshRenderer.materialInstance, size);
     });
     endSection();
-}
-
-void EntityInspector::receiveMeshDragDrop(bloom::EntityHandle entity) {
-    using namespace bloom;
-    auto const payload = acceptAssetDragDrop({ AssetType::StaticMesh });
-    if (!payload) {
-        return;
-    }
-    auto const handle = *payload;
-    Logger::Trace("Received Asset: ", assetManager().getName(handle));
-    auto asset = as<StaticMesh>(assetManager().get(handle));
-    BL_ASSERT(asset);
-    assetManager().makeAvailable(handle, AssetRepresentation::GPU);
-    auto& meshRenderer = entity.get<MeshRendererComponent>();
-    meshRenderer.mesh = std::move(asset);
-}
-
-void EntityInspector::receiveMaterialDragDrop(bloom::EntityHandle entity) {
-    using namespace bloom;
-    auto const payload = acceptAssetDragDrop({ AssetType::MaterialInstance });
-    if (!payload) {
-        return;
-    }
-    auto const handle = *payload;
-    Logger::Trace("Received Asset: ", assetManager().getName(handle));
-    auto materialInstance = as<MaterialInstance>(assetManager().get(handle));
-    BL_ASSERT(materialInstance);
-    assetManager().makeAvailable(handle, AssetRepresentation::CPU |
-                                             AssetRepresentation::GPU);
-    auto& meshRenderer = entity.get<MeshRendererComponent>();
-    meshRenderer.materialInstance = std::move(materialInstance);
 }
 
 void EntityInspector::inspectLight(bloom::EntityHandle entity) {

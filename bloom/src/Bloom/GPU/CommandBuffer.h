@@ -135,6 +135,22 @@ public:
     virtual void copyTexture(TextureView source, TextureView dest) = 0;
 
     ///
+    virtual void copyTextureRegion(TextureView source, size_t sourceSlice,
+                                   size_t sourceLevel, vml::uint3 sourceOrigin,
+                                   vml::uint3 sourceSize, TextureView dest,
+                                   size_t destSlice, size_t destLevel,
+                                   vml::uint3 destOrigin) = 0;
+
+    ///
+    virtual void copyTextureToBuffer(TextureView sourceTexture,
+                                     size_t sourceSlice, size_t sourceLevel,
+                                     vml::uint3 sourceOrigin,
+                                     vml::uint3 sourceSize,
+                                     BufferView destBuffer, size_t destOffset,
+                                     size_t destBytesPerRow,
+                                     size_t destBytesPerImage) = 0;
+
+    ///
     virtual void synchronizeTexture(TextureView texture, size_t slice,
                                     size_t level) = 0;
 

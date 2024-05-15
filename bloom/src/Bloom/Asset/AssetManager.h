@@ -35,7 +35,7 @@ public:
 
     /// Opens the project at \p path
     ///
-    /// \param path	Must be an absolute directory. Directory will be created if
+    /// \Param path	Must be an absolute directory. Directory will be created if
     /// not existent.
     void openProject(std::filesystem::path path);
 
@@ -58,9 +58,11 @@ public:
     /// Creates a new asset in project subdirectory \p destDir
     ///
     /// \Param type	The type of the asset.
-    /// \Param name	The name of the asset. The asset location will be `destDir /
-    /// name.{type-extension}` \Param dest	Path to directory relative to the
-    /// project directory. \Returns a reference to the created asset.
+    /// \Param name	The name of the asset. The asset location will be
+    /// destDir /  name.{type-extension}
+    /// \Param dest	Path to directory relative to the
+    /// project directory.
+    /// \Returns a reference to the created asset.
     Reference<Asset> createAsset(AssetType type, std::string name,
                                  std::filesystem::path destDir);
 
@@ -139,8 +141,10 @@ public:
                        bool forceReload = false);
 
     /// Check if an AssetHandle is valid, i.e. refers to an asset in this
-    /// manager. \Param handle Handle to an asset. \Returns true if Handle
-    /// points to an asset stored in current working directory.
+    /// manager.
+    /// \Param handle Handle to an asset.
+    /// \Returns true if Handle points to an asset stored in current working
+    /// directory.
     bool isValid(AssetHandle handle) const;
 
     /// Saves asset to disk from current CPU representation.
@@ -158,6 +162,9 @@ public:
 
     ///
     void compileScripts();
+
+    /// \Returns a list of all asset handles of type \p type
+    std::vector<AssetHandle> getAssetsOfType(AssetType type) const;
 
     /// Public to make implementation easier
     struct Impl;

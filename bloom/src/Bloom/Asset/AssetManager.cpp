@@ -459,8 +459,10 @@ bool Impl::amendRegistry() {
                !utl::is_hidden(path);
     });
     bool modified = false;
+    utl::hashset<std::filesystem::path> existingAssetPaths;
     for (auto& dirEntry: filtered) {
         auto path = std::filesystem::relative(dirEntry.path(), rootDir);
+        existingAssetPaths.insert(path);
         if (knownAssets.contains(path)) {
             continue;
         }
@@ -473,6 +475,17 @@ bool Impl::amendRegistry() {
         auto ID = utl::uuid::generate();
         assets.insert({ ID, makeEntry({}, AssetHandle(*type, ID),
                                       pathToName(path), path) });
+    }
+    utl::small_vector<utl::uuid> IDsToDelete;
+    for (auto& [ID, entry]: assets) {
+        if (!existingAssetPaths.contains(entry.diskLocation)) {
+            Logger::Error("Asset in registry does not exist: ", entry.name,
+                          " - deleting registry entry");
+            IDsToDelete.push_back(ID);
+        }
+    }
+    for (auto ID: IDsToDelete) {
+        assets.erase(ID);
     }
     return modified;
 }
@@ -495,10 +508,21 @@ std::filesystem::path AssetManager::projectRootDir() const {
     return impl->rootDir;
 }
 
+static std::filesystem::path makeCanonical(std::filesystem::path const& path) {
+    std::string str = path.string();
+    if (str.size() >= 2 && str[0] == '.' &&
+        str[1] == std::filesystem::path::preferred_separator)
+    {
+        str.erase(str.begin(), str.begin() + 2);
+    }
+    return std::move(str);
+}
+
 Reference<Asset> AssetManager::createAsset(AssetType type, std::string name,
                                            std::filesystem::path destDir) {
     BL_EXPECT(std::filesystem::is_directory(destDir));
-    auto diskLocation = destDir / append(name, toExtension(type));
+    auto diskLocation =
+        makeCanonical(destDir / append(name, toExtension(type)));
     if (auto* entry = impl->findByDiskLocation(diskLocation)) {
         Logger::Trace("Asset already exists: ", diskLocation);
         return get(entry->handle);
@@ -514,7 +538,7 @@ Reference<Asset> AssetManager::createAsset(AssetType type, std::string name,
 
 AssetHandle AssetManager::importAsset(std::string name,
                                       std::filesystem::path source,
-                                      std::filesystem::path dest) {
+                                      std::filesystem::path destDir) {
     std::optional type =
         impl->deduceImportedAssetType(source.extension().string());
     /// Only static meshes can be imported for now
@@ -522,7 +546,8 @@ AssetHandle AssetManager::importAsset(std::string name,
         Logger::Error("Failed to import resource ", source);
         return {};
     }
-    auto diskLocation = dest / append(name, toExtension(*type));
+    auto diskLocation =
+        makeCanonical(destDir / append(name, toExtension(*type)));
     auto asset = [&] {
         /// This is a reimport
         if (auto* entry = impl->findByDiskLocation(diskLocation)) {
@@ -739,7 +764,7 @@ bool Impl::makeAvailImpl(Texture2D& texture, RegistryEntry const& entry,
     // clang-format off
     visitRepr(repr, utl::overload{
         [&](Tag<AssetRepresentation::CPU>) {
-            if (texture.data.empty() || forceReload) {
+            if (!texture.pixelData || forceReload) {
                 loadTextureFromDisk(texture, entry.diskLocation);
             }
         },
@@ -869,6 +894,16 @@ void AssetManager::compileScripts() {
     dispatch(DispatchToken::Now, ScriptsDidLoadEvent{});
 }
 
+std::vector<AssetHandle> AssetManager::getAssetsOfType(AssetType type) const {
+    std::vector<AssetHandle> result;
+    for (auto& [ID, entry]: impl->assets) {
+        if (entry.handle.type() == type) {
+            result.push_back(entry.handle);
+        }
+    }
+    return result;
+}
+
 Reference<Asset> Impl::allocateAsset(AssetHandle handle,
                                      std::string name) const {
     return dispatchAssetType(handle.type(),
@@ -918,10 +953,11 @@ struct StaticMeshHeader {
 };
 
 struct Texture2DHeader {
-    TextureType type;
-    PixelFormat pixelFormat;
-    usize2 dimensions;
-    size_t numBytes;
+    TextureType type = TextureType::Texture1D;
+    PixelFormat pixelFormat = PixelFormat::Invalid;
+    usize2 dimensions = 0;
+    size_t numBytes = 0;
+    size_t numIrradianceSHCoefficients = 0;
 };
 
 } // namespace
@@ -984,6 +1020,11 @@ void Impl::loadMaterialInstanceFromDisk(MaterialInstance& inst,
     inst.deserialize(root, *assetManager);
 }
 
+static bool readBytes(std::istream& stream, void* dest, size_t numBytes) {
+    stream.read((char*)dest, numBytes);
+    return stream.good();
+}
+
 void Impl::loadTextureFromDisk(Texture2D& texture,
                                std::filesystem::path const& source) {
     BL_EXPECT(toExtension(source) == FileExtension::Btex);
@@ -993,17 +1034,25 @@ void Impl::loadTextureFromDisk(Texture2D& texture,
         Logger::Error("File was not a texture: ", source);
         return;
     }
-    std::vector<uint8_t> buffer;
-    buffer.resize(header->numBytes);
-    file.read((char*)buffer.data(), buffer.size());
-    if (!file.good()) {
-        Logger::Error("Failed to read texture: ", source);
+    auto buffer = std::make_unique<uint8_t[]>(header->numBytes);
+    if (!readBytes(file, buffer.get(), header->numBytes)) {
+        Logger::Error("Failed to read texture pixel data: ", source);
         return;
     }
     texture.type = header->type;
     texture.pixelFormat = header->pixelFormat;
     texture.size = header->dimensions;
-    texture.data = std::move(buffer);
+    texture.pixelData = std::move(buffer);
+    texture.irradianceSHCoefficients.resize(
+        header->numIrradianceSHCoefficients);
+    if (!readBytes(file, texture.irradianceSHCoefficients.data(),
+                   header->numIrradianceSHCoefficients *
+                       sizeof(texture.irradianceSHCoefficients[0])))
+    {
+        Logger::Error("Failed to read texture irradiance coefficients: ",
+                      source);
+        return;
+    }
 }
 
 void Impl::loadSceneFromDisk(Scene& scene,
@@ -1054,11 +1103,11 @@ static size_t pixelSize(PixelFormat format) {
 }
 
 void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
-    bool hasMemoryRepr = !texture.data.empty();
+    bool hasMemoryRepr = texture.pixelData != nullptr;
     if (!hasMemoryRepr) {
         loadTextureFromDisk(texture, entry.diskLocation);
     }
-    if (texture.data.empty()) {
+    if (!texture.pixelData || texture.getPixelDataByteSize() == 0) {
         return;
     }
     auto handle = assetManager->device().createTexture(
@@ -1074,12 +1123,12 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
         texture.size.x * texture.size.y * pixelSize(texture.pixelFormat);
     switch (texture.type) {
     case TextureType::Texture2D:
-        copyMemoryToTexture(RenderAPI::Metal, handle, texture.data.data(),
+        copyMemoryToTexture(RenderAPI::Metal, handle, texture.pixelData.get(),
                             bytesPerRow,
                             { usize3{}, handle.description().size }, 0);
         break;
     case TextureType::CubeTexture: {
-        uint8_t* data = texture.data.data();
+        uint8_t* data = texture.pixelData.get();
         for (size_t i = 0; i < 6; ++i) {
             copyMemoryToTexture(RenderAPI::Metal, handle,
                                 data + bytesPerImage * i, bytesPerRow,
@@ -1093,7 +1142,7 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
     }
     texture.GPUHandle = handle;
     if (!hasMemoryRepr) {
-        texture.data.clear();
+        texture.pixelData = nullptr;
     }
 }
 
@@ -1161,21 +1210,24 @@ void Impl::flushToDiskImpl(MaterialInstance const& inst,
 
 void Impl::flushToDiskImpl(Texture2D const& texture,
                            std::filesystem::path const& dest) {
-    std::ios::sync_with_stdio(false);
-    auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
-                                           std::ios::binary);
-    if (texture.data.empty()) {
+    if (!texture.pixelData) {
         Logger::Warn("Could not write texture data to disk: no data");
         return;
     }
-    Texture2DHeader header{
-        .type = texture.type,
-        .pixelFormat = texture.pixelFormat,
-        .dimensions = texture.size,
-        .numBytes = texture.data.size(),
-    };
+    std::ios::sync_with_stdio(false);
+    auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
+                                           std::ios::binary);
+    Texture2DHeader header{ .type = texture.type,
+                            .pixelFormat = texture.pixelFormat,
+                            .dimensions = texture.size,
+                            .numBytes = texture.getPixelDataByteSize(),
+                            .numIrradianceSHCoefficients =
+                                texture.irradianceSHCoefficients.size() };
     file.write((char*)&header, sizeof header);
-    file.write((char*)texture.data.data(), texture.data.size());
+    file.write((char*)texture.pixelData.get(), header.numBytes);
+    file.write((char*)texture.irradianceSHCoefficients.data(),
+               texture.irradianceSHCoefficients.size() *
+                   sizeof(texture.irradianceSHCoefficients[0]));
 }
 
 void Impl::flushToDiskImpl(Scene const& scene,

@@ -28,6 +28,8 @@ struct LightBufferContents {
 
     uint32_t numSkyLights;
     SkyLight skyLights[32];
+
+    vml::float3 irradianceCoefficients[9];
 };
 
 /// Describes the layout of the shadow map texture array

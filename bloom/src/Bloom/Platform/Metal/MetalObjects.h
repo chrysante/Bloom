@@ -182,6 +182,7 @@ public:
                              TextureView dest, size_t destinationSlice,
                              size_t destinationLevel,
                              vml::usize3 destinationOrigin) final;
+    void generateMipmaps(TextureView texture) final;
     void end() final;
 
     id<MTLBlitCommandEncoder> commandEncoder;

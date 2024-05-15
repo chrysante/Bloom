@@ -355,9 +355,9 @@ AssetManager::~AssetManager() = default;
 void AssetManager::doInit() {
     impl = std::make_unique<Impl>(this);
     listen([this](AMGetAsset const& msg) {
-        BL_ASSERT(msg.asset);
+        auto asset = get(msg.handle, msg.representation);
         if (msg.handle) {
-            *msg.asset = get(msg.handle, msg.representation);
+            *msg.asset = std::move(asset);
         }
     });
 }
@@ -739,10 +739,14 @@ bool Impl::makeAvailImpl(Texture2D& texture, RegistryEntry const& entry,
     // clang-format off
     visitRepr(repr, utl::overload{
         [&](Tag<AssetRepresentation::CPU>) {
-            loadTextureFromDisk(texture, entry.diskLocation);
+            if (texture.data.empty() || forceReload) {
+                loadTextureFromDisk(texture, entry.diskLocation);
+            }
         },
         [&](Tag<AssetRepresentation::GPU>) {
-            uploadTextureToGPU(texture, entry);
+            if (!texture.GPUHandle || forceReload) {
+                uploadTextureToGPU(texture, entry);                
+            }
         },
     }); // clang-format on
     return true;
@@ -1050,6 +1054,13 @@ static size_t pixelSize(PixelFormat format) {
 }
 
 void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
+    bool hasMemoryRepr = !texture.data.empty();
+    if (!hasMemoryRepr) {
+        loadTextureFromDisk(texture, entry.diskLocation);
+    }
+    if (texture.data.empty()) {
+        return;
+    }
     auto handle = assetManager->device().createTexture(
         { .type = texture.type,
           .pixelFormat = texture.pixelFormat,
@@ -1058,13 +1069,6 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
           .sampleCount = 1,
           .storageMode = StorageMode::Shared,
           .usage = TextureUsage::ShaderRead });
-    bool hasMemoryRepr = !texture.data.empty();
-    if (!hasMemoryRepr) {
-        loadTextureFromDisk(texture, entry.diskLocation);
-    }
-    if (texture.data.empty()) {
-        return;
-    }
     size_t bytesPerRow = texture.size.x * pixelSize(texture.pixelFormat);
     size_t bytesPerImage =
         texture.size.x * texture.size.y * pixelSize(texture.pixelFormat);
@@ -1157,8 +1161,11 @@ void Impl::flushToDiskImpl(MaterialInstance const& inst,
 
 void Impl::flushToDiskImpl(Texture2D const& texture,
                            std::filesystem::path const& dest) {
+    std::ios::sync_with_stdio(false);
+    auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
+                                           std::ios::binary);
     if (texture.data.empty()) {
-        Logger::Warn("Could not write texture to disk: no data");
+        Logger::Warn("Could not write texture data to disk: no data");
         return;
     }
     Texture2DHeader header{
@@ -1167,9 +1174,6 @@ void Impl::flushToDiskImpl(Texture2D const& texture,
         .dimensions = texture.size,
         .numBytes = texture.data.size(),
     };
-    std::ios::sync_with_stdio(false);
-    auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
-                                           std::ios::binary);
     file.write((char*)&header, sizeof header);
     file.write((char*)texture.data.data(), texture.data.size());
 }

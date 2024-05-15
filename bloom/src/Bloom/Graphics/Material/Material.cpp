@@ -38,7 +38,9 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
         auto shaderCompiler = device.createShaderCompiler();
         auto functions =
             shaderCompiler->compile(sourceData.source, functionNames);
-        BL_ASSERT(functions.size() == 2);
+        if (functions.empty()) {
+            throw std::runtime_error("Failed to compile shaders");
+        }
         rgMainPass = createPipeline(device, functions[0], functions[1]);
         for (auto [index, assetHandle]: sourceData.fragmentTextures) {
             fragmentTextures[index] =

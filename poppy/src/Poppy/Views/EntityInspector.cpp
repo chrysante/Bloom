@@ -300,7 +300,7 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
 static std::string meshButtonLabel(StaticMesh const* mesh,
                                    AssetManager& assetManager) {
     if (!mesh) {
-        return "No mesh assigned";
+        return "No Mesh Assigned";
     }
     return assetManager.getName(mesh->handle());
 }
@@ -308,7 +308,7 @@ static std::string meshButtonLabel(StaticMesh const* mesh,
 static std::string materialButtonLabel(MaterialInstance const* mat,
                                        AssetManager& assetManager) {
     if (!mat) {
-        return "No material assigned";
+        return "No Material Assigned";
     }
     return assetManager.getName(mat->handle());
 }

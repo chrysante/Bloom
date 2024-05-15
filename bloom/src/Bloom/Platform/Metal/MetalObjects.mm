@@ -601,6 +601,10 @@ void MetalBlitEncoder::copyBufferToTexture(
                  destinationOrigin:toMTLOrigin(destinationOrigin)];
 }
 
+void MetalBlitEncoder::generateMipmaps(TextureView texture) {
+    [commandEncoder generateMipmapsForTexture:getNative(texture)];
+}
+
 void MetalBlitEncoder::end() { [commandEncoder endEncoding]; }
 
 MetalShaderCompiler::MetalShaderCompiler(id<MTLDevice> device):
@@ -621,9 +625,8 @@ std::vector<ShaderFunctionHandle> MetalShaderCompiler::compile(
                            error:&error];
     }();
     if (error != nil) {
-        throw std::runtime_error(
-            utl::strcat("Failed to compile shader library: ",
-                        error.localizedDescription.UTF8String));
+        Logger::Error("Failed to compile shader library: ",
+                      error.localizedDescription.UTF8String);
         return {};
     }
     Logger::Info("Successfully compiled shader library");
@@ -633,8 +636,8 @@ std::vector<ShaderFunctionHandle> MetalShaderCompiler::compile(
         id<MTLFunction> function = [lib
             newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
         if (!function) {
-            throw std::runtime_error(
-                utl::strcat("Failed to create shader function: ", name));
+            Logger::Error("Failed to create shader function: ", name);
+            return {};
         }
         result.push_back(
             ShaderFunctionHandle(bloom_retain(function), bloom_release));

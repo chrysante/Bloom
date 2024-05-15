@@ -6,21 +6,14 @@
 #include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
+#include "Bloom/GPU/ShaderCompiler.h"
 
 using namespace bloom;
 using namespace vml::short_types;
 
-void bloom::renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
-                          TextureHandle cubemap,
-                          TextureHandle equirectangular) {
-    BL_ASSERT(cubemap.description().type == TextureType::CubeTexture);
-    auto pipeline = device.createRenderPipeline({
-        .colorAttachments = { {
-            .pixelFormat = cubemap.description().pixelFormat,
-        } },
-        .vertexFunction = device.createFunction("cubemapRendererVS"),
-        .fragmentFunction = device.createFunction("cubemapRendererFS"),
-    });
+static void renderCube(CommandBuffer& commandBuffer, HardwareDevice& device,
+                       RenderPipelineHandle& pipeline, TextureView renderTarget,
+                       TextureView source) {
     float4x4 projection = vml::perspective(vml::constants<>::pi / 2,
                                            /* aspectRatio: */ 1.0f,
                                            /* near: */ 0.1f,
@@ -54,9 +47,9 @@ void bloom::renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
                               .storageMode = StorageMode::Managed });
     for (size_t slice = 0; slice < 6; ++slice) {
         TextureHandle side =
-            createSharedTextureView(RenderAPI::Metal, cubemap,
+            createSharedTextureView(RenderAPI::Metal, renderTarget,
                                     TextureType::Texture2D,
-                                    cubemap.description().pixelFormat,
+                                    renderTarget.description().pixelFormat,
                                     /* firstMipLevel: */ 0,
                                     /* numMipLevels: */ 1,
                                     /* firstSlice: */ slice,
@@ -65,13 +58,112 @@ void bloom::renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
             .colorAttachments = { {
                 .texture = side,
             } },
-            .renderTargetSize = cubemap.size().xy,
+            .renderTargetSize = renderTarget.size().xy,
         });
         encoder->setPipeline(pipeline);
         encoder->setVertexBuffer(cameraBuffer, 0, sizeof(float4x4) * slice);
-        encoder->setFragmentTexture(equirectangular, 0);
+        encoder->setFragmentTexture(source, 0);
         encoder->setTriangleCullMode(TriangleCullMode::None);
         encoder->draw(PrimitiveType::TriangleStrip, 4 * slice, 4);
         encoder->end();
     }
+}
+
+void bloom::renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
+                          TextureHandle cubemap,
+                          TextureHandle equirectangular) {
+    BL_ASSERT(cubemap.description().type == TextureType::CubeTexture);
+    auto shaderCompiler = device.createShaderCompiler();
+    auto functions = shaderCompiler->compile(
+        std::filesystem::path(
+            "/Users/indigo/dev/bloom/poppy/resource/Shader/CubemapRenderer.metal"),
+        std::vector<std::string>{ "cubeRendererVS", "cubemapRendererFS" });
+    if (functions.empty()) {
+        return;
+    }
+    auto pipeline = device.createRenderPipeline({
+        .colorAttachments = { {
+            .pixelFormat = cubemap.description().pixelFormat,
+        } },
+        .vertexFunction = functions[0],
+        .fragmentFunction = functions[1],
+    });
+    renderCube(commandBuffer, device, pipeline, cubemap, equirectangular);
+}
+
+void bloom::renderIrradianceMap(HardwareDevice& device,
+                                CommandBuffer& commandBuffer,
+                                TextureHandle dest, TextureHandle source) {
+    BL_ASSERT(source.description().type == TextureType::CubeTexture);
+    BL_ASSERT(dest.description().type == TextureType::CubeTexture);
+    auto shaderCompiler = device.createShaderCompiler();
+    auto functions = shaderCompiler->compile(
+        std::filesystem::path(
+            "/Users/indigo/dev/bloom/poppy/resource/Shader/CubemapRenderer.metal"),
+        std::vector<std::string>{ "cubeRendererVS", "irradianceRendererFS" });
+    if (functions.empty()) {
+        return;
+    }
+    auto pipeline = device.createRenderPipeline({
+        .colorAttachments = { {
+            .pixelFormat = dest.description().pixelFormat,
+        } },
+        .vertexFunction = functions[0],
+        .fragmentFunction = functions[1],
+    });
+    renderCube(commandBuffer, device, pipeline, dest, source);
+}
+
+static float3 mapUVSToN(float u, float v, size_t face, uint2 resolution) {
+    return {};
+}
+
+static std::array<float, 9> genSHCoefficients(float3 N) {
+    return { // Band 0
+             0.282095f,
+             // Band 1
+             0.488603f * N.y, 0.488603f * N.z, 0.488603f * N.x,
+             // Band 2
+             1.092548f * N.x * N.y, 1.092548f * N.y * N.z,
+             0.315392f * (3.0f * N.z * N.z - 1.0f), 1.092548f * N.x * N.z,
+             0.546274f * (N.x * N.x - N.y * N.y)
+    };
+}
+
+static std::array<float3, 9> genLightingCoefficientsForNormal(float3 N,
+                                                              float3 L) {
+    auto coeff = genSHCoefficients(N);
+    vml::vector<float3, 9> result;
+    for (size_t i = 0; i < result.size(); ++i) {
+        result[i] = L * coeff[i];
+    }
+    return result;
+}
+
+std::array<float3, 9> genLightingCoefficients(float4* imageData,
+                                              usize2 resolution) {
+    vml::vector<float3, 9> result{};
+    float weightSum = 0;
+    for (size_t s = 0; s < 6; ++s) {
+        float4* sideData = imageData + s * resolution.x * resolution.y;
+        for (size_t y = 0; y < resolution.y; ++y) {
+            for (size_t x = 0; x < resolution.x; ++x) {
+                float3 L = sideData[y * resolution.x + x].xyz;
+                float2 coords = 2 * (float2(x, y) + 0.5f) / resolution - 1;
+                auto [u, v] = coords;
+                float temp = 1.0f + u * u + v * v;
+                float weight = 4.0f / (sqrt(temp) * temp);
+                float3 N = mapUVSToN(u, v, s, resolution);
+                auto coeff = genLightingCoefficientsForNormal(N, L);
+                for (size_t i = 0; i < result.size(); ++i) {
+                    result[i] += coeff[i] * weight;
+                }
+                weightSum += weight;
+            }
+        }
+    }
+    for (size_t i = 0; i < result.size(); ++i) {
+        result[i] *= 4.0f * vml::constants<float>::pi / weightSum;
+    }
+    return result;
 }

@@ -41,7 +41,7 @@ struct CRVSOut {
     float2 uv;
 };
 
-vertex CRVSOut cubemapRendererVS(float4x4 device const& camera [[buffer(0)]],
+vertex CRVSOut cubeRendererVS(float4x4 device const& camera [[buffer(0)]],
                                  uint32_t vertexID [[vertex_id]]) {
     float3 position = vertices[vertexID];
     return {
@@ -52,7 +52,7 @@ vertex CRVSOut cubemapRendererVS(float4x4 device const& camera [[buffer(0)]],
 
 static float2 sampleSphericalMap(float3 v) {
     float2 invAtan = { 0.1591, 0.3183 };
-    float2 uv = { atan2(v.z, v.x), asin(v.y) };
+    float2 uv = { atan2(v.y, v.x), asin(v.z) };
     uv *= invAtan;
     uv += 0.5;
     return uv;
@@ -65,3 +65,59 @@ fragment float4 cubemapRendererFS(CRVSOut in [[stage_in]],
                                    mag_filter::linear);
     return tex.sample(samplerState, uv);
 }
+
+fragment float4 irradianceRendererFS(CRVSOut in [[stage_in]],
+                                  texturecube<float> source [[texture(0)]]) {
+    float3 normal = normalize(in.localPosition);
+    float3 right = normalize(cross({ 0.0, -1.0, 0.0 }, normal));
+    float3 up    = normalize(cross(normal, right));
+    float3 irradiance = {};
+    float sampleDelta = 0.025;
+    int nrSamples = 0;
+    const float PI = 3.14159265359;
+    for(float phi = 0.0; phi < 2.0 * PI; phi += sampleDelta) {
+        for(float theta = 0.0; theta < 0.5 * PI; theta += sampleDelta) {
+            // Spherical to cartesian (in tangent space)
+            float3 tangentSample = {
+                sin(theta) * cos(phi), 
+                sin(theta) * sin(phi),
+                cos(theta)
+            };
+            // Tangent space to world
+            float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal;
+            constexpr sampler s(min_filter::linear, mag_filter::linear);
+            float3 sampleColor = source.sample(s, sampleVec).rgb;
+            irradiance += sampleColor * dot(sampleVec, normal); 
+            ++nrSamples;
+        }
+    }
+    float3 final = PI * irradiance / float(nrSamples);
+    return float4(final, 1);
+}
+
+#if 0
+
+static float3 mapUVSToN(float u, float v, int face, uint2 resolution) {
+    return {};
+}
+
+vec<float, 9> genLightingCoefficientsForNormal(float3 N, float3 L) {
+    return {};
+}
+
+kernel void genLightingCoefficients(int device const& face,
+                                    vec<float, 9> device& out,
+                                    float device& weightSum,
+                                    texture2d<float, access::read> source [[texture(0)]],
+                                    uint2 position [[thread_position_in_grid]]) {
+    float3 L = source.read(position).rgb;
+    float u = 2 * (position.x + 0.5f) / source.get_width() - 1;
+    float v = 2 * (position.y + 0.5f) / source.get_height() - 1;
+    float temp = 1.0f + u * u + v * v;
+    float weight = 4.0f / (sqrt(temp) * temp);
+    float3 N = mapUVSToN(u, v, face, { source.get_width(), source.get_height() });
+    out += genLightingCoefficientsForNormal(N, L) * weight;
+    weightSum += weight;
+}
+
+#endif

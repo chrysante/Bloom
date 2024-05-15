@@ -9,6 +9,9 @@ namespace bloom {
 void renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
                    TextureHandle cubemap, TextureHandle equirectangular);
 
+void renderIrradianceMap(HardwareDevice& device, CommandBuffer& commandBuffer,
+                         TextureHandle dest, TextureHandle source);
+
 } // namespace bloom
 
 #endif // BLOOM_ASSET_CUBEMAPRENDERER_H

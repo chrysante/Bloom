@@ -147,6 +147,9 @@ public:
                                      size_t destinationLevel,
                                      vml::usize3 destinationOrigin) = 0;
 
+    ///
+    virtual void generateMipmaps(TextureView texture) = 0;
+
 protected:
     BlitEncoder() = default;
 };

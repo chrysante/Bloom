@@ -5,7 +5,6 @@
 
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/GPU/CommandBuffer.h"
-#include "Bloom/GPU/CommandQueue.h"
 
 using namespace bloom;
 using namespace ranges::views;
@@ -41,10 +40,9 @@ void RenderGraph::allocateResources(FrameParameters const& frameParams,
     doAllocateResources(frameParams, device);
 }
 
-void RenderGraph::execute(FrameParameters const& params, CommandQueue& queue) {
-    auto commandBuffer = queue.createCommandBuffer();
-    doExecute(params, *commandBuffer);
-    commandBuffer->commit();
+void RenderGraph::execute(FrameParameters const& params,
+                          CommandBuffer& commandBuffer) {
+    doExecute(params, commandBuffer);
 }
 
 static std::string format(InterfaceType type) {

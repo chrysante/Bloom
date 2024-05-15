@@ -80,7 +80,10 @@ struct Viewport: View, BasicSceneInspector {
     void init() override;
 
     void display() override;
+
     void drawScenes();
+    void displayColorPicker(CommandBuffer& commandBuffer,
+                            TextureView finalColor, float2 mouseCoord);
     void copyEntities(std::span<EntityHandle const> entities);
     void displayGizmo();
     void handleEntitySelection();
@@ -196,6 +199,24 @@ void Viewport::display() {
     }
 }
 
+void Viewport::displayColorPicker(CommandBuffer& commandBuffer,
+                                  TextureView finalColor, float2 mouseCoord) {
+    auto encoder = commandBuffer.makeBlitEncoder();
+    if (!colorPickerTmpTex || colorPickerTmpTex.description().pixelFormat !=
+                                  finalColor.description().pixelFormat)
+    {
+        auto desc = finalColor.description();
+        desc.size = { 1, 1, 1 };
+        desc.storageMode = StorageMode::Shared;
+        colorPickerTmpTex = editor().device().createTexture(desc);
+    }
+    encoder->copyTextureRegion(finalColor, 0, 0, { mouseCoord, 0 }, { 1, 1, 1 },
+                               colorPickerTmpTex, 0, 0, { 0, 0, 0 });
+    encoder->synchronizeTexture(colorPickerTmpTex, 0, 0);
+    encoder->end();
+    displayTextureColorTooltip(colorPickerTmpTex, { 0, 0 }, mouseCoord);
+}
+
 void Viewport::drawScenes() {
     float2 viewportSize =
         (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
@@ -228,7 +249,8 @@ void Viewport::drawScenes() {
                                      AssetRepresentation::CPU);
     }
     renderer->setIBLTexture(iblTexture);
-    renderer->draw(editor().commandQueue());
+    auto commandBuffer = editor().commandQueue().createCommandBuffer();
+    renderer->draw(*commandBuffer);
     if (renderGraph->sources().empty()) {
         displayEmptyWithError("Render Graph Has No Outputs");
         return;
@@ -240,31 +262,15 @@ void Viewport::drawScenes() {
         return;
     }
     float2 size = ImGui::GetContentRegionAvail();
-    //    float2 mouseCoord = finalColor.size().xy *
-    //    ((float2)ImGui::GetMousePos() - (float2)ImGui::GetCursorScreenPos()) /
-    //    size;
+    float2 mouseCoord =
+        finalColor.size().xy *
+        ((float2)ImGui::GetMousePos() - (float2)ImGui::GetCursorScreenPos()) /
+        size;
     ImGui::Image(finalColor.nativeHandle(), size);
-#if 0
     if (ImGui::IsKeyDown(ImGuiKey_ModAlt)) {
-        auto& cmdQueue = editor().commandQueue();
-        auto cmdBuffer = cmdQueue.createCommandBuffer();
-        auto encoder = cmdBuffer->makeBlitEncoder();
-        if (!colorPickerTmpTex ||
-            colorPickerTmpTex.description().pixelFormat != finalColor.description().pixelFormat)
-        {
-            auto desc = finalColor.description();
-            desc.size = { 1, 1, 1 };
-            desc.storageMode = StorageMode::Shared;
-            colorPickerTmpTex = editor().device().createTexture(desc);
-        }
-        encoder->copyTextureRegion(finalColor, 0, 0, { mouseCoord, 0 }, { 1, 1, 1 },
-                                   colorPickerTmpTex, 0, 0, {0,0,0});
-        encoder->end();
-        cmdBuffer->commit();
-        cmdBuffer->waitForCompletion();
-        displayTextureColorTooltip(colorPickerTmpTex, {0,0});
+        displayColorPicker(*commandBuffer, finalColor, mouseCoord);
     }
-#endif
+    commandBuffer->commit();
 }
 
 void Viewport::copyEntities(std::span<EntityHandle const> entities) {

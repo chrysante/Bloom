@@ -145,7 +145,7 @@ void EditorSceneRenderer::setIBLTexture(Reference<Texture2D> tex) {
     }
 }
 
-void EditorSceneRenderer::draw(bloom::CommandQueue& commandQueue) {
+void EditorSceneRenderer::draw(bloom::CommandBuffer& commandBuffer) {
     if (!mRenderer) {
         return;
     }
@@ -154,7 +154,7 @@ void EditorSceneRenderer::draw(bloom::CommandQueue& commandQueue) {
     if (selectedGeometry) {
         selectedGeometry->prepare(mRenderGraph->device());
     }
-    mRenderer->draw(commandQueue);
+    mRenderer->draw(commandBuffer);
 }
 
 bloom::TextureView EditorSceneRenderer::sceneColor() const {

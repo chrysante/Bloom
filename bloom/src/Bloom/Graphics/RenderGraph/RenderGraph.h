@@ -55,7 +55,7 @@ public:
                            HardwareDevice& device);
 
     /// Executes the render graph
-    void execute(FrameParameters const& params, CommandQueue& queue);
+    void execute(FrameParameters const& params, CommandBuffer& commandBuffer);
 
     /// \Returns `true` if this graph is compiled
     bool isCompiled() const { return !executionOrder.empty(); }

@@ -227,7 +227,7 @@ static CameraInput makeCameraInput(Camera const& camera) {
     };
 }
 
-void Renderer::draw(CommandQueue& commandQueue) {
+void Renderer::draw(CommandBuffer& commandBuffer) {
     auto& device = mRenderGraph->device();
     mRenderGraph->allocateResources(frameParams, device);
     if (geometry) {
@@ -271,5 +271,5 @@ void Renderer::draw(CommandQueue& commandQueue) {
         device.fillManagedBuffer(postProcessParams->handle(), &values,
                                  sizeof values);
     }
-    mRenderGraph->execute(frameParams, commandQueue);
+    mRenderGraph->execute(frameParams, commandBuffer);
 }

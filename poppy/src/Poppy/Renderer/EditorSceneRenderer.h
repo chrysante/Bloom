@@ -23,7 +23,7 @@ public:
     void submit(bloom::Scene const& scene,
                 EntitySelectionManager const& selectionManager);
     void setIBLTexture(bloom::Reference<bloom::Texture2D> tex);
-    void draw(bloom::CommandQueue& commandQueue);
+    void draw(bloom::CommandBuffer& commandBuffer);
 
     bloom::TextureView sceneColor() const;
     bloom::TextureView sceneColorWithOverlays() const;

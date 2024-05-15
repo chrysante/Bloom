@@ -67,7 +67,7 @@ public:
     void setIBLTexture(Reference<Texture2D> tex);
 
     ///
-    void draw(CommandQueue& commandQueue);
+    void draw(CommandBuffer& commandBuffer);
 
     ///
     FrameParameters const& getFrameParams() const { return frameParams; }

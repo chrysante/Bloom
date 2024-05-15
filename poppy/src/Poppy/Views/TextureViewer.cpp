@@ -85,9 +85,12 @@ float4 poppy::copyPixelColor(TextureView texture, float2 coord) {
     }
 }
 
-void poppy::displayTextureColorTooltip(TextureView texture, float2 coord) {
+void poppy::displayTextureColorTooltip(
+    TextureView texture, float2 coord,
+    std::optional<vml::float2> displayCoord) {
     coord = vml::floor(coord);
     float4 color = copyPixelColor(texture, coord);
+    coord = displayCoord.value_or(coord);
     auto label = utl::strcat("X: ", coord.x, " Y: ", coord.y, "###Color");
     ImGui::ColorTooltip(label.c_str(), color.data(), ImGuiColorEditFlags_Float);
 }

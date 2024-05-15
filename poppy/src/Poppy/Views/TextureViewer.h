@@ -2,6 +2,7 @@
 #define POPPY_VIEWS_TEXTUREVIEWER_H
 
 #include <memory>
+#include <optional>
 
 #include <vml/vml.hpp>
 
@@ -39,7 +40,9 @@ private:
 
 vml::float4 copyPixelColor(bloom::TextureView texture, vml::float2 coord);
 
-void displayTextureColorTooltip(bloom::TextureView texture, vml::float2 coord);
+void displayTextureColorTooltip(
+    bloom::TextureView texture, vml::float2 textureCoord,
+    std::optional<vml::float2> displayCoord = std::nullopt);
 
 } // namespace poppy
 

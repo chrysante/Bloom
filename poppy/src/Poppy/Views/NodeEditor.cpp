@@ -686,6 +686,7 @@ struct ViewData: PersistentViewData, ActiveViewData, FrameViewData {
 };
 
 static bool drawDebugHelpers = false;
+static bool displayPinUserType = false;
 
 static void debuggerItem(char const* name, Node const* node) {
     ImGui::Text("%s: %s", name, node ? node->name().data() : "");
@@ -728,6 +729,7 @@ static void displayDebugger(ViewData const& viewData,
 #define ITEM(name) debuggerItem(#name, viewData.name)
     ImGui::Begin("Node Editor Debugger", open);
     ImGui::Checkbox("Draw Debug Helpers", &drawDebugHelpers);
+    ImGui::Checkbox("Display Pin User Types", &displayPinUserType);
     ImGui::SeparatorText("Persistent Data");
     ITEM(position);
     ITEM(zoom);
@@ -1165,14 +1167,24 @@ static float2 pinLabelPosition(Pin const& pin, float2 bgPadding,
     }); // clang-format on
 }
 
+static std::string_view selectPinLabel(Pin const& pin) {
+    if (!displayPinUserType) {
+        return pin.name();
+    }
+    static std::string tmpBuffer;
+    tmpBuffer = utl::strcat((int)pin.userType());
+    return tmpBuffer;
+}
+
 static void displayPinLabelOverlay(Pin const& pin, ViewData const& viewData) {
-    if (pin.name().empty()) {
+    std::string_view label = selectPinLabel(pin);
+    if (label.empty()) {
         return;
     }
+    auto* textBegin = label.data();
+    auto* textEnd = textBegin + label.size();
     float2 pinPosition = computeScreenPinPosition(viewData, pin);
     auto* DL = ImGui::GetWindowDrawList();
-    auto* textBegin = pin.name().data();
-    auto* textEnd = textBegin + pin.name().size();
     float2 textSize =
         (float2)ImGui::CalcTextSize(textBegin, textEnd) * viewData.zoom;
     float ypos = styleVars().PinAreaSize * viewData.zoom / 2 - textSize.y / 2;
@@ -1453,7 +1465,7 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
               .connected = drawConnected,
               .hovered = drawHovered });
     if (displayLabelInBody) {
-        displayPinLabelInBody(pin.name(),
+        displayPinLabelInBody(selectPinLabel(pin),
                               pinInBodyLabelPosition(pin, position,
                                                      viewData.zoom),
                               isa<InputPin>(pin) ? TextAlign::Left :

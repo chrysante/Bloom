@@ -96,7 +96,8 @@ public:
     BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
                     std::vector<Value*> arguments);
 
-    BuiltinFunction(Context& ctx, BuiltinFunctionKind kind);
+    BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
+                    std::span<Type const* const> argumentTypes);
 
     BuiltinFunctionKind kind() const { return _kind; }
 
@@ -115,7 +116,13 @@ public:
              commonType(lhs->type(), rhs->type()), { lhs, rhs }),
         _kind(kind) {}
 
+    ArithmeticOperation(Kind kind, Type const* lhsType, Type const* rhsType):
+        User(ValueNodeType::ArithmeticOperation, commonType(lhsType, rhsType),
+             { nullptr, nullptr }),
+        _kind(kind) {}
+
     Value* LHS() const { return operand(0); }
+
     Value* RHS() const { return operand(1); }
 
     Kind kind() const { return _kind; }

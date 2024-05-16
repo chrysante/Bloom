@@ -53,10 +53,8 @@ enum class RasterizerInputKind {
 };
 
 enum class BuiltinFunctionKind {
-    NormalizeFloat1,
-    NormalizeFloat2,
-    NormalizeFloat3,
-    NormalizeFloat4,
+    Normalize,
+    Sqrt,
 };
 
 enum class SampleMode { Color, Normal };

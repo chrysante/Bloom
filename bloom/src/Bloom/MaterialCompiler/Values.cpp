@@ -41,43 +41,53 @@ RasterizerInput::RasterizerInput(Context& ctx, RasterizerInputKind kind):
     Constant(ValueNodeType::RasterizerInput, selectType(ctx, kind)),
     _kind(kind) {}
 
-namespace {
-
-struct BuiltinFunctionDesc {
-    static BuiltinFunctionDesc Make(Context& ctx, BuiltinFunctionKind kind) {
-        using enum BuiltinFunctionKind;
-        switch (kind) {
-        case NormalizeFloat1:
-            [[fallthrough]];
-        case NormalizeFloat2:
-            [[fallthrough]];
-        case NormalizeFloat3:
-            [[fallthrough]];
-        case NormalizeFloat4:
-            return { 1, ctx.vectorType((int)kind - (int)NormalizeFloat1 + 1) };
-        }
+static Type const* getReturnType(Context&, BuiltinFunctionKind kind,
+                                 std::span<Type const* const> argTypes) {
+    using enum BuiltinFunctionKind;
+    switch (kind) {
+    case Normalize:
+        [[fallthrough]];
+    case Sqrt:
+        assert(argTypes.size() == 1);
+        return argTypes[0];
     }
-
-    size_t numArguments;
-    Type const* returnType;
-};
-
-} // namespace
+}
 
 BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
                                  std::vector<Value*> arguments):
     User(ValueNodeType::BuiltinFunction,
-         BuiltinFunctionDesc::Make(ctx, kind).returnType, std::move(arguments)),
+         getReturnType(ctx, kind,
+                       arguments | transform(&Value::type) | ToSmallVector<>),
+         std::move(arguments)),
     _kind(kind) {}
 
-BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind):
-    BuiltinFunction(ctx, kind,
-                    std::vector<Value*>(
-                        BuiltinFunctionDesc::Make(ctx, kind).numArguments)) {}
+BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
+                                 std::span<Type const* const> argumentTypes):
+    User(ValueNodeType::BuiltinFunction,
+         getReturnType(ctx, kind, argumentTypes),
+         std::vector<Value*>(argumentTypes.size())),
+    _kind(kind) {}
+
+static void throwArithmeticTypeError() {
+    throw std::runtime_error("Invalid operand types for arithmetic operation");
+}
 
 Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
-    assert(lhs == rhs);
-    return lhs;
+    auto* LHS = dyncast<VectorType const*>(lhs);
+    auto* RHS = dyncast<VectorType const*>(rhs);
+    if (!LHS || !RHS) {
+        throwArithmeticTypeError();
+    }
+    if (LHS->numComponents() == 1) {
+        return RHS;
+    }
+    if (RHS->numComponents() == 1) {
+        return LHS;
+    }
+    if (LHS->numComponents() != RHS->numComponents()) {
+        throwArithmeticTypeError();
+    }
+    return LHS;
 }
 
 TextureSampler::TextureSampler(Context& ctx, TextureConstant* texture,

@@ -93,6 +93,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void codegenImpl(TextureConstant const&) {}
     void codegenImpl(RasterizerInput const&) {}
     void codegenImpl(BuiltinFunction const& value);
+    void codegenImpl(ArithmeticOperation const& value);
     void codegenImpl(TextureSampler const& value);
     void codegenImpl(VectorBuilder const& value);
     void codegenImpl(VectorElement const&) {}
@@ -436,25 +437,43 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
 }
 
 void MetalCodeGenerator::codegenImpl(BuiltinFunction const& value) {
-    writeItem([&] {
-        writeRaw(getName(value.type()), " ", getName(&value), " = ");
-        using enum BuiltinFunctionKind;
-        switch (value.kind()) {
-        case NormalizeFloat1:
-            [[fallthrough]];
-        case NormalizeFloat2:
-            [[fallthrough]];
-        case NormalizeFloat3:
-            [[fallthrough]];
-        case NormalizeFloat4:
-            writeRaw("normalize");
+    auto item = makeItem();
+    writeRaw(getName(value.type()), " ", getName(&value), " = ");
+    using enum BuiltinFunctionKind;
+    switch (value.kind()) {
+    case Normalize:
+        writeRaw("normalize");
+        break;
+    case Sqrt:
+        writeRaw("sqrt");
+        break;
+    }
+    writeScope(ScopeType::Paran, [&] {
+        for (auto& arg: value.operands()) {
+            writeItem(getName(arg));
         }
-        writeScope(ScopeType::Paran, [&] {
-            for (auto& arg: value.operands()) {
-                writeItem(getName(arg));
-            }
-        });
     });
+}
+
+static std::string_view getSourceRepr(ArithmeticOperation::Kind operation) {
+    using enum ArithmeticOperation::Kind;
+    switch (operation) {
+    case Add:
+        return "+";
+    case Sub:
+        return "-";
+    case Mul:
+        return "*";
+    case Div:
+        return "/";
+    }
+}
+
+void MetalCodeGenerator::codegenImpl(ArithmeticOperation const& value) {
+    auto item = makeItem();
+    writeRaw(getName(value.type()), " ", getName(&value), " = ",
+             getName(value.LHS()), " ", getSourceRepr(value.kind()), " ",
+             getName(value.RHS()));
 }
 
 void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {

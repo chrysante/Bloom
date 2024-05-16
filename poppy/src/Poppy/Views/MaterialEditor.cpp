@@ -57,9 +57,29 @@ enum class InputKind {
     WorldPosition
 };
 
-enum class FunctionType { Normalize };
+enum class FunctionType { Normalize, Sqrt };
 
 enum class ArithmeticOp { Add, Sub, Mul, Div, LAST = Div };
+
+static Type const* translateType(Context& ctx, DataType dataType) {
+    using enum DataType;
+    switch (dataType) {
+    case DataType::Float:
+        [[fallthrough]];
+    case DataType::Float2:
+        [[fallthrough]];
+    case DataType::Float3:
+        [[fallthrough]];
+    case DataType::Float4: {
+        int numComponents = (int)dataType - (int)DataType::Float + 1;
+        return ctx.vectorType(numComponents);
+    }
+    case AnyVector:
+        throw std::runtime_error("Compiling value of AnyVector type");
+    case Texture:
+        BL_UNIMPLEMENTED();
+    }
+}
 
 struct MaterialNodeController: NodeController {
     struct ValueMap: utl::hashmap<Node*, utl::small_vector<Value*>> {
@@ -127,6 +147,10 @@ protected:
         YAML::Node root;
         root["InputTypes"] = inputTypes;
         return root;
+    }
+
+    bool isAnyInputUntyped() const {
+        return ranges::contains(inputTypes, DataType::AnyVector);
     }
 
     std::vector<DataType> inputTypes;
@@ -362,12 +386,15 @@ struct ConstantController: MaterialNodeController {
     float4 nodeColor() override { return { 0.2, .8, .2, 1 }; }
 
     float2 preferredContentSize() const override {
+        auto& style = ImGui::GetStyle();
+        float itemHeight = ImGui::GetFontSize() + 2 * style.FramePadding.y +
+                           style.ItemSpacing.y;
         using enum DataType;
         switch (dataType) {
         case Float:
-            return { 100, 50 };
+            return { 70, itemHeight };
         case Float2:
-            return { 100, 50 };
+            return { 70, itemHeight };
         case Float3:
             return { 150, 180 };
         case Float4:
@@ -375,7 +402,7 @@ struct ConstantController: MaterialNodeController {
         case AnyVector:
             BL_UNREACHABLE();
         case Texture:
-            return { 100, 100 };
+            return float2{ 100, 100 } + float2(0, itemHeight);
         }
     }
 
@@ -527,6 +554,8 @@ struct BuiltinFunctionController: OverloadableNodeController {
     static size_t numInputs(FunctionType type) {
         switch (type) {
         case FunctionType::Normalize:
+            [[fallthrough]];
+        case FunctionType::Sqrt:
             return 1;
         }
     }
@@ -534,7 +563,6 @@ struct BuiltinFunctionController: OverloadableNodeController {
     static NodeDesc Make(float2 position, FunctionType type) {
         return { .name = std::string(magic_enum::enum_name(type)),
                  .position = position,
-                 .minSize = { 100, 0 },
                  .controller =
                      std::make_unique<BuiltinFunctionController>(type) };
     }
@@ -557,11 +585,14 @@ struct BuiltinFunctionController: OverloadableNodeController {
         return root;
     }
 
+    float2 preferredContentSize() const override { return { 70, 0 }; }
+
     std::vector<PinDesc> makeInputDescriptors() override {
         switch (type) {
         case FunctionType::Normalize:
+        case FunctionType::Sqrt:
             return {
-                { .name = "Vector",
+                { .name = "Input",
                   .userType = (PinUserType)DataType::AnyVector },
             };
         }
@@ -570,25 +601,37 @@ struct BuiltinFunctionController: OverloadableNodeController {
     std::vector<PinDesc> makeOutputDescriptors() override {
         switch (type) {
         case FunctionType::Normalize:
+        case FunctionType::Sqrt:
             return {
-                { .name = "Vector", .userType = (PinUserType)inputTypes[0] },
+                { .name = "Result", .userType = (PinUserType)inputTypes[0] },
             };
+        }
+    }
+
+    static BuiltinFunctionKind translateFunctionType(FunctionType type) {
+        switch (type) {
+        case FunctionType::Normalize:
+            return BuiltinFunctionKind::Normalize;
+        case FunctionType::Sqrt:
+            return BuiltinFunctionKind::Sqrt;
         }
     }
 
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& g) const override {
+        if (isAnyInputUntyped()) {
+            return {};
+        }
         using enum BuiltinFunctionKind;
         switch (type) {
-        case FunctionType::Normalize: {
-            auto inType = inputTypes[0];
-            if (inType == DataType::AnyVector) {
-                return { nullptr };
-            }
-            int offset = (int)inType - (int)DataType::Float;
-            auto type = (BuiltinFunctionKind)((int)NormalizeFloat1 + offset);
-            return { g.addValue<BuiltinFunction>(ctx, type) };
-        }
+        case FunctionType::Normalize:
+            [[fallthrough]];
+        case FunctionType::Sqrt:
+            auto* inType = translateType(ctx, inputTypes[0]);
+            auto* value =
+                g.addValue<BuiltinFunction>(ctx, translateFunctionType(type),
+                                            std::array{ inType });
+            return { value };
         }
     }
 
@@ -697,21 +740,24 @@ struct SplitNodeController: MaterialNodeController {
     int numComponents;
 };
 
-struct ArithmeticNodeController: MaterialNodeController {
+struct ArithmeticNodeController: OverloadableNodeController {
     static NodeDesc Make(ArithmeticOp op, float2 position) {
         return { .name = std::string(magic_enum::enum_name(op)),
                  .position = position,
+                 .minSize = { 50, 0 },
                  .controller = std::make_unique<ArithmeticNodeController>(op) };
     }
 
-    ArithmeticNodeController(ArithmeticOp op): operation(op) {}
+    ArithmeticNodeController(ArithmeticOp op):
+        OverloadableNodeController(2, DataType::AnyVector), operation(op) {}
 
-    explicit ArithmeticNodeController(YAML::Node const& root) {
+    explicit ArithmeticNodeController(YAML::Node const& root):
+        OverloadableNodeController(root) {
         operation = root["Operation"].as<ArithmeticOp>();
     }
 
     YAML::Node serialize() const override {
-        YAML::Node root;
+        YAML::Node root = OverloadableNodeController::serialize();
         root["Type"] = NodeType::Arithmetic;
         root["Operation"] = operation;
         return root;
@@ -720,23 +766,58 @@ struct ArithmeticNodeController: MaterialNodeController {
     std::vector<PinDesc> makeInputDescriptors() override {
         return { { .name = "A",
                    .flags = PinFlags::Optional,
-                   .userType = (PinUserType)DataType::Float },
+                   .userType = (PinUserType)DataType::AnyVector },
                  { .name = "B",
                    .flags = PinFlags::Optional,
-                   .userType = (PinUserType)DataType::Float } };
+                   .userType = (PinUserType)DataType::AnyVector } };
+    }
+
+    DataType selectOutputType() const {
+        using enum DataType;
+        auto a = inputTypes[0];
+        auto b = inputTypes[1];
+        if (a == Float || a == AnyVector) {
+            return b;
+        }
+        if (b == Float || b == AnyVector) {
+            return a;
+        }
+        return a;
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
         return { { .name = "Result",
-                   .userType = (PinUserType)DataType::Float } };
+                   .userType = (PinUserType)selectOutputType() } };
     }
 
-    utl::small_vector<Value*> createGraphNodes(Context&,
-                                               MaterialGraph&) const override {
-        BL_UNIMPLEMENTED();
+    static ArithmeticOperation::Kind translateOp(ArithmeticOp op) {
+        switch (op) {
+        case ArithmeticOp::Add:
+            return ArithmeticOperation::Add;
+        case ArithmeticOp::Sub:
+            return ArithmeticOperation::Sub;
+        case ArithmeticOp::Mul:
+            return ArithmeticOperation::Mul;
+        case ArithmeticOp::Div:
+            return ArithmeticOperation::Div;
+        }
     }
 
-    bool alwaysDisplayInputNames() const override { return false; }
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& graph) const override {
+        if (isAnyInputUntyped()) {
+            return {};
+        }
+        auto* value =
+            graph.addValue<ArithmeticOperation>(translateOp(operation),
+                                                translateType(ctx,
+                                                              inputTypes[0]),
+                                                translateType(ctx,
+                                                              inputTypes[1]));
+        return { value };
+    }
+
+    bool alwaysDisplayInputNames() const override { return true; }
 
     bool alwaysDisplayOutputNames() const override { return false; }
 

@@ -34,9 +34,8 @@ TEST_CASE() {
         g.addValue<AggregateBuilder>(ctx, std::vector<Value*>{ const0, const1,
                                                                vec0, sample0 });
     Value* resultVal = g.addValue<AggregateElement>(aggregate, 1);
-    resultVal =
-        g.addValue<BuiltinFunction>(ctx, BuiltinFunctionKind::NormalizeFloat3,
-                                    std::vector<Value*>{ resultVal });
+    resultVal = g.addValue<BuiltinFunction>(ctx, BuiltinFunctionKind::Normalize,
+                                            std::vector<Value*>{ resultVal });
     auto* worldpos = ctx.rasterizerInput(RasterizerInputKind::WorldPosition);
     auto* col =
         g.addValue<TextureSampler>(ctx, tex1, worldpos, SampleMode::Color);

@@ -400,8 +400,9 @@ public:
         return std::nullopt;
     }
 
-    /// Content callback for the editor background popup menu
-    virtual void backgroundPopupMenu([[maybe_unused]] vml::float2 position) {}
+    /// Context menu content to create new nodes. Shall return a pointer to node
+    /// if a node has been added
+    virtual nodeEditor::Node* createNodePopupMenu() { return nullptr; }
 };
 
 /// Generic customizable node editor

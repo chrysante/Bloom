@@ -51,8 +51,8 @@ struct RenderGraphEditor: View {
             }
         }
 
-        void backgroundPopupMenu(float2 position) override {
-            view->backgroundContextMenu(position);
+        Node* createNodePopupMenu() override {
+            return view->createNodePopupMenu();
         }
 
         RenderGraphEditor* view;
@@ -73,7 +73,7 @@ struct RenderGraphEditor: View {
     void compile();
     void doCompile();
 
-    void backgroundContextMenu(float2 position);
+    Node* createNodePopupMenu();
 
     RenderGraph* renderGraph;
     NodeEditorGraph model;
@@ -423,16 +423,18 @@ void RenderGraphEditor::doCompile() {
     RenderGraphManager::set(std::move(rg));
 }
 
-void RenderGraphEditor::backgroundContextMenu(float2 position) {
+Node* RenderGraphEditor::createNodePopupMenu() {
+    Node* result = nullptr;
     if (ImGui::MenuItem("Input")) {
-        model.addNode(GlobalInputNodeController::MakeDesc(position));
+        result = model.addNode(GlobalInputNodeController::MakeDesc({}));
     }
     if (ImGui::MenuItem("Output")) {
-        model.addNode(GlobalOutputNodeController::MakeDesc(position));
+        result = model.addNode(GlobalOutputNodeController::MakeDesc({}));
     }
     for (auto& entry: PassRegistry::entries()) {
         if (ImGui::MenuItem(entry.name.c_str())) {
-            model.addNode(PassNodeController::MakeDesc(position, entry));
+            result = model.addNode(PassNodeController::MakeDesc({}, entry));
         }
     }
+    return result;
 }

@@ -47,8 +47,14 @@ struct BuiltinFunctionDesc {
     static BuiltinFunctionDesc Make(Context& ctx, BuiltinFunctionKind kind) {
         using enum BuiltinFunctionKind;
         switch (kind) {
+        case NormalizeFloat1:
+            [[fallthrough]];
+        case NormalizeFloat2:
+            [[fallthrough]];
         case NormalizeFloat3:
-            return { 1, ctx.float3Type() };
+            [[fallthrough]];
+        case NormalizeFloat4:
+            return { 1, ctx.vectorType((int)kind - (int)NormalizeFloat1 + 1) };
         }
     }
 

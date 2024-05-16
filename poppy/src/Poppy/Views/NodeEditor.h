@@ -91,6 +91,10 @@ public:
     /// The color of the node body
     virtual vml::float4 nodeColor() { return { 1, 0, 0.5, 1 }; }
 
+    /// Called for every input and output pin whenever a link is added or
+    /// removed
+    virtual void pinConnectionChanged(Pin&) {}
+
     /// \Returns the node that this controller is attached to
     Node* node() const { return _node; }
 
@@ -127,6 +131,9 @@ class Pin {
 public:
     /// The description from which this pin was created
     PinDesc const& desc() const { return _desc; }
+
+    ///
+    void setDesc(PinDesc desc) { _desc = std::move(desc); }
 
     /// Runtime type of this pin, i.e., `InputPin` or `OutputPin`
     PinType type() const { return _type; }

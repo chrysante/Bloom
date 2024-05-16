@@ -52,7 +52,12 @@ enum class RasterizerInputKind {
     WorldPosition,
 };
 
-enum class BuiltinFunctionKind { NormalizeFloat3 };
+enum class BuiltinFunctionKind {
+    NormalizeFloat1,
+    NormalizeFloat2,
+    NormalizeFloat3,
+    NormalizeFloat4,
+};
 
 enum class SampleMode { Color, Normal };
 

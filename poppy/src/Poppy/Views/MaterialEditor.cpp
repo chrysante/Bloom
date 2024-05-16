@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <magic_enum.hpp>
+#include <utl/queue.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Asset/AssetManager.h"
@@ -35,7 +36,7 @@ static constexpr std::array<float4, 3> PinChannelColors = {
     { { 1, 0, 0, 1 }, { .4, .9, .3, 1 }, { 0, 0.5, 1, 1 } }
 };
 
-enum class DataType { Float, Float2, Float3, Float4, Texture };
+enum class DataType { Float, Float2, Float3, Float4, AnyVector, Texture };
 
 enum class NodeType {
     Output,
@@ -109,6 +110,76 @@ struct MaterialNodeController: NodeController {
     }
 };
 
+struct OverloadableNodeController: MaterialNodeController {
+protected:
+    explicit OverloadableNodeController(size_t numInputs, DataType defaultType):
+        OverloadableNodeController(
+            std::vector<DataType>(numInputs, defaultType)) {}
+
+    explicit OverloadableNodeController(std::vector<DataType> inputTypes):
+        inputTypes(std::move(inputTypes)) {}
+
+    explicit OverloadableNodeController(YAML::Node const& root) {
+        inputTypes = root["InputTypes"].as<std::vector<DataType>>();
+    }
+
+    YAML::Node serialize() const override {
+        YAML::Node root;
+        root["InputTypes"] = inputTypes;
+        return root;
+    }
+
+    std::vector<DataType> inputTypes;
+
+private:
+    void pinConnectionChanged(Pin& pin) override {
+        auto* in = dyncast<InputPin*>(&pin);
+        if (!in) {
+            return;
+        }
+        updatePinType(*in);
+        notifyUsers();
+    }
+
+    bool updatePinType(InputPin& in) {
+        size_t index = in.indexInParent();
+        BL_ASSERT(index < inputTypes.size());
+        auto* origin = in.origin();
+        auto newType = origin ? (DataType)in.origin()->userType() :
+                                DataType::AnyVector;
+        if (newType == inputTypes[index]) {
+            return false;
+        }
+        inputTypes[index] = newType;
+        auto descs = makeOutputDescriptors();
+        for (auto [pin, desc]: zip(node()->outputs(), descs)) {
+            pin->setDesc(desc);
+        }
+        return true;
+    }
+
+    void notifyUsers() {
+        utl::queue<OverloadableNodeController*> queue = { this };
+        utl::hashset<OverloadableNodeController*> visited = { this };
+        while (!queue.empty()) {
+            auto* controller = queue.pop();
+            for (auto* outpin: controller->node()->outputs()) {
+                for (auto* target: outpin->targets()) {
+                    auto* targetController =
+                        dynamic_cast<OverloadableNodeController*>(
+                            target->parent().controller());
+                    if (targetController &&
+                        targetController->updatePinType(*target) &&
+                        visited.insert(targetController).second)
+                    {
+                        queue.push(targetController);
+                    }
+                }
+            }
+        }
+    }
+};
+
 struct OutputNodeController: MaterialNodeController {
     static NodeDesc Make(float2 position) {
         return { .name = "Output",
@@ -176,18 +247,14 @@ struct ConstantController: MaterialNodeController {
             .controller = std::make_unique<ConstantController>(dataType)
         };
         switch (dataType) {
-        case Float:
-            break;
-        case Float2:
-            break;
         case Float3:
-            desc.resizable = true;
-            break;
+            [[fallthrough]];
         case Float4:
-            desc.resizable = true;
-            break;
+            [[fallthrough]];
         case Texture:
             desc.resizable = true;
+            break;
+        default:
             break;
         }
         return desc;
@@ -258,6 +325,8 @@ struct ConstantController: MaterialNodeController {
                   .userType = (PinUserType)Float,
                   .flags = PinFlags::Optional },
             };
+        case AnyVector:
+            BL_UNREACHABLE();
         case Texture:
             return {
                 { .name = "Texture", .userType = (PinUserType)Texture },
@@ -279,6 +348,8 @@ struct ConstantController: MaterialNodeController {
             int numComponents = (int)dataType - (int)DataType::Float + 1;
             return { ctx.vectorConstant(numComponents, value) };
         }
+        case AnyVector:
+            BL_UNREACHABLE();
         case Texture:
             return { ctx.textureConstant(textype, textureAsset) };
         }
@@ -301,6 +372,8 @@ struct ConstantController: MaterialNodeController {
             return { 150, 180 };
         case Float4:
             return { 150, 180 };
+        case AnyVector:
+            BL_UNREACHABLE();
         case Texture:
             return { 100, 100 };
         }
@@ -330,6 +403,8 @@ struct ConstantController: MaterialNodeController {
             ImGui::SetNextItemWidth(-FLT_MIN);
             ImGui::ColorPicker4("###Value", value.data(), colFlags);
             break;
+        case DataType::AnyVector:
+            BL_UNREACHABLE();
         case DataType::Texture: {
             if (auto asset = acceptAssetDragDrop(AssetType::Texture2D)) {
                 textureAsset = *asset;
@@ -448,7 +523,14 @@ struct InputNodeController: MaterialNodeController {
     InputKind kind;
 };
 
-struct BuiltinFunctionController: MaterialNodeController {
+struct BuiltinFunctionController: OverloadableNodeController {
+    static size_t numInputs(FunctionType type) {
+        switch (type) {
+        case FunctionType::Normalize:
+            return 1;
+        }
+    }
+
     static NodeDesc Make(float2 position, FunctionType type) {
         return { .name = std::string(magic_enum::enum_name(type)),
                  .position = position,
@@ -457,16 +539,21 @@ struct BuiltinFunctionController: MaterialNodeController {
                      std::make_unique<BuiltinFunctionController>(type) };
     }
 
-    BuiltinFunctionController(FunctionType type): type(type) {}
+    BuiltinFunctionController(FunctionType type):
+        OverloadableNodeController(numInputs(type), DataType::AnyVector),
+        type(type) {}
 
-    explicit BuiltinFunctionController(YAML::Node const& root) {
+    explicit BuiltinFunctionController(YAML::Node const& root):
+        OverloadableNodeController(root) {
         type = root["FunctionType"].as<FunctionType>();
+        inputTypes = root["InputTypes"].as<std::vector<DataType>>();
     }
 
     YAML::Node serialize() const override {
-        YAML::Node root;
+        YAML::Node root = OverloadableNodeController::serialize();
         root["Type"] = NodeType::BuiltinFunction;
         root["FunctionType"] = type;
+        root["InputTypes"] = inputTypes;
         return root;
     }
 
@@ -474,7 +561,8 @@ struct BuiltinFunctionController: MaterialNodeController {
         switch (type) {
         case FunctionType::Normalize:
             return {
-                { .name = "Vector", .userType = (PinUserType)DataType::Float3 },
+                { .name = "Vector",
+                  .userType = (PinUserType)DataType::AnyVector },
             };
         }
     }
@@ -483,17 +571,24 @@ struct BuiltinFunctionController: MaterialNodeController {
         switch (type) {
         case FunctionType::Normalize:
             return {
-                { .name = "Vector", .userType = (PinUserType)DataType::Float3 },
+                { .name = "Vector", .userType = (PinUserType)inputTypes[0] },
             };
         }
     }
 
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& g) const override {
+        using enum BuiltinFunctionKind;
         switch (type) {
-        case FunctionType::Normalize:
-            return { g.addValue<BuiltinFunction>(
-                ctx, BuiltinFunctionKind::NormalizeFloat3) };
+        case FunctionType::Normalize: {
+            auto inType = inputTypes[0];
+            if (inType == DataType::AnyVector) {
+                return { nullptr };
+            }
+            int offset = (int)inType - (int)DataType::Float;
+            auto type = (BuiltinFunctionKind)((int)NormalizeFloat1 + offset);
+            return { g.addValue<BuiltinFunction>(ctx, type) };
+        }
         }
     }
 
@@ -915,8 +1010,9 @@ struct Delegate: NodeEditorDelegate {
         }
         if (ImGui::BeginMenu("Constant")) {
             for (auto type: magic_enum::enum_values<DataType>()) {
-                if (ImGui::MenuItem(
-                        std::string(magic_enum::enum_name(type)).c_str()))
+                std::string name(magic_enum::enum_name(type));
+                if (type != DataType::AnyVector &&
+                    ImGui::MenuItem(name.c_str()))
                 {
                     editorGraph->addNode(
                         ConstantController::Make(position, type));
@@ -942,6 +1038,26 @@ struct Delegate: NodeEditorDelegate {
                     ArithmeticNodeController::Make(op, position));
             }
         }
+    }
+
+    bool isPinTypeCompatible(PinUserType input,
+                             PinUserType output) const override {
+        auto in = (DataType)input;
+        auto out = (DataType)output;
+        if (in == out) {
+            return true;
+        }
+        if ((int)in >= (int)DataType::Float &&
+            (int)in <= (int)DataType::Float4 && out == DataType::AnyVector)
+        {
+            return true;
+        }
+        if ((int)out >= (int)DataType::Float &&
+            (int)out <= (int)DataType::Float4 && in == DataType::AnyVector)
+        {
+            return true;
+        }
+        return false;
     }
 
     MaterialModelImpl* getModel() { return ::getModel(editor.material.get()); }

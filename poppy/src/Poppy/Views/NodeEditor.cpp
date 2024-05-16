@@ -211,16 +211,42 @@ size_t Pin::indexInParent() const {
     }); // clang-format on
 }
 
-void Pin::clearLinks() {
+static void clearLinksImpl(Pin& pin, auto callback) {
     // clang-format off
-    visit(*this, utl::overload{
+    visit(pin, utl::overload{
         [&](OutputPin& pin) {
+            auto targets = pin.targets() | ToSmallVector<>;
             pin.clearTargets();
+            callback(pin, targets);
         },
         [&](InputPin& pin) {
+            auto* origin = pin.origin();
             pin.setOrigin(nullptr);
+            callback(pin, origin);
         }
     }); // clang-format on
+}
+
+static void clearLinksWithCallback(Pin& pin) {
+    // clang-format off
+    clearLinksImpl(pin, utl::overload{
+        [](OutputPin& pin, std::span<InputPin* const> targets) {
+            for (auto* target: targets) {
+                target->parent().controller()->pinConnectionChanged(*target);
+            }
+            pin.parent().controller()->pinConnectionChanged(pin);
+        },
+        [](InputPin& pin, OutputPin* origin) {
+            if (origin) {
+                origin->parent().controller()->pinConnectionChanged(*origin);
+            }
+            pin.parent().controller()->pinConnectionChanged(pin);
+        }
+    }); // clang-format on
+}
+
+void Pin::clearLinks() {
+    clearLinksImpl(*this, [](auto&&...) {});
 }
 
 void InputPin::setOrigin(OutputPin* origin) {
@@ -294,6 +320,8 @@ void nodeEditor::link(OutputPin& out, InputPin& in) {
     }
     out.addTarget(&in);
     in.setOrigin(&out);
+    in.parent().controller()->pinConnectionChanged(in);
+    out.parent().controller()->pinConnectionChanged(out);
 }
 
 /// Links the pins \p a and \p b if compatible
@@ -569,7 +597,7 @@ struct Link {
     explicit operator bool() const { return origin || dest; }
 };
 
-static void deleteLink(Link link) { link.dest->clearLinks(); }
+static void deleteLink(Link link) { clearLinksWithCallback(*link.dest); }
 
 enum class Axis { Horizontal, Vertical };
 
@@ -1138,6 +1166,9 @@ static float2 pinLabelPosition(Pin const& pin, float2 bgPadding,
 }
 
 static void displayPinLabelOverlay(Pin const& pin, ViewData const& viewData) {
+    if (pin.name().empty()) {
+        return;
+    }
     float2 pinPosition = computeScreenPinPosition(viewData, pin);
     auto* DL = ImGui::GetWindowDrawList();
     auto* textBegin = pin.name().data();
@@ -1314,7 +1345,7 @@ void Impl::pinPopup(Pin& pin, bool show) {
         return;
     }
     if (ImGui::MenuItem("Clear Links")) {
-        pin.clearLinks();
+        clearLinksWithCallback(pin);
     }
     ImGui::EndPopup();
 }
@@ -1399,7 +1430,7 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
     if (clickedLeft || clickedRight) {
         viewData.activePin = &pin;
         if (ImGui::GetMouseClickedCount(ImGuiMouseButton_Left) == 2) {
-            pin.clearLinks();
+            clearLinksWithCallback(pin);
         }
     }
     pinPopup(pin, /* show: */ clickedRight);

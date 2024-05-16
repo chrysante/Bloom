@@ -440,7 +440,13 @@ void MetalCodeGenerator::codegenImpl(BuiltinFunction const& value) {
         writeRaw(getName(value.type()), " ", getName(&value), " = ");
         using enum BuiltinFunctionKind;
         switch (value.kind()) {
+        case NormalizeFloat1:
+            [[fallthrough]];
+        case NormalizeFloat2:
+            [[fallthrough]];
         case NormalizeFloat3:
+            [[fallthrough]];
+        case NormalizeFloat4:
             writeRaw("normalize");
         }
         writeScope(ScopeType::Paran, [&] {

@@ -179,7 +179,8 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
             .icon([] { return "menu"; })
             .content([] {
                 ImGui::Text("Placeholder Menu");
-            }),
+            })
+            .tooltip("Placeholder Menu")
     }); // clang-format on
 }
 

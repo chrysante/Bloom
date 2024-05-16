@@ -922,12 +922,20 @@ struct ImGui_ImplOSX_WindowDelegate: bloom::WindowDelegate {
     }
     
     void onResize(int2 newSize) override {
+        auto* data = static_cast<ImGuiViewportDataOSX*>(viewport->PlatformUserData);
+        if (data->Window->requestedResize()) {
+            return;
+        }
         viewport->Pos = (float2)window()->position();
         viewport->Size = (float2)newSize;
         viewport->PlatformRequestResize = true;
     }
     
     void onMove(int2 newPos) override {
+        auto* data = static_cast<ImGuiViewportDataOSX*>(viewport->PlatformUserData);
+        if (data->Window->requestedMove()) {
+            return;
+        }
         viewport->Pos = (float2)newPos;
         viewport->PlatformRequestMove = true;
         auto& g = *GImGui;
@@ -989,7 +997,8 @@ static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
     assert(viewport);
     bloom::Window* window = (bloom::Window*)viewport->PlatformHandle;
     if (window) {
-        window->setShouldClose();
+        ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
+        bd->editor->destroyWindow(*window);
     }
     if (ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData)
     {

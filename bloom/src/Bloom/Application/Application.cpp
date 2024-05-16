@@ -72,6 +72,14 @@ Window& Application::createWindow(WindowDescription const& desc) {
     return *mWindows.back();
 }
 
+void Application::destroyWindow(Window& window) {
+    auto itr =
+        ranges::find_if(mWindows, [&](auto& w) { return w.get() == &window; });
+    if (itr != mWindows.end()) {
+        mWindows.erase(itr);
+    }
+}
+
 void Application::closeAllWindows() {
     for (auto& window: mWindows) {
         window->setShouldClose();

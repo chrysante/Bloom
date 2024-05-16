@@ -32,8 +32,8 @@ set(bloom_sources
   src/Bloom/Asset/CubemapRenderer.h
   src/Bloom/Asset/Fwd.cpp
   src/Bloom/Asset/Fwd.h
-  src/Bloom/Asset/MeshImport.cpp
-  src/Bloom/Asset/MeshImport.h
+  src/Bloom/Asset/AssetImport.cpp
+  src/Bloom/Asset/AssetImport.h
   src/Bloom/Asset/Serialization.h
   src/Bloom/Asset/STBImage.c
   src/Bloom/Asset/STBImage.h

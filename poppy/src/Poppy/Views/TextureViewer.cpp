@@ -115,8 +115,10 @@ static void displayTexture(TextureView texture, float2 availSize,
     ImRect BB(displayPos, displayPos + displaySize);
     DL->AddImageRounded(native, BB.Min, BB.Max, { 0, 0 }, { 1, 1 },
                         IM_COL32_WHITE, rounding);
-    ImGui::ItemAdd(BB, ImGui::GetID("Texture Preview"));
+    auto ID = ImGui::GetID("Texture Preview");
+    ImGui::ItemAdd(BB, ID);
     ImGui::ItemSize(BB.GetSize());
+    ImGui::ItemHoverable(BB, ID, ImGuiItemFlags_NoNav);
     if (ImGui::IsKeyDown(ImGuiKey_ModAlt) && ImGui::IsItemHovered()) {
         float2 coord = (float2(ImGui::GetMousePos()) - displayPos) /
                        displaySize * texture.size().xy;

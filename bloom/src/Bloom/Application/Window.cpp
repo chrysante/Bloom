@@ -78,6 +78,7 @@ void Window::setTitle(std::string newTitle) {
 }
 
 void Window::setPosition(vml::int2 newPosition) {
+    desc.requestedMove = true;
     glfwSetWindowPos(GLFW_WND, newPosition.x, newPosition.y);
     glfwGetWindowPos(GLFW_WND, &desc.position.x, &desc.position.y);
 }
@@ -85,6 +86,7 @@ void Window::setPosition(vml::int2 newPosition) {
 void Window::setSize(vml::int2 newSize) {
     newSize.x = std::max(newSize.x, 0);
     newSize.y = std::max(newSize.y, 0);
+    desc.requestedResize = true;
     glfwSetWindowSize(GLFW_WND, newSize.x, newSize.y);
     glfwGetWindowSize(GLFW_WND, &desc.size.x, &desc.size.y);
 }
@@ -273,6 +275,7 @@ void Window::setCallbacks() {
     glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
         posCallback(window, { posx, posy });
+        window.desc.requestedMove = false;
     });
     glfwSetWindowSizeCallback(GLFW_WND,
                               [](GLFWwindow* w, int sizex, int sizey) {
@@ -285,9 +288,13 @@ void Window::setCallbacks() {
         int2 position = 0;
         glfwGetWindowPos(w, &position.x, &position.y);
         if (window.desc.position != position) {
+            bool stashed = window.desc.requestedMove;
+            window.desc.requestedMove = window.desc.requestedResize;
             posCallback(window, position);
+            window.desc.requestedMove = stashed;
         }
         window.invokeDelegates(&WindowDelegate::onResize, newSize);
+        window.desc.requestedResize = false;
     });
     glfwSetWindowFocusCallback(GLFW_WND, [](GLFWwindow* w, int focus) {
         [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);

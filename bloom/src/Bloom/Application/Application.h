@@ -73,6 +73,9 @@ public:
     /// delegate \p delegate
     Window& createWindow(WindowDescription const& desc);
 
+    /// Immediately destroy \p window
+    void destroyWindow(Window& window);
+
     /// Sets the close flag on all windows
     void closeAllWindows();
 

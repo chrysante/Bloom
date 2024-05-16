@@ -190,6 +190,14 @@ public:
     /// \Returns `true` if the window is currently being moved by the user
     bool isMoving() const { return desc.isMoving; }
 
+    /// \Returns `true` for the duration of a size callback if the size change
+    /// was requested through `setSize()`
+    bool requestedResize() const { return desc.requestedResize; }
+
+    /// \Returns `true` for the duration of a position callback if the position
+    /// change was requested through `setPosition()`
+    bool requestedMove() const { return desc.requestedMove; }
+
     /// \Returns the underlying OS window handle
     void* nativeHandle();
 
@@ -262,6 +270,8 @@ private:
         /// the window position callback and clear it whenever the left mouse
         /// button is released
         bool isMoving = false;
+        bool requestedMove = false;
+        bool requestedResize = false;
     };
 
     Window(WindowDescription const& desc);

@@ -349,7 +349,8 @@ struct ConstantController: MaterialNodeController {
                 triedToGetTexture = true;
             }
             char const* textypenames[] = { "Texture2D", "Cubemap" };
-            ImGui::Combo("Texture Type", (int*)&textype, textypenames, 2);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::Combo("###Texture Type", (int*)&textype, textypenames, 2);
             if (texHandle && texHandle.nativeHandle()) {
                 float2 pos = ImGui::GetCursorScreenPos();
                 float2 size = ImGui::GetContentRegionAvail();

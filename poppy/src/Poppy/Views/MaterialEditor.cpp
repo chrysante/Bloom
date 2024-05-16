@@ -1041,20 +1041,22 @@ struct MaterialEditor: View {
 struct Delegate: NodeEditorDelegate {
     Delegate(MaterialEditor& editor): editor(editor) {}
 
-    void backgroundPopupMenu(vml::float2 position) override {
+    Node* createNodePopupMenu() override {
+        float2 position = {};
         auto* editorGraph = &getModel()->editorGraph;
         if (!editorGraph) {
-            return;
+            return nullptr;
         }
+        Node* result = nullptr;
         if (ImGui::MenuItem("Output")) {
-            editorGraph->addNode(OutputNodeController::Make(position));
+            return editorGraph->addNode(OutputNodeController::Make(position));
         }
         if (ImGui::BeginMenu("Inputs")) {
             for (auto kind: magic_enum::enum_values<InputKind>()) {
                 if (ImGui::MenuItem(
                         std::string(magic_enum::enum_name(kind)).c_str()))
                 {
-                    editorGraph->addNode(
+                    result = editorGraph->addNode(
                         InputNodeController::Make(position, kind));
                 }
             }
@@ -1063,7 +1065,7 @@ struct Delegate: NodeEditorDelegate {
         if (ImGui::BeginMenu("Append")) {
             for (int i = 2; i <= 4; ++i) {
                 if (ImGui::MenuItem(utl::strcat("Float", i).c_str())) {
-                    editorGraph->addNode(
+                    result = editorGraph->addNode(
                         AppendNodeController::Make(position, i));
                 }
             }
@@ -1072,7 +1074,7 @@ struct Delegate: NodeEditorDelegate {
         if (ImGui::BeginMenu("Split")) {
             for (int i = 2; i <= 4; ++i) {
                 if (ImGui::MenuItem(utl::strcat("Float", i).c_str())) {
-                    editorGraph->addNode(
+                    result = editorGraph->addNode(
                         SplitNodeController::Make(position, i));
                 }
             }
@@ -1083,7 +1085,7 @@ struct Delegate: NodeEditorDelegate {
                 if (ImGui::MenuItem(
                         std::string(magic_enum::enum_name(type)).c_str()))
                 {
-                    editorGraph->addNode(
+                    result = editorGraph->addNode(
                         BuiltinFunctionController::Make(position, type));
                 }
             }
@@ -1095,19 +1097,19 @@ struct Delegate: NodeEditorDelegate {
                 if (type != DataType::AnyVector &&
                     ImGui::MenuItem(name.c_str()))
                 {
-                    editorGraph->addNode(
+                    result = editorGraph->addNode(
                         ConstantController::Make(position, type));
                 }
             }
             ImGui::EndMenu();
         }
         if (ImGui::MenuItem("Texture Sample")) {
-            editorGraph->addNode(
+            return editorGraph->addNode(
                 TextureSamplerController::Make(TextureSubType::Texture2D,
                                                position));
         }
         if (ImGui::MenuItem("Cube Texture Sample")) {
-            editorGraph->addNode(
+            result = editorGraph->addNode(
                 TextureSamplerController::Make(TextureSubType::TextureCube,
                                                position));
         }
@@ -1115,10 +1117,11 @@ struct Delegate: NodeEditorDelegate {
             auto op = (ArithmeticOp)i;
             if (ImGui::MenuItem(std::string(magic_enum::enum_name(op)).c_str()))
             {
-                editorGraph->addNode(
+                result = editorGraph->addNode(
                     ArithmeticNodeController::Make(op, position));
             }
         }
+        return result;
     }
 
     bool isPinTypeCompatible(PinUserType input,
@@ -1168,7 +1171,7 @@ MaterialEditor::MaterialEditor(): nodeEditor(commandPaletteWrite()) {
             .content([this] {
                 auto* del = nodeEditor.getDelegate();
                 if (!del) return;
-                del->backgroundPopupMenu({ 0, 0 });
+                del->createNodePopupMenu();
             })
             .enabled([this] { return nodeEditor.getDelegate(); }),
         ToolbarIconButton("cog-alt")

@@ -599,7 +599,7 @@ struct Link {
         }); // clang-format on
     }
 
-    explicit operator bool() const { return origin || dest; }
+    explicit operator bool() const { return origin && dest; }
 };
 
 static void deleteLink(Link link) { clearLinksWithCallback(*link.dest); }
@@ -627,8 +627,6 @@ namespace {
 /// Data that persists between frames when performing some actions.
 /// This is reset whenever a mouse button is released
 struct ActiveViewData {
-    /// True if a node is currently being dragged
-    bool isDraggingNode = false;
     /// True if we already changed selection state since the mouse was pressed
     bool handledSelectionSinceMousePressed = false;
     /// True if we are selecting be dragged the background
@@ -639,6 +637,8 @@ struct ActiveViewData {
     /// In screen coordinates
     float2 selectionBegin = 0;
     float2 selectionEnd = 0;
+    /// Set to the node currently being dragged
+    Node* draggingNode = nullptr;
     Node* activeNode = nullptr;
     Node* activeResize = nullptr;
 
@@ -669,10 +669,12 @@ struct FrameViewData {
     ImRect clipRect = {};
     vml::rectangle<float> nodeRectUnion = {};
     bool windowHovered = false;
+    bool windowOrChildHovered = false;
     bool disableBackgroundScrolling = false;
     HoverItem<Pin*> hoveredPin;
     HoverItem<Node*> hoveredNode;
     HoverItem<Link> hoveredLink;
+    HoverItem<Link> hoveredLinkUnderNode;
 
     void update() {
         auto* window = ImGui::GetCurrentWindow();
@@ -680,7 +682,9 @@ struct FrameViewData {
         hoveredPin.update();
         hoveredNode.update();
         hoveredLink.update();
+        hoveredLinkUnderNode.update();
         windowHovered = false;
+        windowOrChildHovered = false;
         disableBackgroundScrolling = false;
     }
 };
@@ -748,7 +752,7 @@ static void displayDebugger(ViewData const& viewData,
     ITEM(position);
     ITEM(zoom);
     ImGui::SeparatorText("Active Data");
-    ITEM(isDraggingNode);
+    ITEM(draggingNode);
     ITEM(handledSelectionSinceMousePressed);
     ITEM(isSelectionDragging);
     ITEM(beginMoveDragging);
@@ -763,9 +767,12 @@ static void displayDebugger(ViewData const& viewData,
     ITEM(nodeRectUnion.lower_bound());
     ITEM(nodeRectUnion.upper_bound());
     ImGui::SeparatorText("Frame Data");
+    ITEM(windowHovered);
+    ITEM(windowOrChildHovered);
     ITEM(hoveredPin);
     ITEM(hoveredNode);
     ITEM(hoveredLink);
+    ITEM(hoveredLinkUnderNode);
     ImGui::SeparatorText("Selection");
     for (auto* node: selection) {
         ImGui::Text("%s",
@@ -828,6 +835,8 @@ struct NodeEditor::Impl {
     void displayPins(Node& node);
     void nodeBodyPopup(Node& node, bool show);
     void displayNodeBody(Node& node);
+    bool canDropNodeIntoLink(Node const& node, Link link) const;
+    void dropNodeIntoLink(Node& node, Link link);
     void displayNode(Node& node);
     void handleDraggingLinkMouseReleased();
 
@@ -1427,8 +1436,9 @@ void Impl::displayPinLink(InputPin& pin, float2 pinPosition) {
                          !viewData.activePin;
     bool hovered = displayLink(begin, end, color, ImGui::GetMousePos(),
                                mayHighlight, mustHighlight, viewData.zoom);
-    if (hovered && viewData.windowHovered && !viewData.activePin) {
+    if (hovered && viewData.windowOrChildHovered && !viewData.activePin) {
         viewData.hoveredLink.set(link);
+        viewData.hoveredLinkUnderNode.set(link);
     }
 }
 
@@ -1822,6 +1832,25 @@ void Impl::nodeBodyPopup(Node& node, bool show) {
     ImGui::EndPopup();
 }
 
+bool Impl::canDropNodeIntoLink(Node const& node, Link link) const {
+    if (node.inputs().size() != 1 || node.outputs().size() != 1) {
+        return false;
+    }
+    InputPin const* in = node.inputs().front();
+    OutputPin const* out = node.outputs().front();
+    return !in->origin() && out->targets().empty() &&
+           isLinkable(*link.origin, *in) && isLinkable(*out, *link.dest);
+}
+
+void Impl::dropNodeIntoLink(Node& node, Link link) {
+    BL_ASSERT(canDropNodeIntoLink(node, link));
+    InputPin* in = node.inputs().front();
+    OutputPin* out = node.outputs().front();
+    deleteLink(link);
+    ::link(*link.origin, *in);
+    ::link(*out, *link.dest);
+}
+
 template <typename T, size_t Dim, vml::vector_options O>
 static vml::AABB<T, Dim, O> union_(vml::AABB<T, Dim, O> a,
                                    vml::AABB<T, Dim, O> b) {
@@ -1875,7 +1904,7 @@ void Impl::displayNodeBody(Node& node) {
     /// Selected nodes change selection state when mouse is released
     if (isSelected && viewData.activeNode == &node &&
         ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
-        !viewData.isDraggingNode && !viewData.handledSelectionSinceMousePressed)
+        !viewData.draggingNode && !viewData.handledSelectionSinceMousePressed)
     {
         selection.amend(&node, getSelectionMode());
     }
@@ -1899,11 +1928,23 @@ void Impl::displayNodeBody(Node& node) {
         }
         return !haveSecondaryInteraction;
     }();
+    Link hoveredLinkBelow = viewData.hoveredLinkUnderNode.get();
+    if (hoveredLinkBelow && viewData.draggingNode == &node &&
+        ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
+        canDropNodeIntoLink(node, hoveredLinkBelow))
+    {
+        dropNodeIntoLink(node, hoveredLinkBelow);
+    }
     if (dragging) {
-        viewData.isDraggingNode = true;
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            viewData.draggingNode = &node;
+        }
         float2 delta = ImGui::GetIO().MouseDelta;
         for (auto* node: selection.elements()) {
             node->setPosition(node->position() + delta / viewData.zoom);
+        }
+        if (hoveredLinkBelow && canDropNodeIntoLink(node, hoveredLinkBelow)) {
+            viewData.hoveredLink.set(hoveredLinkBelow);
         }
     }
     DL->PopClipRect();
@@ -1947,9 +1988,17 @@ void Impl::display() {
     }
     viewData.beginFrame();
     drawBackground(viewData, viewData.zoom);
-    viewData.windowHovered =
-        ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow) &&
+    bool isMouseOverWindowRect =
         ImGui::GetCurrentWindow()->Rect().Contains(ImGui::GetMousePos());
+    viewData.windowHovered =
+        isMouseOverWindowRect &&
+        ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow |
+                               ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+    viewData.windowOrChildHovered =
+        isMouseOverWindowRect &&
+        ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow |
+                               ImGuiHoveredFlags_AllowWhenBlockedByActiveItem |
+                               ImGuiHoveredFlags_ChildWindows);
     if (model) {
         for (auto* node: model->nodes()) {
             displayLinks(*node);

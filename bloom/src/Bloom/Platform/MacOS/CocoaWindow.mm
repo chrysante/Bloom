@@ -8,7 +8,7 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Application/InputEvent.h"
-#include "Bloom/Application/Window.h"
+#include "Bloom/Application/WindowInternal.h"
 #include "Bloom/Platform/MacOS/CocoaImpl.h"
 #include "Bloom/Platform/MacOS/ObjCCommon.h"
 #include "Bloom/Platform/Metal/MetalObjects.h"
@@ -20,20 +20,71 @@ static NSWindow* getNative(Window const* window) {
     return (__bridge NSWindow*)const_cast<Window*>(window)->nativeHandle();
 }
 
-void* Window::nativeHandle() {
-    return (__bridge void*)glfwGetCocoaWindow((GLFWwindow*)windowPtr.get());
-}
+void* Window::nativeHandle() { return impl->nativeWindow; }
 
 void Window::setSwapchain(Reference<Swapchain> swapchain) {
-    _swapchain = std::move(swapchain);
-    MetalSwapchain& mtlSwapchain = dynamic_cast<MetalSwapchain&>(*_swapchain);
+    impl->swapchain = std::move(swapchain);
+    MetalSwapchain& mtlSwapchain =
+        dynamic_cast<MetalSwapchain&>(*impl->swapchain);
     NSWindow* window = getNative(this);
     window.contentView.wantsLayer = true;
     [window.contentView setLayer:mtlSwapchain.layer];
 }
 
+@interface WindowDelegateWrapper: NSObject <NSWindowDelegate> {
+    Window::Impl* windowImpl;
+    id<NSWindowDelegate> glfwDelegate;
+}
+- (instancetype)init:(Window::Impl*)initWindow
+        glfwDelegate:(id<NSWindowDelegate>)del;
+@end
+@implementation WindowDelegateWrapper
+- (instancetype)init:(Window::Impl*)initWindow
+        glfwDelegate:(id<NSWindowDelegate>)del {
+    self = [super init];
+    if (self != nil) {
+        windowImpl = initWindow;
+        glfwDelegate = del;
+    }
+    return self;
+}
+- (BOOL)windowShouldClose:(id)sender {
+    [glfwDelegate windowShouldClose:sender];
+}
+- (void)windowDidResize:(NSNotification*)notification {
+    [glfwDelegate windowDidResize:notification];
+}
+- (void)windowDidMove:(NSNotification*)notification {
+    [glfwDelegate windowDidMove:notification];
+}
+- (void)windowDidMiniaturize:(NSNotification*)notification {
+    [glfwDelegate windowDidMiniaturize:notification];
+}
+- (void)windowDidDeminiaturize:(NSNotification*)notification {
+    [glfwDelegate windowDidDeminiaturize:notification];
+}
+- (void)windowDidBecomeKey:(NSNotification*)notification {
+    [glfwDelegate windowDidBecomeKey:notification];
+}
+- (void)windowDidResignKey:(NSNotification*)notification {
+    [glfwDelegate windowDidResignKey:notification];
+}
+- (void)windowDidChangeOcclusionState:(NSNotification*)notification {
+    [glfwDelegate windowDidChangeOcclusionState:notification];
+}
+- (void)dealloc {
+    windowImpl->_self.reset();
+}
+@end
+
 void Window::platformInit() {
+    impl->nativeWindow =
+        (__bridge void*)glfwGetCocoaWindow(impl->glfwWnd.get());
     NSWindow* window = getNative(this);
+    id<NSWindowDelegate> myDelegate = [[WindowDelegateWrapper alloc]
+                init:impl.get()
+        glfwDelegate:[window delegate]];
+    [window setDelegate:myDelegate];
     NSTrackingArea* trackingArea = [[NSTrackingArea alloc]
         initWithRect:NSZeroRect
              options:NSTrackingMouseMoved | NSTrackingInVisibleRect |
@@ -48,7 +99,7 @@ void Window::applyStyle() {
     NSWindow* window = getNative(this);
     window.title = @"";
     window.movable = false;
-    if (desc.noDecoration) {
+    if (impl->noDecoration) {
         window.styleMask |= NSWindowStyleMaskBorderless;
         window.styleMask &= ~NSWindowStyleMaskTitled;
     }
@@ -56,7 +107,7 @@ void Window::applyStyle() {
         window.styleMask |= NSWindowStyleMaskFullSizeContentView;
         window.titlebarAppearsTransparent = true;
     }
-    if (desc.hasToolbarArea) {
+    if (impl->hasToolbarArea) {
         window.toolbarStyle = NSWindowToolbarStyleUnifiedCompact;
         window.toolbar = [[NSToolbar alloc] init];
     }
@@ -103,14 +154,14 @@ void Window::onInputImpl(InputEvent const& event, void* nativeEvent) {
     if (nsEvent.window != nsWindow) {
         return;
     }
-    invokeDelegates(&WindowDelegate::onInput, event);
-    if (nsEvent.type == NSEventTypeLeftMouseDown && desc.movable &&
+    impl->invokeDelegates(&WindowDelegate::onInput, event);
+    if (nsEvent.type == NSEventTypeLeftMouseDown && impl->movable &&
         isInToolbar(*this, nsEvent))
     {
         switch (nsEvent.clickCount) {
         case 1:
-            desc.isMoving = true;
-            invokeDelegates(&WindowDelegate::onMoveStart);
+            impl->isMoving = true;
+            impl->invokeDelegates(&WindowDelegate::onMoveStart);
             [nsWindow performWindowDragWithEvent:nsEvent];
             break;
         case 2:
@@ -121,27 +172,27 @@ void Window::onInputImpl(InputEvent const& event, void* nativeEvent) {
         }
     }
     if (nsEvent.type == NSEventTypeLeftMouseUp) {
-        desc.isMoving = false;
+        impl->isMoving = false;
     }
 }
 
 bool Window::isMiniaturized() const { return getNative(this).isMiniaturized; }
 
 void Window::addToolbarArea() {
-    if (desc.hasToolbarArea) {
+    if (impl->hasToolbarArea) {
         return;
     }
-    desc.hasToolbarArea = true;
+    impl->hasToolbarArea = true;
     auto* nsWindow = getNative(this);
     nsWindow.toolbarStyle = NSWindowToolbarStyleUnifiedCompact;
     nsWindow.toolbar = [[NSToolbar alloc] init];
 }
 
 void Window::removeToolbarArea() {
-    if (!desc.hasToolbarArea) {
+    if (!impl->hasToolbarArea) {
         return;
     }
-    desc.hasToolbarArea = false;
+    impl->hasToolbarArea = false;
     auto* nsWindow = getNative(this);
     nsWindow.toolbar = nil;
 }

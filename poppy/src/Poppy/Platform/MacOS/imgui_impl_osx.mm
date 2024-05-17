@@ -923,7 +923,7 @@ struct ImGui_ImplOSX_WindowDelegate: bloom::WindowDelegate {
     
     void onResize(int2 newSize) override {
         auto* data = static_cast<ImGuiViewportDataOSX*>(viewport->PlatformUserData);
-        if (data->Window->requestedResize()) {
+        if (!data || data->Window->requestedResize()) {
             return;
         }
         viewport->Pos = (float2)window()->position();
@@ -933,7 +933,7 @@ struct ImGui_ImplOSX_WindowDelegate: bloom::WindowDelegate {
     
     void onMove(int2 newPos) override {
         auto* data = static_cast<ImGuiViewportDataOSX*>(viewport->PlatformUserData);
-        if (data->Window->requestedMove()) {
+        if (!data || data->Window->requestedMove()) {
             return;
         }
         viewport->Pos = (float2)newPos;

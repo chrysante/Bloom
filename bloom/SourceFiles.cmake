@@ -20,6 +20,7 @@ set(bloom_sources
   src/Bloom/Application/ResourceUtil.h
   src/Bloom/Application/Window.cpp
   src/Bloom/Application/Window.h
+  src/Bloom/Application/WindowInternal.h
 
   src/Bloom/Asset/Asset.cpp
   src/Bloom/Asset/Asset.h

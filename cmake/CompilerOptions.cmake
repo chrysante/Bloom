@@ -1,5 +1,14 @@
 
 function(BLSetCompilerOptions target)
+  target_compile_definitions(${target} PRIVATE BUILD_CONFIG=$<CONFIG>)
+
+  if(APPLE)
+    # Enable ARC in Objective-C
+    set_target_properties(${target} PROPERTIES
+      XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+    )
+  endif()
+
   if(NOT BLOOM_DEV_MODE)
     return()
   endif()
@@ -21,15 +30,6 @@ function(BLSetCompilerOptions target)
     target_compile_options(${target} PRIVATE "-Wnull-dereference")
     target_compile_options(${target} PRIVATE "-Woverloaded-virtual")
     target_compile_options(${target} PRIVATE "-Wunused")
-  endif()
-
-  target_compile_definitions(${target} PRIVATE BUILD_CONFIG=$<CONFIG>)
-
-  if(APPLE)
-    # Enable ARC in Objective-C
-    set_target_properties(${target} PROPERTIES
-      XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
-    )
   endif()
 
 endfunction()

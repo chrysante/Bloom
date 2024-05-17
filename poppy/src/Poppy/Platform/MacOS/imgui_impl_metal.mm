@@ -470,7 +470,9 @@ inline static CGSize MakeScaledSize(CGSize size, CGFloat scale)
 static void ImGui_ImplMetal_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
-    data->MetalLayer.drawableSize = MakeScaledSize(CGSizeMake(size.x, size.y), viewport->DpiScale);
+    if (data) {
+        data->MetalLayer.drawableSize = MakeScaledSize(CGSizeMake(size.x, size.y), viewport->DpiScale);
+    }
 }
 
 void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)

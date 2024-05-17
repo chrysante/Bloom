@@ -5,15 +5,17 @@
 #include <GLFW/glfw3.h>
 
 #include "Bloom/Application/InputInternal.h"
+#include "Bloom/Application/WindowInternal.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/Swapchain.h"
 
-#define GLFW_WND ((GLFWwindow*)windowPtr.get())
+#define GLFW_WND (impl->glfwWnd.get())
 
 using namespace vml::short_types;
 using namespace bloom;
+using Impl = Window::Impl;
 
 void Window::PollEvents() { glfwPollEvents(); }
 
@@ -27,30 +29,36 @@ void Window::InitWindowSystem() {
 }
 
 std::unique_ptr<Window> Window::Create(WindowDescription const& desc) {
-    return std::unique_ptr<Window>(new Window(desc));
+    auto window = std::unique_ptr<Window>(new Window(desc));
+    window->impl->_self = window->impl;
+    return window;
 }
 
-Window::Window(WindowDescription const& d) {
-    desc = WindowDescPrivate{ d };
-    desc.fullscreen = false;
+void Window::destroy() { impl->glfwWnd.reset(); }
+
+Window::Window(WindowDescription const& d): impl(std::make_shared<Impl>()) {
+    static_cast<WindowDescription&>(*impl) = d;
+    impl->fullscreen = false;
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_FOCUSED, d.focused);
     glfwWindowHint(GLFW_FOCUS_ON_SHOW, d.focusOnShow);
     glfwWindowHint(GLFW_CAN_BECOME_KEY, d.canBecomeKey);
     glfwWindowHint(GLFW_CAN_BECOME_MAIN, d.canBecomeMain);
-    auto* w = glfwCreateWindow(desc.size.x, desc.size.y, desc.title.data(),
+    auto* w = glfwCreateWindow(impl->size.x, impl->size.y, impl->title.data(),
                                nullptr, nullptr);
-    windowPtr = std::unique_ptr<void, Deleter>(w);
+    impl->glfwWnd = std::unique_ptr<GLFWwindow, Impl::Deleter>(w);
     platformInit();
-    glfwSetWindowUserPointer(GLFW_WND, this);
-    glfwSetWindowPos(GLFW_WND, desc.position.x, desc.position.y);
-    glfwGetWindowSize(GLFW_WND, &desc.size.x, &desc.size.y);
-    glfwGetWindowContentScale(GLFW_WND, &desc.contentScaleFactor.x,
-                              &desc.contentScaleFactor.y);
+    glfwSetWindowUserPointer(GLFW_WND, impl.get());
+    glfwSetWindowPos(GLFW_WND, impl->position.x, impl->position.y);
+    glfwGetWindowSize(GLFW_WND, &impl->size.x, &impl->size.y);
+    glfwGetWindowContentScale(GLFW_WND, &impl->contentScaleFactor.x,
+                              &impl->contentScaleFactor.y);
     setCallbacks();
 }
 
-Window::~Window() { invokeDelegates(&WindowDelegate::onDestroy); }
+Window::~Window() { destroy(); }
+
+Impl::~Impl() { invokeDelegates(&WindowDelegate::onDestroy); }
 
 void Window::createDefaultSwapchain(HardwareDevice& device,
                                     std::size_t backbufferCount) {
@@ -63,62 +71,90 @@ void Window::createDefaultSwapchain(HardwareDevice& device,
 
 WindowDelegate* Window::addDelegate(std::unique_ptr<WindowDelegate> delegate) {
     auto* result = delegate.get();
-    delegates.push_back(std::move(delegate));
+    impl->delegates.push_back(std::move(delegate));
     result->_window = this;
     return result;
 }
 
+Reference<Swapchain> Window::swapchain() { return impl->swapchain; }
+
+WindowDescription const& Window::getDescription() const { return *impl; }
+
+std::string const& Window::title() const { return impl->title; }
+
+vml::int2 Window::position() const { return impl->position; }
+
+vml::int2 Window::size() const { return impl->size; }
+
+bool Window::focused() const { return impl->focused; }
+
+vml::float2 Window::contentScaleFactor() const {
+    return impl->contentScaleFactor;
+}
+
+bool Window::isFullscreen() const { return impl->fullscreen; }
+
+bool Window::isWindowed() const { return !isFullscreen(); }
+
+bool Window::isMoving() const { return impl->isMoving; }
+
+bool Window::requestedResize() const { return impl->requestedResize; }
+
+bool Window::requestedMove() const { return impl->requestedMove; }
+
+void Window::setMovable(bool value) { impl->movable = value; }
+
 bool Window::shouldClose() const {
-    return !desc.shallPreventClose && glfwWindowShouldClose(GLFW_WND);
+    return !impl->shallPreventClose && glfwWindowShouldClose(GLFW_WND);
 }
 
 void Window::setTitle(std::string newTitle) {
-    desc.title = newTitle;
+    impl->title = newTitle;
     glfwSetWindowTitle(GLFW_WND, newTitle.data());
 }
 
 void Window::setPosition(vml::int2 newPosition) {
-    desc.requestedMove = true;
+    impl->requestedMove = true;
     glfwSetWindowPos(GLFW_WND, newPosition.x, newPosition.y);
-    glfwGetWindowPos(GLFW_WND, &desc.position.x, &desc.position.y);
+    glfwGetWindowPos(GLFW_WND, &impl->position.x, &impl->position.y);
 }
 
 void Window::setSize(vml::int2 newSize) {
     newSize.x = std::max(newSize.x, 0);
     newSize.y = std::max(newSize.y, 0);
-    desc.requestedResize = true;
+    impl->requestedResize = true;
     glfwSetWindowSize(GLFW_WND, newSize.x, newSize.y);
-    glfwGetWindowSize(GLFW_WND, &desc.size.x, &desc.size.y);
+    glfwGetWindowSize(GLFW_WND, &impl->size.x, &impl->size.y);
 }
 
 void Window::setMinSize(vml::int2 size) {
     size.x = std::max(size.x, 0);
     size.y = std::max(size.y, 0);
-    desc.minSize = size;
+    impl->minSize = size;
     glfwSetWindowSizeLimits(GLFW_WND,
-                            desc.minSize.x > 0 ? desc.minSize.x :
-                                                 GLFW_DONT_CARE,
-                            desc.minSize.y > 0 ? desc.minSize.y :
-                                                 GLFW_DONT_CARE,
-                            desc.maxSize.x > 0 ? desc.maxSize.x :
-                                                 GLFW_DONT_CARE,
-                            desc.maxSize.y > 0 ? desc.maxSize.y :
-                                                 GLFW_DONT_CARE);
+                            impl->minSize.x > 0 ? impl->minSize.x :
+                                                  GLFW_DONT_CARE,
+                            impl->minSize.y > 0 ? impl->minSize.y :
+                                                  GLFW_DONT_CARE,
+                            impl->maxSize.x > 0 ? impl->maxSize.x :
+                                                  GLFW_DONT_CARE,
+                            impl->maxSize.y > 0 ? impl->maxSize.y :
+                                                  GLFW_DONT_CARE);
 }
 
 void Window::setMaxSize(vml::int2 size) {
     size.x = std::max(size.x, 0);
     size.y = std::max(size.y, 0);
-    desc.maxSize = size;
+    impl->maxSize = size;
     glfwSetWindowSizeLimits(GLFW_WND,
-                            desc.minSize.x > 0 ? desc.minSize.x :
-                                                 GLFW_DONT_CARE,
-                            desc.minSize.y > 0 ? desc.minSize.y :
-                                                 GLFW_DONT_CARE,
-                            desc.maxSize.x > 0 ? desc.maxSize.x :
-                                                 GLFW_DONT_CARE,
-                            desc.maxSize.y > 0 ? desc.maxSize.y :
-                                                 GLFW_DONT_CARE);
+                            impl->minSize.x > 0 ? impl->minSize.x :
+                                                  GLFW_DONT_CARE,
+                            impl->minSize.y > 0 ? impl->minSize.y :
+                                                  GLFW_DONT_CARE,
+                            impl->maxSize.x > 0 ? impl->maxSize.x :
+                                                  GLFW_DONT_CARE,
+                            impl->maxSize.y > 0 ? impl->maxSize.y :
+                                                  GLFW_DONT_CARE);
 }
 
 void Window::setFocused() { glfwFocusWindow(GLFW_WND); }
@@ -145,11 +181,11 @@ void Window::makeFullscreen() {
     auto* vidMode = glfwGetVideoMode(monitor);
     int2 monitorPos = 0;
     int2 monitorSize = { vidMode->width, vidMode->height };
-    desc.backupSize = desc.size;
-    desc.size = monitorSize;
-    desc.backupPosition = desc.position;
-    desc.position = monitorPos;
-    desc.fullscreen = true;
+    impl->backupSize = impl->size;
+    impl->size = monitorSize;
+    impl->backupPosition = impl->position;
+    impl->position = monitorPos;
+    impl->fullscreen = true;
     glfwSetWindowMonitor(GLFW_WND, monitor, monitorPos.x, monitorPos.y,
                          monitorSize.x, monitorSize.y, GLFW_DONT_CARE);
 }
@@ -167,11 +203,11 @@ void Window::makeWindowed() {
     if (isWindowed()) {
         return;
     }
-    desc.size = desc.backupSize;
-    desc.position = desc.backupPosition;
-    desc.fullscreen = false;
-    glfwSetWindowMonitor(GLFW_WND, nullptr, desc.position.x, desc.position.y,
-                         desc.size.x, desc.size.y, GLFW_DONT_CARE);
+    impl->size = impl->backupSize;
+    impl->position = impl->backupPosition;
+    impl->fullscreen = false;
+    glfwSetWindowMonitor(GLFW_WND, nullptr, impl->position.x, impl->position.y,
+                         impl->size.x, impl->size.y, GLFW_DONT_CARE);
     applyStyle();
 }
 
@@ -179,158 +215,98 @@ void Window::close() { glfwSetWindowShouldClose(GLFW_WND, true); }
 
 void Window::stopClose() { glfwSetWindowShouldClose(GLFW_WND, false); }
 
+void Window::haltClose() { impl->shallPreventClose = true; }
+
 void Window::requestAttention() { glfwRequestWindowAttention(GLFW_WND); }
 
 #if !defined(BLOOM_PLATFORM_APPLE)
 void Window::platformInit() {}
 #endif
 
-void Window::setCallbacks() {
-    /// For Apple we handle mouse events in "CocoaWindow.mm"
-#if !defined(BLOOM_PLATFORM_APPLE)
-    glfwSetMouseButtonCallback(GLFW_WND, [](GLFWwindow* w, int button,
-                                            int action, int mods) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.userInput
-            ._mouseButtons[(std::size_t)mouseButtonFromGLFW(button)] = action;
-        window.userInput._modFlags = modFlagsFromGLFW(mods);
-        if (window.callbacks.onInputFn) {
-            auto const event =
-                makeInputEventFromGLFWMouseButton(window.userInput, button,
-                                                  action, mods);
-            window.callbacks.onInputFn(event);
-        }
-    });
-    glfwSetCursorPosCallback(GLFW_WND,
-                             [](GLFWwindow* w, double xpos, double ypos) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.userInput.setMousePosition(double2(xpos, ypos) +
-                                          window.position());
-        if (window.callbacks.onInputFn) {
-            window.callbacks.onInputFn(
-                makeInputEventFromGLFWCursorPos(window.userInput, window));
-        }
-    });
-#endif
-    glfwSetCursorEnterCallback(GLFW_WND,
-                               [](GLFWwindow* w, [[maybe_unused]] int entered) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-    });
-#if !defined(BLOOM_PLATFORM_APPLE)
-    glfwSetScrollCallback(GLFW_WND,
-                          [](GLFWwindow* w, double xoffset, double yoffset) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.userInput.setScrollOffset({ xoffset, yoffset });
-        if (window.callbacks.onInputFn) {
-            window.callbacks.onInputFn(
-                makeInputEventFromGLFWScroll(window.userInput, xoffset,
-                                             yoffset));
-        }
-    });
-    glfwSetKeyCallback(GLFW_WND, [](GLFWwindow* w, int key, int scancode,
-                                    int action, int mods) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        int& repeatCount =
-            window.userInput._keys[(std::size_t)keyFromGLFW(key)];
-        switch (action) {
-        case GLFW_RELEASE:
-            repeatCount = 0;
-            break;
-        case GLFW_PRESS:
-            repeatCount = 1;
-            break;
-        case GLFW_REPEAT:
-            ++repeatCount;
-            break;
+static Impl& getImpl(GLFWwindow* w) {
+    return *static_cast<Impl*>(glfwGetWindowUserPointer(w));
+}
 
-        default:
-            break;
-        }
-        window.userInput._modFlags = modFlagsFromGLFW(mods);
-        if (window.callbacks.onInputFn) {
-            window.callbacks.onInputFn(
-                makeInputEventFromGLFWKey(window.userInput, key, scancode,
-                                          action, mods));
-        }
-    });
-#endif
+void Window::setCallbacks() {
     glfwSetCharCallback(GLFW_WND, [](GLFWwindow* w, unsigned int codepoint) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.invokeDelegates(&WindowDelegate::onTextInput, codepoint);
+        auto& impl = getImpl(w);
+        impl.invokeDelegates(&WindowDelegate::onTextInput, codepoint);
     });
     glfwSetDropCallback(GLFW_WND,
                         [](GLFWwindow* w, int pathCount, char const* paths[]) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
+        auto& impl = getImpl(w);
         utl::small_vector<std::filesystem::path> pathVec;
         pathVec.reserve(pathCount);
         for (int i = 0; i < pathCount; ++i) {
             pathVec.push_back(std::filesystem::path(paths[i]));
         }
-        window.invokeDelegates(&WindowDelegate::onFileDrop, pathVec);
+        impl.invokeDelegates(&WindowDelegate::onFileDrop, pathVec);
     });
-    static constexpr auto posCallback = [](Window& window, int2 pos) {
-        window.desc.position = pos;
-        window.invokeDelegates(&WindowDelegate::onMove, pos);
+    static constexpr auto posCallback = [](Impl& impl, int2 pos) {
+        impl.position = pos;
+        impl.invokeDelegates(&WindowDelegate::onMove, pos);
     };
     glfwSetWindowPosCallback(GLFW_WND, [](GLFWwindow* w, int posx, int posy) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        posCallback(window, { posx, posy });
-        window.desc.requestedMove = false;
+        auto& impl = getImpl(w);
+        posCallback(impl, { posx, posy });
+        impl.requestedMove = false;
     });
     glfwSetWindowSizeCallback(GLFW_WND,
                               [](GLFWwindow* w, int sizex, int sizey) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
+        auto& impl = getImpl(w);
         int2 newSize = { sizex, sizey };
-        window.desc.size = newSize;
-        if (window.desc.autoResizeSwapchain) {
-            window.resizeSwapchain(newSize);
+        impl.size = newSize;
+        if (impl.autoResizeSwapchain) {
+            impl.resizeSwapchain(newSize);
         }
         int2 position = 0;
         glfwGetWindowPos(w, &position.x, &position.y);
-        if (window.desc.position != position) {
-            bool stashed = window.desc.requestedMove;
-            window.desc.requestedMove = window.desc.requestedResize;
-            posCallback(window, position);
-            window.desc.requestedMove = stashed;
+        if (impl.position != position) {
+            bool stashed = impl.requestedMove;
+            impl.requestedMove = impl.requestedResize;
+            posCallback(impl, position);
+            impl.requestedMove = stashed;
         }
-        window.invokeDelegates(&WindowDelegate::onResize, newSize);
-        window.desc.requestedResize = false;
+        impl.invokeDelegates(&WindowDelegate::onResize, newSize);
+        impl.requestedResize = false;
     });
     glfwSetWindowFocusCallback(GLFW_WND, [](GLFWwindow* w, int focus) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
+        auto& impl = getImpl(w);
         if (focus == GLFW_TRUE) {
-            window.desc.focused = true;
-            window.invokeDelegates(&WindowDelegate::onFocus);
+            impl.focused = true;
+            impl.invokeDelegates(&WindowDelegate::onFocus);
         }
         else {
-            window.desc.focused = false;
-            window.invokeDelegates(&WindowDelegate::onFocusLoss);
+            impl.focused = false;
+            impl.invokeDelegates(&WindowDelegate::onFocusLoss);
         }
     });
     glfwSetWindowCloseCallback(GLFW_WND, [](GLFWwindow* w) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
-        window.desc.shallPreventClose = false;
-        window.invokeDelegates(&WindowDelegate::onClose);
+        auto& impl = getImpl(w);
+        impl.shallPreventClose = false;
+        impl.invokeDelegates(&WindowDelegate::onClose);
     });
     glfwSetWindowContentScaleCallback(GLFW_WND,
                                       [](GLFWwindow* w, float x, float y) {
-        [[maybe_unused]] Window& window = *(Window*)glfwGetWindowUserPointer(w);
+        auto& impl = getImpl(w);
         float2 contentScale = { x, y };
-        window.desc.contentScaleFactor = contentScale;
-        window.invokeDelegates(&WindowDelegate::onContentScaleChange,
-                               contentScale);
+        impl.contentScaleFactor = contentScale;
+        impl.invokeDelegates(&WindowDelegate::onContentScaleChange,
+                             contentScale);
     });
 }
 
 void Window::resizeSwapchain(vml::int2 newSize) {
-    if (_swapchain) {
-        _swapchain->resize(newSize * contentScaleFactor());
+    impl->resizeSwapchain(newSize);
+}
+
+void Impl::resizeSwapchain(vml::int2 newSize) {
+    if (swapchain) {
+        swapchain->resize(newSize * contentScaleFactor);
     }
 }
 
-void Window::Deleter::operator()(void* ptr) const {
-    glfwDestroyWindow((GLFWwindow*)ptr);
-}
+void Impl::Deleter::operator()(GLFWwindow* w) const { glfwDestroyWindow(w); }
 
 YAML::Node YAML::convert<WindowDescription>::encode(
     bloom::WindowDescription const& desc) {

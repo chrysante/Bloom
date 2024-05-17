@@ -142,6 +142,9 @@ public:
     ///
     ~Window();
 
+    ///
+    void destroy();
+
     /// Creates a swapchain with default settings and sets it as this windows
     /// swapchain
     void createDefaultSwapchain(HardwareDevice& device,
@@ -155,31 +158,31 @@ public:
     WindowDelegate* addDelegate(std::unique_ptr<WindowDelegate> delegate);
 
     /// \Returns the window's swapchain
-    Reference<Swapchain> swapchain() { return _swapchain; }
+    Reference<Swapchain> swapchain();
 
     /// \Returns the window's descriptor of the current state
-    WindowDescription const& getDescription() const { return desc; }
+    WindowDescription const& getDescription() const;
 
     /// \Returns the window title
-    std::string const& title() const { return desc.title; }
+    std::string const& title() const;
 
     /// \Returns the window's position on the monitor
-    vml::int2 position() const { return desc.position; }
+    vml::int2 position() const;
 
     /// \Returns the window's size
-    vml::int2 size() const { return desc.size; }
+    vml::int2 size() const;
 
     /// \Returns `true` if this window is currently focused
-    bool focused() const { return desc.focused; }
+    bool focused() const;
 
     /// \Returns the window's contant scale factor
-    vml::float2 contentScaleFactor() const { return desc.contentScaleFactor; }
+    vml::float2 contentScaleFactor() const;
 
     /// \Returns `true` if this window is in fullscreen mode
-    bool isFullscreen() const { return desc.fullscreen; }
+    bool isFullscreen() const;
 
     /// \Returns `true` if this window is not in fullscreen mode
-    bool isWindowed() const { return !isFullscreen(); }
+    bool isWindowed() const;
 
     /// \Returns `true` if the window is miniaturized
     bool isMiniaturized() const;
@@ -188,15 +191,15 @@ public:
     bool shouldClose() const;
 
     /// \Returns `true` if the window is currently being moved by the user
-    bool isMoving() const { return desc.isMoving; }
+    bool isMoving() const;
 
     /// \Returns `true` for the duration of a size callback if the size change
     /// was requested through `setSize()`
-    bool requestedResize() const { return desc.requestedResize; }
+    bool requestedResize() const;
 
     /// \Returns `true` for the duration of a position callback if the position
     /// change was requested through `setPosition()`
-    bool requestedMove() const { return desc.requestedMove; }
+    bool requestedMove() const;
 
     /// \Returns the underlying OS window handle
     void* nativeHandle();
@@ -214,7 +217,7 @@ public:
     /// Flag to indicate if the mouse is over an area from which the window may
     /// be dragged. We need this because ImGui is not event based but Cocoa
     /// wants to dispatch the mouse event to the window server directly
-    void setMovable(bool value = true) { desc.movable = value; }
+    void setMovable(bool value = true);
 
     /// Activate double click on titlebar behaviour
     void zoom();
@@ -242,56 +245,24 @@ public:
     void makeWindowed();
     void close();
     void stopClose();
-    void haltClose() { desc.shallPreventClose = true; }
+    void haltClose();
     void requestAttention();
     /// @}
 
-private:
-    friend class Application;
-
     struct Impl;
 
-    struct Deleter {
-        void operator()(void*) const;
-    };
-
-    struct WindowDescPrivate: WindowDescription {
-        /// Backup positition and size to restore from fullscreen
-        vml::int2 backupPosition = 0;
-        vml::int2 backupSize = 0;
-        vml::float2 contentScaleFactor = 1;
-        vml::int2 minSize = 0;
-        vml::int2 maxSize = 0;
-        bool focused = false;
-        bool shallPreventClose = false;
-        /// See `setMovable()`
-        bool movable = true;
-        /// We set this flag when we call `performWindowDragWithEvent` and in
-        /// the window position callback and clear it whenever the left mouse
-        /// button is released
-        bool isMoving = false;
-        bool requestedMove = false;
-        bool requestedResize = false;
-    };
+private:
+    friend class Application; /// To call `onImputImpl()`
 
     Window(WindowDescription const& desc);
+
     void platformInit();
     void applyStyle();
     void setCallbacks();
     void resizeSwapchain(vml::int2 size);
     void onInputImpl(InputEvent const& event, void* native);
-    template <typename... Args, typename... Args2>
-    void invokeDelegates(void (WindowDelegate::*callback)(Args...),
-                         Args2&&... args) const {
-        for (auto& del: delegates) {
-            (del.get()->*callback)(std::forward<Args2>(args)...);
-        }
-    }
 
-    WindowDescPrivate desc;
-    std::unique_ptr<void, Deleter> windowPtr;
-    Reference<Swapchain> _swapchain;
-    std::vector<std::unique_ptr<WindowDelegate>> delegates;
+    std::shared_ptr<Impl> impl;
 };
 
 } // namespace bloom

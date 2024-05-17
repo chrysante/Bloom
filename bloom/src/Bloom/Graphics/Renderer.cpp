@@ -120,9 +120,13 @@ static void submitGeometry(size_t sceneIndex, Scene const& scene,
                            MeshRendererComponent const>();
     view.each([&](EntityID ID, TransformMatrixComponent const& transform,
                   MeshRendererComponent const& meshRenderer) {
+        // FIXME: MeshRendererComponent should only have a StaticMeshRenderer
+        // and not a whole StaticMesh
         if (!scene.getHandle(ID).isVisible() || !meshRenderer.mesh ||
+            !meshRenderer.mesh->getRenderer() ||
             !meshRenderer.materialInstance ||
-            !meshRenderer.materialInstance->material())
+            !meshRenderer.materialInstance->material() ||
+            !meshRenderer.materialInstance->material()->rgMainPass)
         {
             return;
         }

@@ -30,19 +30,27 @@ inline std::optional<bloom::AssetHandle> acceptAssetDragDrop(
     return acceptAssetDragDrop({ type });
 }
 
-bool assetButtonImpl(bloom::Reference<bloom::Asset>& assetRef,
-                     bloom::AssetType type, vml::float2 size,
-                     bloom::AssetRepresentation repr);
+enum class AssetButtonStyle { Compact, Thumbnail };
+
+struct AssetButtonDescriptor {
+    vml::float2 size = {};
+    bloom::AssetType type = bloom::AssetType::Asset;
+    AssetButtonStyle style = AssetButtonStyle::Compact;
+    bloom::AssetRepresentation repr = bloom::AssetRepresentation::None;
+};
+
+bool assetButtonImpl(bloom::Reference<bloom::Asset>& asset,
+                     AssetButtonDescriptor desc);
 
 /// Displays a button that can be used to select assets of type \p AssetType
 /// The selected asset will be assigned to \p asset
 /// \Returns `true` if a new asset has been selected
 template <std::derived_from<bloom::Asset> AssetType>
-bool assetButton(
-    bloom::Reference<AssetType>& asset, vml::float2 size = {},
-    bloom::AssetRepresentation repr = bloom::AssetRepresentation::None) {
+bool assetButton(bloom::Reference<AssetType>& asset,
+                 AssetButtonDescriptor desc = {}) {
+    desc.type = utl::dc::TypeToID<AssetType>;
     bloom::Reference<bloom::Asset> tmp = asset;
-    if (assetButtonImpl(tmp, utl::dc::TypeToID<AssetType>, size, repr)) {
+    if (assetButtonImpl(tmp, desc)) {
         asset = as<AssetType>(tmp);
         return true;
     }

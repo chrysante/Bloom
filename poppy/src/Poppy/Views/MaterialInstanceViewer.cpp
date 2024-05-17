@@ -48,7 +48,7 @@ void MaterialInstanceViewer::display() {
     if (beginSection()) {
         beginProperty("Material");
         auto material = inst->materialRef();
-        if (assetButton(material)) {
+        if (assetButton(material, { .repr = AssetRepresentation::GPU })) {
             inst->setMaterial(std::move(material));
         }
         endSection();

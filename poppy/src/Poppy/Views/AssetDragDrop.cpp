@@ -53,60 +53,107 @@ std::optional<AssetHandle> poppy::acceptAssetDragDrop(
     return std::nullopt;
 }
 
-bool poppy::assetButtonImpl(Reference<Asset>& assetRef, AssetType type,
-                            float2 size, AssetRepresentation repr) {
-    AssetManager* AM = nullptr;
-    Application::DispatchMessage(DispatchToken::Now, GetAssetManager{ &AM });
-    BL_ASSERT(AM);
-    ImGui::PushID((int)type);
-    std::string label = assetRef ? assetRef->name() : "None";
-    std::string popupName = utl::strcat("AssetBrowserPopup");
-    auto popupID = ImGui::GetID(popupName.c_str());
+static AssetHandle displayPopup(ImGuiID popupID, ImRect bb, AssetManager& AM,
+                                AssetType type, AssetHandle existingHandle) {
+    if (!ImGui::BeginComboPopup(popupID, bb, ImGuiPopupFlags_None)) {
+        return {};
+    }
+    auto assets = AM.getAssetsOfType(type);
+    AssetHandle handle;
+    for (auto asset: assets) {
+        bool selected = asset == existingHandle;
+        if (ImGui::Selectable(AM.getName(asset).c_str(), selected)) {
+            handle = asset;
+        }
+    }
+    ImGui::EndCombo();
+    return handle;
+}
+
+namespace {
+
+struct ButtonResult {
+    bool pressed;
+    ImRect rect;
+    AssetHandle dragDropAsset;
+};
+
+} // namespace
+
+static ButtonResult displayButtonCompact(Asset* asset, AssetType type,
+                                         float2 totalSize) {
     auto& g = *GImGui;
     auto& style = g.Style;
-    bool haveNewAsset = false;
-    if (size.x <= 0) {
-        size.x = ImGui::GetContentRegionAvail().x;
+    if (totalSize.x <= 0) {
+        totalSize.x = ImGui::GetContentRegionAvail().x;
     }
-    if (size.y <= 0) {
-        size.y = g.FontSize + 2 * style.FramePadding.y;
+    if (totalSize.y <= 0) {
+        totalSize.y = g.FontSize + 2 * style.FramePadding.y;
     }
-    size.x -= size.y + style.ItemSpacing.x;
+    float2 buttonSize(totalSize.x - totalSize.y - style.ItemSpacing.x,
+                      totalSize.y);
     float2 pos = ImGui::GetCursorScreenPos();
-    if (ImGui::Button(label.c_str(), size)) {
-        ImGui::OpenPopupEx(popupID, ImGuiPopupFlags_None);
-    }
-    AssetHandle handle;
+    std::string label = asset ? asset->name() : "None";
+    ButtonResult result{};
+    result.rect = ImRect(pos, pos + buttonSize);
+    result.pressed = ImGui::Button(label.c_str(), buttonSize);
     if (auto payload = acceptAssetDragDrop({ type })) {
-        handle = *payload;
-        haveNewAsset = true;
+        result.dragDropAsset = *payload;
     }
-    ImGui::SetCursorScreenPos(pos + float2(size.x + style.ItemSpacing.x, 0));
+    // Display open asset button
+    ImGui::SetCursorScreenPos(pos +
+                              float2(buttonSize.x + style.ItemSpacing.x, 0));
     auto icon = FontManager::get({ IconSize::_16 }, "link-ext");
     ImGui::PushFont(icon.font);
-    ImGui::BeginDisabled(!assetRef);
-    if (ImGui::Button(icon.utf8Rep.c_str(), { size.y, size.y })) {
-        openAsset(assetRef->handle());
+    ImGui::BeginDisabled(!asset);
+    float2 openButtonSize(totalSize.y);
+    if (ImGui::Button(icon.utf8Rep.c_str(), openButtonSize)) {
+        BL_ASSERT(asset);
+        openAsset(asset->handle());
     }
     ImGui::EndDisabled();
     ImGui::PopFont();
-    ImRect bb(pos, pos + size);
-    if (ImGui::BeginComboPopup(popupID, bb, ImGuiPopupFlags_None)) {
-        auto assets = AM->getAssetsOfType(type);
-        for (auto asset: assets) {
-            bool selected = assetRef && asset == assetRef->handle();
-            if (ImGui::Selectable(AM->getName(asset).c_str(), selected)) {
-                handle = asset;
-                haveNewAsset = true;
-            }
-        }
-        ImGui::EndCombo();
+    return result;
+}
+
+static ButtonResult displayButton(Asset* existing, float2 size, AssetType type,
+                                  AssetButtonStyle style) {
+    switch (style) {
+    case AssetButtonStyle::Compact:
+        return displayButtonCompact(existing, type, size);
+    case AssetButtonStyle::Thumbnail:
+        BL_UNIMPLEMENTED();
     }
-    if (handle) {
-        assetRef = AM->get(handle, repr);
+}
+
+bool poppy::assetButtonImpl(Reference<Asset>& assetRef,
+                            AssetButtonDescriptor desc) {
+    AssetManager* AM = nullptr;
+    Application::DispatchMessage(DispatchToken::Now, GetAssetManager{ &AM });
+    BL_ASSERT(AM);
+    ImGui::PushID((int)desc.type);
+    std::string popupName = utl::strcat("AssetBrowserPopup");
+    auto popupID = ImGui::GetID(popupName.c_str());
+    AssetHandle existingHandle = assetRef ? assetRef->handle() : AssetHandle{};
+    AssetHandle newHandle;
+    auto buttonResult =
+        displayButton(assetRef.get(), desc.size, desc.type, desc.style);
+    if (buttonResult.pressed) {
+        ImGui::OpenPopupEx(popupID, ImGuiPopupFlags_None);
+    }
+    if (buttonResult.dragDropAsset) {
+        newHandle = buttonResult.dragDropAsset;
+    }
+    if (auto h = displayPopup(popupID, buttonResult.rect, *AM, desc.type,
+                              existingHandle))
+    {
+        newHandle = h;
+    }
+    if (newHandle) {
+        assetRef = AM->get(newHandle, desc.repr);
     }
     ImGui::PopID();
-    return haveNewAsset;
+    return bool(newHandle);
 }
 
 template <typename AssetType>

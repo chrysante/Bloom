@@ -114,7 +114,8 @@ static void submitSelectedGeometry(
         if (!selectionManager.contains(scene.getHandle(ID))) {
             return;
         }
-        if (!meshRenderer.mesh || !meshRenderer.materialInstance ||
+        if (!meshRenderer.mesh || !meshRenderer.mesh->getRenderer() ||
+            !meshRenderer.materialInstance ||
             !meshRenderer.materialInstance->material())
         {
             return;

@@ -305,10 +305,11 @@ void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
     }
     auto& meshRenderer = entity.get<MeshRendererComponent>();
     disabledIf(isSimulating(), [&] {
+        using enum AssetRepresentation;
         beginProperty("Mesh");
-        assetButton(meshRenderer.mesh);
+        assetButton(meshRenderer.mesh, { .repr = GPU });
         beginProperty("Material");
-        assetButton(meshRenderer.materialInstance);
+        assetButton(meshRenderer.materialInstance, { .repr = GPU });
     });
     endSection();
 }

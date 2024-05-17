@@ -114,6 +114,22 @@ VectorConstant* Context::vectorConstant(int numComponents, float4 value) {
     });
 }
 
+VectorConstant* Context::floatConstant(float value) {
+    return vectorConstant(1, float4(value, 0, 0, 0));
+}
+
+VectorConstant* Context::float2Constant(vml::float2 value) {
+    return vectorConstant(2, float4(value, 0, 0));
+}
+
+VectorConstant* Context::float3Constant(vml::float3 value) {
+    return vectorConstant(3, float4(value, 0));
+}
+
+VectorConstant* Context::float4Constant(vml::float4 value) {
+    return vectorConstant(4, value);
+}
+
 TextureConstant* Context::textureConstant(TextureSubType subtype,
                                           AssetHandle asset) {
     return impl->getOrInsert(impl->textureConstants, asset.ID(), [&] {

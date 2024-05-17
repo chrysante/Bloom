@@ -26,6 +26,10 @@ public:
     VectorType const* float4Type() const { return vectorType(4); }
 
     VectorConstant* vectorConstant(int numComponents, vml::float4 value);
+    VectorConstant* floatConstant(float value);
+    VectorConstant* float2Constant(vml::float2 value);
+    VectorConstant* float3Constant(vml::float3 value);
+    VectorConstant* float4Constant(vml::float4 value);
 
     TextureConstant* textureConstant(TextureSubType subtype, AssetHandle asset);
 

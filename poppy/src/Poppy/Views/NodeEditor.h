@@ -156,6 +156,9 @@ public:
     /// Removes all links from this pin
     void clearLinks();
 
+    /// \Returns `true` if the pin flags \p f are set on this pin
+    bool hasFlags(PinFlags f) const { return test(desc().flags & f); }
+
 protected:
     explicit Pin(PinType type, PinDesc const& desc, Node& parent):
         _desc(desc), _type(type), _parent(&parent) {}

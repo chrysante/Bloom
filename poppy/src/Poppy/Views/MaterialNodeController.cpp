@@ -8,6 +8,7 @@
 
 #include <range/v3/view.hpp>
 #include <utl/hashtable.hpp>
+#include <utl/strcat.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Yaml.h"
@@ -136,14 +137,13 @@ void MaterialNodeController::linkGraphNode(Context& ctx,
                     auto* o = input->origin();
                     return map.get(&o->parent(), o->indexInParent());
                 }
-                if ((int)input->userType() >= (int)DataType::Float &&
-                    (int)input->userType() <= (int)DataType::Float4)
-                {
-                    int numComponents =
-                        (int)input->userType() - (int)DataType::Float + 1;
-                    return ctx.vectorConstant(numComponents, {});
+                if (input->hasFlags(PinFlags::Optional)) {
+                    auto* value = defaultInputValue(ctx, inputIndex);
+                    BL_ASSERT(value, "Missing default value");
+                    return value;
                 }
-                return nullptr;
+                throw std::runtime_error(
+                    utl::strcat("Missing link on node: ", node()->name()));
             }();
             user->setOperand(inputIndex, operand);
         }

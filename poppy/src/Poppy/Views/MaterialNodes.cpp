@@ -1,5 +1,3 @@
-#include "Poppy/Views/MaterialNodes.h"
-
 #include <imgui.h>
 #include <utl/function_view.hpp>
 #include <utl/strcat.hpp>
@@ -21,8 +19,12 @@ using namespace ranges::views;
 using namespace matc;
 using namespace nodeEditor;
 
-static constexpr std::array<float4, 3> PinChannelColors = {
+static constexpr std::array<float4, 3> ColorChannelColors = {
     { { 1, 0, 0, 1 }, { .4, .9, .3, 1 }, { 0, 0.5, 1, 1 } }
+};
+
+static constexpr std::array<char const*, 4> ColorChannelNames = {
+    "Red", "Green", "Blue", "Alpha"
 };
 
 static Type const* translateType(Context& ctx, DataType dataType) {
@@ -135,6 +137,25 @@ struct OutputController: MaterialNodeController {
         return { value };
     }
 
+    Value* defaultInputValue(Context& ctx, size_t index) const override {
+        switch (index) {
+        case 0: // Base color
+            return ctx.float3Constant({ 0, 0, 0 });
+        case 1: // Emissive
+            return ctx.float3Constant({ 0, 0, 0 });
+        case 2: // Roughness
+            return ctx.floatConstant(1);
+        case 3: // Metallic
+            return ctx.floatConstant(0);
+        case 4: // AO
+            return ctx.floatConstant(1);
+        case 5: // Normal
+            return ctx.float3Constant({ 0, 0, 1 });
+        default:
+            BL_UNREACHABLE();
+        }
+    }
+
     vml::float4 nodeColor() override { return { 0.1, 0.1, 0.1, 1 }; }
 };
 
@@ -183,10 +204,10 @@ struct InputController: MaterialNodeController {
                 { .name = "Coords", .userType = (PinUserType)DataType::Float2 },
                 { .name = "U",
                   .userType = (PinUserType)DataType::Float,
-                  .color = PinChannelColors[0] },
+                  .color = ColorChannelColors[0] },
                 { .name = "V",
                   .userType = (PinUserType)DataType::Float,
-                  .color = PinChannelColors[1] },
+                  .color = ColorChannelColors[1] },
             };
 
         case InputKind::Normals:
@@ -289,39 +310,39 @@ struct ConstantController: MaterialNodeController {
         case Float2:
             return {
                 { .name = "Value", .userType = (PinUserType)Float2 },
-                { .name = "Red",
+                { .name = ColorChannelNames[0],
                   .userType = (PinUserType)Float,
-                  .color = PinChannelColors[0] },
-                { .name = "Green",
+                  .color = ColorChannelColors[0] },
+                { .name = ColorChannelNames[1],
                   .userType = (PinUserType)Float,
-                  .color = PinChannelColors[1] },
+                  .color = ColorChannelColors[1] },
             };
         case Float3:
             return {
                 { .name = "Value", .userType = (PinUserType)Float3 },
-                { .name = "Red",
+                { .name = ColorChannelNames[0],
                   .userType = (PinUserType)Float,
-                  .color = PinChannelColors[0] },
-                { .name = "Green",
+                  .color = ColorChannelColors[0] },
+                { .name = ColorChannelNames[2],
                   .userType = (PinUserType)Float,
-                  .color = PinChannelColors[1] },
-                { .name = "Blue",
+                  .color = ColorChannelColors[1] },
+                { .name = ColorChannelNames[3],
                   .userType = (PinUserType)Float,
-                  .color = PinChannelColors[2] },
+                  .color = ColorChannelColors[2] },
             };
         case Float4:
             return {
                 { .name = "Value", .userType = (PinUserType)Float3 },
-                { .name = "Red",
+                { .name = ColorChannelNames[0],
                   .userType = (PinUserType)Float,
-                  .color = PinChannelColors[0] },
-                { .name = "Green",
+                  .color = ColorChannelColors[0] },
+                { .name = ColorChannelNames[1],
                   .userType = (PinUserType)Float,
-                  .color = PinChannelColors[1] },
-                { .name = "Blue",
+                  .color = ColorChannelColors[1] },
+                { .name = ColorChannelNames[2],
                   .userType = (PinUserType)Float,
-                  .color = PinChannelColors[2] },
-                { .name = "Alpha",
+                  .color = ColorChannelColors[2] },
+                { .name = ColorChannelNames[3],
                   .userType = (PinUserType)Float,
                   .flags = PinFlags::Optional },
             };
@@ -577,8 +598,7 @@ struct AppendController: MaterialNodeController {
 
     std::vector<PinDesc> makeInputDescriptors() override {
         return iota(0, numComponents) | transform([](int index) {
-            return PinDesc{ .name = std::array{ "Red", "Green", "Blue",
-                                                "Alpha" }[index],
+            return PinDesc{ .name = ColorChannelNames[index],
                             .userType = (PinUserType)DataType::Float,
                             .flags = PinFlags::Optional };
         }) | ranges::to<std::vector>;
@@ -586,9 +606,7 @@ struct AppendController: MaterialNodeController {
 
     std::vector<PinDesc> makeOutputDescriptors() override {
         return {
-            { .name = "",
-              .userType =
-                  (PinUserType)((int)DataType::Float + numComponents - 1) },
+            { .userType = (PinUserType)FloatNType(numComponents) },
         };
     }
 
@@ -782,19 +800,19 @@ struct TextureSamplerController: MaterialNodeController {
 
     std::vector<PinDesc> makeOutputDescriptors() override {
         return { { .name = "Color", .userType = (PinUserType)DataType::Float3 },
-                 { .name = "Red",
+                 { .name = ColorChannelNames[0],
                    .flags = PinFlags::Optional,
                    .userType = (PinUserType)DataType::Float,
-                   .color = PinChannelColors[0] },
-                 { .name = "Green",
+                   .color = ColorChannelColors[0] },
+                 { .name = ColorChannelNames[1],
                    .flags = PinFlags::Optional,
                    .userType = (PinUserType)DataType::Float,
-                   .color = PinChannelColors[1] },
-                 { .name = "Blue",
+                   .color = ColorChannelColors[1] },
+                 { .name = ColorChannelNames[2],
                    .flags = PinFlags::Optional,
                    .userType = (PinUserType)DataType::Float,
-                   .color = PinChannelColors[2] },
-                 { .name = "Alpha",
+                   .color = ColorChannelColors[2] },
+                 { .name = ColorChannelNames[3],
                    .flags = PinFlags::Optional,
                    .userType = (PinUserType)DataType::Float } };
     }
@@ -810,9 +828,7 @@ struct TextureSamplerController: MaterialNodeController {
 
     std::vector<PinDesc> makeInputDescriptors() override {
         return {
-            { .name = "Texture",
-              .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Texture },
+            { .name = "Texture", .userType = (PinUserType)DataType::Texture },
             { .name = "UVs",
               .flags = PinFlags::Optional,
               .userType = (PinUserType)getUVType(subtype) },
@@ -841,6 +857,15 @@ struct TextureSamplerController: MaterialNodeController {
             sample // This is hacky but we put sample here so it will be linked,
                    // even though there is no corresponding output pin
         };
+    }
+
+    Value* defaultInputValue(Context& ctx, size_t index) const override {
+        switch (index) {
+        case 1: // UVs
+            return ctx.rasterizerInput(RasterizerInputKind::TextureCoords);
+        default:
+            BL_UNREACHABLE();
+        }
     }
 
     vml::float4 nodeColor() override { return { 0.2, 0.4, 1, 1 }; }

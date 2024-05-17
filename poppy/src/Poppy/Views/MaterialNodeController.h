@@ -39,12 +39,20 @@ std::span<MaterialNodeRegistryEntry const> getMaterialNodeRegistry();
 std::unique_ptr<nodeEditor::NodeController> deserializeMaterialNodeController(
     std::string_view controllerName, YAML::Node const&);
 
+/// Data types in the material editor
 enum class DataType { Float, Float2, Float3, Float4, AnyVector, Texture };
+
+/// \Returns `Float` or `FloatN` where `N` is \p numComponents
+inline DataType FloatNType(int numComponents) {
+    BL_ASSERT(numComponents >= 1 && numComponents <= 4);
+    return (DataType)((int)DataType::Float + numComponents - 1);
+}
 
 bool isDataTypeCompatible(DataType input, DataType output);
 
 /// Base class of all material node controllers
-struct MaterialNodeController: nodeEditor::NodeController {
+class MaterialNodeController: public nodeEditor::NodeController {
+public:
     struct ValueMap:
         utl::hashmap<nodeEditor::Node*,
                      utl::small_vector<bloom::matc::Value*>> {
@@ -64,6 +72,12 @@ struct MaterialNodeController: nodeEditor::NodeController {
 
     virtual void linkGraphNode(bloom::matc::Context& ctx,
                                ValueMap const& map) const;
+
+private:
+    virtual bloom::matc::Value* defaultInputValue(bloom::matc::Context& ctx,
+                                                  size_t inputIndex) const {
+        return nullptr;
+    }
 };
 
 /// Base class of material nodes that support multiple input types.
@@ -117,6 +131,7 @@ inline constexpr auto DeserializeFactory =
             {                                                                  \
                 __VA_ARGS__                                                    \
             }                                                                  \
+            return nullptr;                                                    \
         });                                                                    \
     };
 

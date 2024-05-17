@@ -482,8 +482,7 @@ void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
      const half4 colorSample = colorTexture.sample(textureSampler,
                                                    in.textureCoordinate);
      */
-    std::string samplerName =
-        utl::strcat(getName(sample.texture()), "_Sampler");
+    std::string samplerName = utl::strcat(getName(&sample), "_Sampler");
     std::string sampleTypeName = getName(sample.type());
     std::string sampleName = getName(&sample);
     writeItem([&] {

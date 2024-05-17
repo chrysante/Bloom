@@ -443,10 +443,10 @@ utl::small_vector<Node const*> NodeEditorGraph::sinks() const {
     return sinksImpl(nodes()) | ranges::to<utl::small_vector<Node const*>>;
 }
 
-static YAML::Node serializeNode(Node const& node) {
+static YAML::Node serializeNode(Node const& node, utl::uuid ID) {
     auto& desc = node.desc();
     YAML::Node root;
-    root["ID"] = desc.ID;
+    root["ID"] = ID;
     root["Name"] = desc.name;
     root["MinSize"] = desc.minSize;
     root["Position"] = desc.position;
@@ -458,57 +458,90 @@ static YAML::Node serializeNode(Node const& node) {
     return root;
 }
 
-static YAML::Node serializeLink(OutputPin const& out, InputPin const& in) {
+static YAML::Node serializeLink(OutputPin const& out, utl::uuid outID,
+                                InputPin const& in, utl::uuid inID) {
     YAML::Node root;
-    root["FromID"] = out.parent().ID();
+    root["FromID"] = outID;
     root["FromIndex"] = out.indexInParent();
-    root["ToID"] = in.parent().ID();
+    root["ToID"] = inID;
     root["ToIndex"] = in.indexInParent();
     return root;
 }
 
-YAML::Node NodeEditorGraph::serialize() const {
+namespace {
+
+struct SerializationOptions {
+    /// If set to true, the existing node IDs are written, otherwise new IDs are
+    /// generated
+    bool generateNewIDs = false;
+    /// If set to false, `serializeNodes()` will only serialize links to nodes
+    /// given to the function, i.e., if only a subset of nodes is serialized,
+    /// only links to nodes within the subset are written
+    bool serializeLinksToOtherNodes = true;
+};
+
+} // namespace
+
+static YAML::Node serializeNodes(std::span<Node const* const> nodes,
+                                 SerializationOptions options = {}) {
     YAML::Node root;
     auto nodeList = root["Nodes"];
     auto linkList = root["Links"];
-    for (auto* node: nodes()) {
+    utl::hashmap<Node const*, utl::uuid> nodeIDMap;
+    for (auto* node: nodes) {
         if (!node->controller()) {
             Logger::Error("Failed to serialize node without controller: ",
                           node->name());
             continue;
         }
-        nodeList.push_back(serializeNode(*node));
+        auto ID = options.generateNewIDs ? utl::uuid::generate() : node->ID();
+        nodeIDMap.insert({ node, ID });
+        nodeList.push_back(serializeNode(*node, ID));
+    }
+    utl::hashset<Node const*> nodeSet;
+    if (!options.serializeLinksToOtherNodes) {
+        nodeSet = nodes | ranges::to<utl::hashset<Node const*>>;
+    }
+    for (auto* node: nodes) {
         for (auto* input: node->inputs()) {
-            if (input->origin()) {
-                linkList.push_back(serializeLink(*input->origin(), *input));
+            if (!input->origin()) {
+                continue;
             }
+            if (!options.serializeLinksToOtherNodes &&
+                !nodeSet.contains(&input->origin()->parent()))
+            {
+                continue;
+            }
+            auto* origin = input->origin();
+            linkList.push_back(
+                serializeLink(*origin, nodeIDMap[&origin->parent()], *input,
+                              nodeIDMap[&input->parent()]));
         }
     }
     return root;
 }
 
+YAML::Node NodeEditorGraph::serialize() const {
+    return serializeNodes(nodes() | ToSmallVector<>);
+}
+
+using ControllerFactory =
+    utl::function_view<std::unique_ptr<NodeController>(YAML::Node const&)>;
+
 static std::unique_ptr<Node> deserializeNode(
-    YAML::Node const& source,
-    utl::function_view<std::unique_ptr<NodeController>(YAML::Node const&)>
-        deserializeController) {
-    try {
-        NodeDesc desc{};
-        desc.ID = source["ID"].as<utl::uuid>();
-        desc.name = source["Name"].as<std::string>();
-        desc.minSize = source["MinSize"].as<vml::float2>();
-        desc.position = source["Position"].as<vml::float2>();
-        bool resizable = desc.resizable = source["Resizable"].as<bool>();
-        desc.controller = deserializeController(source["Controller"]);
-        auto node = std::make_unique<Node>(std::move(desc));
-        if (resizable) {
-            node->setSize(source["Size"].as<vml::float2>());
-        }
-        return node;
+    YAML::Node const& source, ControllerFactory deserializeController) {
+    NodeDesc desc{};
+    desc.ID = source["ID"].as<utl::uuid>();
+    desc.name = source["Name"].as<std::string>();
+    desc.minSize = source["MinSize"].as<vml::float2>();
+    desc.position = source["Position"].as<vml::float2>();
+    bool resizable = desc.resizable = source["Resizable"].as<bool>();
+    desc.controller = deserializeController(source["Controller"]);
+    auto node = std::make_unique<Node>(std::move(desc));
+    if (resizable) {
+        node->setSize(source["Size"].as<vml::float2>());
     }
-    catch (YAML::Exception const& e) {
-        Logger::Error("Failed to deserialize node: ", e.what());
-        return nullptr;
-    }
+    return node;
 }
 
 static Node* findNode(utl::hashmap<utl::uuid, Node*> const& map, utl::uuid ID) {
@@ -545,32 +578,66 @@ static void deserializeLink(YAML::Node const& source,
     link(*fromNode->output(fromIndex), *toNode->input(toIndex));
 }
 
-bool NodeEditorGraph::deserialize(
-    YAML::Node const& source,
-    utl::function_view<std::unique_ptr<NodeController>(YAML::Node const&)>
-        deserializeController) {
+static YAML::Node getValue(YAML::Node const& root, std::string_view key) {
     try {
-        _nodes.clear();
-        utl::hashmap<utl::uuid, Node*> map;
-        for (auto& nodeSource: source["Nodes"]) {
-            auto node = deserializeNode(nodeSource, deserializeController);
-            if (!node) {
-                continue;
-            }
-            if (!utl::is_null(node->ID())) {
-                map[node->ID()] = node.get();
-            }
-            addNode(std::move(node));
+        return root[key];
+    }
+    catch (YAML::Exception const&) {
+        return {};
+    }
+}
+
+static utl::small_vector<Node*> deserializeNodes(
+    NodeEditorGraph& dest, YAML::Node source,
+    ControllerFactory deserializeController,
+    utl::function_view<void(Node&)> transform = {}) {
+    utl::small_vector<Node*> allNodes;
+    utl::hashmap<utl::uuid, Node*> map;
+    auto nodeList = getValue(source, "Nodes");
+    if (!nodeList.IsDefined()) {
+        Logger::Error("No nodes in yaml node");
+        return {};
+    }
+    for (auto nodeSource: nodeList) {
+        std::unique_ptr<Node> node;
+        try {
+            node = deserializeNode(nodeSource, deserializeController);
         }
-        for (auto& linkSource: source["Links"]) {
+        catch (YAML::Exception const& e) {
+            Logger::Error("Failed to deserialize node: ", e.what());
+        }
+        if (!node) {
+            continue;
+        }
+        if (transform) {
+            transform(*node);
+        }
+        if (!utl::is_null(node->ID())) {
+            map[node->ID()] = node.get();
+        }
+        allNodes.push_back(node.get());
+        dest.addNode(std::move(node));
+    }
+    auto linkList = getValue(source, "Links");
+    if (!linkList.IsDefined()) {
+        Logger::Error("No links in yaml node");
+        return {};
+    }
+    for (auto linkSource: linkList) {
+        try {
             deserializeLink(linkSource, map);
         }
-        return true;
+        catch (YAML::Exception const& e) {
+            Logger::Error("Failed to deserialize: ", e.what());
+        }
     }
-    catch (YAML::Exception const& e) {
-        Logger::Error("Failed to deserialize: ", e.what());
-        return false;
-    }
+    return allNodes;
+}
+
+void NodeEditorGraph::deserialize(YAML::Node const& source,
+                                  ControllerFactory deserializeController) {
+    _nodes.clear();
+    deserializeNodes(*this, source, deserializeController);
 }
 
 void NodeEditorGraph::deleteIf(utl::function_view<bool(Node const&)> pred) {
@@ -852,6 +919,8 @@ struct NodeEditor::Impl {
     void orderFront(Node* node);
 
     void deleteSelected();
+    void copyNodesToClipboard(std::span<Node const* const> nodes);
+    void pasteNodesFromClipboard();
 
     void openPopup(char const* name);
     void defer(auto f) { deferList.push_back(f); }
@@ -1173,6 +1242,20 @@ Impl::Impl(CommandPalette& cmd) {
         if (model) {
             selection.set(model->nodes());
         }
+    });
+    cmd.add("Copy Selected Nodes", { Key::C, ModFlags::Control }, [this] {
+        if (!selection.empty()) {
+            copyNodesToClipboard(selection);
+        }
+    });
+    cmd.add("Cut Selected Nodes", { Key::X, ModFlags::Control }, [this] {
+        if (!selection.empty()) {
+            copyNodesToClipboard(selection);
+        }
+        deleteSelected();
+    });
+    cmd.add("Paste Nodes", { Key::V, ModFlags::Control }, [this] {
+        pasteNodesFromClipboard();
     });
 }
 
@@ -2102,6 +2185,34 @@ void Impl::deleteSelected() {
     auto pred = [&](Node const& node) { return selection.contains(&node); };
     model->deleteIf(pred);
     selection.clear();
+}
+
+void Impl::copyNodesToClipboard(std::span<Node const* const> nodes) {
+    YAML::Emitter out;
+    out << serializeNodes(nodes, { .generateNewIDs = true,
+                                   .serializeLinksToOtherNodes = false });
+    ImGui::SetClipboardText(out.c_str());
+}
+
+void Impl::pasteNodesFromClipboard() {
+    if (!model || !delegate) {
+        return;
+    }
+    auto controllerFactory = [this](YAML::Node const& node) {
+        return delegate->deserializeNodeController(node);
+    };
+    auto transform = [](Node& node) {
+        node.setPosition(node.position() + float2(50));
+    };
+    YAML::Node source;
+    try {
+        source = YAML::Load(ImGui::GetClipboardText());
+    }
+    catch (YAML::Exception const& e) {
+        Logger::Error("Failed to paste nodes from clipboard: ", e.what());
+    }
+    auto nodes = deserializeNodes(*model, source, controllerFactory, transform);
+    selection.set(nodes);
 }
 
 void Impl::openPopup(char const* name) {

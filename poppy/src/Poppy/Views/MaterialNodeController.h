@@ -37,7 +37,7 @@ std::span<MaterialNodeRegistryEntry const> getMaterialNodeRegistry();
 
 /// Deserializes a material node controller
 std::unique_ptr<nodeEditor::NodeController> deserializeMaterialNodeController(
-    std::string_view controllerName, YAML::Node const&);
+    YAML::Node const&);
 
 /// Data types in the material editor
 enum class DataType { Float, Float2, Float3, Float4, AnyVector, Texture };

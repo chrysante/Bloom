@@ -104,8 +104,8 @@ std::span<MaterialNodeRegistryEntry const> poppy::getMaterialNodeRegistry() {
 }
 
 std::unique_ptr<nodeEditor::NodeController> poppy::
-    deserializeMaterialNodeController(std::string_view controllerName,
-                                      YAML::Node const& node) {
+    deserializeMaterialNodeController(YAML::Node const& node) {
+    auto controllerName = node["Type"].as<std::string>();
     auto itr = gRegistry.entries.find(controllerName);
     if (itr == gRegistry.entries.end()) {
         return nullptr;

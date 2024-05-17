@@ -55,6 +55,9 @@ struct RenderGraphEditor: View {
             return view->createNodePopupMenu();
         }
 
+        std::unique_ptr<nodeEditor::NodeController> deserializeNodeController(
+            YAML::Node const& node) override;
+
         RenderGraphEditor* view;
     };
 
@@ -108,6 +111,11 @@ public:
     static std::unique_ptr<RenderGraphNodeController> deserialize(
         YAML::Node node);
 };
+
+std::unique_ptr<nodeEditor::NodeController> RenderGraphEditor::Delegate::
+    deserializeNodeController(YAML::Node const& node) {
+    return RenderGraphNodeController::deserialize(node);
+}
 
 static PinFlags translateFlags(InterfaceFlags flags) {
     PinFlags result{};

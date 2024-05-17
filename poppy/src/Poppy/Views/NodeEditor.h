@@ -368,7 +368,7 @@ public:
     YAML::Node serialize() const;
 
     /// Deserializes the document stored in \p node
-    bool deserialize(
+    void deserialize(
         YAML::Node const& node,
         utl::function_view<
             std::unique_ptr<nodeEditor::NodeController>(YAML::Node const&)>
@@ -406,6 +406,12 @@ public:
     /// Context menu content to create new nodes. Shall return a pointer to node
     /// if a node has been added
     virtual nodeEditor::Node* createNodePopupMenu() { return nullptr; }
+
+    /// Must be implemented for copy pasting to work
+    virtual std::unique_ptr<nodeEditor::NodeController>
+        deserializeNodeController(YAML::Node const&) {
+        return nullptr;
+    }
 };
 
 /// Generic customizable node editor

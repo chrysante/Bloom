@@ -44,9 +44,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
     void deserialize(YAML::Node const& node) override {
         shadingModel = node["ShadingModel"].as<MaterialShadingModel>();
         editorGraph.deserialize(node["NodeGraph"], [](YAML::Node const& node) {
-            return deserializeMaterialNodeController(node["Type"]
-                                                         .as<std::string>(),
-                                                     node);
+            return deserializeMaterialNodeController(node);
         });
     }
 
@@ -158,6 +156,11 @@ struct Delegate: NodeEditorDelegate {
     bool isPinTypeCompatible(PinUserType output,
                              PinUserType input) const override {
         return isDataTypeCompatible((DataType)output, (DataType)input);
+    }
+
+    std::unique_ptr<nodeEditor::NodeController> deserializeNodeController(
+        YAML::Node const& node) override {
+        return deserializeMaterialNodeController(node);
     }
 
     MaterialModelImpl* getModel() { return ::getModel(editor.material.get()); }

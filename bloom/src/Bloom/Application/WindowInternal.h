@@ -9,8 +9,12 @@
 namespace bloom {
 
 struct Window::Impl: WindowDescription {
-    struct Deleter {
+    struct GLFWDeleter {
         void operator()(GLFWwindow*) const;
+    };
+
+    struct DelegateDeleter {
+        void operator()(void*) const;
     };
 
     ~Impl();
@@ -39,9 +43,10 @@ struct Window::Impl: WindowDescription {
     /// the window position callback and clear it whenever the left mouse
     /// button is released
     bool isMoving = false;
-    bool requestedMove = false;
-    bool requestedResize = false;
-    std::unique_ptr<GLFWwindow, Deleter> glfwWnd;
+    int requestedMoves = false;
+    int requestedResizes = false;
+    std::unique_ptr<GLFWwindow, GLFWDeleter> glfwWnd;
+    std::unique_ptr<void, DelegateDeleter> delegate;
     void* nativeWindow = nullptr;
     Reference<Swapchain> swapchain;
     std::vector<std::unique_ptr<WindowDelegate>> delegates;

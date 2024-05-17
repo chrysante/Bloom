@@ -36,7 +36,11 @@ struct Application::Impl {
     struct AppWindowDelegate: WindowDelegate {
         AppWindowDelegate(Application* app): app(app) {}
 
-        void onResize(int2) override { app->doFrame(); }
+        void onResize(int2) override {
+            if (!window()->requestedResize()) {
+                app->doFrame(/* handleEvents: */ false);
+            }
+        }
 
         Application* app;
     };
@@ -135,9 +139,11 @@ void Application::doShutdown() {
     mCoreSystems.shutdown();
 }
 
-void Application::doFrame() {
+void Application::doFrame(bool handleEvents) {
     BLOOM_AUTORELEASE_BEGIN
-    handleEvents(mRunLoopMode);
+    if (handleEvents) {
+        ::handleEvents(mRunLoopMode);
+    }
     messageSystem->flush();
     this->frame();
     inputEndFrame(mInput);

@@ -77,6 +77,10 @@ void Window::setSwapchain(Reference<Swapchain> swapchain) {
 }
 @end
 
+void Window::Impl::DelegateDeleter::operator()(void* delegate) const {
+    (void)(__bridge_transfer id<NSWindowDelegate>)delegate;
+}
+
 void Window::platformInit() {
     impl->nativeWindow =
         (__bridge void*)glfwGetCocoaWindow(impl->glfwWnd.get());
@@ -84,6 +88,7 @@ void Window::platformInit() {
     id<NSWindowDelegate> myDelegate = [[WindowDelegateWrapper alloc]
                 init:impl.get()
         glfwDelegate:[window delegate]];
+    impl->delegate.reset((__bridge_retained void*)myDelegate);
     [window setDelegate:myDelegate];
     NSTrackingArea* trackingArea = [[NSTrackingArea alloc]
         initWithRect:NSZeroRect

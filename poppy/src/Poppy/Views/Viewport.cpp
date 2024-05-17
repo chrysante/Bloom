@@ -267,7 +267,9 @@ void Viewport::drawScenes() {
         ((float2)ImGui::GetMousePos() - (float2)ImGui::GetCursorScreenPos()) /
         size;
     ImGui::Image(finalColor.nativeHandle(), size);
-    if (ImGui::IsKeyDown(ImGuiKey_ModAlt)) {
+    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows) &&
+        ImGui::IsKeyDown(ImGuiKey_ModAlt))
+    {
         displayColorPicker(*commandBuffer, finalColor, mouseCoord);
     }
     commandBuffer->commit();

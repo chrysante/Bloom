@@ -12,8 +12,6 @@
 
 namespace poppy {
 
-class Editor;
-
 inline constexpr auto AssetDragDropType = "ASSET_DRAG_DROP";
 
 ///
@@ -32,17 +30,19 @@ inline std::optional<bloom::AssetHandle> acceptAssetDragDrop(
     return acceptAssetDragDrop({ type });
 }
 
-bool assetButtonImpl(Editor& editor, bloom::Reference<bloom::Asset>& assetRef,
-                     bloom::AssetType type, vml::float2 size);
+bool assetButtonImpl(bloom::Reference<bloom::Asset>& assetRef,
+                     bloom::AssetType type, vml::float2 size,
+                     bloom::AssetRepresentation repr);
 
 /// Displays a button that can be used to select assets of type \p AssetType
 /// The selected asset will be assigned to \p asset
 /// \Returns `true` if a new asset has been selected
 template <std::derived_from<bloom::Asset> AssetType>
-bool assetButton(Editor& editor, bloom::Reference<AssetType>& asset,
-                 vml::float2 size = {}) {
+bool assetButton(
+    bloom::Reference<AssetType>& asset, vml::float2 size = {},
+    bloom::AssetRepresentation repr = bloom::AssetRepresentation::None) {
     bloom::Reference<bloom::Asset> tmp = asset;
-    if (assetButtonImpl(editor, tmp, utl::dc::TypeToID<AssetType>, size)) {
+    if (assetButtonImpl(tmp, utl::dc::TypeToID<AssetType>, size, repr)) {
         asset = as<AssetType>(tmp);
         return true;
     }
@@ -50,7 +50,7 @@ bool assetButton(Editor& editor, bloom::Reference<AssetType>& asset,
 }
 
 /// Opens the asset \p handle in a view
-void openAsset(Editor& editor, bloom::AssetHandle handle);
+void openAsset(bloom::AssetHandle handle);
 
 } // namespace poppy
 

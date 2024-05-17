@@ -306,9 +306,9 @@ void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
     auto& meshRenderer = entity.get<MeshRendererComponent>();
     disabledIf(isSimulating(), [&] {
         beginProperty("Mesh");
-        assetButton(editor(), meshRenderer.mesh);
+        assetButton(meshRenderer.mesh);
         beginProperty("Material");
-        assetButton(editor(), meshRenderer.materialInstance);
+        assetButton(meshRenderer.materialInstance);
     });
     endSection();
 }

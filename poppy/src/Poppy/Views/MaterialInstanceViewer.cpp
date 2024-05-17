@@ -48,7 +48,7 @@ void MaterialInstanceViewer::display() {
     if (beginSection()) {
         beginProperty("Material");
         auto material = inst->materialRef();
-        if (assetButton(editor(), material)) {
+        if (assetButton(material)) {
             inst->setMaterial(std::move(material));
         }
         endSection();

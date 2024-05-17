@@ -175,6 +175,11 @@ private:
     std::unique_ptr<Impl> impl;
 };
 
+/// When dispatched the asset manager will assign itself to `*assetManager`
+struct GetAssetManager {
+    AssetManager** assetManager;
+};
+
 } // namespace bloom
 
 #endif // BLOOM_ASSET_ASSETMANAGER_H

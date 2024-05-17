@@ -53,9 +53,11 @@ std::optional<AssetHandle> poppy::acceptAssetDragDrop(
     return std::nullopt;
 }
 
-bool poppy::assetButtonImpl(Editor& editor, Reference<Asset>& assetRef,
-                            AssetType type, float2 size) {
-    AssetManager& AM = editor.coreSystems().assetManager();
+bool poppy::assetButtonImpl(Reference<Asset>& assetRef, AssetType type,
+                            float2 size, AssetRepresentation repr) {
+    AssetManager* AM = nullptr;
+    Application::DispatchMessage(DispatchToken::Now, GetAssetManager{ &AM });
+    BL_ASSERT(AM);
     ImGui::PushID((int)type);
     std::string label = assetRef ? assetRef->name() : "None";
     std::string popupName = utl::strcat("AssetBrowserPopup");
@@ -84,16 +86,16 @@ bool poppy::assetButtonImpl(Editor& editor, Reference<Asset>& assetRef,
     ImGui::PushFont(icon.font);
     ImGui::BeginDisabled(!assetRef);
     if (ImGui::Button(icon.utf8Rep.c_str(), { size.y, size.y })) {
-        openAsset(editor, assetRef->handle());
+        openAsset(assetRef->handle());
     }
     ImGui::EndDisabled();
     ImGui::PopFont();
     ImRect bb(pos, pos + size);
     if (ImGui::BeginComboPopup(popupID, bb, ImGuiPopupFlags_None)) {
-        auto assets = AM.getAssetsOfType(type);
+        auto assets = AM->getAssetsOfType(type);
         for (auto asset: assets) {
             bool selected = assetRef && asset == assetRef->handle();
-            if (ImGui::Selectable(AM.getName(asset).c_str(), selected)) {
+            if (ImGui::Selectable(AM->getName(asset).c_str(), selected)) {
                 handle = asset;
                 haveNewAsset = true;
             }
@@ -101,8 +103,7 @@ bool poppy::assetButtonImpl(Editor& editor, Reference<Asset>& assetRef,
         ImGui::EndCombo();
     }
     if (handle) {
-        assetRef =
-            AM.get(handle, AssetRepresentation::CPU | AssetRepresentation::GPU);
+        assetRef = AM->get(handle, repr);
     }
     ImGui::PopID();
     return haveNewAsset;
@@ -118,8 +119,7 @@ static void openAssetInView(std::string viewName, AssetHandle handle) {
     } });
 }
 
-void poppy::openAsset(Editor& editor, bloom::AssetHandle handle) {
-    auto& AM = editor.coreSystems().assetManager();
+void poppy::openAsset(bloom::AssetHandle handle) {
     switch (handle.type()) {
     case AssetType::Material: {
         openAssetInView<Material>("Material Editor", handle);
@@ -139,10 +139,8 @@ void poppy::openAsset(Editor& editor, bloom::AssetHandle handle) {
     }
     case AssetType::ScriptSource: {
         std::filesystem::path diskLocation;
-        Application::DispatchMessage(DispatchToken::Now,
-                                     AMGetAsset{ .handle = handle,
-                                                 .diskLocation =
-                                                     &diskLocation });
+        AMGetAsset msg{ .handle = handle, .diskLocation = &diskLocation };
+        Application::DispatchMessage(DispatchToken::Now, msg);
         auto command = utl::strcat("open ", diskLocation);
         std::system(command.data());
         break;

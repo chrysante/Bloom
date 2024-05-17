@@ -55,7 +55,7 @@ struct AssetBrowser: View {
             if (!handle) {
                 return;
             }
-            This->openAsset(handle);
+            openAsset(handle);
         }
         void renameEntry(DirectoryEntry const& entry,
                          std::string newName) override {
@@ -111,8 +111,6 @@ struct AssetBrowser: View {
     };
 
     AssetBrowser();
-
-    void openAsset(bloom::AssetHandle);
 
     void init() override;
     void displayToolbar() override;
@@ -272,10 +270,6 @@ void AssetBrowser::displayNoOpenProject() {
         });
     }
     return;
-}
-
-void AssetBrowser::openAsset(bloom::AssetHandle handle) {
-    poppy::openAsset(editor(), handle);
 }
 
 YAML::Node AssetBrowser::serialize() const {

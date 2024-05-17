@@ -570,7 +570,7 @@ void Viewport::dropdownMenu() {
             cameraController.setNearClipPlane(clip);
         }
         beginProperty("IBL Texture");
-        assetButton(editor(), iblTexture);
+        assetButton(iblTexture);
         endSection();
     }
     ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);

@@ -367,6 +367,11 @@ AssetManager::~AssetManager() = default;
 
 void AssetManager::doInit() {
     impl = std::make_unique<Impl>(this);
+    listen([this](GetAssetManager msg) {
+        if (msg.assetManager) {
+            *msg.assetManager = this;
+        }
+    });
     listen([this](AMGetAsset const& msg) {
         auto asset = get(msg.handle, msg.representation);
         if (!asset) {

@@ -85,34 +85,42 @@ static ButtonResult displayButtonCompact(Asset* asset, AssetType type,
     auto& g = *GImGui;
     auto& style = g.Style;
     if (totalSize.x <= 0) {
-        totalSize.x = ImGui::GetContentRegionAvail().x;
+        totalSize.x = ImGui::CalcItemWidth();
     }
     if (totalSize.y <= 0) {
         totalSize.y = g.FontSize + 2 * style.FramePadding.y;
     }
-    float2 buttonSize(totalSize.x - totalSize.y - style.ItemSpacing.x,
-                      totalSize.y);
+    float2 buttonSize(totalSize.x - totalSize.y, totalSize.y);
     float2 pos = ImGui::GetCursorScreenPos();
     std::string label = asset ? asset->name() : "None";
     ButtonResult result{};
     result.rect = ImRect(pos, pos + buttonSize);
-    result.pressed = ImGui::Button(label.c_str(), buttonSize);
+    ImGui::PushStyleColor(ImGuiCol_Border, 0);
+    result.pressed = ImGui::ButtonEx(label.c_str(), buttonSize, 0,
+                                     ImDrawFlags_RoundCornersLeft);
     if (auto payload = acceptAssetDragDrop({ type })) {
         result.dragDropAsset = *payload;
     }
     // Display open asset button
-    ImGui::SetCursorScreenPos(pos +
-                              float2(buttonSize.x + style.ItemSpacing.x, 0));
+    float2 openButtonPos = pos + float2(buttonSize.x, 0);
+    float2 openButtonSize(totalSize.y);
     auto icon = FontManager::get({ IconSize::_16 }, "link-ext");
     ImGui::PushFont(icon.font);
     ImGui::BeginDisabled(!asset);
-    float2 openButtonSize(totalSize.y);
-    if (ImGui::Button(icon.utf8Rep.c_str(), openButtonSize)) {
+    ImGui::SetCursorScreenPos(openButtonPos);
+    if (ImGui::ButtonEx(icon.utf8Rep.c_str(), openButtonSize, 0,
+                        ImDrawFlags_RoundCornersRight))
+    {
         BL_ASSERT(asset);
         openAsset(asset->handle());
     }
+    ImGui::PopStyleColor();
     ImGui::EndDisabled();
     ImGui::PopFont();
+    // Draw frame
+    auto* DL = ImGui::GetWindowDrawList();
+    auto bordercol = ImGui::GetColorU32(ImGuiCol_Border);
+    DL->AddRect(pos, pos + totalSize, bordercol, style.FrameRounding);
     return result;
 }
 

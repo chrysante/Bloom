@@ -307,8 +307,10 @@ void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
     disabledIf(isSimulating(), [&] {
         using enum AssetRepresentation;
         beginProperty("Mesh");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         assetButton(meshRenderer.mesh, { .repr = GPU });
         beginProperty("Material");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         assetButton(meshRenderer.materialInstance, { .repr = GPU });
     });
     endSection();

@@ -570,6 +570,7 @@ void Viewport::dropdownMenu() {
             cameraController.setNearClipPlane(clip);
         }
         beginProperty("IBL Texture");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         assetButton(iblTexture, { .repr = AssetRepresentation::CPU });
         endSection();
     }

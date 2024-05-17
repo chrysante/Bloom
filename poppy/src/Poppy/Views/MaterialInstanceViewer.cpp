@@ -48,6 +48,7 @@ void MaterialInstanceViewer::display() {
     if (beginSection()) {
         beginProperty("Material");
         auto material = inst->materialRef();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (assetButton(material, { .repr = AssetRepresentation::GPU })) {
             inst->setMaterial(std::move(material));
         }

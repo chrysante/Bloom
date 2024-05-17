@@ -107,7 +107,7 @@ public:
 
     /// Can be used to send data to derived views without knowing their type.
     /// Unexpected data will be ignored
-    void openData(std::any data) { doOpenData(std::move(data)); }
+    void sendData(std::any data) { receiveData(std::move(data)); }
 
     struct BackendImpl;
 
@@ -145,7 +145,7 @@ private:
     virtual void deserialize(YAML::Node) {}
 
     /// Callback to receive data
-    virtual void doOpenData(std::any){};
+    virtual void receiveData(std::any){};
 
     friend class ViewRegistryEntry;
     friend class ViewManager;

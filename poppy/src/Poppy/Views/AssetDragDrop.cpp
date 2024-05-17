@@ -114,7 +114,7 @@ static void openAssetInView(std::string viewName, AssetHandle handle) {
                                  ViewManager::OpenCommand{
                                      .name = std::move(viewName),
                                      .completion = [=](View& view) {
-        view.openData(getAsset<AssetType>(handle, AssetRepresentation::CPU));
+        view.sendData(getAsset<AssetType>(handle, AssetRepresentation::CPU));
     } });
 }
 

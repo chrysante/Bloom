@@ -100,7 +100,7 @@ struct Viewport: View, BasicSceneInspector {
     Toolbar makeToolbar();
     void dropdownMenu();
 
-    void doOpenData(std::any data) override;
+    void receiveData(std::any data) override;
 
     float3 worldSpaceToViewSpace(float3 position);
     float3 worldSpaceToScreenSpace(float3 position);
@@ -569,7 +569,6 @@ void Viewport::dropdownMenu() {
         {
             cameraController.setNearClipPlane(clip);
         }
-
         beginProperty("IBL Texture");
         assetButton(editor(), iblTexture);
         endSection();
@@ -577,7 +576,7 @@ void Viewport::dropdownMenu() {
     ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);
 }
 
-void Viewport::doOpenData(std::any data) {
+void Viewport::receiveData(std::any data) {
     auto* scenePtr = std::any_cast<Reference<Scene>>(&data);
     if (!scenePtr) {
         return;

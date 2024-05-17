@@ -22,7 +22,7 @@ namespace {
 struct TextureViewerWrapper: View {
     TextureViewerWrapper();
     void display() override;
-    void doOpenData(std::any data) override;
+    void receiveData(std::any data) override;
 
     TextureViewer impl;
 };
@@ -229,7 +229,7 @@ TextureViewerWrapper::TextureViewerWrapper() {
 
 void TextureViewerWrapper::display() { impl.display(); }
 
-void TextureViewerWrapper::doOpenData(std::any data) {
+void TextureViewerWrapper::receiveData(std::any data) {
     auto* texptr = std::any_cast<Reference<Texture2D>>(&data);
     if (!texptr) {
         return;

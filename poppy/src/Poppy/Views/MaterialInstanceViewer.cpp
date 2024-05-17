@@ -19,7 +19,7 @@ struct MaterialInstanceViewer: public View {
 
     void display() override;
 
-    void doOpenData(std::any data) override;
+    void receiveData(std::any data) override;
 
     bloom::Reference<bloom::MaterialInstance> inst;
 };
@@ -89,15 +89,13 @@ void MaterialInstanceViewer::display() {
     }
 }
 
-void MaterialInstanceViewer::doOpenData(std::any data) {
+void MaterialInstanceViewer::receiveData(std::any data) {
     auto* newInst = std::any_cast<Reference<MaterialInstance>>(&data);
     if (!newInst) {
         return;
     }
     inst = *newInst;
-    editor()
-        .coreSystems()
-        .assetManager()
-        .makeAvailable(inst->handle(),
-                       AssetRepresentation::CPU | AssetRepresentation::GPU);
+    auto& AM = editor().coreSystems().assetManager();
+    using enum AssetRepresentation;
+    AM.makeAvailable(inst->handle(), CPU | GPU);
 }

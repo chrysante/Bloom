@@ -119,7 +119,7 @@ struct MaterialEditor: View {
     void onInput(InputEvent& event) override;
     YAML::Node serialize() const override;
     void deserialize(YAML::Node node) override;
-    void doOpenData(std::any data) override {
+    void receiveData(std::any data) override {
         if (auto* mat = std::any_cast<Reference<Material>>(&data)) {
             material = *mat;
             nodeEditor.setModel(&getModel(material.get())->editorGraph);

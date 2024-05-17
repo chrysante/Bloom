@@ -387,10 +387,10 @@ class NodeEditorDelegate {
 public:
     virtual ~NodeEditorDelegate() = default;
 
-    /// Customization point that decides if two pin types can be linked to each
-    /// other
-    virtual bool isPinTypeCompatible(nodeEditor::PinUserType input,
-                                     nodeEditor::PinUserType output) const {
+    /// Customization point that decides if the node editor can create a link
+    /// from an output pin of type \p output to an input pin of type \p input
+    virtual bool isPinTypeCompatible(nodeEditor::PinUserType output,
+                                     nodeEditor::PinUserType input) const {
         return input == output;
     }
 

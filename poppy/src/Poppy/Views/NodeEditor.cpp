@@ -397,6 +397,7 @@ utl::hashset<Node const*> Node::predecessors() const {
 }
 
 Node* NodeEditorGraph::addNode(std::unique_ptr<Node> node) {
+    BL_ASSERT(node, "Node must not be null");
     _nodes.push_back(std::move(node));
     return _nodes.back().get();
 }
@@ -471,6 +472,11 @@ YAML::Node NodeEditorGraph::serialize() const {
     auto nodeList = root["Nodes"];
     auto linkList = root["Links"];
     for (auto* node: nodes()) {
+        if (!node->controller()) {
+            Logger::Error("Failed to serialize node without controller: ",
+                          node->name());
+            continue;
+        }
         nodeList.push_back(serializeNode(*node));
         for (auto* input: node->inputs()) {
             if (input->origin()) {
@@ -529,10 +535,12 @@ static void deserializeLink(YAML::Node const& source,
     if (fromIndex >= fromNode->outputs().size()) {
         Logger::Warn("Failed to deserialize link: output index out of range: ",
                      fromIndex, " (on node ", fromNode->name(), ")");
+        return;
     }
     if (toIndex >= toNode->inputs().size()) {
         Logger::Warn("Failed to deserialize link: input index out of range: ",
                      toIndex, " (on node ", toNode->name(), ")");
+        return;
     }
     link(*fromNode->output(fromIndex), *toNode->input(toIndex));
 }
@@ -764,6 +772,7 @@ static void displayDebugger(ViewData const& viewData,
     ITEM(activeResize);
     ITEM(activePin);
     ITEM(activePopupName);
+    ITEM(popupPosition);
     ITEM(nodeRectUnion.lower_bound());
     ITEM(nodeRectUnion.upper_bound());
     ImGui::SeparatorText("Frame Data");
@@ -1604,8 +1613,10 @@ static float2 computeNodeMinSize(Node const& node) {
     float2 bodyPadding = NodeBodyPadding();
     float pinHeight = styleVars().PinAreaSize *
                       std::max(node.inputs().size(), node.outputs().size());
-    float2 contentSize = vml::max(node.controller()->preferredContentSize(),
-                                  float2(0, pinHeight));
+    float2 preferredSize = node.controller() ?
+                               node.controller()->preferredContentSize() :
+                               float2();
+    float2 contentSize = vml::max(preferredSize, float2(0, pinHeight));
     contentSize += float2(0, styleVars().NodeBodyTitleHeight + bodyPadding.y);
     float2 result =
         vml::max(node.desc().minSize, node.layoutData().minSize, contentSize);

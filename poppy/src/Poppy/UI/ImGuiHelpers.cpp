@@ -40,9 +40,19 @@ ViewportInput poppy::detectViewportInput(ImGuiButtonFlags buttonFlags) {
     return result;
 }
 
-bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
-                             float v_min, float v_max, char const* format,
-                             ImGuiSliderFlags flags) {
+std::array<float, 3> computeItemWidths(int fullWidth, float labelSize) {
+    int r = fullWidth % 3;
+    int itemWidth = fullWidth / 3 - labelSize;
+    return {
+        float(itemWidth),
+        float(itemWidth) + (r > 0),
+        float(itemWidth) + (r > 1),
+    };
+}
+
+bool poppy::dragFloat3Labelled(char const* label, float v[3], float v_speed,
+                               float v_min, float v_max, char const* format,
+                               ImGuiSliderFlags flags) {
     int const components = 3;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems) {
@@ -60,10 +70,10 @@ bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
     constexpr std::array labels = { "X", "Y", "Z" };
     constexpr std::array itemLabels = { "###X", "###Y", "###Z" };
     /// We display labels if each component is at least 90 pixels in width
-    float fullWidth = 3 * ImFloor(ImGui::CalcItemWidth() / 3);
+    float fullWidth = ImGui::CalcItemWidth();
     bool haveLabelButtons = fullWidth / components >= 90;
     float2 labelButtonSize = float2(haveLabelButtons ? height : 0.0f);
-    float itemWidth = fullWidth / components - labelButtonSize.x;
+    std::array itemWidths = computeItemWidths(fullWidth, labelButtonSize.x);
     float2 beginCursor = window->DC.CursorPos;
     auto* DL = ImGui::GetWindowDrawList();
     float rounding = style.FrameRounding;
@@ -73,12 +83,12 @@ bool poppy::dragFloat3Pretty(char const* label, float v[3], float v_speed,
                 ImGui::GetColorU32(ImGuiCol_BorderShadow), rounding, 0, 1);
     ImGui::PushStyleColor(ImGuiCol_BorderShadow, 0);
     ImGui::PushStyleColor(ImGuiCol_Border, 0);
+    float xCursor = 0;
     for (int i = 0; i < components; i++) {
-        float2 cursorPos =
-            beginCursor +
-            float2(i * (itemWidth + labelButtonSize.x) + labelButtonSize.x, 0);
+        float2 cursorPos = beginCursor + float2(xCursor + labelButtonSize.x, 0);
+        xCursor += itemWidths[i] + labelButtonSize.x;
         ImGui::SetCursorScreenPos(cursorPos);
-        ImGui::SetNextItemWidth(itemWidth);
+        ImGui::SetNextItemWidth(itemWidths[i]);
         ImDrawFlags drawFlags = i == 0 ? (haveLabelButtons ?
                                               ImDrawFlags_RoundCornersNone :
                                               ImDrawFlags_RoundCornersLeft) :

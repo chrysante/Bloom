@@ -240,19 +240,19 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
             float width = ImGui::GetContentRegionAvail().x - lockButtonSize.x -
                           style.ItemSpacing.x;
             ImGui::SetNextItemWidth(width);
-            dragFloat3Pretty("###position", transform.position.data());
+            dragFloat3Labelled("###position", transform.position.data());
             beginProperty("Orientation");
             float3 euler = vml::to_euler(transform.orientation) * 180;
             ImGui::SetNextItemWidth(width);
-            if (dragFloat3Pretty("###orientation", euler.data(), 1, 0, 0,
-                                 "%.3f°"))
+            if (dragFloat3Labelled("###orientation", euler.data(), 1, 0, 0,
+                                   "%.3f°"))
             {
                 transform.orientation = vml::to_quaternion(euler / 180);
             }
             beginProperty("Scale");
             ImGui::SetNextItemWidth(width);
             float3 newScale = transform.scale;
-            if (dragFloat3Pretty("###scale", newScale.data(), 0.02)) {
+            if (dragFloat3Labelled("###scale", newScale.data(), 0.02)) {
                 if (transformScaleLinked) {
                     float3 scaleOffset = newScale / transform.scale;
                     float offset =

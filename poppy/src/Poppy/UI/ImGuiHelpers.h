@@ -21,9 +21,10 @@ struct ViewportInput {
 
 ViewportInput detectViewportInput(int mouseButtons);
 
-bool dragFloat3Pretty(char const* label, float v[3], float v_speed = 1.0f,
-                      float v_min = 0.0f, float v_max = 0.0f,
-                      char const* format = "%.3f", ImGuiSliderFlags flags = 0);
+bool dragFloat3Labelled(char const* label, float v[3], float v_speed = 1.0f,
+                        float v_min = 0.0f, float v_max = 0.0f,
+                        char const* format = "%.3f",
+                        ImGuiSliderFlags flags = 0);
 
 auto withID(int id, std::invocable auto&& block) {
     ImGui::PushID(id);

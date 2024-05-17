@@ -117,12 +117,18 @@ void Window::setTitle(std::string newTitle) {
 }
 
 void Window::setPosition(vml::int2 newPosition) {
+    if (newPosition == impl->position) {
+        return;
+    }
     ++impl->requestedMoves;
     glfwSetWindowPos(GLFW_WND, newPosition.x, newPosition.y);
     glfwGetWindowPos(GLFW_WND, &impl->position.x, &impl->position.y);
 }
 
 void Window::setSize(vml::int2 newSize) {
+    if (newSize == impl->size) {
+        return;
+    }
     newSize.x = std::max(newSize.x, 0);
     newSize.y = std::max(newSize.y, 0);
     ++impl->requestedResizes;

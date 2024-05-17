@@ -925,6 +925,7 @@ struct ImGui_ImplOSX_WindowDelegate: bloom::WindowDelegate {
         viewport->Pos = (float2)window()->position();
         viewport->Size = (float2)newSize;
         viewport->PlatformRequestResize = true;
+        viewport->PlatformRequestMove = true;
     }
     
     void onMove(int2 newPos) override {
@@ -982,7 +983,6 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     copySizeConstaints(*window, viewport->Window->SizeConstraintRect);
     data->Window = window;
     data->WindowOwned = true;
-//    viewport->PlatformRequestResize = false;
     viewport->PlatformWindowCreated = true;
     viewport->PlatformHandle = window;
     viewport->PlatformHandleRaw = window->nativeHandle();

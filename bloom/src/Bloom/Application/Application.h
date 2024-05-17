@@ -119,7 +119,7 @@ private:
     void doInit();
     void registerListeners();
     void doShutdown();
-    void doFrame(bool handleEvents = true);
+    void doFrame(RunLoopMode mode);
     void clearClosingWindows();
     void doOnInput(InputEvent const& event, void* native);
 

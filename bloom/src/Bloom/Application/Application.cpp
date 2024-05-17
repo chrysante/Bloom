@@ -38,7 +38,10 @@ struct Application::Impl {
 
         void onResize(int2) override {
             if (!window()->requestedResize()) {
-                app->doFrame(/* handleEvents: */ false);
+                /// Very important that we don't wait on events when resizing.
+                /// Otherwise the application might freeze during resize because
+                /// no events are being sent
+                app->doFrame(RunLoopMode::Realtime);
             }
         }
 
@@ -113,7 +116,7 @@ static void handleEvents(RunLoopMode mode) {
 void Application::run() {
     doInit();
     while (!mWindows.empty()) {
-        doFrame();
+        doFrame(mRunLoopMode);
     }
     doShutdown();
 }
@@ -139,11 +142,9 @@ void Application::doShutdown() {
     mCoreSystems.shutdown();
 }
 
-void Application::doFrame(bool handleEvents) {
+void Application::doFrame(RunLoopMode mode) {
     BLOOM_AUTORELEASE_BEGIN
-    if (handleEvents) {
-        ::handleEvents(mRunLoopMode);
-    }
+    handleEvents(mode);
     messageSystem->flush();
     this->frame();
     inputEndFrame(mInput);

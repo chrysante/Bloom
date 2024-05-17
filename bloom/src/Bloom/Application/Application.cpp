@@ -41,7 +41,7 @@ struct Application::Impl {
                 /// Very important that we don't wait on events when resizing.
                 /// Otherwise the application might freeze during resize because
                 /// no events are being sent
-                app->doFrame(RunLoopMode::Realtime);
+                app->doFrame(RunLoopMode::None);
             }
         }
 
@@ -102,14 +102,14 @@ void Application::onRenderThread(std::function<void()> callback) {
 static void handleEvents(RunLoopMode mode) {
     using enum RunLoopMode;
     switch (mode) {
+    case None:
+        break;
     case EventDriven:
         Window::WaitEvents();
         break;
     case Realtime:
         Window::PollEvents();
         break;
-    default:
-        BL_UNREACHABLE();
     }
 }
 

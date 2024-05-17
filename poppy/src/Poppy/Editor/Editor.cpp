@@ -64,7 +64,7 @@ struct Editor::Impl::EditorWindowDelegate: WindowDelegate {
         editor->impl->imguiCtx.onTextInput(code);
     }
 
-    void onResize(int2) override { editor->invalidateUI(); }
+    void onResize(int2) override { editor->invalidateUI(10); }
 
     void onClose() override {
         editor->saveConfigToDisk();
@@ -205,9 +205,10 @@ bool Editor::isSimulating() const {
     return coreSystems().runtime().state() == RuntimeState::Running;
 }
 
-void Editor::invalidateUI() {
-    impl->trickleEmptyEventCount = 3;
+void Editor::invalidateUI(int numFrames) {
+    impl->trickleEmptyEventCount = numFrames;
     postEmptySystemEvent();
+    setRunLoopMode(RunLoopMode::Realtime);
 }
 
 bloom::Window* Editor::mainWindow() const { return impl->mainWindow; }
@@ -248,8 +249,9 @@ void Editor::frame() {
     /// the next frame is being rendered. Because ImGui relies on continuous
     /// renderering we need to draw a few frames after every interaction to make
     /// sure views really appear etc.
-    if (impl->trickleEmptyEventCount-- > 0) {
-        postEmptySystemEvent();
+    if (impl->trickleEmptyEventCount-- <= 0) {
+        //        postEmptySystemEvent();
+        setRunLoopMode(RunLoopMode::EventDriven);
     }
     /// If we simulate we want to render continuously
     if (isSimulating()) {

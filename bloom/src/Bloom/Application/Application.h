@@ -28,6 +28,9 @@ BLOOM_WEAK_API std::unique_ptr<Application> createApplication();
 
 /// Run loop modes for the application
 enum class RunLoopMode {
+    /// Not handling any events
+    None,
+
     /// Runs the main loop body after recieving input or other events
     EventDriven,
 

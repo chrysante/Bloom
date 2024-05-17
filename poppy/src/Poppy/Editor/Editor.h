@@ -35,7 +35,7 @@ public:
     bool isSimulating() const;
 
     /// Request the UI to be redrawn. Can be called asynchronously
-    void invalidateUI();
+    void invalidateUI(int numFrames = 3);
 
     /// ImGui expects one window to be the "main" window so we have this here
     bloom::Window* mainWindow() const;

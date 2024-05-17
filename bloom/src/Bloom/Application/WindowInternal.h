@@ -1,5 +1,5 @@
-#ifndef WindowInternal_h
-#define WindowInternal_h
+#ifndef BLOOM_APPLICATION_WINDOWINTERNAL_H
+#define BLOOM_APPLICATION_WINDOWINTERNAL_H
 
 #include <GLFW/glfw3.h>
 #include <vml/vml.hpp>
@@ -55,4 +55,4 @@ struct Window::Impl: WindowDescription {
 
 } // namespace bloom
 
-#endif /* WindowInternal_h */
+#endif // BLOOM_APPLICATION_WINDOWINTERNAL_H

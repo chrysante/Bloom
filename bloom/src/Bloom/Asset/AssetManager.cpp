@@ -183,6 +183,8 @@ struct YAML::convert<RegistryEntry> {
     }
 };
 
+using Impl = AssetManager::Impl;
+
 struct AssetManager::Impl {
     AssetManager* assetManager;
     utl::hashmap<utl::uuid, RegistryEntry> assets;
@@ -190,6 +192,9 @@ struct AssetManager::Impl {
     Reference<ShaderCompiler> shaderCompiler;
 
     explicit Impl(AssetManager* assetManager);
+
+    RegistryEntry* getEntry(utl::uuid ID);
+    RegistryEntry const* getEntry(utl::uuid ID) const;
 
     /// Opens the registry file in mode \p mode
     std::fstream openRegistryFile(std::ios_base::openmode mode = std::ios::in |
@@ -329,6 +334,16 @@ struct AssetManager::Impl {
                                   std::ios_base::openmode mode) const;
 };
 
+RegistryEntry* Impl::getEntry(utl::uuid ID) {
+    return const_cast<RegistryEntry*>(
+        static_cast<Impl const*>(this)->getEntry(ID));
+}
+
+RegistryEntry const* Impl::getEntry(utl::uuid ID) const {
+    auto itr = assets.find(ID);
+    return itr != assets.end() ? &itr->second : nullptr;
+}
+
 namespace {
 
 template <AssetRepresentation>
@@ -346,8 +361,6 @@ static void visitRepr(AssetRepresentation repr, Callback&& callback) {
 #undef VISIT_CASE
 }
 
-using Impl = AssetManager::Impl;
-
 AssetManager::AssetManager() {}
 
 AssetManager::~AssetManager() = default;
@@ -356,8 +369,15 @@ void AssetManager::doInit() {
     impl = std::make_unique<Impl>(this);
     listen([this](AMGetAsset const& msg) {
         auto asset = get(msg.handle, msg.representation);
+        if (!asset) {
+            Logger::Error("AssetManager: Failed to satisfy asset request");
+            return;
+        }
         if (msg.handle) {
             *msg.asset = std::move(asset);
+        }
+        if (msg.diskLocation) {
+            *msg.diskLocation = impl->getEntry(msg.handle.ID())->diskLocation;
         }
     });
 }
@@ -625,19 +645,18 @@ AssetHandle AssetManager::findAsset(std::string_view name) {
 
 Reference<Asset> AssetManager::get(AssetHandle handle,
                                    AssetRepresentation repr) {
-    auto itr = impl->assets.find(handle.ID());
-    if (itr == impl->assets.end()) {
+    auto* entry = impl->getEntry(handle.ID());
+    if (!entry) {
         Logger::Error("Failed to find asset ", handle);
         return nullptr;
     }
-    auto& entry = itr->second;
-    if (auto asset = entry.asset.lock()) {
+    if (auto asset = entry->asset.lock()) {
         return asset;
     }
-    auto asset = impl->allocateAsset(handle, entry.name);
-    entry.asset = asset;
+    auto asset = impl->allocateAsset(handle, entry->name);
+    entry->asset = asset;
     if (repr != AssetRepresentation::None) {
-        impl->makeAvail(*asset, entry, repr, false);
+        impl->makeAvail(*asset, *entry, repr, false);
     }
     return asset;
 }

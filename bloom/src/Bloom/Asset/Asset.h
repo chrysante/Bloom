@@ -57,7 +57,19 @@ struct BLOOM_API AMGetAsset {
     AssetHandle handle;
     Reference<Asset>* asset = nullptr;
     AssetRepresentation representation = AssetRepresentation::None;
+    std::filesystem::path* diskLocation = nullptr;
 };
+
+/// Dispatches to the asset manager to get the asset with handle \p handle
+Reference<Asset> getAsset(AssetHandle handle,
+                          AssetRepresentation repr = AssetRepresentation::None);
+
+/// \overload
+template <std::derived_from<Asset> AssetType>
+Reference<AssetType> getAsset(
+    AssetHandle handle, AssetRepresentation repr = AssetRepresentation::None) {
+    return as<AssetType>(getAsset(handle, repr));
+}
 
 /// Represents a script source file
 /// TODO: Move this to its own file

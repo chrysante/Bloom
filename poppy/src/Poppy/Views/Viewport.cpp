@@ -100,6 +100,8 @@ struct Viewport: View, BasicSceneInspector {
     Toolbar makeToolbar();
     void dropdownMenu();
 
+    void doOpenData(std::any data) override;
+
     float3 worldSpaceToViewSpace(float3 position);
     float3 worldSpaceToScreenSpace(float3 position);
     float2 worldSpaceDirToViewSpace(float3 direction);
@@ -573,6 +575,16 @@ void Viewport::dropdownMenu() {
         endSection();
     }
     ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);
+}
+
+void Viewport::doOpenData(std::any data) {
+    auto* scenePtr = std::any_cast<Reference<Scene>>(&data);
+    if (!scenePtr) {
+        return;
+    }
+    auto& sceneSystem = editor().coreSystems().sceneSystem();
+    sceneSystem.unloadAll();
+    sceneSystem.loadScene(std::move(*scenePtr));
 }
 
 namespace bloom {

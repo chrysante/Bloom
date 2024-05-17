@@ -56,7 +56,12 @@ struct ViewManager::Impl {
 
 ViewManager::ViewManager(Editor* editor, Receiver receiver):
     Receiver(std::move(receiver)), editor(editor) {
-    listen([this](OpenCommand const& cmd) { openView(cmd.name); });
+    listen([this](OpenCommand const& cmd) {
+        auto* view = openView(cmd.name, cmd.completion);
+        if (cmd.result) {
+            *cmd.result = view;
+        }
+    });
     listen([this](CloseAllCommand) { closeAll(); });
     listen([this](ToggleDebugView) { displayDebugger ^= true; });
 }
@@ -70,16 +75,24 @@ View* ViewManager::openView(ViewRegistryEntry const& regEntry) {
     return view;
 }
 
-View* ViewManager::openView(std::string_view name) {
-    if (auto* view = findByStaticName(name)) {
-        view->setFocused();
-        return view;
+View* ViewManager::openView(std::string_view name,
+                            std::function<void(View&)> completion) {
+    auto* view = [&]() -> View* {
+        if (auto* view = findByStaticName(name)) {
+            view->setFocused();
+            return view;
+        }
+        auto regEntry = ViewRegistry::get(name);
+        if (!regEntry) {
+            Logger::Error("View does not exist: ", name);
+            return nullptr;
+        }
+        return openView(*regEntry);
+    }();
+    if (view && completion) {
+        completion(*view);
     }
-    auto regEntry = ViewRegistry::get(name);
-    if (!regEntry) {
-        Logger::Error("Failed to create View (does not exist): ", name);
-    }
-    return openView(*regEntry);
+    return view;
 }
 
 View* ViewManager::findByStaticName(std::string_view name) {

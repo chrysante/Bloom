@@ -10,6 +10,7 @@
 #include <utl/scope_guard.hpp>
 #include <utl/strcat.hpp>
 
+#include "Bloom/Application/Application.h"
 #include "Bloom/Application/ResourceUtil.h"
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/AssetManager.h"
@@ -18,6 +19,7 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/View.h"
+#include "Poppy/UI/ViewManager.h"
 #include "Poppy/Views/DirectoryView.h"
 
 using namespace poppy;
@@ -106,38 +108,42 @@ bool poppy::assetButtonImpl(Editor& editor, Reference<Asset>& assetRef,
     return haveNewAsset;
 }
 
+template <typename AssetType>
+static void openAssetInView(std::string viewName, AssetHandle handle) {
+    Application::DispatchMessage(DispatchToken::NextFrame,
+                                 ViewManager::OpenCommand{
+                                     .name = std::move(viewName),
+                                     .completion = [=](View& view) {
+        view.openData(getAsset<AssetType>(handle, AssetRepresentation::CPU));
+    } });
+}
+
 void poppy::openAsset(Editor& editor, bloom::AssetHandle handle) {
     auto& AM = editor.coreSystems().assetManager();
     switch (handle.type()) {
     case AssetType::Material: {
-        editor.openView("Material Editor", [=, &AM](View& view) {
-            view.openData(
-                as<Material>(AM.get(handle, AssetRepresentation::CPU)));
-        });
+        openAssetInView<Material>("Material Editor", handle);
         break;
     }
     case AssetType::MaterialInstance: {
-        editor.openView("Material Instance Viewer", [=, &AM](View& view) {
-            view.openData(as<MaterialInstance>(AM.get(handle)));
-        });
+        openAssetInView<MaterialInstance>("Material Instance Viewer", handle);
         break;
     }
     case AssetType::Texture2D: {
-        editor.openView("Texture Viewer", [=, &AM](View& view) {
-            view.openData(as<Texture2D>(AM.get(handle)));
-        });
+        openAssetInView<Texture2D>("Texture Viewer", handle);
         break;
     }
     case AssetType::Scene: {
-        editor.openView("Viewport");
-        auto scene = as<Scene>(AM.get(handle, AssetRepresentation::CPU));
-        auto& sceneSystem = editor.coreSystems().sceneSystem();
-        sceneSystem.unloadAll();
-        sceneSystem.loadScene(std::move(scene));
+        openAssetInView<Scene>("Viewport", handle);
         break;
     }
     case AssetType::ScriptSource: {
-        auto command = utl::strcat("open ", AM.getAbsoluteFilepath(handle));
+        std::filesystem::path diskLocation;
+        Application::DispatchMessage(DispatchToken::Now,
+                                     AMGetAsset{ .handle = handle,
+                                                 .diskLocation =
+                                                     &diskLocation });
+        auto command = utl::strcat("open ", diskLocation);
         std::system(command.data());
         break;
     }

@@ -32,6 +32,8 @@ std::unique_ptr<bloom::Application> bloom::createApplication() {
     std::terminate();
 }
 
+Application* Application::gInstance = nullptr;
+
 struct Application::Impl {
     struct AppWindowDelegate: WindowDelegate {
         AppWindowDelegate(Application* app): app(app) {}
@@ -53,6 +55,7 @@ struct Application::Impl {
 };
 
 Application::Application(): mCoreSystems(this), impl(std::make_unique<Impl>()) {
+    gInstance = this;
     messageSystem = MessageSystem::Create();
     assignEmitter(makeEmitter());
     assignReceiver(makeReceiver());

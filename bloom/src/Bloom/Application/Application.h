@@ -42,6 +42,9 @@ enum class RunLoopMode {
 /// to implement their application
 class BLOOM_API Application: protected Receiver, public Emitter {
 public:
+    /// Dispatches \p message to the global application instance
+    static void DispatchMessage(DispatchToken token, auto&& message);
+
     Application(Application const&) = delete;
     Application& operator=(Application const&) = delete;
 
@@ -133,7 +136,13 @@ private:
     RunLoopMode mRunLoopMode = RunLoopMode::Realtime;
     Input mInput;
     std::unique_ptr<Impl> impl;
+    static Application* gInstance;
 };
+
+template <typename T>
+void Application::DispatchMessage(DispatchToken token, T&& message) {
+    gInstance->dispatch(token, std::forward<T>(message));
+}
 
 } // namespace bloom
 

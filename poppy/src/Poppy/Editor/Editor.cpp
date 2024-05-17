@@ -190,10 +190,7 @@ EntitySelectionManager& Editor::selection() { return impl->selection; }
 
 void Editor::openView(std::string name, std::function<void(View&)> completion) {
     dispatch(DispatchToken::NextFrame, [=, this] {
-        auto* view = impl->viewManager.openView(name);
-        if (view && completion) {
-            completion(*view);
-        }
+        impl->viewManager.openView(name, std::move(completion));
     });
 }
 

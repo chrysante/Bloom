@@ -1,6 +1,7 @@
 #ifndef POPPY_UI_VIEWMANAGER_H
 #define POPPY_UI_VIEWMANAGER_H
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,6 +22,8 @@ public:
 
     struct OpenCommand {
         std::string name;
+        View** result = nullptr;
+        std::function<void(View&)> completion = {};
     };
     struct CloseAllCommand {};
 
@@ -35,7 +38,8 @@ public:
     /// Focuses the existing view with static name \p name or, if nonesuch
     /// exists, finds the view registry entry with name \p name and creates a
     /// new view
-    View* openView(std::string_view name);
+    View* openView(std::string_view name,
+                   std::function<void(View&)> completion = {});
 
     /// Finds and returns the first open view with static name \p name or null
     /// if none exists

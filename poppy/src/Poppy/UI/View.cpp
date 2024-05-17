@@ -175,7 +175,7 @@ void View::doFrame() {
         data.docked = isDocked(imguiWindow);
         /// `ImGui::IsWindowFocused()` reports true for inactive dock tabs if
         /// the active window above it is focused
-        data.isFocused = imguiWindow->DockTabIsVisible &&
+        data.isFocused = (!data.docked || imguiWindow->DockTabIsVisible) &&
                          ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
         auto* viewport = (ImGuiViewportP*)imguiWindow->Viewport;
         data.window = (Window*)viewport->PlatformHandle;

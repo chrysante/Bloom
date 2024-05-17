@@ -34,7 +34,10 @@ std::unique_ptr<Window> Window::Create(WindowDescription const& desc) {
     return window;
 }
 
-void Window::destroy() { impl->glfwWnd.reset(); }
+void Window::destroy() {
+    impl->glfwWnd.reset();
+    impl->delegate.reset();
+}
 
 Window::Window(WindowDescription const& d): impl(std::make_shared<Impl>()) {
     static_cast<WindowDescription&>(*impl) = d;
@@ -255,7 +258,6 @@ void Window::setCallbacks() {
     });
     glfwSetWindowSizeCallback(GLFW_WND,
                               [](GLFWwindow* w, int sizex, int sizey) {
-        Logger::Trace("Window size callback");
         auto& impl = getImpl(w);
         int2 newSize = { sizex, sizey };
         impl.size = newSize;

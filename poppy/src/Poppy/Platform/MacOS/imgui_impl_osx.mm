@@ -916,11 +916,7 @@ namespace {
 
 struct ImGui_ImplOSX_WindowDelegate: bloom::WindowDelegate {
     ImGui_ImplOSX_WindowDelegate(ImGuiViewportP* viewport): viewport(viewport) {}
-    
-    void onFocus() override {
-        ImGui::FocusWindow(viewport->Window);
-    }
-    
+
     void onResize(int2 newSize) override {
         auto* data = static_cast<ImGuiViewportDataOSX*>(viewport->PlatformUserData);
         if (!data || data->Window->requestedResize()) {
@@ -986,7 +982,8 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     copySizeConstaints(*window, viewport->Window->SizeConstraintRect);
     data->Window = window;
     data->WindowOwned = true;
-    viewport->PlatformRequestResize = false;
+//    viewport->PlatformRequestResize = false;
+    viewport->PlatformWindowCreated = true;
     viewport->PlatformHandle = window;
     viewport->PlatformHandleRaw = window->nativeHandle();
     window->addDelegate(std::make_unique<ImGui_ImplOSX_WindowDelegate>(viewport));

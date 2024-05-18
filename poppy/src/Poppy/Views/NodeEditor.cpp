@@ -291,10 +291,11 @@ bool OutputPin::removeTargetWeak(InputPin* pin) {
 }
 
 void OutputPin::clearTargets() {
-    for (auto* target: targets()) {
+    auto copy = targets() | ToSmallVector<>;
+    for (auto* target: copy) {
         target->setOrigin(nullptr);
     }
-    _targets.clear();
+    BL_ASSERT(targets().empty());
 }
 
 static bool findCycleDFS(Node const* node, utl::stack<Node const*>& stack) {
@@ -1285,7 +1286,7 @@ void Impl::onInput(InputEvent& event) {
     });
     event.dispatch<ScrollWheel>([&](ScrollEvent event) {
         if (!event.isTrackpad || viewData.disableBackgroundScrolling ||
-            !viewData.clipRect.Contains(ImGui::GetMousePos()))
+            !viewData.windowOrChildHovered)
         {
             return false;
         }
@@ -2084,12 +2085,13 @@ void Impl::display() {
     drawBackground(viewData, viewData.zoom);
     bool isMouseOverWindowRect =
         ImGui::GetCurrentWindow()->Rect().Contains(ImGui::GetMousePos());
+    bool havePopup = ImGui::IsPopupOpen((ImGuiID)0, ImGuiPopupFlags_AnyPopup);
     viewData.windowHovered =
-        isMouseOverWindowRect &&
+        isMouseOverWindowRect && !havePopup &&
         ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow |
                                ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
     viewData.windowOrChildHovered =
-        isMouseOverWindowRect &&
+        isMouseOverWindowRect && !havePopup &&
         ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow |
                                ImGuiHoveredFlags_AllowWhenBlockedByActiveItem |
                                ImGuiHoveredFlags_ChildWindows);

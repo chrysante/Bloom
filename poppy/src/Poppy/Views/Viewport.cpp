@@ -140,6 +140,7 @@ Viewport::Viewport(): BasicSceneInspector(this) {
 void Viewport::init() {
     setPadding({ 0, 0 });
     setToolbar(makeToolbar());
+    editor().reactToSceneCommands(commandPaletteWrite());
     if (auto* defaultScene = std::getenv("DEFAULT_SCENE")) {
         AssetHandle handle = assetManager().findAsset(defaultScene);
         if (handle) {

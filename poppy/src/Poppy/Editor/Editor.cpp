@@ -38,6 +38,7 @@ std::unique_ptr<Application> bloom::createApplication() {
 }
 
 struct Editor::Impl {
+    Editor* editor = nullptr;
     bloom::Window* mainWindow = nullptr;
     ImGuiContext imguiCtx;
     Dockspace dockspace;
@@ -49,10 +50,13 @@ struct Editor::Impl {
     std::atomic<int> trickleEmptyEventCount = 0;
 
     Impl(Editor* editor):
+        editor(editor),
         viewManager(editor, editor->makeReceiver()),
         selection(editor->makeReceiver()) {}
 
     void deleteSelectedEntities();
+
+    std::array<Command const*, 2> addSimCommands(CommandPalette& cmd);
 
     struct EditorWindowDelegate;
 };
@@ -123,31 +127,34 @@ struct ToolbarBuildTimeStamp: ToolbarItem {
 
 } // namespace
 
+std::array<Command const*, 2> Editor::Impl::addSimCommands(
+    CommandPalette& cmd) {
+    // clang-format off
+    auto* start = cmd.add({ 
+        "Simulate",
+        { Key::R, ModFlags::Control },
+        [this] { editor->startSimulation(); },
+        [this] { return !editor->coreSystems().sceneSystem().scenes().empty() &&
+            !editor->isSimulating();
+        }
+    });
+    auto* stop = cmd.add({
+        "Stop Simulation",
+        { Key::Period, ModFlags::Control },
+        [this] { editor->stopSimulation(); },
+        [this] { return editor->isSimulating(); }
+    });
+    // clang-format on
+    return { start, stop };
+}
+
 Editor::Editor(): impl(std::make_unique<Impl>(this)) {
     setRunLoopMode(RunLoopMode::EventDriven);
     // clang-format off
     addCommand({
         "Save", { Key::S, ModFlags::Control }, [this] { saveAll(); }
     });
-    auto* simCmd = addCommand({
-        "Simulate",
-        { Key::R, ModFlags::Control }, [this] { startSimulation(); },
-        [this] {
-            return !coreSystems().sceneSystem().scenes().empty() && 
-                   !isSimulating();
-        }
-    });
-    auto* stopSimCmd = addCommand({
-        "Stop Simulation",
-        { Key::Period, ModFlags::Control },
-        [this] { stopSimulation(); },
-        [this] { return isSimulating(); }
-    });
-    addCommand({
-        "Delete Selected Entities",
-        { Key::Backspace, ModFlags::Control },
-        [this] { impl->deleteSelectedEntities(); }
-    });
+    auto [startSimCmd, stopSimCmd] = impl->addSimCommands(impl->cmd);
     impl->dockspace.setLeftToolbar({
         ToolbarDropdownMenu()
             .icon([] { return "menu"; })
@@ -155,7 +162,7 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
                 menuBar();
             }),
         ToolbarSpacer(),
-        ToolbarIconButton(simCmd, "play"),
+        ToolbarIconButton(startSimCmd, "play"),
         ToolbarIconButton(stopSimCmd, "stop")
     });
     impl->dockspace.setCenterToolbar({
@@ -182,6 +189,13 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
             })
             .tooltip("Placeholder Menu")
     }); // clang-format on
+}
+
+void Editor::reactToSceneCommands(CommandPalette& cmd) {
+    impl->addSimCommands(cmd);
+    cmd.add({ "Delete Selected Entities",
+              { Key::Backspace, ModFlags::Control },
+              [this] { impl->deleteSelectedEntities(); } });
 }
 
 Editor::~Editor() = default;

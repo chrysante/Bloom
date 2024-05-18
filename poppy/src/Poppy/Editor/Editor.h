@@ -40,6 +40,9 @@ public:
     /// ImGui expects one window to be the "main" window so we have this here
     bloom::Window* mainWindow() const;
 
+    /// Adds commands to \p commandPalette that modify the open scenes
+    void reactToSceneCommands(CommandPalette& commandPalette);
+
 private:
     struct Impl;
     friend class poppy::ImGuiContext; /// To access the command palette for the

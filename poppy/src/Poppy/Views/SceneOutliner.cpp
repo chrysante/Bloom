@@ -48,11 +48,11 @@ struct TreeNodeResult {
     bool isEyeButtonPressed;
 };
 
-class SceneOutliner: public View, public BasicSceneInspector {
-public:
+struct SceneOutliner: View, BasicSceneInspector {
     SceneOutliner(): BasicSceneInspector(this) {}
 
-private:
+    void init() override;
+
     void display() override;
 
     TreeNodeResult treeNode(TreeNodeDescription const& desc);
@@ -69,13 +69,16 @@ private:
     void setExpanded(Scene const*, bool);
     void setExpanded(ConstEntityHandle, bool);
 
-private:
     utl::hashset<ConstEntityHandle> mExpanded;
 };
 
 } // namespace
 
 POPPY_REGISTER_VIEW(SceneOutliner, "Scene Outliner");
+
+void SceneOutliner::init() {
+    editor().reactToSceneCommands(commandPaletteWrite());
+}
 
 void SceneOutliner::display() {
     if (scenes().empty()) {

@@ -30,26 +30,36 @@ using namespace poppy;
 
 namespace {
 
+struct TreeNodeDescription {
+    size_t id = 0;
+    bool selected = false;
+    bool expanded = false;
+    bool isLeaf = true;
+    bool haveEyeButton = false;
+    bool eyeButtonCrossed = false;
+    std::string_view name;
+    utl::function_view<void()> itemCallback = {};
+};
+
+struct TreeNodeResult {
+    bool isExpanded;
+    bool isClicked;
+    bool isToggledOpen;
+    bool isEyeButtonPressed;
+};
+
 class SceneOutliner: public View, public BasicSceneInspector {
 public:
     SceneOutliner(): BasicSceneInspector(this) {}
 
 private:
     void display() override;
-    void onInput(InputEvent&) override;
 
-    struct TreeNodeDescription {
-        size_t id = 0;
-        bool selected = false;
-        bool expanded = false;
-        bool isLeaf = true;
-        std::string_view name;
-    };
-    bool treeNode(TreeNodeDescription const& desc);
+    TreeNodeResult treeNode(TreeNodeDescription const& desc);
     void displayScene(Scene& scene);
     void sceneContextMenu(Scene& scene);
     void displayEntity(EntityHandle entity);
-    void entityContextMenu(EntityHandle entity);
+    void entityContextMenu(EntityHandle entity, ImGuiID popupID);
 
     void dragDropSource(EntityHandle child);
     void dragDropTarget(EntityHandle parent);
@@ -81,26 +91,38 @@ void SceneOutliner::display() {
     }
 }
 
-void SceneOutliner::onInput(InputEvent&) {}
-
-[[maybe_unused]] static void eyeButton() {
+static bool eyeButton(float2 nodePosLocal, bool selectedOrHovered,
+                      bool crossed) {
+    auto& g = *GImGui;
     auto& style = ImGui::GetStyle();
-    ImGui::SetCursorPosX(style.WindowPadding.x + style.FramePadding.x);
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, float2());
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, float2());
-    auto icon = FontManager::get({ IconSize::_16 }, "eye");
-    ImGui::PushFont(icon.font);
+    float2 stashedPos = ImGui::GetCursorScreenPos();
+    ImGui::SetCursorPos({ ImGui::GetCursorStartPos().x, nodePosLocal.y });
+    float2 pos = ImGui::GetCursorScreenPos();
+    float2 size(g.FontSize + 2 * style.FramePadding.y);
     ImGui::PushStyleColor(ImGuiCol_Button, 0);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
     ImGui::PushStyleColor(ImGuiCol_Border, 0);
-    ImGui::Button(icon.utf8Rep.c_str());
-    ImGui::PopStyleColor(4);
-    ImGui::PopFont();
-    ImGui::PopStyleVar(2);
+    ImGui::PushStyleColor(ImGuiCol_Text, 0);
+    bool pressed = ImGui::Button("###EyeButton", { size.x, size.y + 1 });
+    ImGui::PopStyleColor(5);
+    auto* DL = ImGui::GetWindowDrawList();
+    auto eyeCol =
+        selectedOrHovered ?
+            IM_COL32_WHITE :
+            ImGui::GetColorU32(crossed ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+    auto icon =
+        FontManager::get({ IconSize::_16 }, crossed ? "eye-off" : "eye");
+    float iconSize = 0.9;
+    DL->AddText(icon.font, g.FontSize * iconSize,
+                pos + (float2)style.FramePadding +
+                    float2(0, g.FontSize * 0.5 * (1 - iconSize)),
+                eyeCol, icon.utf8Rep.c_str());
+    ImGui::SetCursorScreenPos(stashedPos);
+    return pressed;
 }
 
-bool SceneOutliner::treeNode(TreeNodeDescription const& desc) {
+TreeNodeResult SceneOutliner::treeNode(TreeNodeDescription const& desc) {
     ImGuiTreeNodeFlags flags = 0;
     flags |= ImGuiTreeNodeFlags_OpenOnArrow;
     flags |= ImGuiTreeNodeFlags_OpenOnDoubleClick;
@@ -116,11 +138,31 @@ bool SceneOutliner::treeNode(TreeNodeDescription const& desc) {
     if (desc.isLeaf) {
         flags |= ImGuiTreeNodeFlags_Leaf;
     }
+    float2 pos = ImGui::GetCursorPos();
+    ImGui::SetNextItemAllowOverlap();
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 0, 0 });
-    bool nodeExpanded =
+    ImGui::PushStyleColor(ImGuiCol_Text,
+                          ImGui::GetStyleColorVec4(desc.eyeButtonCrossed ?
+                                                       ImGuiCol_TextDisabled :
+                                                       ImGuiCol_Text));
+    bool isExpanded =
         ImGui::TreeNodeEx((void*)desc.id, flags, "%s", desc.name.data());
     ImGui::PopStyleVar();
-    return nodeExpanded;
+    ImGui::PopStyleColor();
+    if (desc.itemCallback) {
+        desc.itemCallback();
+    }
+    TreeNodeResult result = {
+        .isExpanded = isExpanded,
+        .isClicked = ImGui::IsItemClicked(),
+        .isToggledOpen = ImGui::IsItemToggledOpen(),
+    };
+    if (desc.haveEyeButton) {
+        result.isEyeButtonPressed =
+            eyeButton(pos, ImGui::IsItemHovered() || desc.selected,
+                      desc.eyeButtonCrossed);
+    }
+    return result;
 }
 
 void SceneOutliner::displayScene(Scene& scene) {
@@ -128,7 +170,9 @@ void SceneOutliner::displayScene(Scene& scene) {
                                  .id = scene.hashID(),
                                  .selected = false,
                                  .expanded = expanded(&scene),
-                                 .isLeaf = false });
+                                 .isLeaf = false,
+                                 .haveEyeButton = false })
+                          .isExpanded;
     sceneContextMenu(scene);
     setExpanded(&scene, isExpanded);
     dragDropTarget(EntityHandle(EntityID{}, &scene));
@@ -186,19 +230,28 @@ void SceneOutliner::sceneContextMenu(Scene& scene) {
 
 void SceneOutliner::displayEntity(EntityHandle entity) {
     BL_ASSERT(entity);
-    bool isExpanded = treeNode({ .name = entity.get<TagComponent>().name,
-                                 .id = entity.raw(),
-                                 .selected = selection().contains(entity),
-                                 .expanded = expanded(entity),
-                                 .isLeaf = entity.scene().isLeaf(entity) });
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
-        ImGui::SetTooltip("ID: %d", entity.raw());
-    }
-    entityContextMenu(entity);
+    auto* vis = entity.tryGet<VisibilityComponent>();
+    ImGuiID popupID = ImGui::GetCurrentWindow()->GetID(entity.raw()) +
+                      ImGui::GetID("ContextMenu");
+    auto itemCallback = [&] {
+        entityContextMenu(entity, popupID);
+        dragDropSource(entity);
+        dragDropTarget(entity);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
+            ImGui::SetTooltip("ID: %d", entity.raw());
+        }
+    };
+    auto [isExpanded, isClicked, isToggledOpen, isEyeButtonPressed] =
+        treeNode({ .name = entity.get<TagComponent>().name,
+                   .id = entity.raw(),
+                   .selected = selection().contains(entity),
+                   .expanded = expanded(entity),
+                   .isLeaf = entity.scene().isLeaf(entity),
+                   .haveEyeButton = vis != nullptr,
+                   .eyeButtonCrossed = vis && !vis->value,
+                   .itemCallback = itemCallback });
     setExpanded(entity, isExpanded);
-    dragDropSource(entity);
-    dragDropTarget(entity);
-    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+    if (isClicked && !isToggledOpen) {
         selection().amend(entity, getSelectionMode());
     }
     if (isExpanded) {
@@ -207,24 +260,30 @@ void SceneOutliner::displayEntity(EntityHandle entity) {
         }
         ImGui::TreePop();
     }
+    if (isEyeButtonPressed) {
+        vis->value ^= true;
+    }
 }
 
-void SceneOutliner::entityContextMenu(EntityHandle entity) {
-    ImGui::PushID((int)entity.raw());
-    utl_defer { ImGui::PopID(); };
-    ImGui::OpenPopupOnItemClick("Context Menu");
-    if (ImGui::BeginPopup("Context Menu")) {
-        utl_defer { ImGui::EndPopup(); };
-        if (ImGui::MenuItem("Delete Entity")) {
-            dispatch(DispatchToken::NextFrame, [this, entity] {
-                entity.scene().deleteEntity(entity);
-                selection().erase(entity);
-            });
-        }
-        if (entity.getParent() && ImGui::MenuItem("Unparent")) {
-            dispatch(DispatchToken::NextFrame, [entity] { entity.unparent(); });
-        }
+void SceneOutliner::entityContextMenu(EntityHandle entity, ImGuiID popupID) {
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        ImGui::OpenPopupEx(popupID);
     }
+    auto flags = ImGuiWindowFlags_AlwaysAutoResize |
+                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings;
+    if (!ImGui::BeginPopupEx(popupID, flags)) {
+        return;
+    }
+    if (ImGui::MenuItem("Delete Entity")) {
+        dispatch(DispatchToken::NextFrame, [this, entity] {
+            entity.scene().deleteEntity(entity);
+            selection().erase(entity);
+        });
+    }
+    if (entity.getParent() && ImGui::MenuItem("Unparent")) {
+        dispatch(DispatchToken::NextFrame, [entity] { entity.unparent(); });
+    }
+    ImGui::EndPopup();
 }
 
 void SceneOutliner::dragDropSource(EntityHandle child) {

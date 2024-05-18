@@ -42,7 +42,6 @@ public:
 private:
     void display() override;
 
-    void inspectVisibility(bloom::EntityHandle);
     void inspectTag(bloom::EntityHandle);
     template <typename... Components>
     void addComponentButton(char const* name, bloom::EntityHandle entity,
@@ -96,10 +95,6 @@ void EntityInspector::display() {
         displayEmptyWithReason("No Entity Selected");
         return;
     }
-    if (entity.has<VisibilityComponent>()) {
-        inspectVisibility(entity);
-        ImGui::SameLine();
-    }
     if (entity.has<TagComponent>()) {
         inspectTag(entity);
         ImGui::Separator();
@@ -120,21 +115,6 @@ void EntityInspector::display() {
         inspectScript(entity);
         ImGui::Separator();
     }
-}
-
-void EntityInspector::inspectVisibility(bloom::EntityHandle entity) {
-    auto& vis = entity.get<VisibilityComponent>();
-    ImGui::PushStyleColor(ImGuiCol_Button, 0);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
-    auto icon = FontManager::get({ .size = IconSize::_16 },
-                                 vis.value ? "eye" : "eye-off");
-    withFont(icon.font, [&] {
-        if (ImGui::Button(icon.utf8Rep.c_str())) {
-            vis.value ^= true;
-        }
-    });
-    ImGui::PopStyleColor(3);
 }
 
 void EntityInspector::inspectTag(bloom::EntityHandle entity) {

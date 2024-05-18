@@ -286,7 +286,9 @@ struct ConstantController: MaterialNodeController {
     explicit ConstantController(YAML::Node const& node) {
         dataType = node["DataType"].as<DataType>();
         value = node["Value"].as<float4>();
-        textureAsset = node["Texture"].as<AssetHandle>();
+        if ((textureHandle = node["Texture"].as<AssetHandle>())) {
+            texture = getAsset<Texture2D>(textureHandle);
+        }
         textype = node["TextureType"].as<TextureSubType>();
     }
 
@@ -295,7 +297,7 @@ struct ConstantController: MaterialNodeController {
         node["Type"] = Name;
         node["DataType"] = dataType;
         node["Value"] = value;
-        node["Texture"] = textureAsset;
+        node["Texture"] = textureHandle;
         node["TextureType"] = textype;
         return node;
     }
@@ -372,7 +374,7 @@ struct ConstantController: MaterialNodeController {
         case AnyVector:
             BL_UNREACHABLE();
         case Texture:
-            return { ctx.textureConstant(textype, textureAsset) };
+            return { ctx.textureConstant(textype, textureHandle) };
         }
     }
 
@@ -430,34 +432,15 @@ struct ConstantController: MaterialNodeController {
         case DataType::AnyVector:
             BL_UNREACHABLE();
         case DataType::Texture: {
-            if (auto asset = acceptAssetDragDrop(AssetType::Texture2D)) {
-                textureAsset = *asset;
-                texHandle = {};
-                triedToGetTexture = false;
-            }
-            if (!texHandle && !triedToGetTexture) {
-                Reference<Asset> asset;
-#if 0
-                gEditor->dispatch(DispatchToken::Now,
-                                  AMGetAsset{ .handle = textureAsset,
-                                              .asset = &asset,
-                                              .representation =
-                                                  AssetRepresentation::GPU });
-#endif
-                if (asset) {
-                    texHandle = as<Texture2D>(asset)->GPUHandle;
-                }
-                triedToGetTexture = true;
-            }
             char const* textypenames[] = { "Texture2D", "Cubemap" };
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
             ImGui::Combo("###Texture Type", (int*)&textype, textypenames, 2);
-            if (texHandle && texHandle.nativeHandle()) {
-                float2 pos = ImGui::GetCursorScreenPos();
-                float2 size = ImGui::GetContentRegionAvail();
-                auto* DL = ImGui::GetWindowDrawList();
-                DL->AddImageRounded(texHandle.nativeHandle(), pos, pos + size,
-                                    { 0, 0 }, { 1, 1 }, IM_COL32_WHITE, 5);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (assetButton(texture, { .repr = AssetRepresentation::GPU,
+                                       .style = AssetButtonStyle::Thumbnail,
+                                       .maxHeight = 100 }))
+            {
+                textureHandle = texture->handle();
             }
             break;
         }
@@ -466,10 +449,9 @@ struct ConstantController: MaterialNodeController {
 
     DataType dataType;
     float4 value = .5;
-    AssetHandle textureAsset;
-    TextureHandle texHandle;
+    AssetHandle textureHandle;
+    Reference<Texture2D> texture;
     TextureSubType textype = TextureSubType::Texture2D;
-    bool triedToGetTexture = false;
 };
 
 REGISTER_MATERIAL_NODE(ConstantController, {

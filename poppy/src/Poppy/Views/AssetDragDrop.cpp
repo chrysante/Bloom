@@ -80,6 +80,25 @@ struct ButtonResult {
 
 } // namespace
 
+static void displayOpenAssetButton(Asset* asset, float2 openButtonPos,
+                                   float2 openButtonSize,
+                                   ImDrawFlags drawFlags = 0) {
+    auto icon = FontManager::get({ IconSize::_16 }, "link-ext");
+    ImGui::PushFont(icon.font);
+    ImGui::BeginDisabled(!asset);
+    ImGui::SetCursorScreenPos(openButtonPos);
+    if (ImGui::ButtonEx(icon.utf8Rep.c_str(), openButtonSize, 0, drawFlags)) {
+        BL_ASSERT(asset);
+        openAsset(asset->handle());
+    }
+    ImGui::EndDisabled();
+    ImGui::PopFont();
+}
+
+static std::string getLabel(Asset const* asset) {
+    return asset ? asset->name() : "None";
+}
+
 static ButtonResult displayButtonCompact(Asset* asset, AssetType type,
                                          float2 totalSize) {
     auto& g = *GImGui;
@@ -92,31 +111,17 @@ static ButtonResult displayButtonCompact(Asset* asset, AssetType type,
     }
     float2 buttonSize(totalSize.x - totalSize.y, totalSize.y);
     float2 pos = ImGui::GetCursorScreenPos();
-    std::string label = asset ? asset->name() : "None";
     ButtonResult result{};
     result.rect = ImRect(pos, pos + buttonSize);
     ImGui::PushStyleColor(ImGuiCol_Border, 0);
-    result.pressed = ImGui::ButtonEx(label.c_str(), buttonSize, 0,
+    result.pressed = ImGui::ButtonEx(getLabel(asset).c_str(), buttonSize, 0,
                                      ImDrawFlags_RoundCornersLeft);
     if (auto payload = acceptAssetDragDrop({ type })) {
         result.dragDropAsset = *payload;
     }
-    // Display open asset button
-    float2 openButtonPos = pos + float2(buttonSize.x, 0);
-    float2 openButtonSize(totalSize.y);
-    auto icon = FontManager::get({ IconSize::_16 }, "link-ext");
-    ImGui::PushFont(icon.font);
-    ImGui::BeginDisabled(!asset);
-    ImGui::SetCursorScreenPos(openButtonPos);
-    if (ImGui::ButtonEx(icon.utf8Rep.c_str(), openButtonSize, 0,
-                        ImDrawFlags_RoundCornersRight))
-    {
-        BL_ASSERT(asset);
-        openAsset(asset->handle());
-    }
+    displayOpenAssetButton(asset, pos + float2(buttonSize.x, 0),
+                           float2(totalSize.y), ImDrawFlags_RoundCornersRight);
     ImGui::PopStyleColor();
-    ImGui::EndDisabled();
-    ImGui::PopFont();
     // Draw frame
     auto* DL = ImGui::GetWindowDrawList();
     auto bordercol = ImGui::GetColorU32(ImGuiCol_Border);
@@ -124,13 +129,140 @@ static ButtonResult displayButtonCompact(Asset* asset, AssetType type,
     return result;
 }
 
+static bool thumbnailButtonDefault(AssetType type, float2 buttonSize) {
+    auto icon = FontManager::get({ IconSize::_16 }, "doc");
+    ImGui::PushFont(icon.font);
+    bool result = ImGui::ButtonEx(icon.utf8Rep.c_str(), buttonSize);
+    ImGui::PopFont();
+    return result;
+}
+
+static bool thumbnailButtonTexture(Texture2D const* tex, float2 buttonSize,
+                                   ImGuiID popupID) {
+    ImGui::PushStyleColor(ImGuiCol_Border, 0);
+    float2 pos = ImGui::GetCursorScreenPos();
+    bool pressed = ImGui::Button("###AssetButton", buttonSize);
+    ImGui::PopStyleColor();
+    auto* DL = ImGui::GetWindowDrawList();
+    float rounding = ImGui::GetStyle().FrameRounding;
+    auto col = ImGui::IsItemActive() ||
+                       ImGui::IsPopupOpen(popupID, ImGuiPopupFlags_None) ?
+                   ImGui::ColorConvertFloat4ToU32({ .8, .8, .8, 1 }) :
+                   IM_COL32_WHITE;
+    DL->AddImageRounded(tex->GPUHandle.nativeHandle(), pos, pos + buttonSize,
+                        { 0, 0 }, { 1, 1 }, col, rounding);
+    DL->AddRect(pos, pos + buttonSize, ImGui::GetColorU32(ImGuiCol_Border),
+                rounding);
+    return pressed;
+}
+
+static bool thumbnailButtonImpl(Asset const* asset, AssetType type,
+                                float2 buttonSize, ImGuiID popupID) {
+    switch (type) {
+    case AssetType::Texture2D:
+        if (auto* tex = cast<Texture2D const*>(asset); tex && tex->GPUHandle) {
+            return thumbnailButtonTexture(tex, buttonSize, popupID);
+        }
+        else {
+            return thumbnailButtonDefault(type, buttonSize);
+        }
+    default:
+        return thumbnailButtonDefault(type, buttonSize);
+    }
+}
+
+static void TNButtonDisplayLabelAndOpenAsset(Asset* asset, bool active,
+                                             bool hovered, float2 buttonPos,
+                                             float2 buttonSize) {
+    auto& g = *GImGui;
+    auto& style = g.Style;
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32_WHITE);
+    ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(255, 255, 255, 127));
+    ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 127));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(0, 0, 0, 127));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(0, 0, 0, 191));
+    float2 padding = style.FramePadding;
+    float2 openButtonSize(g.FontSize + 2 * padding.y);
+    float2 barPos = buttonPos + padding;
+    float2 barSize = float2(buttonSize.x - 2 * padding.x, openButtonSize.y);
+    float2 labelFrameSize =
+        float2(barSize.x - openButtonSize.x, openButtonSize.y);
+    auto label = getLabel(asset);
+    auto* DL = ImGui::GetWindowDrawList();
+    float labelWidthMax = barSize.x - openButtonSize.x - 2 * padding.x;
+    float labelWidthPreferred = ImGui::CalcTextSize(label.c_str()).x;
+    bool isLabelClipped = labelWidthMax < labelWidthPreferred;
+    float labelWidth = std::min(labelWidthPreferred, labelWidthMax);
+    float2 labelPos =
+        barPos + padding + float2((labelWidthMax - labelWidth) / 2, 0);
+    float2 labelFramePos = barPos;
+    auto frameBGCol = ImGui::GetColorU32(ImGuiCol_Button);
+    auto borderCol = ImGui::GetColorU32(ImGuiCol_Border);
+    float rounding = style.FrameRounding;
+    ImGui::PushStyleColor(ImGuiCol_Border, 0);
+    displayOpenAssetButton(asset, labelFramePos + float2(labelFrameSize.x, 0),
+                           openButtonSize, ImDrawFlags_RoundCornersRight);
+    ImGui::PopStyleColor();
+    DL->AddRectFilled(labelFramePos, labelFramePos + labelFrameSize, frameBGCol,
+                      rounding, ImDrawFlags_RoundCornersLeft);
+    DL->AddRect(barPos, barPos + barSize, borderCol, rounding);
+    ImGui::PushClipRect(labelPos, labelPos + float2(labelWidthMax, g.FontSize),
+                        true);
+    DL->AddText(nullptr, 0, labelPos, ImGui::GetColorU32(ImGuiCol_Text),
+                label.c_str(), label.c_str() + label.size(), labelWidth);
+    ImGui::PopClipRect();
+    if (isLabelClipped && hovered &&
+        ImGui::IsMouseHoveringRect(barPos, barPos + labelFrameSize))
+    {
+        ImGui::SetNextWindowPos(barPos);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, style.FrameRounding);
+        ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32_BLACK);
+        ImGui::SetTooltip("%s", label.c_str());
+        ImGui::PopStyleVar(2);
+        ImGui::PopStyleColor();
+    }
+    ImGui::PopStyleColor(5);
+}
+
+static ButtonResult displayButtonThumbnail(Asset* asset, AssetType type,
+                                           ImGuiID popupID, float2 totalSize,
+                                           float maxHeight) {
+    if (totalSize.x <= 0) {
+        totalSize.x = ImGui::CalcItemWidth();
+    }
+    if (totalSize.y <= 0) {
+        totalSize.y = std::min(ImGui::GetContentRegionAvail().y, maxHeight);
+    }
+    float2 buttonSize(std::min(totalSize.x, totalSize.y));
+    float2 pos = ImGui::GetCursorScreenPos();
+    ButtonResult result{};
+    result.rect = ImRect(pos, pos + buttonSize);
+    ImGui::SetNextItemAllowOverlap();
+    result.pressed = thumbnailButtonImpl(asset, type, buttonSize, popupID);
+    if (auto payload = acceptAssetDragDrop({ type })) {
+        result.dragDropAsset = *payload;
+    }
+    bool hovered =
+        ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByItem |
+                             ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+    bool active = ImGui::IsItemActive() ||
+                  ImGui::IsPopupOpen(popupID, ImGuiPopupFlags_None);
+    if (hovered || active) {
+        TNButtonDisplayLabelAndOpenAsset(asset, active, hovered, pos,
+                                         buttonSize);
+    }
+    return result;
+}
+
 static ButtonResult displayButton(Asset* existing, float2 size, AssetType type,
-                                  AssetButtonStyle style) {
+                                  AssetButtonStyle style, ImGuiID popupID,
+                                  float maxHeight) {
     switch (style) {
     case AssetButtonStyle::Compact:
         return displayButtonCompact(existing, type, size);
     case AssetButtonStyle::Thumbnail:
-        BL_UNIMPLEMENTED();
+        return displayButtonThumbnail(existing, type, popupID, size, maxHeight);
     }
 }
 
@@ -144,8 +276,8 @@ bool poppy::assetButtonImpl(Reference<Asset>& assetRef,
     auto popupID = ImGui::GetID(popupName.c_str());
     AssetHandle existingHandle = assetRef ? assetRef->handle() : AssetHandle{};
     AssetHandle newHandle;
-    auto buttonResult =
-        displayButton(assetRef.get(), desc.size, desc.type, desc.style);
+    auto buttonResult = displayButton(assetRef.get(), desc.size, desc.type,
+                                      desc.style, popupID, desc.maxHeight);
     if (buttonResult.pressed) {
         ImGui::OpenPopupEx(popupID, ImGuiPopupFlags_None);
     }

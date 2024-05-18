@@ -35,8 +35,9 @@ enum class AssetButtonStyle { Compact, Thumbnail };
 struct AssetButtonDescriptor {
     vml::float2 size = {};
     bloom::AssetType type = bloom::AssetType::Asset;
-    AssetButtonStyle style = AssetButtonStyle::Compact;
     bloom::AssetRepresentation repr = bloom::AssetRepresentation::None;
+    AssetButtonStyle style = AssetButtonStyle::Compact;
+    float maxHeight = 75;
 };
 
 bool assetButtonImpl(bloom::Reference<bloom::Asset>& asset,

@@ -55,6 +55,15 @@ void TextureResource::assign(TextureHandle texture) {
     assignUsers();
 }
 
+static bool validate(TextureInterfaceDescriptor const& desc) {
+    if (desc.type == TextureType::Texture2DArray) {
+        if (desc.arrayLength < 1) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void TextureResource::doReallocate(HardwareDevice& device,
                                    FrameParameters const& params) {
     auto newDesc = idf(params);
@@ -62,6 +71,10 @@ void TextureResource::doReallocate(HardwareDevice& device,
         return;
     }
     desc = newDesc;
+    if (!validate(desc)) {
+        _handle = {};
+        return;
+    }
     _handle = device.createTexture({ .type = desc.type,
                                      .pixelFormat = desc.pixelFormat,
                                      .size = desc.size,

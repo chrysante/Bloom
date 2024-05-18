@@ -760,6 +760,10 @@ bool Impl::makeAvailImpl(Material& mat, RegistryEntry const& entry,
                 return;
             }
             mat.compile(assetManager->device(), *assetManager);
+            for (auto &[index, texture]: mat.fragmentTextures) {
+                assetManager->makeAvailable(texture->handle(),
+                                            AssetRepresentation::GPU);
+            }
         },
     }); // clang-format on
     return true;

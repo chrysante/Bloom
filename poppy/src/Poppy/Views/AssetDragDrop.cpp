@@ -18,6 +18,7 @@
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/Font.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewManager.h"
 #include "Poppy/Views/DirectoryView.h"
@@ -53,8 +54,9 @@ std::optional<AssetHandle> poppy::acceptAssetDragDrop(
     return std::nullopt;
 }
 
-static AssetHandle displayPopup(ImGuiID popupID, ImRect bb, AssetManager& AM,
-                                AssetType type, AssetHandle existingHandle) {
+static AssetHandle displayAssetListPopup(ImGuiID popupID, ImRect bb,
+                                         AssetManager& AM, AssetType type,
+                                         AssetHandle existingHandle) {
     if (!ImGui::BeginComboPopup(popupID, bb, ImGuiPopupFlags_None)) {
         return {};
     }
@@ -70,12 +72,33 @@ static AssetHandle displayPopup(ImGuiID popupID, ImRect bb, AssetManager& AM,
     return handle;
 }
 
+static bool displayContextMenu(ImGuiID popupID, Reference<Asset>& assetRef) {
+    auto flags = ImGuiWindowFlags_AlwaysAutoResize |
+                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings;
+    if (!ImGui::BeginPopupEx(popupID, flags)) {
+        return false;
+    }
+    bool modified = false;
+    if (ImGui::MenuItem("Clear")) {
+        assetRef.reset();
+        modified |= true;
+    }
+    ImGui::EndPopup();
+    return modified;
+}
+
 namespace {
 
 struct ButtonResult {
-    bool pressed;
+    bool clicked;
+    bool rightClicked;
     ImRect rect;
     AssetHandle dragDropAsset;
+};
+
+struct PopupIDs {
+    ImGuiID assetList;
+    ImGuiID contextMenu;
 };
 
 } // namespace
@@ -114,8 +137,9 @@ static ButtonResult displayButtonCompact(Asset* asset, AssetType type,
     ButtonResult result{};
     result.rect = ImRect(pos, pos + buttonSize);
     ImGui::PushStyleColor(ImGuiCol_Border, 0);
-    result.pressed = ImGui::ButtonEx(getLabel(asset).c_str(), buttonSize, 0,
+    result.clicked = ImGui::ButtonEx(getLabel(asset).c_str(), buttonSize, 0,
                                      ImDrawFlags_RoundCornersLeft);
+    result.rightClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
     if (auto payload = acceptAssetDragDrop({ type })) {
         result.dragDropAsset = *payload;
     }
@@ -138,30 +162,32 @@ static bool thumbnailButtonDefault(AssetType type, float2 buttonSize) {
 }
 
 static bool thumbnailButtonTexture(Texture2D const* tex, float2 buttonSize,
-                                   ImGuiID popupID) {
+                                   PopupIDs popupIDs) {
     ImGui::PushStyleColor(ImGuiCol_Border, 0);
     float2 pos = ImGui::GetCursorScreenPos();
-    bool pressed = ImGui::Button("###AssetButton", buttonSize);
+    bool clicked = ImGui::Button("###AssetButton", buttonSize);
     ImGui::PopStyleColor();
     auto* DL = ImGui::GetWindowDrawList();
     float rounding = ImGui::GetStyle().FrameRounding;
-    auto col = ImGui::IsItemActive() ||
-                       ImGui::IsPopupOpen(popupID, ImGuiPopupFlags_None) ?
-                   ImGui::ColorConvertFloat4ToU32({ .8, .8, .8, 1 }) :
-                   IM_COL32_WHITE;
+    auto col =
+        ImGui::IsItemActive() ||
+                ImGui::IsPopupOpen(popupIDs.assetList, ImGuiPopupFlags_None) ?
+            ImGui::ColorConvertFloat4ToU32({ .8, .8, .8, 1 }) :
+            IM_COL32_WHITE;
+    markObjectRenderHazard(tex->GPUHandle);
     DL->AddImageRounded(tex->GPUHandle.nativeHandle(), pos, pos + buttonSize,
                         { 0, 0 }, { 1, 1 }, col, rounding);
     DL->AddRect(pos, pos + buttonSize, ImGui::GetColorU32(ImGuiCol_Border),
                 rounding);
-    return pressed;
+    return clicked;
 }
 
 static bool thumbnailButtonImpl(Asset const* asset, AssetType type,
-                                float2 buttonSize, ImGuiID popupID) {
+                                float2 buttonSize, PopupIDs popupIDs) {
     switch (type) {
     case AssetType::Texture2D:
         if (auto* tex = cast<Texture2D const*>(asset); tex && tex->GPUHandle) {
-            return thumbnailButtonTexture(tex, buttonSize, popupID);
+            return thumbnailButtonTexture(tex, buttonSize, popupIDs);
         }
         else {
             return thumbnailButtonDefault(type, buttonSize);
@@ -226,7 +252,8 @@ static void TNButtonDisplayLabelAndOpenAsset(Asset* asset, bool active,
 }
 
 static ButtonResult displayButtonThumbnail(Asset* asset, AssetType type,
-                                           ImGuiID popupID, float2 totalSize) {
+                                           PopupIDs popupIDs,
+                                           float2 totalSize) {
     if (totalSize.x <= 0) {
         totalSize.x = ImGui::CalcItemWidth();
     }
@@ -238,7 +265,8 @@ static ButtonResult displayButtonThumbnail(Asset* asset, AssetType type,
     ButtonResult result{};
     result.rect = ImRect(pos, pos + buttonSize);
     ImGui::SetNextItemAllowOverlap();
-    result.pressed = thumbnailButtonImpl(asset, type, buttonSize, popupID);
+    result.clicked = thumbnailButtonImpl(asset, type, buttonSize, popupIDs);
+    result.rightClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
     if (auto payload = acceptAssetDragDrop({ type })) {
         result.dragDropAsset = *payload;
     }
@@ -246,7 +274,7 @@ static ButtonResult displayButtonThumbnail(Asset* asset, AssetType type,
         ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByItem |
                              ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
     bool active = ImGui::IsItemActive() ||
-                  ImGui::IsPopupOpen(popupID, ImGuiPopupFlags_None);
+                  ImGui::IsPopupOpen(popupIDs.assetList, ImGuiPopupFlags_None);
     if (hovered || active) {
         TNButtonDisplayLabelAndOpenAsset(asset, active, hovered, pos,
                                          buttonSize);
@@ -255,12 +283,12 @@ static ButtonResult displayButtonThumbnail(Asset* asset, AssetType type,
 }
 
 static ButtonResult displayButton(Asset* existing, float2 size, AssetType type,
-                                  AssetButtonStyle style, ImGuiID popupID) {
+                                  AssetButtonStyle style, PopupIDs popupIDs) {
     switch (style) {
     case AssetButtonStyle::Compact:
         return displayButtonCompact(existing, type, size);
     case AssetButtonStyle::Thumbnail:
-        return displayButtonThumbnail(existing, type, popupID, size);
+        return displayButtonThumbnail(existing, type, popupIDs, size);
     }
 }
 
@@ -270,28 +298,33 @@ bool poppy::assetButtonImpl(char const* strID, Reference<Asset>& assetRef,
     Application::DispatchMessage(DispatchToken::Now, GetAssetManager{ &AM });
     BL_ASSERT(AM);
     ImGui::PushID(strID);
-    std::string popupName = utl::strcat("AssetBrowserPopup");
-    auto popupID = ImGui::GetID(popupName.c_str());
+    PopupIDs popupIDs = { .assetList = ImGui::GetID("AssetBrowserPopup"),
+                          .contextMenu = ImGui::GetID("ContextMenu") };
     AssetHandle existingHandle = assetRef ? assetRef->handle() : AssetHandle{};
     AssetHandle newHandle;
     auto buttonResult =
-        displayButton(assetRef.get(), desc.size, type, desc.style, popupID);
-    if (buttonResult.pressed) {
-        ImGui::OpenPopupEx(popupID, ImGuiPopupFlags_None);
+        displayButton(assetRef.get(), desc.size, type, desc.style, popupIDs);
+    if (buttonResult.clicked) {
+        ImGui::OpenPopupEx(popupIDs.assetList, ImGuiPopupFlags_None);
+    }
+    if (buttonResult.rightClicked) {
+        ImGui::OpenPopupEx(popupIDs.contextMenu, ImGuiPopupFlags_None);
     }
     if (buttonResult.dragDropAsset) {
         newHandle = buttonResult.dragDropAsset;
     }
-    if (auto h =
-            displayPopup(popupID, buttonResult.rect, *AM, type, existingHandle))
+    if (auto h = displayAssetListPopup(popupIDs.assetList, buttonResult.rect,
+                                       *AM, type, existingHandle))
     {
         newHandle = h;
     }
     if (newHandle) {
         assetRef = AM->get(newHandle, desc.repr);
     }
+    bool modified = bool(newHandle);
+    modified |= displayContextMenu(popupIDs.contextMenu, assetRef);
     ImGui::PopID();
-    return bool(newHandle);
+    return modified;
 }
 
 template <typename AssetType>

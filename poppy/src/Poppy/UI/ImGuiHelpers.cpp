@@ -10,9 +10,12 @@
 #include <utl/strcat.hpp>
 #include <vml/vml.hpp>
 
+#include "Bloom/Application/Application.h"
 #include "Poppy/Core/Debug.h"
+#include "Poppy/Editor/Messages.h"
 
 using namespace poppy;
+using namespace bloom;
 using namespace ranges::views;
 using namespace vml::short_types;
 
@@ -246,4 +249,9 @@ void SplitView::display(std::span<std::function<void()> const> contents,
 void SplitView::display(std::initializer_list<std::function<void()>> contents,
                         Flags flags) {
     display(std::span(contents), flags);
+}
+
+void poppy::markObjectRenderHazard(std::any obj) {
+    Application::DispatchMessage(DispatchToken::Now,
+                                 ExtendRenderLifetime{ std::move(obj) });
 }

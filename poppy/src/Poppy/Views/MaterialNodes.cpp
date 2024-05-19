@@ -512,7 +512,7 @@ struct ConstantController: MaterialNodeController {
                               .style = AssetButtonStyle::Thumbnail,
                               .size = ImGui::GetContentRegionAvail() }))
             {
-                textureHandle = texture->handle();
+                textureHandle = texture ? texture->handle() : AssetHandle{};
             }
             break;
         }

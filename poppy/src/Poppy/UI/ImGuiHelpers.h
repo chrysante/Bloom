@@ -1,6 +1,7 @@
 #ifndef POPPY_UI_IMGUIHELPERS_H
 #define POPPY_UI_IMGUIHELPERS_H
 
+#include <any>
 #include <array>
 #include <functional>
 #include <initializer_list>
@@ -114,6 +115,9 @@ private:
     float totalWidth = 0;
     std::vector<float> widths;
 };
+
+/// Extends the lifetime of \p object until the current frame has been rendered
+void markObjectRenderHazard(std::any object);
 
 } // namespace poppy
 

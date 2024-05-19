@@ -83,7 +83,7 @@ static void displayParam(MaterialInstance& inst,
     if (assetButton(makeLabel(param.name).c_str(), tex,
                     { .style = AssetButtonStyle::Thumbnail, .repr = GPU }))
     {
-        param.defaultValue = tex->handle();
+        param.defaultValue = tex ? tex->handle() : AssetHandle{};
         inst.setTexture(param.vertexBindingPoint, param.fragmentBindingPoint,
                         std::move(tex));
     }

@@ -1,6 +1,8 @@
 #ifndef BLOOM_MATERIALCOMPILER_FWD_H
 #define BLOOM_MATERIALCOMPILER_FWD_H
 
+#include <string_view>
+
 #include "Bloom/Core/Dyncast.h"
 
 namespace bloom::matc {
@@ -53,9 +55,11 @@ enum class RasterizerInputKind {
 };
 
 enum class BuiltinFunctionKind {
-    Normalize,
-    Sqrt,
+#define BL_MATGRAPH_BUILTIN(Name, ...) Name,
+#include "Bloom/MaterialCompiler/Lists.def"
 };
+
+std::string_view toSpelling(BuiltinFunctionKind function);
 
 enum class SampleMode { Color, Normal };
 

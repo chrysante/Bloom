@@ -22,7 +22,7 @@ TEST_CASE() {
                                      genTexture(), "TexParam");
     auto* tex1 = ctx.textureConstant(TextureSubType::TextureCube, genTexture());
     auto* const0 =
-        g.addValue<VectorParameter>(ctx, 1, float4{ 1, 0, 0, 0 }, "Param0");
+        g.addValue<VectorParameter>(ctx, 2, float4{ 1, 0, 0, 0 }, "Param0");
     auto* const1 =
         g.addValue<VectorParameter>(ctx, 3, float4{ 2, 1, 5, 0 }, "Param1");
     auto* const2 =
@@ -50,4 +50,36 @@ TEST_CASE() {
     auto generator = makeCodeGenerator(ctx, g, {});
     auto result = generator->run();
     std::cout << result.source << std::endl;
+}
+
+TEST_CASE("Builtins") {
+    Context ctx;
+    MaterialGraph g(MaterialShadingModel::Unlit);
+    using enum BuiltinFunctionKind;
+    SECTION("Cross with invalid arguments") {
+        CHECK_THROWS(g.addValue<BuiltinFunction>(ctx, Cross,
+                                                 std::vector<Value*>{
+                                                     ctx.float2Constant({}),
+                                                     ctx.float3Constant({}) }));
+    }
+    SECTION("Cross with valid arguments") {
+        auto* call = g.addValue<BuiltinFunction>(ctx, Cross,
+                                                 std::vector<Value*>{
+                                                     ctx.float3Constant({}),
+                                                     ctx.float3Constant({}) });
+        CHECK(call->type() == ctx.float3Type());
+    }
+    SECTION("Reflect with invalid arguments") {
+        CHECK_THROWS(g.addValue<BuiltinFunction>(ctx, Reflect,
+                                                 std::vector<Value*>{
+                                                     ctx.float2Constant({}),
+                                                     ctx.float3Constant({}) }));
+    }
+    SECTION("Reflect with valid arguments") {
+        auto* call = g.addValue<BuiltinFunction>(ctx, Reflect,
+                                                 std::vector<Value*>{
+                                                     ctx.float3Constant({}),
+                                                     ctx.float3Constant({}) });
+        CHECK(call->type() == ctx.float3Type());
+    }
 }

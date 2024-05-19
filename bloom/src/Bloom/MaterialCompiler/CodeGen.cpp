@@ -572,15 +572,7 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
 void MetalCodeGenerator::codegenImpl(BuiltinFunction const& value) {
     auto item = makeItem();
     writeRaw(getName(value.type()), " ", getName(&value), " = ");
-    using enum BuiltinFunctionKind;
-    switch (value.kind()) {
-    case Normalize:
-        writeRaw("normalize");
-        break;
-    case Sqrt:
-        writeRaw("sqrt");
-        break;
-    }
+    writeRaw(toSpelling(value.kind()));
     writeScope(ScopeType::Paran, [&] {
         for (auto& arg: value.operands()) {
             writeItem(getName(arg));

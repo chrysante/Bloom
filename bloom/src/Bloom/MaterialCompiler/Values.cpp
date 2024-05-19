@@ -42,16 +42,96 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
 RasterizerInput::RasterizerInput(Context& ctx, RasterizerInputKind kind):
     Value(ValueNodeType::RasterizerInput, selectType(ctx, kind)), _kind(kind) {}
 
-static Type const* getReturnType(Context&, BuiltinFunctionKind kind,
-                                 std::span<Type const* const> argTypes) {
-    using enum BuiltinFunctionKind;
-    switch (kind) {
-    case Normalize:
-        [[fallthrough]];
-    case Sqrt:
-        assert(argTypes.size() == 1);
-        return argTypes[0];
+namespace {
+
+enum class SymType {
+    Float,  /// Single floating point value
+    Float3, /// Vector of three floating point values
+    FloatN, /// Single floating point value or vector of 2-4 floating point
+            /// values
+    VectorN /// Vector of 2-4 floating point values
+};
+
+} // namespace
+
+static Type const* deduceRetType(Context& ctx, SymType symRet,
+                                 std::span<SymType const> symArgs,
+                                 std::span<Type const* const> args) {
+    using enum SymType;
+    if (symArgs.size() != args.size()) {
+        return nullptr;
     }
+    int N = -1;
+    for (auto [symArg, arg]: zip(symArgs, args)) {
+        switch (symArg) {
+        case Float:
+            if (arg != ctx.floatType()) {
+                return nullptr;
+            }
+            break;
+        case Float3:
+            if (arg != ctx.float3Type()) {
+                return nullptr;
+            }
+            break;
+        case FloatN: {
+            auto* vecType = dyncast<VectorType const*>(arg);
+            if (!vecType) {
+                return nullptr;
+            }
+            if (N != -1 && N != vecType->numComponents()) {
+                return nullptr;
+            }
+            N = vecType->numComponents();
+            break;
+        }
+        case VectorN: {
+            auto* vecType = dyncast<VectorType const*>(arg);
+            if (!vecType || vecType->numComponents() < 2) {
+                return nullptr;
+            }
+            if (N != -1 && N != vecType->numComponents()) {
+                return nullptr;
+            }
+            N = vecType->numComponents();
+            break;
+        }
+        }
+    }
+    switch (symRet) {
+    case Float:
+        return ctx.floatType();
+    case Float3:
+        return ctx.float3Type();
+    case FloatN:
+        [[fallthrough]];
+    case VectorN:
+        if (N == -1) {
+            return nullptr;
+        }
+        return ctx.vectorType(N);
+    }
+}
+
+static Type const* getReturnTypeImpl(Context& ctx, BuiltinFunctionKind kind,
+                                     std::span<Type const* const> args) {
+    switch (kind) {
+        using enum SymType;
+#define ARGS_TO_SPAN(...) std::span({ __VA_ARGS__ })
+#define BL_MATGRAPH_BUILTIN(Name, Spelling, RetType, Args)                     \
+    case BuiltinFunctionKind::Name:                                            \
+        return deduceRetType(ctx, RetType, ARGS_TO_SPAN Args, args);
+#include "Bloom/MaterialCompiler/Lists.def"
+    }
+}
+
+static Type const* getReturnType(Context& ctx, BuiltinFunctionKind kind,
+                                 std::span<Type const* const> args) {
+    auto* type = getReturnTypeImpl(ctx, kind, args);
+    if (!type) {
+        throw std::runtime_error("Invalid arguments for function call");
+    }
+    return type;
 }
 
 BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,

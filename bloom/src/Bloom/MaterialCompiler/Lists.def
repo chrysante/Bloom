@@ -33,3 +33,217 @@ BL_MATGRAPH_VALUE(AggregateElement, User, Concrete)
 
 #undef BL_MATGRAPH_VALUE
 
+#ifndef BL_MATGRAPH_BUILTIN
+#define BL_MATGRAPH_BUILTIN(Name, Spelling, Ret, Args)
+#endif
+
+/// Returns the cross product of x and y
+///
+///     float3 cross(float3 x, float3 y)
+BL_MATGRAPH_BUILTIN(Cross, cross, Float3, (Float3, Float3))
+/// Returns the distance between x and y
+///
+///     float distance(floatN x, floatN y)
+BL_MATGRAPH_BUILTIN(Distance, distance, Float, (VectorN, VectorN))
+/// Returns the square of the distance between x and y
+///
+///     float distance_squared(floatN x, floatN y)
+BL_MATGRAPH_BUILTIN(DistanceSquared, distance_squared, Float, (VectorN, VectorN))
+/// Returns the dot product of x and y
+///
+///     float dot(floatN x, floatN y)
+BL_MATGRAPH_BUILTIN(Dot, dot, Float, (VectorN, VectorN))
+/// If `dot(Nref, I) < 0.0` returns N, otherwise returns –N
+///
+///     floatN faceforward(floatN N, floatN I, floatN Nref)
+BL_MATGRAPH_BUILTIN(FaceForward, faceforward, VectorN, (VectorN, VectorN, VectorN))
+/// Returns the length of x
+///
+///     float length(floatN x)
+BL_MATGRAPH_BUILTIN(Length, length, Float, (VectorN))
+/// Returns the square of the length of x
+///
+///     float length_squared(floatN x)
+BL_MATGRAPH_BUILTIN(LengthSquared, length_squared, Float, (VectorN))
+///  Returns a vector in the same direction as x but with a length of 1
+///
+///      floatN normalize(floatN x)
+BL_MATGRAPH_BUILTIN(Normalize, normalize,  VectorN, (VectorN))
+/// For the incident vector I and surface orientation N, compute normalized N (NN), and return the reflection direction: `I – 2 * dot(NN, I) * NN`
+///
+///     floatN reflect(floatN I, floatN N)
+BL_MATGRAPH_BUILTIN(Reflect, reflect, VectorN, (VectorN, VectorN))
+/// Compute arc cosine of x
+///
+///     T acos(T x)
+BL_MATGRAPH_BUILTIN(Acos, acos, FloatN, (FloatN))
+/// Compute inverse hyperbolic cosine of x
+///
+///     T acosh(T x)
+BL_MATGRAPH_BUILTIN(Acosh, acosh, FloatN, (FloatN))
+/// Compute arc sine function of x
+///
+///     T asin(T x)
+BL_MATGRAPH_BUILTIN(Asin, asin, FloatN, (FloatN))
+/// Compute inverse hyperbolic sine of x
+///
+///     T asinh(T x)
+BL_MATGRAPH_BUILTIN(Asinh, asinh, FloatN, (FloatN))
+/// Compute arc tangent of x
+///
+///     T atan(T y_over_x)
+BL_MATGRAPH_BUILTIN(Atan, atan, FloatN, (FloatN))
+/// Compute arc tangent of y over x
+///
+///     T atan2(T y, T x)
+BL_MATGRAPH_BUILTIN(Atan2, atan2, FloatN, (FloatN, FloatN))
+/// Compute hyperbolic arc tangent of x
+///
+///     T atanh(T x)
+BL_MATGRAPH_BUILTIN(Atanh, atanh, FloatN, (FloatN))
+/// Round x to integral value using the round to positive infinity rounding mode
+///
+///     T ceil(T x)
+BL_MATGRAPH_BUILTIN(Ceil, ceil, FloatN, (FloatN))
+/// Return x with its sign changed to match the sign of y
+///
+///     T copysign(T x, T y)
+BL_MATGRAPH_BUILTIN(Copysign, copysign, FloatN, (FloatN, FloatN))
+/// Compute cosine of x
+///
+///     T cos(T x)
+BL_MATGRAPH_BUILTIN(Cos, cos, FloatN, (FloatN))
+/// Compute hyperbolic cosine of x
+///
+///     T cosh(T x)
+BL_MATGRAPH_BUILTIN(Cosh, cosh, FloatN, (FloatN))
+/// Compute `cos(PI * x)`
+///
+///     T cospi(T x)
+BL_MATGRAPH_BUILTIN(Cospi, cospi, FloatN, (FloatN))
+/// Exponential base e function
+///
+///     T exp(T x)
+BL_MATGRAPH_BUILTIN(Exp, exp, FloatN, (FloatN))
+/// Exponential base 2 function
+///
+///     T exp2(T x)
+BL_MATGRAPH_BUILTIN(Exp2, exp2, FloatN, (FloatN))
+/// Exponential base 10 function
+///
+///     T exp10(T x)
+BL_MATGRAPH_BUILTIN(Exp10, exp10, FloatN, (FloatN))
+/// Compute absolute value of a floating-point number
+///
+///     T abs(T x)
+BL_MATGRAPH_BUILTIN(Abs, abs, FloatN, (FloatN))
+/// x – y if x > y; +0 if x <= y
+///
+///     T fdim(T x, T y)
+BL_MATGRAPH_BUILTIN(Fdim, fdim, FloatN, (FloatN, FloatN))
+/// Round x to integral value using the round to negative infinity rounding mode
+///
+///     T floor(T x)
+BL_MATGRAPH_BUILTIN(Floor, floor, FloatN, (FloatN))
+/// Returns the correctly rounded floating-point representation of the sum of c with the infinitely precise product of a and b. Rounding of intermediate products shall not occur. Edge case behavior is per the IEEE 754-2008 standard
+///
+///     T fma(T a, T b, T c)
+BL_MATGRAPH_BUILTIN(Fma, fma, FloatN, (FloatN, FloatN, FloatN))
+/// Returns y if `x < y`, otherwise returns x. If one argument is a NaN, fmax() returns the other argument. If both arguments are NaNs, fmax() returns a NaN. If x and y are denormals and the GPU doesn’t support denormals, either value may be returned
+///
+///     T max(T x, T y)
+BL_MATGRAPH_BUILTIN(Max, max, FloatN, (FloatN, FloatN))
+/// Returns `max(x, max(y, z))`
+///
+///     T max3(T x, T y, T z)
+BL_MATGRAPH_BUILTIN(Max3, max3, FloatN, (FloatN, FloatN, FloatN))
+/// Returns the middle value of x, y, and z
+///
+///     T median3(T x, T y, T z)
+BL_MATGRAPH_BUILTIN(Median3, median3, FloatN, (FloatN, FloatN, FloatN))
+/// Returns y if `y < x`, otherwise it returns x. If one argument is a NaN, fmin() returns the other argument. If both arguments are NaNs, fmin() returns a NaN. If x and y are denormals and the GPU doesn’t support denormals, either value may be returned
+///
+///     T min(T x, T y)
+BL_MATGRAPH_BUILTIN(Min, min, FloatN, (FloatN, FloatN))
+/// Returns `min(x, min(y, z))`
+///
+///     T min3(T x, T y, T z)
+BL_MATGRAPH_BUILTIN(Min3, min3, FloatN, (FloatN, FloatN, FloatN))
+/// Returns `x – y * trunc(x/y)`
+///
+///     T fmod(T x, T y)
+BL_MATGRAPH_BUILTIN(Fmod, fmod, FloatN, (FloatN, FloatN))
+/// Returns the fractional part of x that is greater than or equal to 0 or less than 1
+///
+///     T fract(T x)
+BL_MATGRAPH_BUILTIN(Fract, fract, FloatN, (FloatN))
+/// Multiply x by 2 to the power k
+///
+///     T ldexp(T x, Ti k)
+BL_MATGRAPH_BUILTIN(Ldexp, ldexp, FloatN, (FloatN, FloatN))
+/// Compute the natural logarithm of x
+///
+///     T log(T x)
+BL_MATGRAPH_BUILTIN(Log, log, FloatN, (FloatN))
+/// Compute the base 2 logarithm of x
+///
+///     T log2(T x)
+BL_MATGRAPH_BUILTIN(Log2, log2, FloatN, (FloatN))
+/// Compute the base 10 logarithm of x
+///
+///     T log10(T x)
+BL_MATGRAPH_BUILTIN(Log10, log10, FloatN, (FloatN))
+/// Return next representable floating-point value after x in the direction of y. If x equals y, return y. Note that if both x and y represent the floating-point zero values, the result has sign of y. If either x or y is NaN, return NaN
+///
+///     T nextafter(T x, T y)
+BL_MATGRAPH_BUILTIN(Nextafter, nextafter, FloatN, (FloatN, FloatN))
+/// Compute x to the power y
+///
+///     T pow(T x, T y)
+BL_MATGRAPH_BUILTIN(Pow, pow, FloatN, (FloatN, FloatN))
+/// Round x to integral value using round ties to even rounding mode in floating-point format
+///
+///     T rint(T x)
+BL_MATGRAPH_BUILTIN(Rint, rint, FloatN, (FloatN))
+/// Return the integral value nearest to x, rounding halfway cases away from zero
+///
+///     T round(T x)
+BL_MATGRAPH_BUILTIN(Round, round, FloatN, (FloatN))
+/// Compute inverse square root of x
+///
+///     T rsqrt(T x)
+BL_MATGRAPH_BUILTIN(Rsqrt, rsqrt, FloatN, (FloatN))
+/// Compute sine of x
+///
+///     T sin(T x)
+BL_MATGRAPH_BUILTIN(Sin, sin, FloatN, (FloatN))
+/// Compute hyperbolic sine of x
+///
+///     T sinh(T x)
+BL_MATGRAPH_BUILTIN(Sinh, sinh, FloatN, (FloatN))
+/// Compute `sin(PI * x)`
+///
+///     T sinpi(T x)
+BL_MATGRAPH_BUILTIN(Sinpi, sinpi, FloatN, (FloatN))
+/// Compute square root of x
+///
+///     T sqrt(T x)
+BL_MATGRAPH_BUILTIN(Sqrt, sqrt, FloatN, (FloatN))
+/// Compute tangent of x
+///
+///     T tan(T x)
+BL_MATGRAPH_BUILTIN(Tan, tan, FloatN, (FloatN))
+/// Compute hyperbolic tangent of x
+///
+///     T tanh(T x)
+BL_MATGRAPH_BUILTIN(Tanh, tanh, FloatN, (FloatN))
+/// Compute `tan(PI * x)`
+///
+///     T tanpi(T x)
+BL_MATGRAPH_BUILTIN(Tanpi, tanpi, FloatN, (FloatN))
+/// Round x to integral value using the round toward zero rounding mode
+///
+///     T trunc(T x)
+BL_MATGRAPH_BUILTIN(Trunc, trunc, FloatN, (FloatN))
+
+#undef BL_MATGRAPH_BUILTIN

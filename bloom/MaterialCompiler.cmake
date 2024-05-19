@@ -36,6 +36,8 @@ set(matc_sources
   src/Bloom/MaterialCompiler/Values.h
 )
 
+target_compile_definitions(matc PRIVATE BLOOM_NO_SERIALIZATION)
+
 target_sources(matc
   PRIVATE
     ${matc_sources}
@@ -62,6 +64,8 @@ target_link_libraries(matc-test
     matc
     Catch2::Catch2WithMain
 )
+
+target_compile_definitions(matc-test PRIVATE BLOOM_NO_SERIALIZATION)
 
 set(matc_test_sources
   test/MaterialCompiler/Compiler.t.cpp

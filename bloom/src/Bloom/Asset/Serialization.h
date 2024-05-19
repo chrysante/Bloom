@@ -1,6 +1,8 @@
 #ifndef BLOOM_ASSET_SERIALIZATION_H
 #define BLOOM_ASSET_SERIALIZATION_H
 
+#ifndef BLOOM_NO_SERIALIZATION
+
 #include <yaml-cpp/yaml.h>
 
 #include "Bloom/Asset/AssetHandle.h"
@@ -38,5 +40,7 @@ struct YAML::convert<bloom::AssetHandle> {
         return true;
     }
 };
+
+#endif // BLOOM_NO_SERIALIZATION
 
 #endif // BLOOM_ASSET_SERIALIZATION_H

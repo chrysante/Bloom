@@ -6,6 +6,8 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Asset/Asset.h"
+#include "Bloom/Asset/Serialization.h"
+#include "Bloom/Core/Serialize.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 
 namespace bloom {
@@ -28,5 +30,16 @@ struct MaterialTextureParameter {
 };
 
 } // namespace bloom
+
+#ifndef BLOOM_NO_SERIALIZATION
+
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::MaterialPrimitiveParameter, dataType,
+                           bufferOffset, name, defaultValue);
+
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::MaterialTextureParameter, type,
+                           fragmentBindingPoint, vertexBindingPoint, name,
+                           defaultValue);
+
+#endif // BLOOM_NO_SERIALIZATION
 
 #endif // BLOOM_GRAPHICS_MATERIAL_MATERIALPARAMETER_H

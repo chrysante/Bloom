@@ -770,7 +770,7 @@ bool Impl::makeAvailImpl(Material& mat, RegistryEntry const& entry,
 }
 
 bool Impl::makeAvailImpl(MaterialInstance& inst, RegistryEntry const& entry,
-                         AssetRepresentation repr, bool /* forceReload */) {
+                         AssetRepresentation repr, bool forceReload) {
     loadMaterialInstanceFromDisk(inst, entry.diskLocation);
     // clang-format off
     visitRepr(repr, utl::overload{
@@ -778,10 +778,10 @@ bool Impl::makeAvailImpl(MaterialInstance& inst, RegistryEntry const& entry,
             Logger::Warn("No CPU Representation for materials yet");
         },
         [&](Tag<AssetRepresentation::GPU>) {
-            if (auto* mat = inst.material()) {
-                assetManager->makeAvailable(mat->handle(),
-                                            AssetRepresentation::GPU);
+            if (inst.material() && !forceReload) {
+                return;
             }
+            loadMaterialInstanceFromDisk(inst, entry.diskLocation);
         },
     }); // clang-format on
     return true;

@@ -47,8 +47,8 @@ static void amendParameters(
 }
 
 void MaterialInstance::setMaterial(Reference<Material> material) {
-    cpuBuffer.resize(material->paramBufferSize);
     if (material) {
+        cpuBuffer.resize(material->paramBufferSize);
         amendParameters(*this, primitiveParameters,
                         material->primitiveParameters);
         textureParameters = material->textureParameters;
@@ -78,12 +78,18 @@ void MaterialInstance::uploadData(HardwareDevice& device) {
 YAML::Node MaterialInstance::serialize() const {
     YAML::Node root;
     root["Material"] = mMaterial ? mMaterial->handle() : AssetHandle{};
+    root["PrimitiveParameters"] = primitiveParameters;
+    root["TextureParameters"] = textureParameters;
     return root;
 }
 
 void MaterialInstance::deserialize(YAML::Node const& root,
                                    AssetManager& assetManager) {
-    auto const matHandle = root["Material"].as<AssetHandle>();
+    auto matHandle = root["Material"].as<AssetHandle>();
+    primitiveParameters = root["PrimitiveParameters"]
+                              .as<std::vector<MaterialPrimitiveParameter>>();
+    textureParameters =
+        root["TextureParameters"].as<std::vector<MaterialTextureParameter>>();
     setMaterial(as<Material>(assetManager.get(matHandle)));
     assetManager.makeAvailable(matHandle, AssetRepresentation::GPU);
 }

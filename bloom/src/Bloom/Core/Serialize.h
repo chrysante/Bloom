@@ -1,6 +1,8 @@
 #ifndef BLOOM_CORE_SERIALIZE_H
 #define BLOOM_CORE_SERIALIZE_H
 
+#ifndef BLOOM_NO_SERIALIZATION
+
 #include <utl/common.hpp>
 #include <yaml-cpp/yaml.h>
 
@@ -903,5 +905,7 @@
     _BLOOM_REGISTER_TEXT_SERIALIZER(Type, __VA_ARGS__)                         \
     _BLOOM_REGISTER_TEXT_DESERIALIZER(Type, __VA_ARGS__)                       \
     _BLOOM_REGISTER_TEXT_SERIALIZER_END()
+
+#endif // BLOOM_NO_SERIALIZATION
 
 #endif // BLOOM_CORE_SERIALIZE_H

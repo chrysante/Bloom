@@ -288,10 +288,11 @@ void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
         using enum AssetRepresentation;
         beginProperty("Mesh");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        assetButton(meshRenderer.mesh, { .repr = GPU });
+        assetButton("###Mesh", meshRenderer.mesh, { .repr = GPU });
         beginProperty("Material");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        assetButton(meshRenderer.materialInstance, { .repr = GPU });
+        assetButton("###MaterialInstance", meshRenderer.materialInstance,
+                    { .repr = GPU });
     });
     endSection();
 }

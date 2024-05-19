@@ -39,6 +39,8 @@ protected:
         mHandle(handle), mName(std::move(name)) {}
 
 private:
+    friend class AssetManager;
+
     AssetHandle mHandle;
     std::string mName;
 };

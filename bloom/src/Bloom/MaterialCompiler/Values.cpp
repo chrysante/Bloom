@@ -91,7 +91,7 @@ Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
     return LHS;
 }
 
-TextureSampler::TextureSampler(Context& ctx, TextureConstant* texture,
+TextureSampler::TextureSampler(Context& ctx, TextureValue* texture,
                                Value* coords, SampleMode mode):
     User(ValueNodeType::TextureSampler, ctx.float4Type(), { texture, coords }),
     _mode(mode) {}

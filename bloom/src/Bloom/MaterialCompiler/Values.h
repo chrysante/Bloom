@@ -193,7 +193,7 @@ class TextureSampler: public User {
 public:
     DECLARE_TYPE(VectorType)
 
-    TextureSampler(Context& ctx, TextureConstant* texture, Value* coords,
+    TextureSampler(Context& ctx, TextureValue* texture, Value* coords,
                    SampleMode mode);
 
     DECLARE_OPERAND(TextureValue, texture, 0)

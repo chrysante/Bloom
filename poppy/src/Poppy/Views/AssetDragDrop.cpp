@@ -226,13 +226,12 @@ static void TNButtonDisplayLabelAndOpenAsset(Asset* asset, bool active,
 }
 
 static ButtonResult displayButtonThumbnail(Asset* asset, AssetType type,
-                                           ImGuiID popupID, float2 totalSize,
-                                           float maxHeight) {
+                                           ImGuiID popupID, float2 totalSize) {
     if (totalSize.x <= 0) {
         totalSize.x = ImGui::CalcItemWidth();
     }
     if (totalSize.y <= 0) {
-        totalSize.y = std::min(ImGui::GetContentRegionAvail().y, maxHeight);
+        totalSize.y = 75;
     }
     float2 buttonSize(std::min(totalSize.x, totalSize.y));
     float2 pos = ImGui::GetCursorScreenPos();
@@ -256,36 +255,35 @@ static ButtonResult displayButtonThumbnail(Asset* asset, AssetType type,
 }
 
 static ButtonResult displayButton(Asset* existing, float2 size, AssetType type,
-                                  AssetButtonStyle style, ImGuiID popupID,
-                                  float maxHeight) {
+                                  AssetButtonStyle style, ImGuiID popupID) {
     switch (style) {
     case AssetButtonStyle::Compact:
         return displayButtonCompact(existing, type, size);
     case AssetButtonStyle::Thumbnail:
-        return displayButtonThumbnail(existing, type, popupID, size, maxHeight);
+        return displayButtonThumbnail(existing, type, popupID, size);
     }
 }
 
-bool poppy::assetButtonImpl(Reference<Asset>& assetRef,
-                            AssetButtonDescriptor desc) {
+bool poppy::assetButtonImpl(char const* strID, Reference<Asset>& assetRef,
+                            AssetType type, AssetButtonDescriptor const& desc) {
     AssetManager* AM = nullptr;
     Application::DispatchMessage(DispatchToken::Now, GetAssetManager{ &AM });
     BL_ASSERT(AM);
-    ImGui::PushID((int)desc.type);
+    ImGui::PushID(strID);
     std::string popupName = utl::strcat("AssetBrowserPopup");
     auto popupID = ImGui::GetID(popupName.c_str());
     AssetHandle existingHandle = assetRef ? assetRef->handle() : AssetHandle{};
     AssetHandle newHandle;
-    auto buttonResult = displayButton(assetRef.get(), desc.size, desc.type,
-                                      desc.style, popupID, desc.maxHeight);
+    auto buttonResult =
+        displayButton(assetRef.get(), desc.size, type, desc.style, popupID);
     if (buttonResult.pressed) {
         ImGui::OpenPopupEx(popupID, ImGuiPopupFlags_None);
     }
     if (buttonResult.dragDropAsset) {
         newHandle = buttonResult.dragDropAsset;
     }
-    if (auto h = displayPopup(popupID, buttonResult.rect, *AM, desc.type,
-                              existingHandle))
+    if (auto h =
+            displayPopup(popupID, buttonResult.rect, *AM, type, existingHandle))
     {
         newHandle = h;
     }

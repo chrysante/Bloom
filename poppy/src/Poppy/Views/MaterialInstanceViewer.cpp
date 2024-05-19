@@ -4,6 +4,7 @@
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Core.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Bloom/Graphics/Texture.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/View.h"
@@ -40,10 +41,14 @@ MaterialInstanceViewer::MaterialInstanceViewer() {
     }); // clang-format on
 }
 
+static std::string makeLabel(std::string_view name) {
+    return utl::strcat("###", name);
+}
+
 static bool displayParam(MaterialPrimitiveParameter& param) {
     using namespace propertiesView;
     beginProperty(param.name);
-    std::string label = utl::strcat("###", param.name);
+    std::string label = makeLabel(param.name);
     using enum MaterialDataType;
     switch (param.dataType) {
     case Float:
@@ -68,6 +73,22 @@ static bool displayParam(MaterialPrimitiveParameter& param) {
     }
 }
 
+static void displayParam(MaterialInstance& inst,
+                         MaterialTextureParameter& param) {
+    using namespace propertiesView;
+    beginProperty(param.name);
+    auto tex =
+        inst.getTexture(param.vertexBindingPoint, param.fragmentBindingPoint);
+    using enum AssetRepresentation;
+    if (assetButton(makeLabel(param.name).c_str(), tex,
+                    { .style = AssetButtonStyle::Thumbnail, .repr = GPU }))
+    {
+        param.defaultValue = tex->handle();
+        inst.setTexture(param.vertexBindingPoint, param.fragmentBindingPoint,
+                        std::move(tex));
+    }
+}
+
 void MaterialInstanceViewer::display() {
     if (!inst) {
         displayEmptyWithReason("No Material Instance Open");
@@ -78,29 +99,37 @@ void MaterialInstanceViewer::display() {
         beginProperty("Material");
         auto material = inst->materialRef();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (assetButton(material, { .repr = AssetRepresentation::GPU })) {
+        if (assetButton("###Material", material,
+                        { .repr = AssetRepresentation::GPU }))
+        {
             inst->setMaterial(std::move(material));
         }
         endSection();
     }
+    auto primParams = inst->getPrimitiveParameterDescriptors();
+    auto texParams = inst->getTextureParameterDescriptors();
+    if (primParams.empty() && texParams.empty()) {
+        return;
+    }
     if (!beginSection("Parameters")) {
         return;
     }
-    for (auto& param: inst->getPrimitiveParameterDescriptors()) {
+    for (auto& param: primParams) {
         if (displayParam(param)) {
             inst->setParameter(param.defaultValue.data(), param.bufferOffset,
                                layoutSize(param.dataType));
         }
     }
+    for (auto& param: texParams) {
+        displayParam(*inst, param);
+    }
     endSection();
 }
 
 void MaterialInstanceViewer::receiveData(std::any data) {
-    auto* newInst = std::any_cast<Reference<MaterialInstance>>(&data);
-    if (!newInst) {
+    if (receiveAsset(inst, data)) {
         return;
     }
-    inst = *newInst;
     auto& AM = editor().coreSystems().assetManager();
     using enum AssetRepresentation;
     AM.makeAvailable(inst->handle(), CPU | GPU);

@@ -21,8 +21,6 @@ using namespace bloom;
 using namespace matc;
 using namespace ranges::views;
 
-namespace {
-
 static MaterialDataType translate(TextureType const* type) {
     switch (type->subtype()) {
     case TextureSubType::Texture2D:
@@ -53,6 +51,8 @@ static Type const* translate(Context& ctx, MaterialDataType type) {
         return ctx.textureType(TextureSubType::TextureCube);
     }
 }
+
+namespace {
 
 template <typename T>
 class NameGenerator {
@@ -163,6 +163,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     NameGenerator<Type const*> typeNameGen{ "Type_" };
     NameGenerator<Value const*> valueNameGen{ "Value_" };
     utl::hashmap<TextureValue const*, int> textureIndexMap;
+    utl::hashmap<int, AssetHandle> textureConstants;
     utl::hashmap<Value const*, int> parameterIndexMap;
     std::vector<MaterialPrimitiveParameter> primitiveParameters;
     std::vector<MaterialTextureParameter> textureParameters;
@@ -303,12 +304,8 @@ MaterialSourceData MetalCodeGenerator::run() {
     writeVertexFunction();
     writeFragmentFunction();
     writeInclude(IncludeType::Local, "Shader/PBRShader.metal");
-    auto constantFragmentTextures = textureIndexMap | transform([](auto& p) {
-        auto [tex, index] = p;
-        return std::pair{ index, tex->asset() };
-    }) | ranges::to<utl::hashmap<int, AssetHandle>>;
     return { .source = takeSource(),
-             .constantFragmentTextures = std::move(constantFragmentTextures),
+             .constantFragmentTextures = std::move(textureConstants),
              .primitiveParameters = std::move(primitiveParameters),
              .textureParameters = std::move(textureParameters),
              .parameterBufferSize = parameterBufferSize };
@@ -693,18 +690,27 @@ std::string MetalCodeGenerator::genNameImpl(VectorParameter const& param) {
     return utl::strcat(ParameterObjectName, "._", itr->second);
 }
 
+static MaterialTextureParameter translate(TextureParameter const& param,
+                                          int fragmentIndex) {
+    return { .type = translate(param.type()),
+             .fragmentBindingPoint = fragmentIndex,
+             .vertexBindingPoint = MaterialTextureParameter::UnusedBindingPoint,
+             .name = param.name(),
+             .defaultValue = param.asset() };
+}
+
 std::string MetalCodeGenerator::genNameImpl(TextureValue const& tex) {
     int index = ReservedTextureSlots + textureIndexCounter++;
     textureIndexMap[&tex] = index;
-    if (auto* param = dyncast<TextureParameter const*>(&tex)) {
-        textureParameters.push_back(
-            { .type = translate(param->type()),
-              .fragmentBindingPoint = index,
-              .vertexBindingPoint =
-                  MaterialTextureParameter::UnusedBindingPoint,
-              .name = param->name(),
-              .defaultValue = param->asset() });
-    }
+    // clang-format off
+    visit(tex, utl::overload{
+        [&](TextureConstant const& constant) {
+            textureConstants[index] = constant.asset();
+        },
+        [&](TextureParameter const& param) {
+            textureParameters.push_back(translate(param, index));
+        },
+    }); // clang-format on
     return utl::strcat("Texture_", index);
 }
 

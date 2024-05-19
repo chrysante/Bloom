@@ -572,7 +572,8 @@ void Viewport::dropdownMenu() {
         }
         beginProperty("IBL Texture");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        assetButton(iblTexture, { .repr = AssetRepresentation::CPU });
+        assetButton("###IBLTexture", iblTexture,
+                    { .repr = AssetRepresentation::CPU });
         endSection();
     }
     ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);

@@ -158,35 +158,45 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
     if (params.drawWireframe) {
         encoder->setTriangleFillMode(TriangleFillMode::Lines);
     }
-    Material* currentMaterial = nullptr;
-    MaterialInstance* currentMaterialInstance = nullptr;
-    StaticMeshRenderer* currentMesh = nullptr;
+    Material* curMat = nullptr;
+    MaterialInstance* curMatInst = nullptr;
+    StaticMeshRenderer* curMesh = nullptr;
     for (size_t index = 0; auto object: geometry->getObjects()) {
-        if (object.materialInstance->material() != currentMaterial) {
-            currentMaterial = object.materialInstance->material();
-            encoder->setPipeline(currentMaterial->rgMainPass);
-            encoder->setTriangleCullMode(currentMaterial->cullMode);
-            encoder->setDepthStencil(currentMaterial->depthStencil);
-            for (auto& [index, texture]:
-                 currentMaterial->constantFragmentTextures)
-            {
+        if (object.materialInstance->material() != curMat) {
+            curMat = object.materialInstance->material();
+            encoder->setPipeline(curMat->rgMainPass);
+            encoder->setTriangleCullMode(curMat->cullMode);
+            encoder->setDepthStencil(curMat->depthStencil);
+            for (auto& [index, texture]: curMat->constantFragmentTextures) {
                 if (texture) {
                     encoder->setFragmentTexture(texture->GPUHandle, index);
                 }
             }
         }
-        if (object.materialInstance.get() != currentMaterialInstance) {
+        if (object.materialInstance.get() != curMatInst) {
             auto paramBuffer = object.materialInstance->buffer();
             encoder->setFragmentBuffer(paramBuffer,
                                        getBindIndex(Fragment,
                                                     MaterialParameterBuffer));
-            currentMaterialInstance = object.materialInstance.get();
-            currentMaterialInstance->uploadData(device());
+            curMatInst = object.materialInstance.get();
+            curMatInst->uploadData(device());
+            for (auto& [key, tex]: curMatInst->getTextures()) {
+                auto [vertBinding, fragBinding] = key;
+                auto texView = tex ? tex->GPUHandle : TextureView();
+                if (vertBinding > MaterialTextureParameter::UnusedBindingPoint)
+                {
+                    encoder->setVertexTexture(texView, vertBinding);
+                }
+                if (fragBinding > MaterialTextureParameter::UnusedBindingPoint)
+                {
+                    encoder->setFragmentTexture(texView, fragBinding);
+                }
+            }
         }
-        if (object.mesh.get() != currentMesh) {
+        if (object.mesh.get() != curMesh) {
             encoder->setVertexBuffer(object.mesh->vertexBuffer(),
                                      getBindIndex(Vertex, Geometry));
-            currentMesh = object.mesh.get();
+            curMesh = object.mesh.get();
         }
         // Object transform
         encoder->setVertexBufferOffset(transformBufferIndex,

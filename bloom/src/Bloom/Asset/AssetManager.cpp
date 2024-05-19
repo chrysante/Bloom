@@ -627,6 +627,9 @@ void AssetManager::renameAsset(AssetHandle handle, std::string name) {
                             impl->makeAbsolute(newPath));
     entry.diskLocation = newPath;
     impl->writeRegistryToDisk();
+    if (auto asset = entry.asset.lock()) {
+        asset->mName = name;
+    }
 }
 
 void AssetManager::deleteAsset(AssetHandle handle) {
@@ -655,11 +658,14 @@ Reference<Asset> AssetManager::get(AssetHandle handle,
         Logger::Error("Failed to find asset ", handle);
         return nullptr;
     }
-    if (auto asset = entry->asset.lock()) {
+    auto asset = [&] {
+        if (auto asset = entry->asset.lock()) {
+            return asset;
+        }
+        auto asset = impl->allocateAsset(handle, entry->name);
+        entry->asset = asset;
         return asset;
-    }
-    auto asset = impl->allocateAsset(handle, entry->name);
-    entry->asset = asset;
+    }();
     if (repr != AssetRepresentation::None) {
         impl->makeAvail(*asset, *entry, repr, false);
     }

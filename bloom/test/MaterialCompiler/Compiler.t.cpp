@@ -17,7 +17,9 @@ static AssetHandle genTexture() {
 TEST_CASE() {
     Context ctx;
     MaterialGraph g(MaterialShadingModel::DefaultLit);
-    auto* tex0 = ctx.textureConstant(TextureSubType::Texture2D, genTexture());
+    auto* tex0 =
+        g.addValue<TextureParameter>(ctx.textureType(TextureSubType::Texture2D),
+                                     genTexture(), "TexParam");
     auto* tex1 = ctx.textureConstant(TextureSubType::TextureCube, genTexture());
     auto* const0 =
         g.addValue<VectorParameter>(ctx, 1, float4{ 1, 0, 0, 0 }, "Param0");
@@ -35,10 +37,12 @@ TEST_CASE() {
     auto* coords = ctx.rasterizerInput(RasterizerInputKind::TextureCoords);
     auto* sample0 =
         g.addValue<TextureSampler>(ctx, tex0, coords, SampleMode::Normal);
+    auto* sample1 =
+        g.addValue<TextureSampler>(ctx, tex1, coords, SampleMode::Color);
     auto* aggregate =
-        g.addValue<AggregateBuilder>(ctx,
-                                     std::vector<Value*>{ const0, const1, vec0,
-                                                          sample0, const2 });
+        g.addValue<AggregateBuilder>(ctx, std::vector<Value*>{
+                                              const0, const1, vec0, sample0,
+                                              sample1, const2 });
     Value* resultVal = g.addValue<AggregateElement>(aggregate, 1);
     resultVal = g.addValue<BuiltinFunction>(ctx, BuiltinFunctionKind::Normalize,
                                             std::vector<Value*>{ resultVal });

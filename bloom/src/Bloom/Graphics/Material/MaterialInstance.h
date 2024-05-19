@@ -34,7 +34,21 @@ public:
         return primitiveParameters;
     }
 
+    std::span<MaterialTextureParameter> getTextureParameterDescriptors() {
+        return textureParameters;
+    }
+
+    std::span<std::pair<std::pair<int, int>, Reference<Texture2D>> const>
+        getTextures() const {
+        return textures.values();
+    }
+
     void setParameter(void* data, size_t offset, size_t size);
+
+    void setTexture(int vertBinding, int fragBinding,
+                    Reference<Texture2D> texture);
+
+    Reference<Texture2D> getTexture(int vertBinding, int fragBinding) const;
 
     YAML::Node serialize() const;
 
@@ -53,6 +67,8 @@ private:
     std::vector<uint8_t> cpuBuffer;
     std::vector<MaterialPrimitiveParameter> primitiveParameters;
     std::vector<MaterialTextureParameter> textureParameters;
+    /// Maps pairs of vertex and fragment binding points to textures
+    utl::hashmap<std::pair<int, int>, Reference<Texture2D>> textures;
     bool mDirty = true;
 };
 

@@ -22,6 +22,13 @@ struct MaterialPrimitiveParameter {
 struct MaterialTextureParameter {
     static constexpr int UnusedBindingPoint = -1;
 
+    bool hasFragmentBinding() const {
+        return fragmentBindingPoint != UnusedBindingPoint;
+    }
+    bool hasVertexBinding() const {
+        return vertexBindingPoint != UnusedBindingPoint;
+    }
+
     MaterialDataType type;
     int fragmentBindingPoint = UnusedBindingPoint;
     int vertexBindingPoint = UnusedBindingPoint;

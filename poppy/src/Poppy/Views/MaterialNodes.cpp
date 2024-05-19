@@ -507,9 +507,10 @@ struct ConstantController: MaterialNodeController {
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
             ImGui::Combo("###Texture Type", (int*)&textype, textypenames, 2);
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            if (assetButton(texture, { .repr = AssetRepresentation::GPU,
-                                       .style = AssetButtonStyle::Thumbnail,
-                                       .maxHeight = 100 }))
+            if (assetButton("###Texture", texture,
+                            { .repr = AssetRepresentation::GPU,
+                              .style = AssetButtonStyle::Thumbnail,
+                              .size = ImGui::GetContentRegionAvail() }))
             {
                 textureHandle = texture->handle();
             }

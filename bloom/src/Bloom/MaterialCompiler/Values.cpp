@@ -96,10 +96,6 @@ TextureSampler::TextureSampler(Context& ctx, TextureConstant* texture,
     User(ValueNodeType::TextureSampler, ctx.float4Type(), { texture, coords }),
     _mode(mode) {}
 
-TextureConstant* TextureSampler::texture() const {
-    return cast<TextureConstant*>(operand(0));
-}
-
 static int accNumComponents(std::span<Value const* const> values) {
     return ranges::accumulate(values, 0, ranges::plus{},
                               [](Value const* value) {

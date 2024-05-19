@@ -158,11 +158,10 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
     if (params.drawWireframe) {
         encoder->setTriangleFillMode(TriangleFillMode::Lines);
     }
-    Material const* currentMaterial = nullptr;
-    MaterialInstance const* currentMaterialInstance = nullptr;
-    StaticMeshRenderer const* currentMesh = nullptr;
+    Material* currentMaterial = nullptr;
+    MaterialInstance* currentMaterialInstance = nullptr;
+    StaticMeshRenderer* currentMesh = nullptr;
     for (size_t index = 0; auto object: geometry->getObjects()) {
-        object.materialInstance->uploadData(device());
         if (object.materialInstance->material() != currentMaterial) {
             currentMaterial = object.materialInstance->material();
             encoder->setPipeline(currentMaterial->rgMainPass);
@@ -182,6 +181,7 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
                                        getBindIndex(Fragment,
                                                     MaterialParameterBuffer));
             currentMaterialInstance = object.materialInstance.get();
+            currentMaterialInstance->uploadData(device());
         }
         if (object.mesh.get() != currentMesh) {
             encoder->setVertexBuffer(object.mesh->vertexBuffer(),

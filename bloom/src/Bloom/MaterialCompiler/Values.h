@@ -16,6 +16,12 @@
         return cast<T const*>(Value::type());                                  \
     }
 
+#define DECLARE_OPERAND(TYPE, NAME, INDEX)                                     \
+    template <typename T = TYPE>                                               \
+    T* NAME() const {                                                          \
+        return cast<T*>(User::operand(INDEX));                                 \
+    }
+
 namespace bloom::matc {
 
 class Value {
@@ -96,7 +102,7 @@ class TextureParameter: public TextureValue {
 public:
     explicit TextureParameter(TextureType const* type, AssetHandle asset,
                               std::string name):
-        TextureValue(ValueNodeType::TextureValue, type, asset),
+        TextureValue(ValueNodeType::TextureParameter, type, asset),
         _name(std::move(name)) {}
 
     std::string const& name() const { return _name; }
@@ -174,9 +180,8 @@ public:
              { nullptr, nullptr }),
         _kind(kind) {}
 
-    Value* LHS() const { return operand(0); }
-
-    Value* RHS() const { return operand(1); }
+    DECLARE_OPERAND(Value, LHS, 0)
+    DECLARE_OPERAND(Value, RHS, 1)
 
     Kind kind() const { return _kind; }
 
@@ -191,9 +196,8 @@ public:
     TextureSampler(Context& ctx, TextureConstant* texture, Value* coords,
                    SampleMode mode);
 
-    TextureConstant* texture() const;
-
-    Value* coords() const { return operand(1); }
+    DECLARE_OPERAND(TextureValue, texture, 0)
+    DECLARE_OPERAND(Value, coords, 1)
 
     SampleMode mode() const { return _mode; }
 
@@ -218,7 +222,7 @@ public:
 
     int index() const { return _index; }
 
-    Value* operand() const { return User::operand(0); }
+    DECLARE_OPERAND(Value, operand, 0)
 
 private:
     int _index = -1;
@@ -244,7 +248,7 @@ public:
 
     int index() const { return _index; }
 
-    Value* operand() const { return User::operand(0); }
+    DECLARE_OPERAND(Value, operand, 0)
 
 private:
     int _index;
@@ -253,5 +257,6 @@ private:
 } // namespace bloom::matc
 
 #undef DECLARE_TYPE
+#undef DECLARE_OPERAND
 
 #endif // BLOOM_MATERIALCOMPILER_VALUES_H

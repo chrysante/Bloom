@@ -311,6 +311,11 @@ struct ConstantController: MaterialNodeController {
             texture = getAsset<Texture2D>(textureHandle);
         }
         textype = node["TextureType"].as<TextureSubType>();
+        try {
+            parameterName = node["ParameterName"].as<std::string>();
+        }
+        catch (...) {
+        }
         isParameter = node["IsParameter"].as<bool>();
     }
 
@@ -321,6 +326,7 @@ struct ConstantController: MaterialNodeController {
         node["Value"] = value;
         node["Texture"] = textureHandle;
         node["TextureType"] = textype;
+        node["ParameterName"] = parameterName;
         node["IsParameter"] = isParameter;
         return node;
     }
@@ -380,8 +386,8 @@ struct ConstantController: MaterialNodeController {
         }
     }
 
-    utl::small_vector<Value*> createGraphNodes(Context& ctx,
-                                               MaterialGraph&) const override {
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& graph) const override {
         using enum DataType;
         switch (dataType) {
         case DataType::Float:
@@ -392,12 +398,29 @@ struct ConstantController: MaterialNodeController {
             [[fallthrough]];
         case DataType::Float4: {
             int numComponents = (int)dataType - (int)DataType::Float + 1;
-            return { ctx.vectorConstant(numComponents, value) };
+            if (isParameter) {
+                auto* param =
+                    graph.addValue<VectorParameter>(ctx, numComponents, value,
+                                                    node()->name());
+                return { param };
+            }
+            else {
+                return { ctx.vectorConstant(numComponents, value) };
+            }
         }
         case AnyVector:
             BL_UNREACHABLE();
         case Texture:
-            return { ctx.textureConstant(textype, textureHandle) };
+            if (isParameter) {
+                auto* param =
+                    graph.addValue<TextureParameter>(ctx.textureType(textype),
+                                                     textureHandle,
+                                                     parameterName);
+                return { param };
+            }
+            else {
+                return { ctx.textureConstant(textype, textureHandle) };
+            }
         }
     }
 
@@ -510,6 +533,8 @@ struct ConstantController: MaterialNodeController {
         }
     }
 
+    void didEditName(std::string newName) override { parameterName = newName; }
+
     float4 nodeColor() override {
         return isParameter ? colors.parameter : colors.constant;
     }
@@ -522,6 +547,7 @@ struct ConstantController: MaterialNodeController {
     AssetHandle textureHandle;
     Reference<Texture2D> texture;
     TextureSubType textype = TextureSubType::Texture2D;
+    std::string parameterName;
     bool isParameter = false;
 };
 

@@ -102,6 +102,9 @@ public:
     /// removed
     virtual void pinConnectionChanged(Pin&) {}
 
+    /// Called after the user has editd the node name
+    virtual void didEditName(std::string /* newName */) {}
+
     /// \Returns the node that this controller is attached to
     Node* node() const { return _node; }
 
@@ -300,7 +303,7 @@ public:
     std::string const& name() const { return desc().name; }
 
     /// Sets the name of this node
-    void setName(std::string name) { _desc.name = std::move(name); }
+    void setName(std::string name);
 
     /// \Returns the size of this node
     vml::float2 size() const { return _size; }

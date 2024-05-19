@@ -397,8 +397,18 @@ utl::hashset<Node const*> Node::predecessors() const {
     return predsImpl(inputs()) | ranges::to<utl::hashset<Node const*>>;
 }
 
+void Node::setName(std::string name) {
+    if (controller()) {
+        controller()->didEditName(name);
+    }
+    _desc.name = std::move(name);
+}
+
 Node* NodeEditorGraph::addNode(std::unique_ptr<Node> node) {
     BL_ASSERT(node, "Node must not be null");
+    if (node->controller()) {
+        node->controller()->_editor = _editor;
+    }
     _nodes.push_back(std::move(node));
     return _nodes.back().get();
 }
@@ -1325,7 +1335,9 @@ void NodeEditor::setModel(NodeEditorGraph* model) {
         impl->model->setEditor(nullptr);
     }
     impl->model = model;
-    model->setEditor(this);
+    if (model) {
+        model->setEditor(this);        
+    }
 }
 
 YAML::Node NodeEditor::serialize() const {
@@ -1794,61 +1806,6 @@ static float2 computeLabelSize(char const* label, char const* labelEnd,
     return vml::min(desiredLabelSize, availLabelSize);
 }
 
-static void extracted(poppy::NodeEditor::Impl& object, ImDrawList* DL,
-                      float2 const& bodyPadding, value_type const* label,
-                      value_type const* labelEnd, float2& labelPos,
-                      float2 const& labelSize, Node& node, float2 const& pos,
-                      float2 const& scaledSize, float zoom) {
-    static std::array<char, 512> renameBuffer{};
-    if (object.viewData.startRenamingNode == &node) {
-        object.viewData.renamingNode = &node;
-        std::strncpy(renameBuffer.data(), node.name().c_str(),
-                     renameBuffer.size());
-        ImGui::SetKeyboardFocusHere();
-    }
-    if (object.viewData.renamingNode == &node) {
-        auto& g = *GImGui;
-        auto& style = ImGui::GetStyle();
-        float fontSize = g.FontSize;
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
-                            zoom * (float2)style.FramePadding);
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
-        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, 0);
-        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, 0);
-        ImGui::PushStyleColor(ImGuiCol_Border, 0);
-        ImGui::PushStyleColor(ImGuiCol_BorderShadow, 0);
-        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32_WHITE);
-        ImGui::PushStyleColor(ImGuiCol_TextSelectedBg,
-                              IM_COL32(255, 255, 255, 127));
-        g.FontSize *= zoom;
-        ImGui::SetCursorScreenPos(pos + bodyPadding -
-                                  float2(0, style.FramePadding.y));
-        ImGui::SetNextItemWidth(scaledSize.x - bodyPadding.x -
-                                2 * style.FramePadding.x);
-        ImGui::InputText("###", renameBuffer.data(), renameBuffer.size());
-        ImGui::PopStyleColor(7);
-        ImGui::PopStyleVar();
-        g.FontSize = fontSize;
-        if (object.viewData.startRenamingNode != &node &&
-            (!ImGui::IsItemFocused() || ImGui::IsKeyPressed(ImGuiKey_Enter)))
-        {
-            object.viewData.renamingNode = nullptr;
-            node.setName(renameBuffer.data());
-        }
-    }
-    else {
-        auto labelCol =
-            ImGui::ColorConvertFloat4ToU32(styleColors().nodeTitleText);
-        ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
-        DL->AddText(nullptr, ImGui::GetFontSize() * zoom, labelPos, labelCol,
-                    label, labelEnd);
-        ImGui::PopClipRect();
-    }
-    if (object.viewData.startRenamingNode == &node) {
-        object.viewData.startRenamingNode = nullptr;
-    }
-}
-
 /// \Returns the area in which content can be drawn
 ImRect Impl::drawNodeBody(Node& node, bool selected) {
     float zoom = viewData.zoom;
@@ -1907,8 +1864,54 @@ ImRect Impl::drawNodeBody(Node& node, bool selected) {
                 rounding - highlightOutlineInset,
                 ImDrawFlags_RoundCornersBottom, 1 * zoom);
     /// Label
-    extracted(*this, DL, bodyPadding, label, labelEnd, labelPos, labelSize,
-              node, pos, scaledSize, zoom);
+    static std::array<char, 512> renameBuffer{};
+    if (viewData.startRenamingNode == &node) {
+        viewData.renamingNode = &node;
+        std::strncpy(renameBuffer.data(), node.name().c_str(),
+                     renameBuffer.size());
+        ImGui::SetKeyboardFocusHere();
+    }
+    if (viewData.renamingNode == &node) {
+        auto& g = *GImGui;
+        auto& style = ImGui::GetStyle();
+        float fontSize = g.FontSize;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+                            zoom * (float2)style.FramePadding);
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, 0);
+        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, 0);
+        ImGui::PushStyleColor(ImGuiCol_Border, 0);
+        ImGui::PushStyleColor(ImGuiCol_BorderShadow, 0);
+        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32_WHITE);
+        ImGui::PushStyleColor(ImGuiCol_TextSelectedBg,
+                              IM_COL32(255, 255, 255, 127));
+        g.FontSize *= zoom;
+        ImGui::SetCursorScreenPos(pos + bodyPadding -
+                                  float2(0, style.FramePadding.y));
+        ImGui::SetNextItemWidth(scaledSize.x - bodyPadding.x -
+                                2 * style.FramePadding.x);
+        ImGui::InputText("###", renameBuffer.data(), renameBuffer.size());
+        ImGui::PopStyleColor(7);
+        ImGui::PopStyleVar();
+        g.FontSize = fontSize;
+        if (viewData.startRenamingNode != &node &&
+            (!ImGui::IsItemFocused() || ImGui::IsKeyPressed(ImGuiKey_Enter)))
+        {
+            viewData.renamingNode = nullptr;
+            node.setName(renameBuffer.data());
+        }
+    }
+    else {
+        auto labelCol =
+            ImGui::ColorConvertFloat4ToU32(styleColors().nodeTitleText);
+        ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
+        DL->AddText(nullptr, ImGui::GetFontSize() * zoom, labelPos, labelCol,
+                    label, labelEnd);
+        ImGui::PopClipRect();
+    }
+    if (viewData.startRenamingNode == &node) {
+        viewData.startRenamingNode = nullptr;
+    }
     ImGui::PopFont();
     if (ImGui::IsWindowHovered() &&
         ImGui::IsMouseHoveringRect(labelPos, labelPos + labelSize) &&
@@ -2000,6 +2003,9 @@ void Impl::nodeBodyPopup(Node& node, bool show) {
                                                 "Delete Selected Nodes"))
     {
         defer([this] { deleteSelected(); });
+    }
+    if (ImGui::MenuItem("Rename")) {
+        viewData.startRenamingNode = &node;
     }
     if (auto* controller = node.controller()) {
         controller->contextMenuContent();

@@ -688,6 +688,8 @@ struct PersistentViewData {
     float zoom = 1.0;
     /// In screen coordinates
     float2 popupPosition = {};
+    Node const* startRenamingNode = nullptr;
+    Node const* renamingNode = nullptr;
     /// This is here and not in `ActiveViewData` because we want to prolong its
     /// lifetime when the dragging link popup menu is open
     Pin* activePin = nullptr;
@@ -910,6 +912,7 @@ struct NodeEditor::Impl {
     void displayPin(Pin& pin, float2 position, float& maxLabelWith,
                     bool displayLabelInBody);
     void displayPins(Node& node);
+    ImRect drawNodeBody(Node& node, bool selected);
     void nodeBodyPopup(Node& node, bool show);
     void displayNodeBody(Node& node);
     bool canDropNodeIntoLink(Node const& node, Link link) const;
@@ -1773,7 +1776,8 @@ static float2 computeLabelSize(char const* label, char const* labelEnd,
 }
 
 /// \Returns the area in which content can be drawn
-static ImRect drawNodeBody(Node const& node, float zoom, bool selected) {
+ImRect Impl::drawNodeBody(Node& node, bool selected) {
+    float zoom = viewData.zoom;
     auto* DL = ImGui::GetWindowDrawList();
     auto* font =
         FontManager::get(FontDesc::UIDefault().setWeight(FontWeight::Bold));
@@ -1829,13 +1833,47 @@ static ImRect drawNodeBody(Node const& node, float zoom, bool selected) {
                 rounding - highlightOutlineInset,
                 ImDrawFlags_RoundCornersBottom, 1 * zoom);
     /// Label
-    auto labelCol = ImGui::ColorConvertFloat4ToU32(styleColors().nodeTitleText);
-    ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
-    DL->AddText(nullptr, ImGui::GetFontSize() * zoom, labelPos, labelCol, label,
-                labelEnd);
-    ImGui::PopClipRect();
+    static std::array<char, 512> renameBuffer{};
+    if (viewData.startRenamingNode == &node) {
+        viewData.startRenamingNode = nullptr;
+        viewData.renamingNode = &node;
+        std::strncpy(renameBuffer.data(), node.name().c_str(),
+                     renameBuffer.size());
+        ImGui::SetKeyboardFocusHere();
+    }
+    if (viewData.renamingNode == &node) {
+        auto& g = *GImGui;
+        auto& style = ImGui::GetStyle();
+        float fontSize = g.FontSize;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+                            zoom * (float2)style.FramePadding);
+        g.FontSize *= zoom;
+        ImGui::SetCursorScreenPos(pos + bodyPadding.x -
+                                  (float2)style.FramePadding);
+        ImGui::SetNextItemWidth(scaledSize.x - bodyPadding.x);
+        ImGui::InputText("###", renameBuffer.data(), renameBuffer.size());
+        ImGui::PopStyleVar();
+        g.FontSize = fontSize;
+        if (!ImGui::IsItemFocused() || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+            viewData.renamingNode = nullptr;
+            node.setName(renameBuffer.data());
+        }
+    }
+    else {
+        auto labelCol =
+            ImGui::ColorConvertFloat4ToU32(styleColors().nodeTitleText);
+        ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
+        DL->AddText(nullptr, ImGui::GetFontSize() * zoom, labelPos, labelCol,
+                    label, labelEnd);
+        ImGui::PopClipRect();
+    }
     ImGui::PopFont();
-
+    if (ImGui::IsWindowHovered() &&
+        ImGui::IsMouseHoveringRect(labelPos, labelPos + labelSize) &&
+        ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+    {
+        viewData.startRenamingNode = &node;
+    }
     float2 contentRectMin =
         pos + (bodyPadding + float2(0, labelSize.y + 2 * bodyPadding.y));
     float2 contentRectMax = pos + scaledSize - bodyPadding;
@@ -1968,7 +2006,7 @@ void Impl::displayNodeBody(Node& node) {
     auto* DL = ImGui::GetWindowDrawList();
     DL->PushClipRect(viewData.clipRect.Min, viewData.clipRect.Max);
     bool isSelected = selection.contains(&node);
-    ImRect contentRect = drawNodeBody(node, viewData.zoom, isSelected);
+    ImRect contentRect = drawNodeBody(node, isSelected);
     ImGuiID id = ImGui::GetID("Node_Body");
     ImRect bb(pos, pos + scaledNodeSize);
     ImGui::ItemSize(scaledNodeSize);

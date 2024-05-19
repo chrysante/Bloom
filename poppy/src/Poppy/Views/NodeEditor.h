@@ -287,6 +287,9 @@ public:
     /// \Returns the name of this node
     std::string const& name() const { return desc().name; }
 
+    /// Sets the name of this node
+    void setName(std::string name) { _desc.name = std::move(name); }
+
     /// \Returns the size of this node
     vml::float2 size() const { return _size; }
 

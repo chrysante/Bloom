@@ -29,6 +29,12 @@ using namespace matc;
 using namespace vml::short_types;
 using namespace ranges::views;
 
+namespace poppy {
+
+void displayMaterialNodeColorEditor();
+
+}
+
 namespace {
 
 struct MaterialModelImpl: bloom::MaterialModel {
@@ -149,6 +155,10 @@ struct Delegate: NodeEditorDelegate {
         return nullptr;
     }
 
+    void backgroundContextMenu() override {
+        ImGui::MenuItem("Display Color Editor", "", &displayColorEditor);
+    }
+
     bool isPinTypeCompatible(PinUserType output,
                              PinUserType input) const override {
         return isDataTypeCompatible((DataType)output, (DataType)input);
@@ -162,6 +172,7 @@ struct Delegate: NodeEditorDelegate {
     MaterialModelImpl* getModel() { return ::getModel(editor.material.get()); }
 
     MaterialEditor& editor;
+    bool displayColorEditor = false;
 };
 
 } // namespace
@@ -211,6 +222,11 @@ void MaterialEditor::display() {
     }
     else {
         nodeEditor.display();
+    }
+    if (auto* del = dynamic_cast<Delegate*>(nodeEditor.getDelegate());
+        del && del->displayColorEditor)
+    {
+        displayMaterialNodeColorEditor();
     }
 }
 

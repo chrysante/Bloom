@@ -656,6 +656,15 @@ void NodeEditorGraph::orderFront(Node* node) {
     _nodes.push_back(std::move(n));
 }
 
+void NodeEditorGraph::setEditor(NodeEditor* editor) {
+    _editor = editor;
+    for (auto* node: nodes()) {
+        if (auto* c = node->controller()) {
+            c->_editor = editor;
+        }
+    }
+}
+
 namespace {
 
 struct Link {
@@ -877,7 +886,6 @@ Node::Node(NodeDesc desc):
     }
     if (controller()) {
         controller()->_node = this;
-        _color = controller()->nodeColor();
         auto inputDescs = controller()->makeInputDescriptors();
         _inputs = inputDescs | transform([&](PinDesc const& pin) {
             return DynUniquePtr<InputPin>(new InputPin(pin, *this));
@@ -941,7 +949,7 @@ struct NodeEditor::Impl {
 NodeEditor::NodeEditor(CommandPalette& commandPalette):
     impl(std::make_unique<Impl>(commandPalette)) {}
 
-NodeEditor::~NodeEditor() = default;
+NodeEditor::~NodeEditor() { setModel(nullptr); }
 
 void NodeEditor::setDelegate(std::unique_ptr<NodeEditorDelegate> delegate) {
     impl->delegate = std::move(delegate);
@@ -1199,6 +1207,7 @@ void Impl::backgroundPopup() {
     showDebugger |= ImGui::MenuItem("Show Debugger");
     showStyleEditor |= ImGui::MenuItem("Show Style Editor");
     ImGui::Separator();
+    delegate->backgroundContextMenu();
     showNodeCreatePopup(delegate.get(), viewData);
     ImGui::EndPopup();
 }
@@ -1311,7 +1320,13 @@ void Impl::onInput(InputEvent& event) {
 
 NodeEditorGraph* NodeEditor::model() const { return impl->model; }
 
-void NodeEditor::setModel(NodeEditorGraph* model) { impl->model = model; }
+void NodeEditor::setModel(NodeEditorGraph* model) {
+    if (impl->model) {
+        impl->model->setEditor(nullptr);
+    }
+    impl->model = model;
+    model->setEditor(this);
+}
 
 YAML::Node NodeEditor::serialize() const {
     YAML::Node root;
@@ -1328,6 +1343,10 @@ void NodeEditor::deserialize(YAML::Node const& node) const {
         Logger::Error("Failed to deserialize node editor view data: ",
                       err.what());
     }
+}
+
+void NodeEditor::startRenamingNode(nodeEditor::Node const* node) {
+    impl->viewData.startRenamingNode = node;
 }
 
 namespace {
@@ -1775,6 +1794,61 @@ static float2 computeLabelSize(char const* label, char const* labelEnd,
     return vml::min(desiredLabelSize, availLabelSize);
 }
 
+static void extracted(poppy::NodeEditor::Impl& object, ImDrawList* DL,
+                      float2 const& bodyPadding, value_type const* label,
+                      value_type const* labelEnd, float2& labelPos,
+                      float2 const& labelSize, Node& node, float2 const& pos,
+                      float2 const& scaledSize, float zoom) {
+    static std::array<char, 512> renameBuffer{};
+    if (object.viewData.startRenamingNode == &node) {
+        object.viewData.renamingNode = &node;
+        std::strncpy(renameBuffer.data(), node.name().c_str(),
+                     renameBuffer.size());
+        ImGui::SetKeyboardFocusHere();
+    }
+    if (object.viewData.renamingNode == &node) {
+        auto& g = *GImGui;
+        auto& style = ImGui::GetStyle();
+        float fontSize = g.FontSize;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+                            zoom * (float2)style.FramePadding);
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, 0);
+        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, 0);
+        ImGui::PushStyleColor(ImGuiCol_Border, 0);
+        ImGui::PushStyleColor(ImGuiCol_BorderShadow, 0);
+        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32_WHITE);
+        ImGui::PushStyleColor(ImGuiCol_TextSelectedBg,
+                              IM_COL32(255, 255, 255, 127));
+        g.FontSize *= zoom;
+        ImGui::SetCursorScreenPos(pos + bodyPadding -
+                                  float2(0, style.FramePadding.y));
+        ImGui::SetNextItemWidth(scaledSize.x - bodyPadding.x -
+                                2 * style.FramePadding.x);
+        ImGui::InputText("###", renameBuffer.data(), renameBuffer.size());
+        ImGui::PopStyleColor(7);
+        ImGui::PopStyleVar();
+        g.FontSize = fontSize;
+        if (object.viewData.startRenamingNode != &node &&
+            (!ImGui::IsItemFocused() || ImGui::IsKeyPressed(ImGuiKey_Enter)))
+        {
+            object.viewData.renamingNode = nullptr;
+            node.setName(renameBuffer.data());
+        }
+    }
+    else {
+        auto labelCol =
+            ImGui::ColorConvertFloat4ToU32(styleColors().nodeTitleText);
+        ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
+        DL->AddText(nullptr, ImGui::GetFontSize() * zoom, labelPos, labelCol,
+                    label, labelEnd);
+        ImGui::PopClipRect();
+    }
+    if (object.viewData.startRenamingNode == &node) {
+        object.viewData.startRenamingNode = nullptr;
+    }
+}
+
 /// \Returns the area in which content can be drawn
 ImRect Impl::drawNodeBody(Node& node, bool selected) {
     float zoom = viewData.zoom;
@@ -1833,40 +1907,8 @@ ImRect Impl::drawNodeBody(Node& node, bool selected) {
                 rounding - highlightOutlineInset,
                 ImDrawFlags_RoundCornersBottom, 1 * zoom);
     /// Label
-    static std::array<char, 512> renameBuffer{};
-    if (viewData.startRenamingNode == &node) {
-        viewData.startRenamingNode = nullptr;
-        viewData.renamingNode = &node;
-        std::strncpy(renameBuffer.data(), node.name().c_str(),
-                     renameBuffer.size());
-        ImGui::SetKeyboardFocusHere();
-    }
-    if (viewData.renamingNode == &node) {
-        auto& g = *GImGui;
-        auto& style = ImGui::GetStyle();
-        float fontSize = g.FontSize;
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
-                            zoom * (float2)style.FramePadding);
-        g.FontSize *= zoom;
-        ImGui::SetCursorScreenPos(pos + bodyPadding.x -
-                                  (float2)style.FramePadding);
-        ImGui::SetNextItemWidth(scaledSize.x - bodyPadding.x);
-        ImGui::InputText("###", renameBuffer.data(), renameBuffer.size());
-        ImGui::PopStyleVar();
-        g.FontSize = fontSize;
-        if (!ImGui::IsItemFocused() || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
-            viewData.renamingNode = nullptr;
-            node.setName(renameBuffer.data());
-        }
-    }
-    else {
-        auto labelCol =
-            ImGui::ColorConvertFloat4ToU32(styleColors().nodeTitleText);
-        ImGui::PushClipRect(labelPos, labelPos + labelSize, true);
-        DL->AddText(nullptr, ImGui::GetFontSize() * zoom, labelPos, labelCol,
-                    label, labelEnd);
-        ImGui::PopClipRect();
-    }
+    extracted(*this, DL, bodyPadding, label, labelEnd, labelPos, labelSize,
+              node, pos, scaledSize, zoom);
     ImGui::PopFont();
     if (ImGui::IsWindowHovered() &&
         ImGui::IsMouseHoveringRect(labelPos, labelPos + labelSize) &&

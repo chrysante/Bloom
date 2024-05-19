@@ -27,6 +27,38 @@ static constexpr std::array<char const*, 4> ColorChannelNames = {
     "Red", "Green", "Blue", "Alpha"
 };
 
+namespace {
+
+struct Colors {
+    float4 output = { 0.1, 0.1, 0.1, 1 };
+    float4 input = { 1, 0, 0.5, 1 };
+    float4 constant = { 0, 0.55, 0.066, 1 };
+    float4 parameter = { 0.89, 0, 1, 1 };
+    float4 sampler = { 0, 0.45, 1, 1 };
+    float4 util = { 0, 0.86, 0.14, 1 };
+};
+
+} // namespace
+
+static Colors colors;
+
+namespace poppy {
+
+void displayMaterialNodeColorEditor() {
+    ImGui::Begin("Material Node Colors");
+#define EDIT(Name) ImGui::ColorEdit4(#Name, colors.Name.data())
+    EDIT(output);
+    EDIT(input);
+    EDIT(constant);
+    EDIT(parameter);
+    EDIT(sampler);
+    EDIT(util);
+#undef EDIT
+    ImGui::End();
+}
+
+} // namespace poppy
+
 static Type const* translateType(Context& ctx, DataType dataType) {
     using enum DataType;
     switch (dataType) {
@@ -156,7 +188,7 @@ struct OutputController: MaterialNodeController {
         }
     }
 
-    vml::float4 nodeColor() override { return { 0.1, 0.1, 0.1, 1 }; }
+    float4 nodeColor() override { return colors.output; }
 };
 
 REGISTER_MATERIAL_NODE(OutputController, {
@@ -246,7 +278,7 @@ struct InputController: MaterialNodeController {
 
     float2 preferredContentSize() const override { return { 70, 0 }; }
 
-    float4 nodeColor() override { return { 1, 0.3, 0.1, 1 }; }
+    float4 nodeColor() override { return colors.input; }
 
     bool alwaysDisplayInputNames() const override { return false; }
     bool alwaysDisplayOutputNames() const override { return true; }
@@ -261,9 +293,12 @@ REGISTER_MATERIAL_NODE(InputController, {
 struct ConstantController: MaterialNodeController {
     static constexpr auto Name = "ConstantController";
 
+    static std::string nameAsConstant(DataType dataType) {
+        return utl::strcat(magic_enum::enum_name(dataType), " Constant");
+    }
+
     static NodeDesc Make(DataType dataType) {
-        return { .name =
-                     utl::strcat(magic_enum::enum_name(dataType), " Constant"),
+        return { .name = nameAsConstant(dataType),
                  .controller = std::make_unique<ConstantController>(dataType) };
     }
 
@@ -276,6 +311,7 @@ struct ConstantController: MaterialNodeController {
             texture = getAsset<Texture2D>(textureHandle);
         }
         textype = node["TextureType"].as<TextureSubType>();
+        isParameter = node["IsParameter"].as<bool>();
     }
 
     YAML::Node serialize() const override {
@@ -285,6 +321,7 @@ struct ConstantController: MaterialNodeController {
         node["Value"] = value;
         node["Texture"] = textureHandle;
         node["TextureType"] = textype;
+        node["IsParameter"] = isParameter;
         return node;
     }
 
@@ -363,12 +400,6 @@ struct ConstantController: MaterialNodeController {
             return { ctx.textureConstant(textype, textureHandle) };
         }
     }
-
-    bool alwaysDisplayInputNames() const override { return false; }
-
-    bool alwaysDisplayOutputNames() const override { return false; }
-
-    float4 nodeColor() override { return { 0.2, .8, .2, 1 }; }
 
     float2 preferredContentSize() const override {
         auto& style = ImGui::GetStyle();
@@ -464,12 +495,34 @@ struct ConstantController: MaterialNodeController {
         }
     }
 
+    void contextMenuContent() override {
+        if (isParameter) {
+            if (ImGui::MenuItem("Demote to Constant")) {
+                node()->setName(nameAsConstant(dataType));
+                isParameter = false;
+            }
+        }
+        else {
+            if (ImGui::MenuItem("Promote to Parameter")) {
+                editor()->startRenamingNode(node());
+                isParameter = true;
+            }
+        }
+    }
+
+    float4 nodeColor() override {
+        return isParameter ? colors.parameter : colors.constant;
+    }
+    bool alwaysDisplayInputNames() const override { return false; }
+    bool alwaysDisplayOutputNames() const override { return false; }
+
     DataType dataType;
     float4 value = .5;
     float4 backupValue = {};
     AssetHandle textureHandle;
     Reference<Texture2D> texture;
     TextureSubType textype = TextureSubType::Texture2D;
+    bool isParameter = false;
 };
 
 REGISTER_MATERIAL_NODE(ConstantController, {
@@ -562,6 +615,7 @@ struct BuiltinFunctionController: OverloadableNodeController {
         }
     }
 
+    float4 nodeColor() override { return colors.util; }
     float2 preferredContentSize() const override { return { 70, 0 }; }
     bool alwaysDisplayInputNames() const override { return false; }
     bool alwaysDisplayOutputNames() const override { return true; }
@@ -617,7 +671,11 @@ struct AppendController: MaterialNodeController {
                                     numComponents)) };
     }
 
+    Value* defaultInputValue(Context& ctx, size_t inputIndex) const override {
+        return ctx.floatConstant(0);
+    }
     float2 preferredContentSize() const override { return { 50, 0 }; }
+    float4 nodeColor() override { return colors.util; }
 
     int numComponents;
 };
@@ -677,6 +735,7 @@ struct SplitController: MaterialNodeController {
         }) | ToSmallVector<>;
     }
 
+    float4 nodeColor() override { return colors.util; }
     float2 preferredContentSize() const override { return { 50, 0 }; }
     bool alwaysDisplayInputNames() const override { return false; }
     bool alwaysDisplayOutputNames() const override { return false; }
@@ -721,11 +780,8 @@ struct ArithmeticController: OverloadableNodeController {
     }
 
     std::vector<PinDesc> makeInputDescriptors() override {
-        return { { .name = "A",
-                   .flags = PinFlags::Optional,
-                   .userType = (PinUserType)DataType::AnyVector },
+        return { { .name = "A", .userType = (PinUserType)DataType::AnyVector },
                  { .name = "B",
-                   .flags = PinFlags::Optional,
                    .userType = (PinUserType)DataType::AnyVector } };
     }
 
@@ -761,6 +817,7 @@ struct ArithmeticController: OverloadableNodeController {
         return { value };
     }
 
+    float4 nodeColor() override { return colors.util; }
     float2 preferredContentSize() const override { return { 50, 0 }; }
     bool alwaysDisplayInputNames() const override { return true; }
     bool alwaysDisplayOutputNames() const override { return false; }
@@ -868,7 +925,7 @@ struct TextureSamplerController: MaterialNodeController {
         }
     }
 
-    vml::float4 nodeColor() override { return { 0.2, 0.4, 1, 1 }; }
+    float4 nodeColor() override { return colors.sampler; }
     float2 preferredContentSize() const override { return { 100, 0 }; }
 
     SampleMode mode = SampleMode::Color;

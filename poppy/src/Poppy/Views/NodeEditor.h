@@ -21,6 +21,13 @@
 #include "Bloom/Core/Dyncast.h"
 #include "Poppy/UI/Fwd.h"
 
+namespace poppy {
+
+class NodeEditor;
+class NodeEditorGraph;
+
+} // namespace poppy
+
 namespace poppy::nodeEditor {
 
 class Pin;
@@ -98,9 +105,14 @@ public:
     /// \Returns the node that this controller is attached to
     Node* node() const { return _node; }
 
+    /// \Returns the node editor in which this node is opened
+    NodeEditor* editor() const { return _editor; }
+
 private:
     friend class Node;
+    friend class poppy::NodeEditorGraph;
 
+    NodeEditor* _editor = nullptr;
     Node* _node = nullptr;
 };
 
@@ -303,7 +315,10 @@ public:
     void setPosition(vml::float2 position) { _desc.position = position; }
 
     /// \Returns the body color of the node
-    vml::float4 color() const { return _color; }
+    vml::float4 color() const {
+        return controller() ? controller()->nodeColor() :
+                              vml::float4{ 0, 0, 0, 1 };
+    }
 
     /// Internal to the node editor
     LayoutData& layoutData() { return *_layoutData; }
@@ -315,7 +330,6 @@ private:
     friend class Pin;
 
     NodeDesc _desc;
-    vml::float4 _color = {};
     vml::float2 _size;
     std::unique_ptr<LayoutData> _layoutData;
     std::vector<bloom::DynUniquePtr<nodeEditor::InputPin>> _inputs;
@@ -384,8 +398,15 @@ public:
     /// the nodes
     void orderFront(Node* node);
 
+    /// \Returns the node editor in which is graph is opened
+    NodeEditor* editor() const { return _editor; }
+
+    ///
+    void setEditor(NodeEditor* editor);
+
 private:
     std::vector<std::unique_ptr<Node>> _nodes;
+    NodeEditor* _editor;
 };
 
 /// Provides callbacks to customize the behaviour of a node editor
@@ -405,6 +426,9 @@ public:
         nodeEditor::PinUserType /* type */) const {
         return std::nullopt;
     }
+
+    ///
+    virtual void backgroundContextMenu() {}
 
     /// Context menu content to create new nodes. Shall return a pointer to node
     /// if a node has been added
@@ -444,6 +468,9 @@ public:
 
     /// Deserializes view data
     void deserialize(YAML::Node const& node) const;
+
+    ///
+    void startRenamingNode(nodeEditor::Node const* node);
 
     struct Impl;
 

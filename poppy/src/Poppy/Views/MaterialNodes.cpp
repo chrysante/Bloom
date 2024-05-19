@@ -262,23 +262,9 @@ struct ConstantController: MaterialNodeController {
     static constexpr auto Name = "ConstantController";
 
     static NodeDesc Make(DataType dataType) {
-        using enum DataType;
-        NodeDesc desc = {
-            .name = utl::strcat(magic_enum::enum_name(dataType), " Constant"),
-            .controller = std::make_unique<ConstantController>(dataType)
-        };
-        switch (dataType) {
-        case Float3:
-            [[fallthrough]];
-        case Float4:
-            [[fallthrough]];
-        case Texture:
-            desc.resizable = true;
-            break;
-        default:
-            break;
-        }
-        return desc;
+        return { .name =
+                     utl::strcat(magic_enum::enum_name(dataType), " Constant"),
+                 .controller = std::make_unique<ConstantController>(dataType) };
     }
 
     explicit ConstantController(DataType dataType): dataType(dataType) {}
@@ -395,13 +381,49 @@ struct ConstantController: MaterialNodeController {
         case Float2:
             return { 70, itemHeight };
         case Float3:
-            return { 150, 180 };
+            return { 80, 80 };
         case Float4:
-            return { 150, 180 };
+            return { 80, 80 };
         case AnyVector:
             BL_UNREACHABLE();
         case Texture:
-            return float2{ 100, 100 } + float2(0, itemHeight);
+            return float2{ 80, 80 } + float2(0, itemHeight);
+        }
+    }
+
+    static void colorButton(float4& color, float4& backupColor,
+                            DataType dataType) {
+        auto flags = ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_HDR;
+        bool alpha = dataType == DataType::Float4;
+        if (alpha) {
+            flags |= ImGuiColorEditFlags_AlphaPreview;
+        }
+        auto& colVec4 = *(ImVec4*)color.data();
+        bool pressed = ImGui::ColorButton("###Button", colVec4, flags,
+                                          ImGui::GetContentRegionAvail());
+        if (pressed) {
+            ImGui::OpenPopup("Picker");
+            backupColor = color;
+        }
+        if (ImGui::BeginPopup("Picker")) {
+            ImGui::ColorPicker4("###picker", color.data(),
+                                flags | ImGuiColorEditFlags_NoSidePreview |
+                                    ImGuiColorEditFlags_NoSmallPreview);
+            ImGui::SameLine();
+            ImGui::BeginGroup(); // Lock X position
+            ImGui::Text("Current");
+            auto buttonFlags = ImGuiColorEditFlags_NoPicker |
+                               (alpha ? ImGuiColorEditFlags_AlphaPreview : 0);
+            ImGui::ColorButton("###current", colVec4, buttonFlags,
+                               ImVec2(60, 40));
+            ImGui::Text("Previous");
+            if (ImGui::ColorButton("##previous", (ImVec4&)backupColor,
+                                   buttonFlags, ImVec2(60, 40)))
+            {
+                color = backupColor;
+            }
+            ImGui::EndGroup();
+            ImGui::EndPopup();
         }
     }
 
@@ -417,17 +439,12 @@ struct ConstantController: MaterialNodeController {
             break;
         case DataType::Float2:
             ImGui::SetNextItemWidth(-FLT_MIN);
-            ImGui::DragFloat("###ValueR", &value.x, 0.001);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            ImGui::DragFloat("###ValueG", &value.y, 0.001);
+            ImGui::DragFloat("###Value", &value.x, 0.001);
             break;
         case DataType::Float3:
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            ImGui::ColorPicker3("###Value", value.data(), colFlags);
-            break;
+            [[fallthrough]];
         case DataType::Float4:
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            ImGui::ColorPicker4("###Value", value.data(), colFlags);
+            colorButton(value, backupValue, dataType);
             break;
         case DataType::AnyVector:
             BL_UNREACHABLE();
@@ -449,6 +466,7 @@ struct ConstantController: MaterialNodeController {
 
     DataType dataType;
     float4 value = .5;
+    float4 backupValue = {};
     AssetHandle textureHandle;
     Reference<Texture2D> texture;
     TextureSubType textype = TextureSubType::Texture2D;

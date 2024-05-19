@@ -2,16 +2,55 @@
 
 #include <cstring>
 
+#include <range/v3/view.hpp>
+#include <utl/hashtable.hpp>
+
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Asset/Serialization.h"
 #include "Bloom/GPU/HardwareDevice.h"
 
-namespace bloom {
+using namespace bloom;
+using namespace ranges::views;
+
+namespace {
+
+struct ParamHash {
+    size_t operator()(MaterialPrimitiveParameter const& param) const {
+        return utl::hash_combine(param.name, param.dataType);
+    }
+};
+
+struct ParamEqual {
+    bool operator()(MaterialPrimitiveParameter const& a,
+                    MaterialPrimitiveParameter const& b) const {
+        return a.dataType == b.dataType && a.name == b.name;
+    }
+};
+
+} // namespace
+
+static void amendParameters(
+    MaterialInstance& inst,
+    std::vector<MaterialPrimitiveParameter>& existingParams,
+    std::vector<MaterialPrimitiveParameter> const& newParams) {
+    using Set = utl::hashset<MaterialPrimitiveParameter, ParamHash, ParamEqual>;
+    auto set = existingParams | ranges::to<Set>;
+    existingParams = newParams;
+    for (auto& param: existingParams) {
+        auto itr = set.find(param);
+        if (itr != set.end()) {
+            param.defaultValue = itr->defaultValue;
+        }
+        inst.setParameter(param.defaultValue.data(), param.bufferOffset,
+                          layoutSize(param.dataType));
+    }
+}
 
 void MaterialInstance::setMaterial(Reference<Material> material) {
     cpuBuffer.resize(material->paramBufferSize);
     if (material) {
-        primitiveParameters = material->primitiveParameters;
+        amendParameters(*this, primitiveParameters,
+                        material->primitiveParameters);
         textureParameters = material->textureParameters;
         material->instances.insert(weak_from_this());
     }
@@ -48,5 +87,3 @@ void MaterialInstance::deserialize(YAML::Node const& root,
     setMaterial(as<Material>(assetManager.get(matHandle)));
     assetManager.makeAvailable(matHandle, AssetRepresentation::GPU);
 }
-
-} // namespace bloom

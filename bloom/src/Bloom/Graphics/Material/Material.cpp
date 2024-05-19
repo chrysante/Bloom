@@ -28,6 +28,20 @@ static RenderPipelineHandle createPipeline(
           .fragmentFunction = fragmentFunction });
 }
 
+static void updateInstances(
+    Material& mat,
+    std::set<WeakReference<MaterialInstance>, std::owner_less<>>& instances) {
+    for (auto itr = instances.begin(); itr != instances.end();) {
+        auto instance = itr->lock();
+        if (!instance) {
+            itr = instances.erase(itr);
+            continue;
+        }
+        ++itr;
+        instance->setMaterial(mat.shared_from_this());
+    }
+}
+
 void Material::compile(HardwareDevice& device, AssetManager& AM) {
     BL_PROFILE_FUNCTION();
     try {
@@ -47,6 +61,10 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
             constantFragmentTextures[index] =
                 as<Texture2D>(AM.get(assetHandle, AssetRepresentation::GPU));
         }
+        primitiveParameters = std::move(sourceData.primitiveParameters);
+        paramBufferSize = sourceData.parameterBufferSize;
+        textureParameters = std::move(sourceData.textureParameters);
+        updateInstances(*this, instances);
     }
     catch (std::exception const& e) {
         Logger::Error("Failed to compile material: ", e.what());

@@ -70,6 +70,7 @@ set(bloom_sources
   src/Bloom/GPU/ShaderCompiler.h
 
   src/Bloom/Graphics/Material/Fwd.h
+  src/Bloom/Graphics/Material/Fwd.cpp
   src/Bloom/Graphics/Material/Material.cpp
   src/Bloom/Graphics/Material/Material.h
   src/Bloom/Graphics/Material/MaterialInstance.cpp

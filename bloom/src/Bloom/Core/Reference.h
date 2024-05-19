@@ -40,6 +40,9 @@ Reference<T> allocateRef(Args&&... args) {
     return std::make_shared<T>(UTL_FORWARD(args)...);
 }
 
+template <typename T>
+using EnableRefFromThis = std::enable_shared_from_this<T>;
+
 } // namespace bloom
 
 #endif // BLOOM_CORE_REFERENCE_H

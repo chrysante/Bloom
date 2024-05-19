@@ -65,11 +65,16 @@ void propertiesView::beginProperty(std::string_view label,
             std::max(style.WindowPadding.x, availWidth - textSize.x);
 
         ImGui::SetCursorPosX(cpX);
-        ImGui::Text("%s", label.data());
+        auto* textBegin = label.data();
+        auto* textEnd = label.data() + label.size();
+        ImGui::TextEx(textBegin, textEnd);
         if (cpX == style.WindowPadding.x && ImGui::IsItemHovered()) {
             ImGui::SetNextWindowPos(ImGui::GetWindowPos() + ImVec2(cpX, cpY) -
                                     style.WindowPadding);
-            ImGui::SetTooltip("%s", label.data());
+            if (ImGui::BeginTooltip()) {
+                ImGui::TextEx(textBegin, textEnd);
+                ImGui::EndTooltip();
+            }
         }
     });
 

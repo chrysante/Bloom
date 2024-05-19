@@ -176,7 +176,7 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
             }
         }
         if (object.materialInstance.get() != currentMaterialInstance) {
-            auto paramBuffer = object.materialInstance->parameterBuffer();
+            auto paramBuffer = object.materialInstance->buffer();
             encoder->setFragmentBuffer(paramBuffer,
                                        getBindIndex(Fragment,
                                                     MaterialParameterBuffer));

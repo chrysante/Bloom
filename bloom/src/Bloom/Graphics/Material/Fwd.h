@@ -7,6 +7,7 @@
 namespace bloom {
 
 class Material;
+class MaterialInstance;
 
 /// Declaration order matters because parameter descriptors are sorted based on
 /// their data type
@@ -18,6 +19,9 @@ enum class MaterialDataType {
     Texture2D,
     TextureCube
 };
+
+/// \Returns the size of \p type
+size_t layoutSize(MaterialDataType type);
 
 /// Global buffer and texture binding points used for shading
 

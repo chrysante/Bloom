@@ -2,6 +2,7 @@
 #define BLOOM_GRAPHICS_MATERIAL_MATERIAL_H
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,7 @@
 #include "Bloom/Core/Reference.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
+#include "Bloom/Graphics/Material/MaterialParameter.h"
 
 namespace bloom {
 
@@ -28,7 +30,7 @@ struct MaterialModel {
 
 __attribute__((weak)) std::unique_ptr<MaterialModel> makeMaterialModel();
 
-class BLOOM_API Material: public Asset {
+class BLOOM_API Material: public Asset, public EnableRefFromThis<Material> {
 public:
     explicit Material(AssetHandle handle, std::string name);
 
@@ -41,6 +43,10 @@ public:
     TriangleCullMode cullMode = TriangleCullMode::Back;
     DepthStencilHandle depthStencil;
     utl::hashmap<int, Reference<Texture2D>> constantFragmentTextures;
+    std::vector<MaterialPrimitiveParameter> primitiveParameters;
+    size_t paramBufferSize = 0;
+    std::vector<MaterialTextureParameter> textureParameters;
+    std::set<WeakReference<MaterialInstance>, std::owner_less<>> instances;
 };
 
 } // namespace bloom

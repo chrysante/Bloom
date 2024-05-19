@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <utl/strcat.hpp>
 
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Core.h"
@@ -39,6 +40,34 @@ MaterialInstanceViewer::MaterialInstanceViewer() {
     }); // clang-format on
 }
 
+static bool displayParam(MaterialPrimitiveParameter& param) {
+    using namespace propertiesView;
+    beginProperty(param.name);
+    std::string label = utl::strcat("###", param.name);
+    using enum MaterialDataType;
+    switch (param.dataType) {
+    case Float:
+        fullWidth();
+        return ImGui::DragFloat(label.c_str(), param.defaultValue.data());
+    case Float2:
+        fullWidth();
+        return ImGui::DragFloat2(label.c_str(), param.defaultValue.data());
+    case Float3:
+        return ImGui::ColorEdit3(label.c_str(), param.defaultValue.data(),
+                                 ImGuiColorEditFlags_NoInputs |
+                                     ImGuiColorEditFlags_NoLabel |
+                                     ImGuiColorEditFlags_Float |
+                                     ImGuiColorEditFlags_NoAlpha);
+    case Float4:
+        return ImGui::ColorEdit4(label.c_str(), param.defaultValue.data(),
+                                 ImGuiColorEditFlags_NoInputs |
+                                     ImGuiColorEditFlags_NoLabel |
+                                     ImGuiColorEditFlags_Float);
+    default:
+        return false;
+    }
+}
+
 void MaterialInstanceViewer::display() {
     if (!inst) {
         displayEmptyWithReason("No Material Instance Open");
@@ -54,40 +83,16 @@ void MaterialInstanceViewer::display() {
         }
         endSection();
     }
-    auto params = inst->paramaters();
-    bool edited = false;
-    if (beginSection("Parameters")) {
-        beginProperty("Base Color");
-        edited |= ImGui::ColorEdit3("##base-color", params.baseColor.data(),
-                                    ImGuiColorEditFlags_NoInputs |
-                                        ImGuiColorEditFlags_NoLabel |
-                                        ImGuiColorEditFlags_Float |
-                                        ImGuiColorEditFlags_NoAlpha |
-                                        ImGuiColorEditFlags_PickerHueWheel);
-        beginProperty("Metallic");
-        fullWidth();
-        edited |= ImGui::SliderFloat("##metallic", &params.metallic, 0, 1);
-        beginProperty("Roughness");
-        fullWidth();
-        edited |= ImGui::SliderFloat("##roughness", &params.roughness, 0, 1);
-
-        beginProperty("Emissive");
-        edited |= ImGui::ColorEdit3("##emissive", params.emissive.data(),
-                                    ImGuiColorEditFlags_NoInputs |
-                                        ImGuiColorEditFlags_NoLabel |
-                                        ImGuiColorEditFlags_Float |
-                                        ImGuiColorEditFlags_NoAlpha |
-                                        ImGuiColorEditFlags_PickerHueWheel);
-        beginProperty("Emissive Intensity");
-        fullWidth();
-        edited |= ImGui::DragFloat("##emissive-intensity",
-                                   &params.emissiveIntensity, .1);
-
-        endSection();
+    if (!beginSection("Parameters")) {
+        return;
     }
-    if (edited) {
-        inst->setParamaters(params);
+    for (auto& param: inst->getPrimitiveParameterDescriptors()) {
+        if (displayParam(param)) {
+            inst->setParameter(param.defaultValue.data(), param.bufferOffset,
+                               layoutSize(param.dataType));
+        }
     }
+    endSection();
 }
 
 void MaterialInstanceViewer::receiveData(std::any data) {

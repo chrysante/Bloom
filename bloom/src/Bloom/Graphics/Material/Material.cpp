@@ -4,6 +4,7 @@
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/ShaderCompiler.h"
 #include "Bloom/Graphics/Material/Fwd.h"
+#include "Bloom/Graphics/Material/MaterialSourceData.h"
 #include "Bloom/Graphics/Texture.h"
 
 using namespace bloom;
@@ -42,8 +43,8 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
             throw std::runtime_error("Failed to compile shaders");
         }
         rgMainPass = createPipeline(device, functions[0], functions[1]);
-        for (auto [index, assetHandle]: sourceData.fragmentTextures) {
-            fragmentTextures[index] =
+        for (auto [index, assetHandle]: sourceData.constantFragmentTextures) {
+            constantFragmentTextures[index] =
                 as<Texture2D>(AM.get(assetHandle, AssetRepresentation::GPU));
         }
     }

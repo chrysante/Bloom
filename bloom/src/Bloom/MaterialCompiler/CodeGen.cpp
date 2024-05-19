@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include <range/v3/algorithm.hpp>
 #include <utl/hashtable.hpp>
 #include <utl/overload.hpp>
 #include <utl/strcat.hpp>
@@ -21,6 +22,37 @@ using namespace matc;
 using namespace ranges::views;
 
 namespace {
+
+static MaterialDataType translate(TextureType const* type) {
+    switch (type->subtype()) {
+    case TextureSubType::Texture2D:
+        return MaterialDataType::Texture2D;
+    case TextureSubType::TextureCube:
+        return MaterialDataType::TextureCube;
+    }
+}
+
+static MaterialDataType translate(VectorType const* type) {
+    using enum MaterialDataType;
+    return (MaterialDataType)((int)Float + type->numComponents() - 1);
+}
+
+static Type const* translate(Context& ctx, MaterialDataType type) {
+    switch (type) {
+    case MaterialDataType::Float:
+        return ctx.floatType();
+    case MaterialDataType::Float2:
+        return ctx.float2Type();
+    case MaterialDataType::Float3:
+        return ctx.float3Type();
+    case MaterialDataType::Float4:
+        return ctx.float4Type();
+    case MaterialDataType::Texture2D:
+        return ctx.textureType(TextureSubType::Texture2D);
+    case MaterialDataType::TextureCube:
+        return ctx.textureType(TextureSubType::TextureCube);
+    }
+}
 
 template <typename T>
 class NameGenerator {
@@ -55,16 +87,17 @@ static constexpr std::string_view MaterialFragmentFunctionName =
     "materialFragmentFunction";
 inline constexpr std::string_view MaterialVertexOutName = "MatVertexOut";
 inline constexpr std::string_view MaterialFragmentOutName = "MatFragmentOut";
+inline constexpr std::string_view ParameterObjectName = "parameters";
 
 struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
-    MetalCodeGenerator(Context const& ctx, MaterialGraph const& graph,
+    MetalCodeGenerator(Context& ctx, MaterialGraph const& graph,
                        CodeGenOptions const& options):
         SourceEmitter(ScopeType::CompoundStmt),
         ctx(ctx),
         graph(graph),
         options(options) {}
 
-    CodegenResult run() override;
+    MaterialSourceData run() override;
 
     void declareType(Type const* type) {
         visit(*type, [this](auto& type) { declareTypeImpl(&type); });
@@ -89,8 +122,8 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
         visit(value, [this](auto& value) { codegenImpl(value); });
     }
     void codegenImpl(Value const&) { assert(false); }
-    void codegenImpl(VectorConstant const&) {}
-    void codegenImpl(TextureConstant const&) {}
+    void codegenImpl(VectorValue const&) {}
+    void codegenImpl(TextureValue const&) {}
     void codegenImpl(RasterizerInput const&) {}
     void codegenImpl(BuiltinFunction const& value);
     void codegenImpl(ArithmeticOperation const& value);
@@ -105,7 +138,8 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     /// names
     void genName(Value const& value);
     std::string genNameImpl(VectorConstant const& c);
-    std::string genNameImpl(TextureConstant const&);
+    std::string genNameImpl(TextureValue const&);
+    std::string genNameImpl(VectorParameter const& c);
     std::string genNameImpl(RasterizerInput const&);
     std::string genNameImpl(VectorElement const&);
     std::string genNameImpl(AggregateElement const&);
@@ -116,24 +150,28 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
 
     void clampGreaterZero(Type const* type, auto const&... valueName);
 
-    Context const& ctx;
+    Context& ctx;
     MaterialGraph const& graph;
     CodeGenOptions options;
 
     static constexpr int ReservedTextureSlots = 8;
     int textureIndexCounter = 0;
+    int parameterIndexCounter = 0;
 
-    Type const* returnType;
+    Type const* returnType = nullptr;
+    AggregateType const* paramBufferType = nullptr;
     NameGenerator<Type const*> typeNameGen{ "Type_" };
     NameGenerator<Value const*> valueNameGen{ "Value_" };
-    utl::hashmap<TextureConstant const*, int> textureIndexMap;
+    utl::hashmap<TextureValue const*, int> textureIndexMap;
+    utl::hashmap<Value const*, int> parameterIndexMap;
+    std::vector<MaterialPrimitiveParameter> primitiveParameters;
+    std::vector<MaterialTextureParameter> textureParameters;
 };
 
 } // namespace
 
 std::unique_ptr<CodeGenerator> matc::makeCodeGenerator(
-    Context const& ctx, MaterialGraph const& graph,
-    CodeGenOptions const& options) {
+    Context& ctx, MaterialGraph const& graph, CodeGenOptions const& options) {
     return std::make_unique<MetalCodeGenerator>(ctx, graph, options);
 }
 
@@ -165,12 +203,82 @@ static std::vector<Value const*> topsort(Value const* root) {
     return sorted;
 }
 
-CodegenResult MetalCodeGenerator::run() {
+static std::pair<uint32_t, uint32_t> getSizeAndAlign(MaterialDataType type) {
+    using enum MaterialDataType;
+    switch (type) {
+    case Float:
+        return { 4, 4 };
+    case Float2:
+        return { 8, 8 };
+    case Float3:
+        return { 16, 16 };
+    case Float4:
+        return { 16, 16 };
+    default:
+        assert(false);
+    }
+}
+
+static size_t computeBufferLayout(
+    std::span<MaterialPrimitiveParameter> params,
+    std::span<VectorParameter const*> paramValues) {
+    auto cmp = [](auto const& a, auto const& b) {
+        return (int)a.first.dataType < (int)b.first.dataType;
+    };
+    ranges::sort(zip(params, paramValues), cmp);
+    auto itr = params.begin();
+    uint32_t offset = 0;
+    while (itr < params.end()) {
+        auto type = itr->dataType;
+        assert((int)type < (int)MaterialDataType::Texture2D &&
+               "This function must not be used with texture parameters");
+        auto [size, align] = getSizeAndAlign(type);
+        offset += (offset % align == 0 ? 0 : align - offset % align);
+        do {
+            itr->bufferOffset = offset;
+            offset += size;
+            ++itr;
+        } while (itr < params.end() && itr->dataType == type);
+    }
+    return offset;
+}
+
+static AggregateType const* makeParameterBufferType(
+    Context& ctx, std::span<MaterialPrimitiveParameter const> params) {
+    if (params.empty()) {
+        return nullptr;
+    }
+    return ctx.aggregateType(params | transform([&](auto& param) {
+        return translate(ctx, param.dataType);
+    }) | ranges::to<std::vector>);
+}
+
+static std::vector<MaterialPrimitiveParameter> makePrimitiveParameters(
+    std::span<VectorParameter const* const> params) {
+    return params | transform([](VectorParameter const* param) {
+        return MaterialPrimitiveParameter{ .dataType = translate(param->type()),
+                                           .bufferOffset = 0,
+                                           .name = param->name(),
+                                           .defaultValue = param->get() };
+    }) | ranges::to<std::vector>;
+}
+
+MaterialSourceData MetalCodeGenerator::run() {
     if (!graph.root()) {
         throw std::runtime_error("Material graph has no root");
     }
     returnType = graph.root()->type();
     auto order = topsort(graph.root());
+    auto vectorParameters = order | filter(isa<VectorParameter>) |
+                            transform(cast<VectorParameter const*>) |
+                            ToSmallVector<>;
+    primitiveParameters = makePrimitiveParameters(vectorParameters);
+    size_t parameterBufferSize =
+        computeBufferLayout(primitiveParameters, vectorParameters);
+    paramBufferType = makeParameterBufferType(ctx, primitiveParameters);
+    for (auto [index, param]: vectorParameters | enumerate) {
+        parameterIndexMap[param] = (int)index;
+    }
     for (auto* value: order) {
         genName(*value);
     }
@@ -179,6 +287,10 @@ CodegenResult MetalCodeGenerator::run() {
     writeFragmentOutput();
     for (auto* type: ctx.types()) {
         declareType(type);
+    }
+    if (paramBufferType) {
+        writeItem("static_assert(", "sizeof(", getName(paramBufferType),
+                  ") == ", parameterBufferSize, ")");
     }
     beginFunction();
     for (auto* value: order) {
@@ -191,11 +303,15 @@ CodegenResult MetalCodeGenerator::run() {
     writeVertexFunction();
     writeFragmentFunction();
     writeInclude(IncludeType::Local, "Shader/PBRShader.metal");
-    return { .source = takeSource(),
-             .fragmentTextures = textureIndexMap | transform([](auto& p) {
+    auto constantFragmentTextures = textureIndexMap | transform([](auto& p) {
         auto [tex, index] = p;
         return std::pair{ index, tex->asset() };
-    }) | ranges::to<utl::hashmap<int, AssetHandle>> };
+    }) | ranges::to<utl::hashmap<int, AssetHandle>>;
+    return { .source = takeSource(),
+             .constantFragmentTextures = std::move(constantFragmentTextures),
+             .primitiveParameters = std::move(primitiveParameters),
+             .textureParameters = std::move(textureParameters),
+             .parameterBufferSize = parameterBufferSize };
 }
 
 void MetalCodeGenerator::declareTypeImpl(TextureType const* type) {
@@ -237,6 +353,10 @@ void MetalCodeGenerator::beginFunction() {
     writeRaw("static ", getName(returnType), " ", MaterialFragmentFunctionName);
     beginScope(ScopeType::FuncParams);
     writeItem(MaterialVertexOutName, " in");
+    if (paramBufferType) {
+        writeItem(getName(paramBufferType), " device const& ",
+                  ParameterObjectName);
+    }
     for (auto [tex, index]: textureIndexMap) {
         writeItem(getName(tex->type()), " ", getName(tex));
     }
@@ -354,6 +474,11 @@ void MetalCodeGenerator::writeUnlitFragmentFunction() {
               getBindIndex(Fragment, Camera), ")]]");
     writeItem("uint32_t device const& entityID [[buffer(",
               getBindIndex(Fragment, GeometryIDBuffer), ")]]");
+    if (paramBufferType) {
+        writeItem(getName(paramBufferType), " device const& ",
+                  ParameterObjectName, " [[buffer(",
+                  getBindIndex(Fragment, MaterialParameterBuffer), ")]]");
+    }
     for (auto [tex, index]: textureIndexMap) {
         writeItem(getName(tex->type()), " ", getName(tex), " [[texture(", index,
                   ")]]");
@@ -367,6 +492,9 @@ void MetalCodeGenerator::writeUnlitFragmentFunction() {
         writeRaw("float3 color = ", MaterialFragmentFunctionName);
         auto argScope = makeScope(ScopeType::Paran);
         writeItem("in");
+        if (paramBufferType) {
+            writeItem(ParameterObjectName);
+        }
         for (auto [tex, index]: textureIndexMap) {
             writeItem(getName(tex));
         }
@@ -393,6 +521,11 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
               getBindIndex(Fragment, ShadowMetadata), ")]]");
     writeItem("uint32_t device const& entityID [[buffer(",
               getBindIndex(Fragment, GeometryIDBuffer), ")]]");
+    if (paramBufferType) {
+        writeItem(getName(paramBufferType), " device const& ",
+                  ParameterObjectName, " [[buffer(",
+                  getBindIndex(Fragment, MaterialParameterBuffer), ")]]");
+    }
     writeItem("texture2d_array<float> shadowMaps [[texture(",
               getBindIndex(Fragment, ShadowMaps), ")]]");
     for (auto [tex, index]: textureIndexMap) {
@@ -408,6 +541,9 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
         writeRaw("PBRData pbr = ", MaterialFragmentFunctionName);
         auto argScope = makeScope(ScopeType::Paran);
         writeItem("in");
+        if (paramBufferType) {
+            writeItem(ParameterObjectName);
+        }
         for (auto [tex, index]: textureIndexMap) {
             writeItem(getName(tex));
         }
@@ -551,9 +687,24 @@ std::string MetalCodeGenerator::genNameImpl(VectorConstant const& c) {
     return e.takeSource();
 }
 
-std::string MetalCodeGenerator::genNameImpl(TextureConstant const& tex) {
+std::string MetalCodeGenerator::genNameImpl(VectorParameter const& param) {
+    auto itr = parameterIndexMap.find(&param);
+    assert(itr != parameterIndexMap.end());
+    return utl::strcat(ParameterObjectName, "._", itr->second);
+}
+
+std::string MetalCodeGenerator::genNameImpl(TextureValue const& tex) {
     int index = ReservedTextureSlots + textureIndexCounter++;
     textureIndexMap[&tex] = index;
+    if (auto* param = dyncast<TextureParameter const*>(&tex)) {
+        textureParameters.push_back(
+            { .type = translate(param->type()),
+              .fragmentBindingPoint = index,
+              .vertexBindingPoint =
+                  MaterialTextureParameter::UnusedBindingPoint,
+              .name = param->name(),
+              .defaultValue = param->asset() });
+    }
     return utl::strcat("Texture_", index);
 }
 

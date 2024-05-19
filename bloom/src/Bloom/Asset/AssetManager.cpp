@@ -760,7 +760,7 @@ bool Impl::makeAvailImpl(Material& mat, RegistryEntry const& entry,
                 return;
             }
             mat.compile(assetManager->device(), *assetManager);
-            for (auto &[index, texture]: mat.fragmentTextures) {
+            for (auto &[index, texture]: mat.constantFragmentTextures) {
                 assetManager->makeAvailable(texture->handle(),
                                             AssetRepresentation::GPU);
             }

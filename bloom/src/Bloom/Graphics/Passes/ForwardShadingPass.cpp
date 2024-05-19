@@ -168,7 +168,9 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
             encoder->setPipeline(currentMaterial->rgMainPass);
             encoder->setTriangleCullMode(currentMaterial->cullMode);
             encoder->setDepthStencil(currentMaterial->depthStencil);
-            for (auto& [index, texture]: currentMaterial->fragmentTextures) {
+            for (auto& [index, texture]:
+                 currentMaterial->constantFragmentTextures)
+            {
                 if (texture) {
                     encoder->setFragmentTexture(texture->GPUHandle, index);
                 }

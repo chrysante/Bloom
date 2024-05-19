@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <utl/hashtable.hpp>
 #include <yaml-cpp/yaml.h>
@@ -15,10 +16,7 @@
 
 namespace bloom {
 
-struct MaterialSourceData {
-    std::string source;
-    utl::hashmap<int, AssetHandle> fragmentTextures;
-};
+struct MaterialSourceData;
 
 struct MaterialModel {
     virtual ~MaterialModel() = default;
@@ -42,7 +40,7 @@ public:
     RenderPipelineHandle rgMainPass;
     TriangleCullMode cullMode = TriangleCullMode::Back;
     DepthStencilHandle depthStencil;
-    utl::hashmap<int, Reference<Texture2D>> fragmentTextures;
+    utl::hashmap<int, Reference<Texture2D>> constantFragmentTextures;
 };
 
 } // namespace bloom

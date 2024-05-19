@@ -1,11 +1,25 @@
 #ifndef BLOOM_GRAPHICS_MATERIAL_FWD_H
 #define BLOOM_GRAPHICS_MATERIAL_FWD_H
 
+#include <cassert>
 #include <string_view>
 
 namespace bloom {
 
 class Material;
+
+/// Declaration order matters because parameter descriptors are sorted based on
+/// their data type
+enum class MaterialDataType {
+    Float,
+    Float2,
+    Float3,
+    Float4,
+    Texture2D,
+    TextureCube
+};
+
+/// Global buffer and texture binding points used for shading
 
 /// Different material shading models
 enum class MaterialShadingModel { Unlit, DefaultLit, LAST = DefaultLit };

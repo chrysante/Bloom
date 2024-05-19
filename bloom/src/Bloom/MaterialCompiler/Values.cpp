@@ -13,13 +13,15 @@ using namespace matc;
 using namespace vml::short_types;
 using namespace ranges::views;
 
-VectorConstant::VectorConstant(Context& ctx, int numComponents, float4 value):
-    Constant(ValueNodeType::VectorConstant, ctx.vectorType(numComponents)),
+VectorValue::VectorValue(ValueNodeType nodeType, Context& ctx,
+                         int numComponents, float4 value):
+    Value(nodeType, ctx.vectorType(numComponents)),
     _value(value),
     numc(numComponents) {}
 
-TextureConstant::TextureConstant(TextureType const* type, AssetHandle asset):
-    Constant(ValueNodeType::TextureConstant, type), _asset(asset) {}
+TextureValue::TextureValue(ValueNodeType nodeType, TextureType const* type,
+                           AssetHandle asset):
+    Value(nodeType, type), _asset(asset) {}
 
 static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     using enum RasterizerInputKind;
@@ -38,8 +40,7 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
 }
 
 RasterizerInput::RasterizerInput(Context& ctx, RasterizerInputKind kind):
-    Constant(ValueNodeType::RasterizerInput, selectType(ctx, kind)),
-    _kind(kind) {}
+    Value(ValueNodeType::RasterizerInput, selectType(ctx, kind)), _kind(kind) {}
 
 static Type const* getReturnType(Context&, BuiltinFunctionKind kind,
                                  std::span<Type const* const> argTypes) {

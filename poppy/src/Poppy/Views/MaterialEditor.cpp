@@ -78,11 +78,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
             break;
         }
         auto codegen = makeCodeGenerator(ctx, graph, {});
-        auto result = codegen->run();
-        return {
-            .source = std::move(result.source),
-            .fragmentTextures = std::move(result.fragmentTextures),
-        };
+        return codegen->run();
     }
 
     void setShadingModel(MaterialShadingModel model) {

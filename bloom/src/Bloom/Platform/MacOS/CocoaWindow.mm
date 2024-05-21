@@ -49,7 +49,7 @@ void Window::setSwapchain(Reference<Swapchain> swapchain) {
     return self;
 }
 - (BOOL)windowShouldClose:(id)sender {
-    [glfwDelegate windowShouldClose:sender];
+    return [glfwDelegate windowShouldClose:sender];
 }
 - (void)windowDidResize:(NSNotification*)notification {
     [glfwDelegate windowDidResize:notification];

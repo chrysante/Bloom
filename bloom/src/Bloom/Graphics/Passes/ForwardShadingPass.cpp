@@ -174,12 +174,12 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
             }
         }
         if (object.materialInstance.get() != curMatInst) {
-            auto paramBuffer = object.materialInstance->buffer();
+            curMatInst = object.materialInstance.get();
+            curMatInst->uploadData(device());
+            auto paramBuffer = curMatInst->buffer();
             encoder->setFragmentBuffer(paramBuffer,
                                        getBindIndex(Fragment,
                                                     MaterialParameterBuffer));
-            curMatInst = object.materialInstance.get();
-            curMatInst->uploadData(device());
             for (auto& [key, tex]: curMatInst->getTextures()) {
                 auto [vertBinding, fragBinding] = key;
                 auto texView = tex ? tex->GPUHandle : TextureView();

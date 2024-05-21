@@ -465,9 +465,11 @@ void EntityInspector::inspectScript(bloom::EntityHandle entity) {
     auto* sym = scriptSystem.symbolTable();
     auto& component = entity.get<ScriptComponent>();
     auto& preservedData = entity.get<ScriptPreservedData>();
-    if (!beginComponentSection<ScriptComponent>("Script Component", entity) ||
-        !sym)
-    {
+    if (!sym) {
+        displayEmptyWithError("No symbol table", { 0, 50 });
+        return;
+    }
+    if (!beginComponentSection<ScriptComponent>("Script Component", entity)) {
         return;
     }
     disabledIf(isSimulating(), [&] {
@@ -517,8 +519,8 @@ void EntityInspector::inspectScript(bloom::EntityHandle entity) {
                 }
             }); // clang-format on
         }
-#endif
         endSubSection();
+#endif
     });
     endSection();
 }

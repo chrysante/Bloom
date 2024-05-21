@@ -51,7 +51,8 @@ BEGIN_SOURCE_DECL(PostProcessPass) {
         [](FrameParameters const& params){
             return TextureInterfaceDescriptor{
                 .pixelFormat = PixelFormat::RGBA8Unorm,
-                .size = { params.screenSize, 1 }
+                .size = { params.screenSize, 1 },
+                .usage = TextureUsage::ShaderWrite | TextureUsage::ShaderRead
             };
         }
     }

@@ -157,15 +157,18 @@ std::array<char, 64> poppy::generateUniqueID(std::string_view name, int id,
     return buffer;
 }
 
-static void displayEmptyImpl(std::string_view reason, FontDesc font,
-                             float4 color) {
+static void displayEmptyImpl(std::string_view reason, float2 size,
+                             FontDesc font, float4 color) {
     float2 stashedCursorPos = ImGui::GetCursorPos();
+    size = float2([&](size_t index) {
+        return size[index] <= 0 ? ImGui::GetContentRegionAvail()[index] :
+                                  size[index];
+    });
     withFont(font, [&] {
         float2 textSize = ImGui::CalcTextSize(reason.data());
-        ImGui::SetCursorPos(
-            ((float2)ImGui::GetContentRegionAvail() - textSize) / 2);
+        ImGui::SetCursorPos((size - textSize) / 2);
         ImGui::PushStyleColor(ImGuiCol_Text, color);
-        ImGui::Text("%s", reason.data());
+        ImGui::TextEx(reason.data(), reason.data() + reason.size());
         ImGui::PopStyleColor();
     });
     ImGui::SetCursorPos(stashedCursorPos);
@@ -175,13 +178,13 @@ static FontDesc emptyPlaceholderFont() {
     return FontDesc::UIDefault().setWeight(FontWeight::Semibold);
 }
 
-void poppy::displayEmptyWithReason(std::string_view reason) {
-    displayEmptyImpl(reason, emptyPlaceholderFont(),
+void poppy::displayEmptyWithReason(std::string_view reason, float2 size) {
+    displayEmptyImpl(reason, size, emptyPlaceholderFont(),
                      ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
 }
 
-void poppy::displayEmptyWithError(std::string_view reason) {
-    displayEmptyImpl(reason, emptyPlaceholderFont(), { 1, 0, .2, 1 });
+void poppy::displayEmptyWithError(std::string_view reason, float2 size) {
+    displayEmptyImpl(reason, size, emptyPlaceholderFont(), { 1, 0, .2, 1 });
 }
 
 void SplitView::display(std::span<std::function<void()> const> contents,

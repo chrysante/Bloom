@@ -1150,7 +1150,7 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
           .size = usize3(texture.size, 1),
           .mipmapLevelCount = 1,
           .sampleCount = 1,
-          .storageMode = StorageMode::Shared,
+          .storageMode = StorageMode::Managed,
           .usage = TextureUsage::ShaderRead });
     size_t bytesPerRow = texture.size.x * pixelSize(texture.pixelFormat);
     size_t bytesPerImage =

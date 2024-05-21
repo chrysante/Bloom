@@ -10,6 +10,7 @@
 
 #include <imgui.h>
 #include <utl/scope_guard.hpp>
+#include <vml/vml.hpp>
 
 #include "Bloom/Core/EnumCount.h"
 #include "Poppy/UI/Font.h"
@@ -92,10 +93,10 @@ bool enumCombo(E e, std::invocable<E> auto set,
 }
 
 /// Placeholder for views that don't display content for good reason
-void displayEmptyWithReason(std::string_view reason);
+void displayEmptyWithReason(std::string_view reason, vml::float2 size = {});
 
 /// Placeholder for views that don't display content because an error occurred
-void displayEmptyWithError(std::string_view reason);
+void displayEmptyWithError(std::string_view reason, vml::float2 size = {});
 
 /// Displays a resizable split view
 class SplitView {

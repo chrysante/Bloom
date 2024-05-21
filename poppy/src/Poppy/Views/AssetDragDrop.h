@@ -16,6 +16,9 @@ namespace poppy {
 inline constexpr auto AssetDragDropType = "ASSET_DRAG_DROP";
 
 ///
+std::string selectAssetIcon(bloom::AssetType type);
+
+///
 std::optional<bloom::AssetHandle> acceptAssetDragDrop(
     std::span<bloom::AssetType const> types);
 

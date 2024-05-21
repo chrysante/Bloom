@@ -70,7 +70,8 @@ BEGIN_SOURCE_DECL(BloomPass) {
             return TextureInterfaceDescriptor{
                 .type = TextureType::Texture2D,
                 .pixelFormat = PixelFormat::RGBA32Float,
-                .size = { params.screenSize, 1 }
+                .size = { params.screenSize, 1 },
+                .usage = TextureUsage::ShaderWrite | TextureUsage::ShaderRead
             };
         }
     }

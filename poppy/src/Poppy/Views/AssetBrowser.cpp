@@ -68,24 +68,7 @@ struct AssetBrowser: View {
         }
         std::string selectIcon(DirectoryEntry const& entry) override {
             auto handle = getHandle(entry);
-            switch (handle.type()) {
-            case AssetType::StaticMesh:
-                return "cube";
-            case AssetType::SkeletalMesh:
-                return "cube";
-            case AssetType::Material:
-                return "leaf";
-            case AssetType::MaterialInstance:
-                return "delicious";
-            case AssetType::Texture2D:
-                return "file-image";
-            case AssetType::Scene:
-                return "cubes";
-            case AssetType::ScriptSource:
-                return "file-code";
-            default:
-                return "doc";
-            }
+            return selectAssetIcon(handle.type());
         }
         std::any makeUserData(
             std::filesystem::directory_entry const& entry) override {

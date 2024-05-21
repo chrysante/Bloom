@@ -27,6 +27,27 @@ using namespace poppy;
 using namespace bloom;
 using namespace vml::short_types;
 
+std::string poppy::selectAssetIcon(AssetType type) {
+    switch (type) {
+    case AssetType::StaticMesh:
+        return "cube";
+    case AssetType::SkeletalMesh:
+        return "cube";
+    case AssetType::Material:
+        return "leaf";
+    case AssetType::MaterialInstance:
+        return "delicious";
+    case AssetType::Texture2D:
+        return "file-image";
+    case AssetType::Scene:
+        return "cubes";
+    case AssetType::ScriptSource:
+        return "file-code";
+    default:
+        return "doc";
+    }
+}
+
 std::optional<AssetHandle> poppy::acceptAssetDragDrop(
     std::span<AssetType const> types) {
     if (!ImGui::BeginDragDropTarget()) {
@@ -154,7 +175,8 @@ static ButtonResult displayButtonCompact(Asset* asset, AssetType type,
 }
 
 static bool thumbnailButtonDefault(AssetType type, float2 buttonSize) {
-    auto icon = FontManager::get({ IconSize::_16 }, "doc");
+    auto icon =
+        FontManager::get({ IconSize::_16 }, selectAssetIcon(type).c_str());
     ImGui::PushFont(icon.font);
     bool result = ImGui::ButtonEx(icon.utf8Rep.c_str(), buttonSize);
     ImGui::PopFont();

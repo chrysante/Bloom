@@ -188,7 +188,8 @@ BEGIN_SOURCE_DECL(CompositionPass) {
         [](FrameParameters const& params) {
             return TextureInterfaceDescriptor{
                 .pixelFormat = PixelFormat::RGBA8Unorm,
-                .size = { params.screenSize, 1 }
+                .size = { params.screenSize, 1 },
+                .usage = TextureUsage::ShaderWrite | TextureUsage::ShaderRead
             };
         }
     }
@@ -326,7 +327,7 @@ void GridPass::doAllocateResources(FrameParameters const&,
                                    HardwareDevice& device) {
     pipeline = device.createRenderPipeline(
         { .colorAttachments = { {
-              .pixelFormat = PixelFormat::R8Unorm,
+              .pixelFormat = PixelFormat::RGBA8Unorm,
               .blendingEnabled = true,
               .sourceRGBBlendFactor = BlendFactor::SourceAlpha,
               .destinationRGBBlendFactor = BlendFactor::OneMinusSourceAlpha,

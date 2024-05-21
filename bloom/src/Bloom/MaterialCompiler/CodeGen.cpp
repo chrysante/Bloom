@@ -125,7 +125,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void codegenImpl(VectorValue const&) {}
     void codegenImpl(TextureValue const&) {}
     void codegenImpl(RasterizerInput const&) {}
-    void codegenImpl(BuiltinFunction const& value);
+    void codegenImpl(FunctionCall const& value);
     void codegenImpl(ArithmeticOperation const& value);
     void codegenImpl(TextureSampler const& value);
     void codegenImpl(VectorBuilder const& value);
@@ -569,10 +569,10 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
     fnScope.pop();
 }
 
-void MetalCodeGenerator::codegenImpl(BuiltinFunction const& value) {
+void MetalCodeGenerator::codegenImpl(FunctionCall const& value) {
     auto item = makeItem();
     writeRaw(getName(value.type()), " ", getName(&value), " = ");
-    writeRaw(toSpelling(value.kind()));
+    writeRaw(toSpelling(value.function()));
     writeScope(ScopeType::Paran, [&] {
         for (auto& arg: value.operands()) {
             writeItem(getName(arg));

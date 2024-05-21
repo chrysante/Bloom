@@ -74,8 +74,7 @@ static Type const* translateType(Context& ctx, DataType dataType) {
     case DataType::Float3:
         [[fallthrough]];
     case DataType::Float4: {
-        int numComponents = (int)dataType - (int)DataType::Float + 1;
-        return ctx.vectorType(numComponents);
+        return ctx.vectorType(numComponents(dataType));
     }
     case Texture:
         BL_UNIMPLEMENTED();
@@ -409,15 +408,15 @@ struct ConstantController: MaterialNodeController {
         case DataType::Float3:
             [[fallthrough]];
         case DataType::Float4: {
-            int numComponents = (int)dataType - (int)DataType::Float + 1;
             if (isParameter) {
                 auto* param =
-                    graph.addValue<VectorParameter>(ctx, numComponents, value,
-                                                    node()->name());
+                    graph.addValue<VectorParameter>(ctx,
+                                                    numComponents(dataType),
+                                                    value, node()->name());
                 return { param };
             }
             else {
-                return { ctx.vectorConstant(numComponents, value) };
+                return { ctx.vectorConstant(numComponents(dataType), value) };
             }
         }
         case Texture:
@@ -560,8 +559,6 @@ REGISTER_MATERIAL_NODE(ConstantController, {
                                                        ConstantController>());
 })
 
-using FunctionType = BuiltinFunctionKind;
-
 static DataTypeMask deduceBuiltinRetType(
     DataTypeMask definedRet, std::span<DataTypeMask const> definedArgs,
     std::span<DataTypeMask const> actualArgs) {
@@ -594,64 +591,62 @@ static DataTypeMask deduceBuiltinRetType(
     return definedRet;
 }
 
-static DataTypeMask getBuiltinRetType(BuiltinFunctionKind function) {
+static DataTypeMask getBuiltinRetType(BuiltinFunction function) {
     using enum DataType;
     switch (function) {
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, Ret, ...)                          \
-    case BuiltinFunctionKind::Name:                                            \
+    case BuiltinFunction::Name:                                                \
         return Ret;
 #include "Bloom/MaterialCompiler/Lists.def"
     }
 }
 
 static utl::small_vector<DataTypeMask> getBuiltinArgTypes(
-    BuiltinFunctionKind function) {
+    BuiltinFunction function) {
     using enum DataType;
     switch (function) {
 #define UNPACK(...) __VA_ARGS__
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, Ret, Args)                         \
-    case BuiltinFunctionKind::Name:                                            \
+    case BuiltinFunction::Name:                                                \
         return { UNPACK Args };
 #include "Bloom/MaterialCompiler/Lists.def"
 #undef UNPACK
     }
 }
 
-static auto getFunctionsImpl(BuiltinFunctionKind first,
-                             BuiltinFunctionKind last) {
-    using enum BuiltinFunctionKind;
-    return iota(0, (int)last - (int)first + 1) | transform([=](int n) {
-        return BuiltinFunctionKind{ (int)first + n };
-    });
+static auto getFunctionsImpl(BuiltinFunction first, BuiltinFunction last) {
+    using enum BuiltinFunction;
+    return iota(0, (int)last - (int)first + 1) |
+           transform([=](int n) { return BuiltinFunction{ (int)first + n }; });
 }
 
 static auto getGeometricFunctions() {
-    using enum BuiltinFunctionKind;
+    using enum BuiltinFunction;
     return getFunctionsImpl(Cross, Reflect);
 }
 
 static auto getMathFunctions() {
-    using enum BuiltinFunctionKind;
+    using enum BuiltinFunction;
     return getFunctionsImpl(Acos, Trunc);
 }
 
 struct BuiltinFunctionController: OverloadableNodeController {
     static constexpr auto Name = "BuiltinFunction";
 
-    static NodeDesc Make(FunctionType type) {
-        return { .name = std::string(magic_enum::enum_name(type)),
+    static NodeDesc Make(BuiltinFunction function) {
+        return { .name = std::string(magic_enum::enum_name(function)),
                  .controller =
-                     std::make_unique<BuiltinFunctionController>(type) };
+                     std::make_unique<BuiltinFunctionController>(function) };
     }
 
-    explicit BuiltinFunctionController(FunctionType function):
+    explicit BuiltinFunctionController(BuiltinFunction function):
         OverloadableNodeController(getBuiltinArgTypes(function) |
                                    ranges::to<std::vector>),
         function(function) {}
 
     explicit BuiltinFunctionController(YAML::Node const& root):
         OverloadableNodeController(root) {
-        function = root["FunctionType"].as<FunctionType>();
+        function = root["FunctionType"].as<BuiltinFunction>();
     }
 
     YAML::Node serialize() const override {
@@ -685,7 +680,7 @@ struct BuiltinFunctionController: OverloadableNodeController {
         auto inTypes = inputTypes() | transform([&](DataTypeMask m) {
             return translateType(ctx, m.getSingle().value());
         }) | ranges::to<std::vector>;
-        auto* value = g.addValue<BuiltinFunction>(ctx, function, inTypes);
+        auto* value = g.addValue<FunctionCall>(ctx, function, inTypes);
         return { value };
     }
 
@@ -694,7 +689,7 @@ struct BuiltinFunctionController: OverloadableNodeController {
     bool alwaysDisplayInputNames() const override { return false; }
     bool alwaysDisplayOutputNames() const override { return true; }
 
-    FunctionType function;
+    BuiltinFunction function;
 };
 
 REGISTER_MATERIAL_NODE(BuiltinFunctionController, {

@@ -113,41 +113,41 @@ static Type const* deduceRetType(Context& ctx, SymType symRet,
     }
 }
 
-static Type const* getReturnTypeImpl(Context& ctx, BuiltinFunctionKind kind,
+static Type const* getReturnTypeImpl(Context& ctx, BuiltinFunction function,
                                      std::span<Type const* const> args) {
-    switch (kind) {
+    switch (function) {
         using enum SymType;
 #define UNPACK(...) __VA_ARGS__
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, RetType, Args)                     \
-    case BuiltinFunctionKind::Name:                                            \
+    case BuiltinFunction::Name:                                                \
         return deduceRetType(ctx, RetType, { { UNPACK Args } }, args);
 #include "Bloom/MaterialCompiler/Lists.def"
     }
 }
 
-static Type const* getReturnType(Context& ctx, BuiltinFunctionKind kind,
+static Type const* getReturnType(Context& ctx, BuiltinFunction function,
                                  std::span<Type const* const> args) {
-    auto* type = getReturnTypeImpl(ctx, kind, args);
+    auto* type = getReturnTypeImpl(ctx, function, args);
     if (!type) {
         throw std::runtime_error("Invalid arguments for function call");
     }
     return type;
 }
 
-BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
-                                 std::vector<Value*> arguments):
-    User(ValueNodeType::BuiltinFunction,
-         getReturnType(ctx, kind,
+FunctionCall::FunctionCall(Context& ctx, BuiltinFunction function,
+                           std::vector<Value*> arguments):
+    User(ValueNodeType::FunctionCall,
+         getReturnType(ctx, function,
                        arguments | transform(&Value::type) | ToSmallVector<>),
          std::move(arguments)),
-    _kind(kind) {}
+    _function(function) {}
 
-BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
-                                 std::span<Type const* const> argumentTypes):
-    User(ValueNodeType::BuiltinFunction,
-         getReturnType(ctx, kind, argumentTypes),
+FunctionCall::FunctionCall(Context& ctx, BuiltinFunction function,
+                           std::span<Type const* const> argumentTypes):
+    User(ValueNodeType::FunctionCall,
+         getReturnType(ctx, function, argumentTypes),
          std::vector<Value*>(argumentTypes.size())),
-    _kind(kind) {}
+    _function(function) {}
 
 static void throwArithmeticTypeError() {
     throw std::runtime_error("Invalid operand types for arithmetic operation");

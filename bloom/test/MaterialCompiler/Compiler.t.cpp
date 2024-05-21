@@ -44,8 +44,8 @@ TEST_CASE() {
                                               const0, const1, vec0, sample0,
                                               sample1, const2 });
     Value* resultVal = g.addValue<AggregateElement>(aggregate, 1);
-    resultVal = g.addValue<BuiltinFunction>(ctx, BuiltinFunctionKind::Normalize,
-                                            std::vector<Value*>{ resultVal });
+    resultVal = g.addValue<FunctionCall>(ctx, BuiltinFunction::Normalize,
+                                         std::vector<Value*>{ resultVal });
     g.setRoot(resultVal);
     auto generator = makeCodeGenerator(ctx, g, {});
     auto result = generator->run();
@@ -55,31 +55,31 @@ TEST_CASE() {
 TEST_CASE("Builtins") {
     Context ctx;
     MaterialGraph g(MaterialShadingModel::Unlit);
-    using enum BuiltinFunctionKind;
+    using enum BuiltinFunction;
     SECTION("Cross with invalid arguments") {
-        CHECK_THROWS(g.addValue<BuiltinFunction>(ctx, Cross,
-                                                 std::vector<Value*>{
-                                                     ctx.float2Constant({}),
-                                                     ctx.float3Constant({}) }));
+        CHECK_THROWS(g.addValue<FunctionCall>(ctx, Cross,
+                                              std::vector<Value*>{
+                                                  ctx.float2Constant({}),
+                                                  ctx.float3Constant({}) }));
     }
     SECTION("Cross with valid arguments") {
-        auto* call = g.addValue<BuiltinFunction>(ctx, Cross,
-                                                 std::vector<Value*>{
-                                                     ctx.float3Constant({}),
-                                                     ctx.float3Constant({}) });
+        auto* call = g.addValue<FunctionCall>(ctx, Cross,
+                                              std::vector<Value*>{
+                                                  ctx.float3Constant({}),
+                                                  ctx.float3Constant({}) });
         CHECK(call->type() == ctx.float3Type());
     }
     SECTION("Reflect with invalid arguments") {
-        CHECK_THROWS(g.addValue<BuiltinFunction>(ctx, Reflect,
-                                                 std::vector<Value*>{
-                                                     ctx.float2Constant({}),
-                                                     ctx.float3Constant({}) }));
+        CHECK_THROWS(g.addValue<FunctionCall>(ctx, Reflect,
+                                              std::vector<Value*>{
+                                                  ctx.float2Constant({}),
+                                                  ctx.float3Constant({}) }));
     }
     SECTION("Reflect with valid arguments") {
-        auto* call = g.addValue<BuiltinFunction>(ctx, Reflect,
-                                                 std::vector<Value*>{
-                                                     ctx.float3Constant({}),
-                                                     ctx.float3Constant({}) });
+        auto* call = g.addValue<FunctionCall>(ctx, Reflect,
+                                              std::vector<Value*>{
+                                                  ctx.float3Constant({}),
+                                                  ctx.float3Constant({}) });
         CHECK(call->type() == ctx.float3Type());
     }
 }

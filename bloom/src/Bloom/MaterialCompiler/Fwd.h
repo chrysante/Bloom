@@ -54,12 +54,12 @@ enum class RasterizerInputKind {
     WorldPosition,
 };
 
-enum class BuiltinFunctionKind {
+enum class BuiltinFunction {
 #define BL_MATGRAPH_BUILTIN(Name, ...) Name,
 #include "Bloom/MaterialCompiler/Lists.def"
 };
 
-std::string_view toSpelling(BuiltinFunctionKind function);
+std::string_view toSpelling(BuiltinFunction function);
 
 enum class SampleMode { Color, Normal };
 

@@ -148,18 +148,18 @@ private:
     std::vector<Value*> _operands;
 };
 
-class BuiltinFunction: public User {
+class FunctionCall: public User {
 public:
-    BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
-                    std::vector<Value*> arguments);
+    FunctionCall(Context& ctx, BuiltinFunction function,
+                 std::vector<Value*> arguments);
 
-    BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
-                    std::span<Type const* const> argumentTypes);
+    FunctionCall(Context& ctx, BuiltinFunction function,
+                 std::span<Type const* const> argumentTypes);
 
-    BuiltinFunctionKind kind() const { return _kind; }
+    BuiltinFunction function() const { return _function; }
 
 private:
-    BuiltinFunctionKind _kind;
+    BuiltinFunction _function;
 };
 
 class ArithmeticOperation: public User {

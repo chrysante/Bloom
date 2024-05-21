@@ -2,6 +2,8 @@
 
 #include <utl/functional.hpp>
 
+#include "Bloom/Asset/CubemapRenderer.h"
+#include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
@@ -49,6 +51,24 @@ BEGIN_RENDERGRAPH_SINK_DECL(Renderer) {
         "Post Process Parameters",
         nullptr,
         { .size = sizeof(PostProcessParameters) }
+    },
+    TextureInterface{
+        "Specular Texture",
+        nullptr,
+        {
+            .type = TextureType::CubeTexture,
+            .size = { 512, 512, 1 },
+            .pixelFormat = PixelFormat::RGBA32Float,
+        }
+    },
+    TextureInterface{
+        "BDRF Texture",
+        nullptr,
+        {
+            .size = { 512, 512, 1 },
+            .pixelFormat = PixelFormat::RGBA32Float,
+            .usage = TextureUsage::ShaderRead | TextureUsage::ShaderWrite
+        }
     }
 }
 END_DECL()
@@ -69,7 +89,8 @@ END_DECL()
     return cast<R*>(source->resource());
 }
 
-Renderer::Renderer(RenderGraph* renderGraph): mRenderGraph(renderGraph) {
+Renderer::Renderer(RenderGraph* renderGraph, CommandQueue& commandQueue):
+    mRenderGraph(renderGraph) {
     geometry = getResource<GeometryResource>(renderGraph, 0);
     lights = getResource<LightsResource>(renderGraph, 1);
     cameraBuffer = getResource<BufferResource>(renderGraph, 2);
@@ -77,6 +98,20 @@ Renderer::Renderer(RenderGraph* renderGraph): mRenderGraph(renderGraph) {
     shadowMetadataBuffer = getResource<BufferResource>(renderGraph, 4);
     bloomParams = getResource<BufferResource>(renderGraph, 5);
     postProcessParams = getResource<BufferResource>(renderGraph, 6);
+    specularTexture = getResource<TextureResource>(renderGraph, 7);
+    brdfTexture = getResource<TextureResource>(renderGraph, 8);
+
+    /// Generate BRDF map
+    auto& device = renderGraph->device();
+    BRDF = device.createTexture({
+        .pixelFormat = PixelFormat::RGBA32Float,
+        .size = { 512, 512, 1 },
+        .usage = TextureUsage::ShaderWrite | TextureUsage::ShaderRead,
+    });
+    auto commandBuffer = commandQueue.createCommandBuffer();
+    computeBDRF(device, *commandBuffer, BRDF);
+    commandBuffer->commit();
+    commandBuffer->waitForCompletion();
 }
 
 void Renderer::begin(FrameParameters const& frameParams, Camera const& camera) {
@@ -189,10 +224,12 @@ void Renderer::submit(Scene const& scene) {
     }
 }
 
-void Renderer::setIBLTexture(Reference<Texture2D> tex) {
-    if (tex && lights) {
-        lights->setIrradianceCoefficients(tex->irradianceSHCoefficients);
+void Renderer::setIBLTexture(Reference<Texture2D> IBL) {
+    if (IBL && lights) {
+        lights->setIrradianceCoefficients(IBL->irradianceSHCoefficients);
     }
+    specularTexture->assign(IBL->GPUHandle);
+    brdfTexture->assign(BRDF);
 }
 
 namespace {

@@ -49,7 +49,9 @@ enum class GlobalMaterialBindingType {
     ShadowMaps,
     MaterialParameterBuffer,
     GeometryIDBuffer,
-    LAST = ShadowMetadata
+    SpecularTexture,
+    BRDFTexture,
+    LAST = BRDFTexture
 };
 
 /// \Returns the shader binding points for the different combinations of shader
@@ -91,6 +93,10 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
             return { Buffer, 4 };
         case GeometryIDBuffer:
             return { Buffer, 5 };
+        case SpecularTexture:
+            return { Texture, 4 };
+        case BRDFTexture:
+            return { Texture, 5 };
         }
     }
 }

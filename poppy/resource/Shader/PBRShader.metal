@@ -262,10 +262,40 @@ static float3 calcSHIrradiance(float3 N, float3 device const* SH) {
     return color / PI;
 }
 
-static float3 computeAmbient(PBRData data, float3 N, float3 V, float3 device const* SH) {
+float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness) 
+{
+    return F0 + (max(float3(1.0 - roughness), F0) - F0) * 
+           pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+static float3 computeAmbient(PBRData data, float3 N, float3 V, float3 device const* SH,
+                             texturecube<float> specularMap,
+                             texture2d<float> brdfMap) 
+{
     float3 irradiance = calcSHIrradiance(N, SH);
     float3 diffuse = irradiance * data.albedo;
-    return diffuse * data.ao;
+    float3 F0 = computeF0(data.albedo, data.metallic);
+    float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, data.roughness);
+    float3 kD = (1.0f - F) * (1.0f - data.metallic);
+    float3 R = reflect(-V, N);
+    float mipLevel = data.roughness * (specularMap.get_num_mip_levels() - 1);
+    constexpr sampler specSampler(min_filter::linear, mag_filter::linear, 
+                                  mip_filter::linear);
+    float3 prefilteredColor = specularMap.sample(specSampler, R, 
+                                                 level(mipLevel)).rgb;
+    constexpr sampler brdfSampler(min_filter::linear, mag_filter::linear);
+    float2 brdfUV = { max(dot(N, V), 0.0), data.roughness };
+    float2 envBRDF = brdfMap.sample(brdfSampler, brdfUV).rg;
+    // TODO: envBRDF should not be NAN. This must be fixed when generating the 
+    // texture
+    if (isnan(envBRDF.x)) {
+        envBRDF.x = 0;
+    }
+    if (isnan(envBRDF.y)) {
+        envBRDF.y = 0;
+    }
+    float3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+    return (kD * diffuse + specular) * data.ao;
 }
 
 float3 bloom::PBRForwardShader(
@@ -273,7 +303,9 @@ float3 bloom::PBRForwardShader(
     float3 cameraPosition, device const float4x4* lightSpaceTransforms,
     device const LightBufferContents& lights,
     device const ShadowRenderMetadata& shadowMetadata,
-    texture2d_array<float> shadowMaps)
+    texture2d_array<float> shadowMaps,
+                               texturecube<float> specularMap,
+                               texture2d<float> brdfMap)
 {
     float3 N = pbr.normal;
     float3 V = normalize(cameraPosition - worldPosition);
@@ -286,7 +318,9 @@ float3 bloom::PBRForwardShader(
                                  lights.numDirLights, lights.dirLights,
                                  shadowMetadata, shadowMaps);
     lightAcc += computeSkyLights(pbr, lights.numSkyLights, lights.skyLights);
-    lightAcc += computeAmbient(pbr, N, V, lights.irradianceCoefficients);
+    lightAcc += computeAmbient(pbr, N, V, lights.irradianceCoefficients ,
+                               specularMap,
+                               brdfMap);
     lightAcc += pbr.emissive;
     return lightAcc;
 }

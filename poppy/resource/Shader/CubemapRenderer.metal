@@ -113,6 +113,8 @@ static float distributionGGX(float NdotH, float roughness)
     return num / denom;
 }
 
+constant uint SampleCount = 16 * 1024u;
+
 fragment float4 specularIBLRendererFS(CRVSOut in [[stage_in]],
                                        float device const& roughness [[buffer(0)]],
                                        texturecube<float> source [[texture(0)]]) 
@@ -120,11 +122,10 @@ fragment float4 specularIBLRendererFS(CRVSOut in [[stage_in]],
     float3 N = normalize(in.localPosition);
     float3 R = N;
     float3 V = R;
-    uint sampleCount = 16 * 1024u;
     float totalWeight = 0.0;
     float3 prefilteredColor{};
-    for(uint i = 0u; i < sampleCount; ++i) {
-        float2 Xi = Hammersley(i, sampleCount);
+    for(uint i = 0u; i < SampleCount; ++i) {
+        float2 Xi = Hammersley(i, SampleCount);
         float3 H  = ImportanceSampleGGX(Xi, N, roughness);
         float3 L  = normalize(2.0 * dot(V, H) * H - V);
         float NdotL = max(dot(N, L), 0.0);
@@ -138,11 +139,73 @@ fragment float4 specularIBLRendererFS(CRVSOut in [[stage_in]],
         // FIXME: Pass the resolution in through buffer
         float resolution = 512.0; // resolution of source cubemap (per face)
         float saTexel  = 4.0 * PI / (6.0 * resolution * resolution);
-        float saSample = 1.0 / (float(sampleCount) * pdf + 0.0001);
+        float saSample = 1.0 / (float(SampleCount) * pdf + 0.0001);
         float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
         constexpr sampler s(min_filter::linear, mag_filter::linear, mip_filter::linear);
         prefilteredColor += source.sample(s, L, min_lod_clamp(mipLevel)).rgb;
         totalWeight      += NdotL;
     }
     return float4(prefilteredColor / totalWeight, 1.0);
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float a = roughness;
+    float k = (a * a) / 2.0;
+
+    float nom   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return nom / denom;
+}
+
+float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
+}
+
+static float2 IntegrateBRDF(float NdotV, float roughness)
+{
+    float3 V = {
+        sqrt(1.0 - NdotV*NdotV),
+        0.0,
+        NdotV,
+    };
+    float A = 0.0;
+    float B = 0.0;
+    float3 N = float3(0.0, 0.0, 1.0);
+    for(uint i = 0u; i < SampleCount; ++i) {
+        float2 Xi = Hammersley(i, SampleCount);
+        float3 H  = ImportanceSampleGGX(Xi, N, roughness);
+        float3 L  = normalize(2.0 * dot(V, H) * H - V);
+        float NdotL = max(L.z, 0.0);
+        float NdotH = max(H.z, 0.0);
+        float VdotH = max(dot(V, H), 0.0);
+        if (NdotL <= 0.0) {
+            continue;
+        }
+        float G = GeometrySmith(N, V, L, roughness);
+        float G_Vis = (G * VdotH) / (NdotH * NdotV);
+        float Fc = pow(1.0 - VdotH, 5.0);
+        A += (1.0 - Fc) * G_Vis;
+        B += Fc * G_Vis;
+    }
+    A /= float(SampleCount);
+    B /= float(SampleCount);
+    return float2(A, B);
+}
+
+kernel void IntegrateBRDFKernel(
+    texture2d<float, access::write> dest [[texture(0)]],
+    uint2 position [[thread_position_in_grid]])
+{
+    float2 uv = float2(position) / float2( dest.get_width(), dest.get_height());
+    uv.y = 1 - uv.y;
+    float2 integratedBRDF = IntegrateBRDF(uv.x, uv.y);
+    dest.write(float4(integratedBRDF, 0, 1), position);
 }

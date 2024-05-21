@@ -33,6 +33,8 @@ struct ForwardShadingPass: PassImpl<ForwardShadingPass> {
     BufferHandle lightSpaceTransforms;
     BufferHandle shadowMetadata;
     TextureHandle shadowMaps;
+    TextureHandle specularTexture;
+    TextureHandle brdfTexture;
 
     // Sources
     TextureHandle rawColor;
@@ -71,6 +73,16 @@ BEGIN_SINK_DECL(ForwardShadingPass) {
     TextureInterface{
         "Shadow Maps",
         &ForwardShadingPass::shadowMaps,
+        {}
+    },
+    TextureInterface{
+        "Specular Texture",
+        &ForwardShadingPass::specularTexture,
+        {}
+    },
+    TextureInterface{
+        "BRDF Texture",
+        &ForwardShadingPass::brdfTexture,
         {}
     },
 }
@@ -155,6 +167,10 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
     encoder->setFragmentBuffer(geometry->IDBuffer(),
                                getBindIndex(Fragment, GeometryIDBuffer));
     encoder->setFragmentTexture(shadowMaps, getBindIndex(Fragment, ShadowMaps));
+    encoder->setFragmentTexture(specularTexture,
+                                getBindIndex(Fragment, SpecularTexture));
+    encoder->setFragmentTexture(brdfTexture,
+                                getBindIndex(Fragment, BRDFTexture));
     if (params.drawWireframe) {
         encoder->setTriangleFillMode(TriangleFillMode::Lines);
     }

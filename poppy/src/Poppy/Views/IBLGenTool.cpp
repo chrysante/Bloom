@@ -11,6 +11,7 @@
 #include "Bloom/Graphics/Texture.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/Messages.h"
+#include "Poppy/UI/ImGuiHelpers.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetDragDrop.h"
@@ -31,6 +32,8 @@ struct IBLGenTool: View {
 
     void generateSH();
     void generateSpec();
+    void generateBRDF();
+
     std::pair<Reference<Texture2D>, TextureHandle> getTexture(AssetHandle asset,
                                                               int side);
     void imgDragDropButton(Reference<Texture2D>& tex, TextureHandle& view,
@@ -43,12 +46,14 @@ struct IBLGenTool: View {
     TextureHandle sourceView;
     Reference<Texture2D> dest;
     TextureHandle destView;
+    TextureHandle BRDF;
     int sourceside = 0;
     int sourceMipLevel = 0;
     int destside = 0;
     int destMipLevel = 0;
     bool showFaceFillTool = false;
     bool applyWindowing = true;
+    bool showSHCoeffs = false;
     std::array<float3, 9> SHCoeffs;
 };
 
@@ -153,7 +158,8 @@ void IBLGenTool::display() {
         destView = makeView(dest.get(), destside, destMipLevel);
     }
     imgDragDropButton(dest, destView, destside);
-    if (dest) {
+    ImGui::Checkbox("Show SH Coefficients", &showSHCoeffs);
+    if (showSHCoeffs && dest) {
         for (auto value: dest->irradianceSHCoefficients) {
             ImGui::TextEx(utl::strcat(value).c_str());
         }
@@ -163,6 +169,14 @@ void IBLGenTool::display() {
                 sstr << "float3" << value << ",\n";
             ImGui::SetClipboardText(sstr.str().c_str());
         }
+    }
+    ImGui::SeparatorText("BDRF Texture");
+    if (ImGui::Button("Generate BDRF Texture")) {
+        generateBRDF();
+    }
+    if (BRDF) {
+        markObjectRenderHazard(BRDF);
+        ImGui::Image(BRDF.nativeHandle(), { 400, 400 });
     }
 }
 
@@ -207,6 +221,19 @@ void IBLGenTool::generateSpec() {
     auto destHandle = dest->GPUHandle;
     renderSpecularIBL(editor().device(), *commandBuffer, destHandle,
                       source->GPUHandle);
+    commandBuffer->commit();
+    commandBuffer->waitForCompletion();
+}
+
+void IBLGenTool::generateBRDF() {
+    auto& device = editor().device();
+    BRDF = device.createTexture({
+        .pixelFormat = PixelFormat::RGBA32Float,
+        .size = { 512, 512, 1 },
+        .usage = TextureUsage::ShaderWrite | TextureUsage::ShaderRead,
+    });
+    auto commandBuffer = editor().commandQueue().createCommandBuffer();
+    computeBDRF(device, *commandBuffer, BRDF);
     commandBuffer->commit();
     commandBuffer->waitForCompletion();
 }

@@ -525,6 +525,10 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
     }
     writeItem("texture2d_array<float> shadowMaps [[texture(",
               getBindIndex(Fragment, ShadowMaps), ")]]");
+    writeItem("texturecube<float> specularMap [[texture(",
+              getBindIndex(Fragment, SpecularTexture), ")]]");
+    writeItem("texture2d<float> brdfMap [[texture(",
+              getBindIndex(Fragment, BRDFTexture), ")]]");
     for (auto [tex, index]: textureIndexMap) {
         writeItem(getName(tex->type()), " ", getName(tex), " [[texture(", index,
                   ")]]");
@@ -564,6 +568,8 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
         writeItem("lights");
         writeItem("shadowMetadata");
         writeItem("shadowMaps");
+        writeItem("specularMap");
+        writeItem("brdfMap");
     });
     writeItem("return { float4(color, 1), entityID }");
     fnScope.pop();

@@ -44,7 +44,8 @@ static void wrapRenderGraph(RenderGraph& outer,
 }
 
 EditorSceneRenderer::EditorSceneRenderer(
-    std::unique_ptr<RenderGraph> sceneRenderGraphOwner) {
+    std::unique_ptr<RenderGraph> sceneRenderGraphOwner,
+    CommandQueue& commandQueue) {
     auto* sceneRenderGraph = sceneRenderGraphOwner.get();
     mRenderGraph = std::make_unique<RenderGraph>("Editor Render Graph",
                                                  sceneRenderGraph->device());
@@ -90,7 +91,7 @@ EditorSceneRenderer::EditorSceneRenderer(
     idMap = dyncast<TextureResource*>(idMapSource->resource());
     mCompositeColor = dyncast<TextureResource*>(compositeColor->resource());
     mSceneColor = dyncast<TextureResource*>(sceneColor->resource());
-    mRenderer = std::make_unique<Renderer>(mRenderGraph.get());
+    mRenderer = std::make_unique<Renderer>(mRenderGraph.get(), commandQueue);
 }
 
 void EditorSceneRenderer::begin(bloom::FrameParameters const& frameParams,

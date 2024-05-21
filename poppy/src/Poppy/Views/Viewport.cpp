@@ -152,12 +152,14 @@ void Viewport::init() {
     }
 }
 
-static EditorSceneRenderer& getSceneRenderer(RenderGraph* renderGraph) {
+static EditorSceneRenderer& getSceneRenderer(RenderGraph* renderGraph,
+                                             CommandQueue& commandQueue) {
     static RenderGraph const* current = nullptr;
     static std::unique_ptr<EditorSceneRenderer> instance;
     if (current != renderGraph) {
         current = renderGraph;
-        instance = std::make_unique<EditorSceneRenderer>(renderGraph->clone());
+        instance = std::make_unique<EditorSceneRenderer>(renderGraph->clone(),
+                                                         commandQueue);
     }
     return *instance;
 }
@@ -237,7 +239,7 @@ void Viewport::drawScenes() {
         displayEmptyWithError("No Render Graph Found");
         return;
     }
-    renderer = &getSceneRenderer(renderGraph);
+    renderer = &getSceneRenderer(renderGraph, editor().commandQueue());
     cameraController.applyProjection(viewportSize);
     renderer->begin(frameParams, cameraController.camera());
     auto& sceneSystem = editor().coreSystems().sceneSystem();

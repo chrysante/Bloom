@@ -466,3 +466,27 @@ void bloom::renderSpecularIBL(HardwareDevice& device,
         });
     }
 }
+
+void bloom::computeBDRF(HardwareDevice& device, CommandBuffer& commandBuffer,
+                        TextureHandle dest) {
+    auto compiler = device.createShaderCompiler();
+    auto functions =
+        compiler->compile(std::filesystem::path("Shader/CubemapRenderer.metal"),
+                          std::vector<std::string>{ "IntegrateBRDFKernel" });
+    if (functions.empty()) {
+        return;
+    }
+    auto pipeline =
+        device.createComputePipeline({ .computeFunction = functions[0] });
+    auto encoder = commandBuffer.makeComputeEncoder();
+    encoder->setPipeline(pipeline);
+    encoder->setTexture(dest, 0);
+    uint2 gridSize = dest.size().xy;
+    size_t threadGroupWidth = pipeline.threadExecutionWidth;
+    size_t threadGroupHeight =
+        pipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth;
+    vml::uint2 threadGroupSize = { (uint32_t)threadGroupWidth,
+                                   (uint32_t)threadGroupHeight };
+    encoder->dispatchThreads(gridSize, threadGroupSize);
+    encoder->end();
+}

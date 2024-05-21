@@ -55,7 +55,7 @@ public:
 
     static std::span<InterfaceUnion const> Sources();
 
-    explicit Renderer(RenderGraph* renderGraph);
+    explicit Renderer(RenderGraph* renderGraph, CommandQueue& commandQueue);
 
     ///
     void begin(FrameParameters const& frameParams, Camera const& camera);
@@ -64,7 +64,7 @@ public:
     void submit(Scene const& scene);
 
     ///
-    void setIBLTexture(Reference<Texture2D> tex);
+    void setIBLTexture(Reference<Texture2D> IBL);
 
     ///
     void draw(CommandBuffer& commandBuffer);
@@ -79,6 +79,9 @@ private:
     RenderGraph* mRenderGraph = nullptr;
     GeometryResource* geometry = nullptr;
     BufferResource* cameraBuffer = nullptr;
+    TextureResource* specularTexture = nullptr;
+    TextureResource* brdfTexture = nullptr;
+    TextureHandle BRDF;
     std::vector<vml::float4x4> lightSpaceTransforms;
     BufferResource* lightSpaceTransformBuffer = nullptr;
     ShadowRenderMetadata shadowMetadata;

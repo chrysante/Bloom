@@ -17,7 +17,8 @@ namespace poppy {
 class EditorSceneRenderer {
 public:
     explicit EditorSceneRenderer(
-        std::unique_ptr<bloom::RenderGraph> renderGraph);
+        std::unique_ptr<bloom::RenderGraph> renderGraph,
+        bloom::CommandQueue& commandQueue);
     void begin(bloom::FrameParameters const& frameParams,
                bloom::Camera const& camera);
     void submit(bloom::Scene const& scene,

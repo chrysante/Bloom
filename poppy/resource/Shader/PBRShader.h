@@ -22,7 +22,9 @@ metal::float3 PBRForwardShader(
     device const metal::float4x4* lightSpaceTransforms,
     device const LightBufferContents& lights,
     device const ShadowRenderMetadata& shadowMetadata,
-    metal::texture2d_array<float> shadowMaps);
+    metal::texture2d_array<float> shadowMaps,
+                               metal::texturecube<float> specularMap,
+                               metal::texture2d<float> brdfMap);
 
 } // namespace bloom
 

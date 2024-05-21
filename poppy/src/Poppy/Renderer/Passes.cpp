@@ -299,10 +299,11 @@ std::unique_ptr<Pass> poppy::makeGridPass() {
 
 static void copyTexture(TextureHandle source, TextureHandle dest,
                         BlitEncoder& encoder) {
-    if (source == dest) {
-        return;
+    if (source != dest &&
+        source.description().pixelFormat == dest.description().pixelFormat)
+    {
+        encoder.copyTexture(source, dest);
     }
-    encoder.copyTexture(source, dest);
     encoder.end();
 }
 

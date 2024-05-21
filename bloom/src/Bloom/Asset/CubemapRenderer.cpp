@@ -1,5 +1,6 @@
 #include "Bloom/Asset/CubemapRenderer.h"
 
+#include <range/v3/view.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Debug.h"
@@ -10,10 +11,12 @@
 
 using namespace bloom;
 using namespace vml::short_types;
+using namespace ranges::views;
 
-static void renderCube(CommandBuffer& commandBuffer, HardwareDevice& device,
-                       RenderPipelineHandle& pipeline, TextureView renderTarget,
-                       TextureView source) {
+static void renderCube(
+    CommandBuffer& commandBuffer, HardwareDevice& device,
+    RenderPipelineHandle& pipeline, TextureView renderTarget,
+    utl::function_view<void(RenderEncoder&)> encoderCallback) {
     float4x4 projection = vml::perspective(vml::constants<>::pi / 2,
                                            /* aspectRatio: */ 1.0f,
                                            /* near: */ 0.1f,
@@ -62,8 +65,8 @@ static void renderCube(CommandBuffer& commandBuffer, HardwareDevice& device,
         });
         encoder->setPipeline(pipeline);
         encoder->setVertexBuffer(cameraBuffer, 0, sizeof(float4x4) * slice);
-        encoder->setFragmentTexture(source, 0);
         encoder->setTriangleCullMode(TriangleCullMode::None);
+        encoderCallback(*encoder);
         encoder->draw(PrimitiveType::TriangleStrip, 4 * slice, 4);
         encoder->end();
     }
@@ -89,31 +92,10 @@ void bloom::renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
         .vertexFunction = functions[0],
         .fragmentFunction = functions[1],
     });
-    renderCube(commandBuffer, device, pipeline, cubemap, equirectangular);
-}
-
-void bloom::renderIrradianceMap(HardwareDevice& device,
-                                CommandBuffer& commandBuffer,
-                                TextureHandle dest, TextureHandle source) {
-    BL_ASSERT(source.description().type == TextureType::CubeTexture);
-    BL_ASSERT(dest.description().type == TextureType::CubeTexture);
-    auto shaderCompiler = device.createShaderCompiler();
-    auto functions =
-        shaderCompiler->compile(std::filesystem::path(
-                                    "Shader/CubemapRenderer.metal"),
-                                std::vector<std::string>{
-                                    "cubeRendererVS", "irradianceRendererFS" });
-    if (functions.empty()) {
-        return;
-    }
-    auto pipeline = device.createRenderPipeline({
-        .colorAttachments = { {
-            .pixelFormat = dest.description().pixelFormat,
-        } },
-        .vertexFunction = functions[0],
-        .fragmentFunction = functions[1],
+    renderCube(commandBuffer, device, pipeline, cubemap,
+               [&](RenderEncoder& encoder) {
+        encoder.setFragmentTexture(equirectangular, 0);
     });
-    renderCube(commandBuffer, device, pipeline, dest, source);
 }
 
 static float3 mapUVSToN(float u, float v, size_t face) {
@@ -441,4 +423,46 @@ std::array<float3, 9> bloom::genLightingCoefficients(float4 const* imageData,
         windowSH(result, 3);
     }
     return result;
+}
+
+void bloom::renderSpecularIBL(HardwareDevice& device,
+                              CommandBuffer& commandBuffer, TextureHandle dest,
+                              TextureHandle source) {
+    BL_ASSERT(source.description().type == TextureType::CubeTexture);
+    BL_ASSERT(dest.description().type == TextureType::CubeTexture);
+    auto shaderCompiler = device.createShaderCompiler();
+    auto functions =
+        shaderCompiler
+            ->compile(std::filesystem::path("Shader/CubemapRenderer.metal"),
+                      std::vector<std::string>{ "cubeRendererVS",
+                                                "specularIBLRendererFS" });
+    if (functions.empty()) {
+        return;
+    }
+    size_t numMips = dest.description().mipmapLevelCount;
+    auto roughness = iota(0, (int)numMips) |
+                     transform([&](float i) { return i / (numMips - 1); }) |
+                     ranges::to<std::vector>;
+    auto roughnessBuffer =
+        device.createBuffer({ .data = roughness.data(),
+                              .size = numMips * sizeof(float),
+                              .storageMode = StorageMode::Managed });
+    auto pipeline = device.createRenderPipeline({
+        .colorAttachments = { {
+            .pixelFormat = dest.description().pixelFormat,
+        } },
+        .vertexFunction = functions[0],
+        .fragmentFunction = functions[1],
+    });
+    for (size_t i = 0; i < numMips; ++i) {
+        auto destMip = createSharedTextureView(RenderAPI::Metal, dest,
+                                               TextureType::CubeTexture,
+                                               dest.description().pixelFormat,
+                                               i, 1, 0, 6);
+        renderCube(commandBuffer, device, pipeline, destMip,
+                   [&](RenderEncoder& encoder) {
+            encoder.setFragmentTexture(source, 0);
+            encoder.setFragmentBuffer(roughnessBuffer, 0, i * sizeof(float));
+        });
+    }
 }

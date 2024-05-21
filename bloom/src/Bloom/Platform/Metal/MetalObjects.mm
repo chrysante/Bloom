@@ -96,6 +96,14 @@ void bloom::metalCopyMemoryToTexture(TextureView dest, void* data,
                      bytesPerImage:bytesPerImage];
 }
 
+static size_t exp2(size_t n) {
+    size_t result = 1;
+    for (size_t i = 0; i < n; ++i) {
+        result *= 2;
+    }
+    return result;
+}
+
 TextureHandle bloom::metalCreateSharedTextureView(
     TextureView texture, TextureType newType, PixelFormat newFormat,
     size_t firstMipLevel, size_t numMipLevels, size_t firstSlice,
@@ -110,6 +118,7 @@ TextureHandle bloom::metalCreateSharedTextureView(
     desc.pixelFormat = newFormat;
     desc.mipmapLevelCount = numMipLevels;
     desc.arrayLength = numSlices;
+    desc.size = vml::max(usize3{ 1 }, desc.size / exp2(firstMipLevel));
     return TextureHandle(bloom_retain(sharedView), bloom_release, desc);
 }
 

@@ -22,10 +22,15 @@ using namespace vml::short_types;
 namespace {
 
 struct IBLGenTool: View {
+    void generateMipmapsFor(Texture2D& tex);
+
     void display();
     void displayFaceFillTool();
     void generateIrradiance();
+    bool verifySourceAndDest();
+
     void generateSH();
+    void generateSpec();
     std::pair<Reference<Texture2D>, TextureHandle> getTexture(AssetHandle asset,
                                                               int side);
     void imgDragDropButton(Reference<Texture2D>& tex, TextureHandle& view,
@@ -41,6 +46,7 @@ struct IBLGenTool: View {
     int sourceside = 0;
     int sourceMipLevel = 0;
     int destside = 0;
+    int destMipLevel = 0;
     bool showFaceFillTool = false;
     bool applyWindowing = true;
     std::array<float3, 9> SHCoeffs;
@@ -50,13 +56,13 @@ struct IBLGenTool: View {
 
 POPPY_REGISTER_VIEW(IBLGenTool, "IBL Generator");
 
-TextureHandle makeView(Texture2D* tex, int side, int sourceMipLevel = 0) {
+TextureHandle makeView(Texture2D* tex, int side, int mipLevel = 0) {
     if (!tex || !tex->GPUHandle) {
         return {};
     }
     return createSharedTextureView(RenderAPI::Metal, tex->GPUHandle,
                                    TextureType::Texture2D, tex->pixelFormat,
-                                   sourceMipLevel, 1, side, 1);
+                                   mipLevel, 1, side, 1);
 }
 
 std::pair<Reference<Texture2D>, TextureHandle> IBLGenTool::getTexture(
@@ -83,49 +89,69 @@ void IBLGenTool::imgDragDropButton(Reference<Texture2D>& tex,
     }
 }
 
+void IBLGenTool::generateMipmapsFor(Texture2D& tex) {
+    if (!tex.GPUHandle) {
+        Logger::Error("Cannot generate mips: No GPU data");
+        return;
+    }
+    usize2 size = tex.size;
+    size_t expectedMipapCount =
+        vml::ceil(vml::log2((float2)size)).fold(utl::max);
+    auto& device = editor().device();
+    auto& commandQueue = editor().commandQueue();
+    auto commandBuffer = commandQueue.createCommandBuffer();
+    auto encoder = commandBuffer->makeBlitEncoder();
+    if (tex.GPUHandle.description().mipmapLevelCount < expectedMipapCount) {
+        auto desc = tex.GPUHandle.description();
+        desc.mipmapLevelCount = expectedMipapCount;
+        auto newHandle = device.createTexture(desc);
+        encoder->copyTexture(tex.GPUHandle, newHandle);
+        tex.GPUHandle = newHandle;
+    }
+    encoder->generateMipmaps(tex.GPUHandle);
+    encoder->end();
+    commandBuffer->commit();
+    commandBuffer->waitForCompletion();
+}
+
 void IBLGenTool::display() {
     ImGui::Checkbox("Show Face Fill Tool", &showFaceFillTool);
     if (showFaceFillTool) {
         displayFaceFillTool();
     }
     ImGui::SeparatorText("Source");
-    if (source && source->GPUHandle && ImGui::Button("Generate Mipmaps")) {
-        usize2 size = source->size;
-        size_t expectedMipapCount =
-            vml::ceil(vml::log2((float2)size)).fold(utl::max);
-        auto& device = editor().device();
-        auto& commandQueue = editor().commandQueue();
-        auto commandBuffer = commandQueue.createCommandBuffer();
-        auto encoder = commandBuffer->makeBlitEncoder();
-        if (source->GPUHandle.description().mipmapLevelCount <
-            expectedMipapCount)
-        {
-            auto desc = source->GPUHandle.description();
-            desc.mipmapLevelCount = expectedMipapCount;
-            auto newHandle = device.createTexture(desc);
-            encoder->copyTexture(source->GPUHandle, newHandle);
-            source->GPUHandle = newHandle;
-        }
-        encoder->generateMipmaps(source->GPUHandle);
-        encoder->end();
-        commandBuffer->commit();
-        commandBuffer->waitForCompletion();
+    if (source && ImGui::Button("Generate Mipmaps for Source")) {
+        generateMipmapsFor(*source);
     }
-    if (ImGui::SliderInt("Source Side", &sourceside, 0, 5) ||
-        (source && source->GPUHandle &&
-         ImGui::SliderInt("Source Mip Level", &sourceMipLevel, 0,
-                          source->GPUHandle.description().mipmapLevelCount -
-                              1)))
-    {
+    bool needNewSourceView = ImGui::SliderInt("Source Side", &sourceside, 0, 5);
+    if (source && source->GPUHandle) {
+        int numMips = (int)source->GPUHandle.description().mipmapLevelCount;
+        needNewSourceView |= ImGui::SliderInt("Source Mip Level",
+                                              &sourceMipLevel, 0, numMips - 1);
+    }
+    if (needNewSourceView) {
         extendLifetime(sourceView);
         sourceView = makeView(source.get(), sourceside, sourceMipLevel);
     }
     imgDragDropButton(source, sourceView, sourceside);
+    ImGui::SeparatorText("Dest");
     ImGui::Checkbox("Apply Windowing", &applyWindowing);
     if (ImGui::Button("Generate Irradiance Coefficients")) {
         generateSH();
     }
-    ImGui::SeparatorText("Dest");
+    if (ImGui::Button("Generate Specular Map")) {
+        generateSpec();
+    }
+    bool needNewDestView = ImGui::SliderInt("Dest Side", &destside, 0, 5);
+    if (dest && dest->GPUHandle) {
+        int numMips = (int)dest->GPUHandle.description().mipmapLevelCount;
+        needNewDestView |=
+            ImGui::SliderInt("Dest Mip Level", &destMipLevel, 0, numMips - 1);
+    }
+    if (needNewDestView) {
+        extendLifetime(destView);
+        destView = makeView(dest.get(), destside, destMipLevel);
+    }
     imgDragDropButton(dest, destView, destside);
     if (dest) {
         for (auto value: dest->irradianceSHCoefficients) {
@@ -140,13 +166,20 @@ void IBLGenTool::display() {
     }
 }
 
-void IBLGenTool::generateSH() {
+bool IBLGenTool::verifySourceAndDest() {
     if (source) {
         auto& AM = editor().coreSystems().assetManager();
         AM.makeAvailable(source->handle(), AssetRepresentation::CPU);
     }
     if (!source || !source->pixelData || !dest) {
-        Logger::Error("Cannot generate coefficients: No source or dest data");
+        Logger::Error("No source or dest data");
+        return false;
+    }
+    return true;
+}
+
+void IBLGenTool::generateSH() {
+    if (!verifySourceAndDest()) {
         return;
     }
     auto* sourceData = reinterpret_cast<float4 const*>(source->pixelData.get());
@@ -157,6 +190,25 @@ void IBLGenTool::generateSH() {
             std::make_unique<uint8_t[]>(dest->getPixelDataByteSize());
     }
     dest->irradianceSHCoefficients = coeffs | ranges::to<std::vector>;
+}
+
+void IBLGenTool::generateSpec() {
+    if (!verifySourceAndDest()) {
+        return;
+    }
+    auto desc = source->GPUHandle.description();
+    desc.usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget;
+    dest->GPUHandle = editor().device().createTexture(desc);
+    dest->size = desc.size.xy;
+    dest->type = desc.type;
+    dest->pixelFormat = desc.pixelFormat;
+    generateMipmapsFor(*dest);
+    auto commandBuffer = editor().commandQueue().createCommandBuffer();
+    auto destHandle = dest->GPUHandle;
+    renderSpecularIBL(editor().device(), *commandBuffer, destHandle,
+                      source->GPUHandle);
+    commandBuffer->commit();
+    commandBuffer->waitForCompletion();
 }
 
 void IBLGenTool::displayFaceFillTool() {

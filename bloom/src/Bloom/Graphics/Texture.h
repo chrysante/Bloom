@@ -21,8 +21,9 @@ public:
     PixelFormat pixelFormat = PixelFormat::RGBA8Unorm;
     vml::usize2 size = 0;
 
-    /// If this is set, this has `size.x * size.y * <size-of-single-pixel> *
-    /// <num-slices>` number of elements.
+    /// If this is set, this has
+    /// `size.x * size.y * <size-of-single-pixel> *  <num-slices>` number of
+    /// elements.
     /// `<num-slices>` is 1 for 2D textures and 6 for cubemaps
     std::unique_ptr<uint8_t[]> pixelData;
     TextureHandle GPUHandle;

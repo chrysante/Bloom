@@ -67,31 +67,82 @@ fragment float4 cubemapRendererFS(CRVSOut in [[stage_in]],
     return tex.sample(samplerState, uv);
 }
 
-fragment float4 irradianceRendererFS(CRVSOut in [[stage_in]],
-                                  texturecube<float> source [[texture(0)]]) {
-    float3 normal = normalize(in.localPosition);
-    float3 right = normalize(cross({ 0.0, -1.0, 0.0 }, normal));
-    float3 up    = normalize(cross(normal, right));
-    float3 irradiance = {};
-    float sampleDelta = 0.025;
-    int nrSamples = 0;
-    const float PI = 3.14159265359;
-    for(float phi = 0.0; phi < 2.0 * PI; phi += sampleDelta) {
-        for(float theta = 0.0; theta < 0.5 * PI; theta += sampleDelta) {
-            // Spherical to cartesian (in tangent space)
-            float3 tangentSample = {
-                sin(theta) * cos(phi), 
-                sin(theta) * sin(phi),
-                cos(theta)
-            };
-            // Tangent space to world
-            float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal;
-            constexpr sampler s(min_filter::linear, mag_filter::linear);
-            float3 sampleColor = source.sample(s, sampleVec).rgb;
-            irradiance += sampleColor * dot(sampleVec, normal);
-            ++nrSamples;
+static float RadicalInverse_VdC(uint bits) {
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+static float2 Hammersley(uint i, uint N) {
+    return float2(float(i)/float(N), RadicalInverse_VdC(i));
+}
+
+constant float PI = 3.14159265359;
+
+static float3 ImportanceSampleGGX(float2 Xi, float3 N, float roughness) {
+    float a = roughness*roughness;
+    float phi = 2.0 * PI * Xi.x;
+    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
+    float sinTheta = sqrt(1.0 - cosTheta*cosTheta);
+    // from spherical coordinates to cartesian coordinates
+    float3 H = {
+        cos(phi) * sinTheta,
+        sin(phi) * sinTheta,
+        cosTheta,
+    };
+    // from tangent-space vector to world-space sample vector
+    float3 up        = abs(N.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
+    float3 tangent   = normalize(cross(up, N));
+    float3 bitangent = cross(N, tangent);
+    float3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
+    return normalize(sampleVec);
+}
+
+static float distributionGGX(float NdotH, float roughness)
+{
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH2 = NdotH * NdotH;
+    float num = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    float PI = 3.14159265359;
+    denom = PI * denom * denom;
+    return num / denom;
+}
+
+fragment float4 specularIBLRendererFS(CRVSOut in [[stage_in]],
+                                       float device const& roughness [[buffer(0)]],
+                                       texturecube<float> source [[texture(0)]]) 
+{
+    float3 N = normalize(in.localPosition);
+    float3 R = N;
+    float3 V = R;
+    uint sampleCount = 16 * 1024u;
+    float totalWeight = 0.0;
+    float3 prefilteredColor{};
+    for(uint i = 0u; i < sampleCount; ++i) {
+        float2 Xi = Hammersley(i, sampleCount);
+        float3 H  = ImportanceSampleGGX(Xi, N, roughness);
+        float3 L  = normalize(2.0 * dot(V, H) * H - V);
+        float NdotL = max(dot(N, L), 0.0);
+        if (NdotL <= 0.0) {
+            continue;
         }
+        float NdotH = dot(N, H);
+        float HdotV = dot(H, V);
+        float D   = distributionGGX(NdotH, roughness);
+        float pdf = (D * NdotH / (4.0 * HdotV)) + 0.0001;
+        // FIXME: Pass the resolution in through buffer
+        float resolution = 512.0; // resolution of source cubemap (per face)
+        float saTexel  = 4.0 * PI / (6.0 * resolution * resolution);
+        float saSample = 1.0 / (float(sampleCount) * pdf + 0.0001);
+        float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
+        constexpr sampler s(min_filter::linear, mag_filter::linear, mip_filter::linear);
+        prefilteredColor += source.sample(s, L, min_lod_clamp(mipLevel)).rgb;
+        totalWeight      += NdotL;
     }
-    float3 final = PI * irradiance / float(nrSamples);
-    return float4(final, 1);
+    return float4(prefilteredColor / totalWeight, 1.0);
 }

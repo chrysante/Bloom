@@ -13,8 +13,8 @@ namespace bloom {
 void renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
                    TextureHandle cubemap, TextureHandle equirectangular);
 
-void renderIrradianceMap(HardwareDevice& device, CommandBuffer& commandBuffer,
-                         TextureHandle dest, TextureHandle source);
+void renderSpecularIBL(HardwareDevice& device, CommandBuffer& commandBuffer,
+                       TextureHandle dest, TextureHandle source);
 
 std::array<vml::float3, 9> genLightingCoefficients(vml::float4 const* imageData,
                                                    vml::usize2 resolution,

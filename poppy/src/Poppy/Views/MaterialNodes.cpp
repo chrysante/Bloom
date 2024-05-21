@@ -27,6 +27,8 @@ static constexpr std::array<char const*, 4> ColorChannelNames = {
     "Red", "Green", "Blue", "Alpha"
 };
 
+static DataTypeMask mask(auto... t) { return { t... }; }
+
 namespace {
 
 struct Colors {
@@ -72,8 +74,6 @@ static Type const* translateType(Context& ctx, DataType dataType) {
         int numComponents = (int)dataType - (int)DataType::Float + 1;
         return ctx.vectorType(numComponents);
     }
-    case AnyVector:
-        throw std::runtime_error("Compiling value of AnyVector type");
     case Texture:
         BL_UNIMPLEMENTED();
     }
@@ -135,22 +135,22 @@ struct OutputController: MaterialNodeController {
         return {
             { .name = "Base Color",
               .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Float3 },
+              .userType = mask(DataType::Float3) },
             { .name = "Emissive",
               .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Float3 },
+              .userType = mask(DataType::Float3) },
             { .name = "Roughness",
               .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Float },
+              .userType = mask(DataType::Float) },
             { .name = "Metallic",
               .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Float },
+              .userType = mask(DataType::Float) },
             { .name = "Ambient Occlusion",
               .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Float },
+              .userType = mask(DataType::Float) },
             { .name = "Normal",
               .flags = PinFlags::Optional,
-              .userType = (PinUserType)DataType::Float3 },
+              .userType = mask(DataType::Float3) },
         };
     }
 
@@ -233,12 +233,12 @@ struct InputController: MaterialNodeController {
         switch (kind) {
         case InputKind::TextureCoords:
             return {
-                { .name = "Coords", .userType = (PinUserType)DataType::Float2 },
+                { .name = "Coords", .userType = mask(DataType::Float2) },
                 { .name = "U",
-                  .userType = (PinUserType)DataType::Float,
+                  .userType = mask(DataType::Float),
                   .color = ColorChannelColors[0] },
                 { .name = "V",
-                  .userType = (PinUserType)DataType::Float,
+                  .userType = mask(DataType::Float),
                   .color = ColorChannelColors[1] },
             };
 
@@ -249,8 +249,7 @@ struct InputController: MaterialNodeController {
         case InputKind::Binormals:
             [[fallthrough]];
         case InputKind::WorldPosition:
-            return { { .name = "Vector",
-                       .userType = (PinUserType)DataType::Float3 } };
+            return { { .name = "Vector", .userType = mask(DataType::Float3) } };
         }
     }
 
@@ -336,52 +335,50 @@ struct ConstantController: MaterialNodeController {
         switch (dataType) {
         case Float:
             return {
-                { .name = "Value", .userType = (PinUserType)Float },
+                { .name = "Value", .userType = mask(Float) },
             };
         case Float2:
             return {
-                { .name = "Value", .userType = (PinUserType)Float2 },
+                { .name = "Value", .userType = mask(Float2) },
                 { .name = ColorChannelNames[0],
-                  .userType = (PinUserType)Float,
+                  .userType = mask(Float),
                   .color = ColorChannelColors[0] },
                 { .name = ColorChannelNames[1],
-                  .userType = (PinUserType)Float,
+                  .userType = mask(Float),
                   .color = ColorChannelColors[1] },
             };
         case Float3:
             return {
-                { .name = "Value", .userType = (PinUserType)Float3 },
+                { .name = "Value", .userType = mask(Float3) },
                 { .name = ColorChannelNames[0],
-                  .userType = (PinUserType)Float,
+                  .userType = mask(Float),
                   .color = ColorChannelColors[0] },
                 { .name = ColorChannelNames[2],
-                  .userType = (PinUserType)Float,
+                  .userType = mask(Float),
                   .color = ColorChannelColors[1] },
                 { .name = ColorChannelNames[3],
-                  .userType = (PinUserType)Float,
+                  .userType = mask(Float),
                   .color = ColorChannelColors[2] },
             };
         case Float4:
             return {
-                { .name = "Value", .userType = (PinUserType)Float3 },
+                { .name = "Value", .userType = mask(Float3) },
                 { .name = ColorChannelNames[0],
-                  .userType = (PinUserType)Float,
+                  .userType = mask(Float),
                   .color = ColorChannelColors[0] },
                 { .name = ColorChannelNames[1],
-                  .userType = (PinUserType)Float,
+                  .userType = mask(Float),
                   .color = ColorChannelColors[1] },
                 { .name = ColorChannelNames[2],
-                  .userType = (PinUserType)Float,
+                  .userType = mask(Float),
                   .color = ColorChannelColors[2] },
                 { .name = ColorChannelNames[3],
-                  .userType = (PinUserType)Float,
+                  .userType = mask(Float),
                   .flags = PinFlags::Optional },
             };
-        case AnyVector:
-            BL_UNREACHABLE();
         case Texture:
             return {
-                { .name = "Texture", .userType = (PinUserType)Texture },
+                { .name = "Texture", .userType = mask(Texture) },
             };
         }
     }
@@ -408,8 +405,6 @@ struct ConstantController: MaterialNodeController {
                 return { ctx.vectorConstant(numComponents, value) };
             }
         }
-        case AnyVector:
-            BL_UNREACHABLE();
         case Texture:
             if (isParameter) {
                 auto* param =
@@ -438,8 +433,6 @@ struct ConstantController: MaterialNodeController {
             return { 80, 80 };
         case Float4:
             return { 80, 80 };
-        case AnyVector:
-            BL_UNREACHABLE();
         case Texture:
             return float2{ 80, 80 } + float2(0, itemHeight);
         }
@@ -482,10 +475,6 @@ struct ConstantController: MaterialNodeController {
     }
 
     void bodyContent() override {
-        auto colFlags =
-            ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoLabel |
-            ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder |
-            ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoOptions;
         switch (dataType) {
         case DataType::Float:
             ImGui::SetNextItemWidth(-FLT_MIN);
@@ -500,8 +489,6 @@ struct ConstantController: MaterialNodeController {
         case DataType::Float4:
             colorButton(value, backupValue, dataType);
             break;
-        case DataType::AnyVector:
-            BL_UNREACHABLE();
         case DataType::Texture: {
             char const* textypenames[] = { "Texture2D", "Cubemap" };
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
@@ -553,9 +540,9 @@ struct ConstantController: MaterialNodeController {
 };
 
 REGISTER_MATERIAL_NODE(ConstantController, {
-    return enumMenu<DataType>(
-        "Constants", defaultControllerFactory<DataType, ConstantController>(),
-        {}, [](DataType t) { return t != DataType::AnyVector; });
+    return enumMenu<DataType>("Constants",
+                              defaultControllerFactory<DataType,
+                                                       ConstantController>());
 })
 
 enum class FunctionType { Normalize, Sqrt };
@@ -579,7 +566,7 @@ struct BuiltinFunctionController: OverloadableNodeController {
     }
 
     explicit BuiltinFunctionController(FunctionType type):
-        OverloadableNodeController(numInputs(type), DataType::AnyVector),
+        OverloadableNodeController(numInputs(type), DataTypeMask::VectorN),
         type(type) {}
 
     explicit BuiltinFunctionController(YAML::Node const& root):
@@ -599,8 +586,7 @@ struct BuiltinFunctionController: OverloadableNodeController {
         case FunctionType::Normalize:
         case FunctionType::Sqrt:
             return {
-                { .name = "Input",
-                  .userType = (PinUserType)DataType::AnyVector },
+                { .name = "Input", .userType = DataTypeMask::VectorN },
             };
         }
     }
@@ -610,7 +596,7 @@ struct BuiltinFunctionController: OverloadableNodeController {
         case FunctionType::Normalize:
         case FunctionType::Sqrt:
             return {
-                { .name = "Result", .userType = (PinUserType)inputType(0) },
+                { .name = "Result", .userType = inputType(0) },
             };
         }
     }
@@ -634,7 +620,7 @@ struct BuiltinFunctionController: OverloadableNodeController {
         case FunctionType::Normalize:
             [[fallthrough]];
         case FunctionType::Sqrt:
-            auto* inType = translateType(ctx, inputType(0));
+            auto* inType = translateType(ctx, inputType(0).getSingle().value());
             auto* value =
                 g.addValue<BuiltinFunction>(ctx, translateFunctionType(type),
                                             std::array{ inType });
@@ -680,14 +666,14 @@ struct AppendController: MaterialNodeController {
     std::vector<PinDesc> makeInputDescriptors() override {
         return iota(0, numComponents) | transform([](int index) {
             return PinDesc{ .name = ColorChannelNames[index],
-                            .userType = (PinUserType)DataType::Float,
+                            .userType = mask(DataType::Float),
                             .flags = PinFlags::Optional };
         }) | ranges::to<std::vector>;
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
         return {
-            { .userType = (PinUserType)FloatNType(numComponents) },
+            { .userType = mask(FloatNType(numComponents)) },
         };
     }
 
@@ -698,7 +684,7 @@ struct AppendController: MaterialNodeController {
                                     numComponents)) };
     }
 
-    Value* defaultInputValue(Context& ctx, size_t inputIndex) const override {
+    Value* defaultInputValue(Context& ctx, size_t) const override {
         return ctx.floatConstant(0);
     }
     float2 preferredContentSize() const override { return { 50, 0 }; }
@@ -744,15 +730,13 @@ struct SplitController: MaterialNodeController {
 
     std::vector<PinDesc> makeInputDescriptors() override {
         return {
-            { .userType =
-                  (PinUserType)((int)DataType::Float + numComponents - 1) },
+            { .userType = mask(FloatNType(numComponents)) },
         };
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
         return std::vector<PinDesc>(numComponents,
-                                    { .userType =
-                                          (PinUserType)DataType::Float });
+                                    { .userType = mask(DataType::Float) });
     }
 
     utl::small_vector<Value*> createGraphNodes(
@@ -792,7 +776,7 @@ struct ArithmeticController: OverloadableNodeController {
     }
 
     ArithmeticController(ArithmeticOperation::Kind op):
-        OverloadableNodeController(2, DataType::AnyVector), operation(op) {}
+        OverloadableNodeController(2, DataTypeMask::FloatN), operation(op) {}
 
     explicit ArithmeticController(YAML::Node const& root):
         OverloadableNodeController(root) {
@@ -807,27 +791,25 @@ struct ArithmeticController: OverloadableNodeController {
     }
 
     std::vector<PinDesc> makeInputDescriptors() override {
-        return { { .name = "A", .userType = (PinUserType)DataType::AnyVector },
-                 { .name = "B",
-                   .userType = (PinUserType)DataType::AnyVector } };
+        return { { .name = "A", .userType = DataTypeMask::FloatN },
+                 { .name = "B", .userType = DataTypeMask::FloatN } };
     }
 
-    DataType selectOutputType() const {
+    DataTypeMask selectOutputType() const {
         using enum DataType;
         auto a = inputType(0);
         auto b = inputType(1);
-        if (a == Float || a == AnyVector) {
+        if (a.matches(Float) || DataTypeMask::FloatN.contains(b)) {
             return b;
         }
-        if (b == Float || b == AnyVector) {
+        if (b.matches(Float) || DataTypeMask::FloatN.contains(a)) {
             return a;
         }
         return a;
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
-        return { { .name = "Result",
-                   .userType = (PinUserType)selectOutputType() } };
+        return { { .name = "Result", .userType = selectOutputType() } };
     }
 
     utl::small_vector<Value*> createGraphNodes(
@@ -835,12 +817,9 @@ struct ArithmeticController: OverloadableNodeController {
         if (isAnyInputUntyped()) {
             return {};
         }
-        auto* value =
-            graph.addValue<ArithmeticOperation>(operation,
-                                                translateType(ctx,
-                                                              inputType(0)),
-                                                translateType(ctx,
-                                                              inputType(1)));
+        auto* value = graph.addValue<ArithmeticOperation>(
+            operation, translateType(ctx, inputType(0).getSingle().value()),
+            translateType(ctx, inputType(1).getSingle().value()));
         return { value };
     }
 
@@ -883,39 +862,41 @@ struct TextureSamplerController: MaterialNodeController {
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
-        return { { .name = "Color", .userType = (PinUserType)DataType::Float3 },
+        using enum DataType;
+        return { { .name = "Color", .userType = mask(Float3) },
                  { .name = ColorChannelNames[0],
                    .flags = PinFlags::Optional,
-                   .userType = (PinUserType)DataType::Float,
+                   .userType = mask(Float),
                    .color = ColorChannelColors[0] },
                  { .name = ColorChannelNames[1],
                    .flags = PinFlags::Optional,
-                   .userType = (PinUserType)DataType::Float,
+                   .userType = mask(Float),
                    .color = ColorChannelColors[1] },
                  { .name = ColorChannelNames[2],
                    .flags = PinFlags::Optional,
-                   .userType = (PinUserType)DataType::Float,
+                   .userType = mask(Float),
                    .color = ColorChannelColors[2] },
                  { .name = ColorChannelNames[3],
                    .flags = PinFlags::Optional,
-                   .userType = (PinUserType)DataType::Float } };
+                   .userType = mask(Float) } };
     }
 
     static DataType getUVType(TextureSubType subtype) {
+        using enum DataType;
         switch (subtype) {
         case TextureSubType::Texture2D:
-            return DataType::Float2;
+            return Float2;
         case TextureSubType::TextureCube:
-            return DataType::Float3;
+            return Float3;
         }
     }
 
     std::vector<PinDesc> makeInputDescriptors() override {
         return {
-            { .name = "Texture", .userType = (PinUserType)DataType::Texture },
+            { .name = "Texture", .userType = mask(DataType::Texture) },
             { .name = "UVs",
               .flags = PinFlags::Optional,
-              .userType = (PinUserType)getUVType(subtype) },
+              .userType = mask(getUVType(subtype)) },
         };
     }
 

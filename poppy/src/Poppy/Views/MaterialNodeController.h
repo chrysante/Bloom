@@ -1,6 +1,9 @@
 #ifndef POPPY_VIEWS_MATERIALNODECONTROLLER_H
 #define POPPY_VIEWS_MATERIALNODECONTROLLER_H
 
+#include <bit>
+#include <bitset>
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <span>
@@ -40,7 +43,68 @@ std::unique_ptr<nodeEditor::NodeController> deserializeMaterialNodeController(
     YAML::Node const&);
 
 /// Data types in the material editor
-enum class DataType { Float, Float2, Float3, Float4, AnyVector, Texture };
+enum class DataType { Float, Float2, Float3, Float4, Texture };
+
+class DataTypeMask {
+public:
+    static DataTypeMask const FloatN;
+    static DataTypeMask const VectorN;
+
+    constexpr DataTypeMask(nodeEditor::PinUserType userType):
+        bits(std::bit_cast<std::bitset<64>>(userType)) {}
+
+    constexpr DataTypeMask(std::same_as<DataType> auto... t):
+        DataTypeMask({ { t... } }) {}
+
+    constexpr DataTypeMask(std::span<DataType const> types) {
+        for (auto t: types) {
+            bits.set((int)t);
+        }
+    }
+
+    void set(DataType t, bool value = true) { bits.set((int)t, value); }
+
+    bool matches(DataType t) const { return contains(t) && bits.count() == 1; }
+
+    bool matches(DataTypeMask m) const { return bits == m.bits; }
+
+    bool contains(DataType t) const { return bits.test((int)t); }
+
+    bool contains(DataTypeMask m) const { return (bits & m.bits) == m.bits; }
+
+    bool containsAll(auto... t) const { return (... && contains(t)); }
+
+    bool containsAny(auto... t) const { return (... || contains(t)); }
+
+    size_t count() const { return bits.count(); }
+
+    operator nodeEditor::PinUserType() const {
+        return std::bit_cast<nodeEditor::PinUserType>(bits);
+    }
+
+    auto range() const {
+        return ranges::views::iota(0, 64) | ranges::views::transform([](int n) {
+            return DataType(n);
+        }) | ranges::views::filter([*this](DataType t) { return contains(t); });
+    }
+
+    std::optional<DataType> getSingle() const {
+        if (count() == 1) {
+            return range().front();
+        }
+        return std::nullopt;
+    }
+
+private:
+    std::bitset<64> bits = {};
+};
+
+inline DataTypeMask const DataTypeMask::FloatN = {
+    DataType::Float, DataType::Float2, DataType::Float3, DataType::Float4
+};
+inline DataTypeMask const DataTypeMask::VectorN = { DataType::Float2,
+                                                    DataType::Float3,
+                                                    DataType::Float4 };
 
 /// \Returns `Float` or `FloatN` where `N` is \p numComponents
 inline DataType FloatNType(int numComponents) {
@@ -48,7 +112,7 @@ inline DataType FloatNType(int numComponents) {
     return (DataType)((int)DataType::Float + numComponents - 1);
 }
 
-bool isDataTypeCompatible(DataType input, DataType output);
+bool isDataTypeCompatible(DataTypeMask input, DataTypeMask output);
 
 /// Base class of all material node controllers
 class MaterialNodeController: public nodeEditor::NodeController {
@@ -74,8 +138,8 @@ public:
                                ValueMap const& map) const;
 
 private:
-    virtual bloom::matc::Value* defaultInputValue(bloom::matc::Context& ctx,
-                                                  size_t inputIndex) const {
+    virtual bloom::matc::Value* defaultInputValue(
+        bloom::matc::Context&, [[maybe_unused]] size_t inputIndex) const {
         return nullptr;
     }
 };
@@ -86,12 +150,18 @@ private:
 struct OverloadableNodeController: MaterialNodeController {
 public:
     /// \Returns the connected type of the pin at index \p index
-    DataType inputType(size_t index) const { return _inputTypes[index]; }
+    DataTypeMask inputType(size_t index) const { return _inputTypes[index]; }
+
+    /// \Returns the default type of the pin at index \p index
+    DataTypeMask defaultType(size_t index) const {
+        return _defaultTypes[index];
+    }
 
 protected:
-    explicit OverloadableNodeController(size_t numInputs, DataType defaultType);
+    explicit OverloadableNodeController(size_t numInputs,
+                                        DataTypeMask defaultType);
 
-    explicit OverloadableNodeController(std::vector<DataType> inputTypes);
+    explicit OverloadableNodeController(std::vector<DataTypeMask> defaultTypes);
 
     explicit OverloadableNodeController(YAML::Node const& root);
 
@@ -107,7 +177,8 @@ private:
 
     void notifyUsers();
 
-    std::vector<DataType> _inputTypes;
+    std::vector<DataTypeMask> _defaultTypes;
+    std::vector<DataTypeMask> _inputTypes;
 };
 
 namespace internal {
@@ -134,5 +205,25 @@ inline constexpr auto DeserializeFactory =
             return nullptr;                                                    \
         });                                                                    \
     };
+
+#ifndef BLOOM_NO_SERIALIZATION
+
+template <>
+struct YAML::convert<poppy::DataTypeMask> {
+    static Node encode(poppy::DataTypeMask mask) {
+        Node node;
+        ranges::for_each(mask.range(),
+                         [&](poppy::DataType t) { node.push_back(t); });
+        return node;
+    }
+    static bool decode(Node const& node, poppy::DataTypeMask& mask) {
+        for (auto& field: node) {
+            mask.set(node.as<poppy::DataType>());
+        }
+        return true;
+    }
+};
+
+#endif // BLOOM_NO_SERIALIZATION
 
 #endif // POPPY_VIEWS_MATERIALNODECONTROLLER_H

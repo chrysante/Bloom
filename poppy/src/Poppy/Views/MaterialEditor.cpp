@@ -161,7 +161,7 @@ struct Delegate: NodeEditorDelegate {
 
     bool isPinTypeCompatible(PinUserType output,
                              PinUserType input) const override {
-        return isDataTypeCompatible((DataType)output, (DataType)input);
+        return isDataTypeCompatible(output, input);
     }
 
     std::unique_ptr<nodeEditor::NodeController> deserializeNodeController(

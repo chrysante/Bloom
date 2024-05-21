@@ -22,21 +22,8 @@ using namespace nodeEditor;
 using namespace vml::short_types;
 using namespace ranges::views;
 
-bool poppy::isDataTypeCompatible(DataType out, DataType in) {
-    if (out == in) {
-        return true;
-    }
-    if ((int)in >= (int)DataType::Float && (int)in <= (int)DataType::Float4 &&
-        out == DataType::AnyVector)
-    {
-        return true;
-    }
-    if ((int)out >= (int)DataType::Float && (int)out <= (int)DataType::Float4 &&
-        in == DataType::AnyVector)
-    {
-        return true;
-    }
-    return false;
+bool poppy::isDataTypeCompatible(DataTypeMask out, DataTypeMask in) {
+    return in.contains(out) || out.contains(in);
 }
 
 namespace {
@@ -150,26 +137,30 @@ void MaterialNodeController::linkGraphNode(Context& ctx,
     }
 }
 
-OverloadableNodeController::OverloadableNodeController(size_t numInputs,
-                                                       DataType defaultType):
-    OverloadableNodeController(std::vector<DataType>(numInputs, defaultType)) {}
+OverloadableNodeController::OverloadableNodeController(
+    size_t numInputs, DataTypeMask defaultType):
+    OverloadableNodeController(
+        std::vector<DataTypeMask>(numInputs, defaultType)) {}
 
 OverloadableNodeController::OverloadableNodeController(
-    std::vector<DataType> inputTypes):
-    _inputTypes(std::move(inputTypes)) {}
+    std::vector<DataTypeMask> defaultTypes):
+    _defaultTypes(defaultTypes), _inputTypes(std::move(defaultTypes)) {}
 
 OverloadableNodeController::OverloadableNodeController(YAML::Node const& root) {
-    _inputTypes = root["InputTypes"].as<std::vector<DataType>>();
+    _defaultTypes = root["DefaultTypes"].as<std::vector<DataTypeMask>>();
+    _inputTypes = root["InputTypes"].as<std::vector<DataTypeMask>>();
 }
 
 YAML::Node OverloadableNodeController::serialize() const {
     YAML::Node root;
+    root["DefaultTypes"] = _defaultTypes;
     root["InputTypes"] = _inputTypes;
     return root;
 }
 
 bool OverloadableNodeController::isAnyInputUntyped() const {
-    return ranges::contains(_inputTypes, DataType::AnyVector);
+    return ranges::any_of(_inputTypes,
+                          [](DataTypeMask t) { return t.count() > 1; });
 }
 
 void OverloadableNodeController::pinConnectionChanged(nodeEditor::Pin& pin) {
@@ -185,9 +176,9 @@ bool OverloadableNodeController::updatePinType(InputPin& in) {
     size_t index = in.indexInParent();
     BL_ASSERT(index < _inputTypes.size());
     auto* origin = in.origin();
-    auto newType = origin ? (DataType)in.origin()->userType() :
-                            DataType::AnyVector;
-    if (newType == _inputTypes[index]) {
+    auto newType = origin ? DataTypeMask(in.origin()->userType()) :
+                            defaultType(index);
+    if (newType == inputType(index)) {
         return false;
     }
     _inputTypes[index] = newType;

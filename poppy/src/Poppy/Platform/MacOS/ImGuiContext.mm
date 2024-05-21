@@ -58,7 +58,8 @@ struct poppy::ImGuiContext::BackendImpl {
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer
             renderCommandEncoderWithDescriptor:renderPassDescriptor];
         [renderEncoder pushDebugGroup:@"Dear ImGui rendering"];
-        ImGui_ImplMetal_RenderDrawData(drawData, commandBuffer, renderEncoder);
+        ImGui_ImplMetal_RenderDrawData(drawData, commandBuffer, renderEncoder,
+                                       swapchain.size());
         [renderEncoder popDebugGroup];
         [renderEncoder endEncoding];
         lock.unlock();

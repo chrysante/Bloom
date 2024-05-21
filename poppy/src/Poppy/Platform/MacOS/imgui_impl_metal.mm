@@ -238,14 +238,15 @@ static void ImGui_ImplMetal_SetupRenderState(ImDrawData* drawData, id<MTLCommand
 }
 
 // Metal Render function.
-void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> commandBuffer, id<MTLRenderCommandEncoder> commandEncoder)
+void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> commandBuffer, id<MTLRenderCommandEncoder> commandEncoder,
+                                    vml::usize2 framebufferSize)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     MetalContext* ctx = bd->SharedMetalContext;
 
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
-    int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+    int fb_width = (int)framebufferSize.x;
+    int fb_height = (int)framebufferSize.y;
     if (fb_width <= 0 || fb_height <= 0 || drawData->CmdListsCount == 0)
         return;
 
@@ -477,6 +478,7 @@ static void ImGui_ImplMetal_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 
 void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
 {
+    BL_UNREACHABLE();
     ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
 
 #if TARGET_OS_OSX
@@ -513,7 +515,7 @@ void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
 
     id <MTLCommandBuffer> commandBuffer = [data->CommandQueue commandBuffer];
     id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-    ImGui_ImplMetal_RenderDrawData(viewport->DrawData, commandBuffer, renderEncoder);
+    ImGui_ImplMetal_RenderDrawData(viewport->DrawData, commandBuffer, renderEncoder, {});
     [renderEncoder endEncoding];
 
     [commandBuffer presentDrawable:drawable];

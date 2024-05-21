@@ -54,19 +54,8 @@ fragment MainPassFragmentData rgMainPassFS(
     LightBufferContents device const& lights [[buffer(1)]],
     float4x4 device const* lightSpaceTransforms [[buffer(2)]],
     ShadowRenderMetadata device const& shadowMetadata [[buffer(3)]],
-    MaterialParameters device const& materialParams [[buffer(4)]],
     uint32_t device const& entityID [[buffer(5)]],
     texture2d_array<float> shadowMaps [[texture(0)]])
 {
-    PBRData pbr{ .albedo = materialParams.baseColor,
-            .metallic = materialParams.metallic,
-            .roughness = materialParams.roughness,
-            .ao = 1,
-            .normal = normalize(in.normalWS.xyz)
-    };
-    float3 color =
-        PBRForwardShader(pbr, in.positionWS,
-                         cameraBuffer.cameraPosition, lightSpaceTransforms,
-                         lights, shadowMetadata, shadowMaps);
-    return { float4(color, 1), entityID };
+    return { float4(in.textureCoords, 0, 1), entityID };
 }

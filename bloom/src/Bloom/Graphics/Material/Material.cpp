@@ -72,6 +72,10 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
         rgMainPass = createPipeline(device,
                                     device.createFunction("rgMainPassVS"),
                                     device.createFunction("rgMainPassFS"));
+        primitiveParameters = {};
+        paramBufferSize = 0;
+        textureParameters = {};
+        updateInstances(*this, instances);
     }
     depthStencil = device.createDepthStencil(
         { .depthWrite = true,

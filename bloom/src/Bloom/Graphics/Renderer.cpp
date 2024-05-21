@@ -255,8 +255,10 @@ void Renderer::draw(CommandBuffer& commandBuffer) {
             lightSpaceTransformBuffer->assign(device.createBuffer(
                 { .size = byteSize, .storageMode = StorageMode::Managed }));
         }
-        device.fillManagedBuffer(lightSpaceTransformBuffer->handle(),
-                                 lightSpaceTransforms.data(), byteSize);
+        if (!lightSpaceTransforms.empty()) {
+            device.fillManagedBuffer(lightSpaceTransformBuffer->handle(),
+                                     lightSpaceTransforms.data(), byteSize);
+        }
     }
     if (bloomParams && bloomParams->handle()) {
         BloomParameters values = makeBloomParams({

@@ -986,6 +986,14 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     viewport->PlatformWindowCreated = true;
     viewport->PlatformHandle = window;
     viewport->PlatformHandleRaw = window->nativeHandle();
+    if ((float2)viewport->Pos != window->position()) {
+        viewport->Pos = (float2)window->position();
+        viewport->PlatformRequestMove = true;
+    }
+    if ((float2)viewport->Size != window->size()) {
+        viewport->Size = (float2)window->size();
+        viewport->PlatformRequestResize = true;
+    }
     window->addDelegate(std::make_unique<ImGui_ImplOSX_WindowDelegate>(viewport));
 }
 

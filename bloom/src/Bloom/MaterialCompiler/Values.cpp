@@ -117,12 +117,10 @@ static Type const* getReturnTypeImpl(Context& ctx, BuiltinFunctionKind kind,
                                      std::span<Type const* const> args) {
     switch (kind) {
         using enum SymType;
-        // clang-format off
-#define ARGS_TO_SPAN(...) { { __VA_ARGS__ } }
-        // clang-format on
+#define UNPACK(...) __VA_ARGS__
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, RetType, Args)                     \
     case BuiltinFunctionKind::Name:                                            \
-        return deduceRetType(ctx, RetType, ARGS_TO_SPAN Args, args);
+        return deduceRetType(ctx, RetType, { { UNPACK Args } }, args);
 #include "Bloom/MaterialCompiler/Lists.def"
     }
 }

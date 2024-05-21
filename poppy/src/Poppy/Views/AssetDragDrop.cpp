@@ -196,9 +196,22 @@ static bool thumbnailButtonTexture(Texture2D const* tex, float2 buttonSize,
                 ImGui::IsPopupOpen(popupIDs.assetList, ImGuiPopupFlags_None) ?
             ImGui::ColorConvertFloat4ToU32({ .8, .8, .8, 1 }) :
             IM_COL32_WHITE;
-    markObjectRenderHazard(tex->GPUHandle);
-    DL->AddImageRounded(tex->GPUHandle.nativeHandle(), pos, pos + buttonSize,
-                        { 0, 0 }, { 1, 1 }, col, rounding);
+    auto handle = tex->GPUHandle;
+    switch (handle.description().type) {
+    case TextureType::Texture2D:
+        break;
+    case TextureType::CubeTexture:
+        handle = createSharedTextureView(RenderAPI::Metal, handle,
+                                         TextureType::Texture2D,
+                                         handle.description().pixelFormat, 0, 1,
+                                         0, 1);
+        break;
+    default:
+        BL_UNIMPLEMENTED();
+    }
+    markObjectRenderHazard(handle);
+    DL->AddImageRounded(handle.nativeHandle(), pos, pos + buttonSize, { 0, 0 },
+                        { 1, 1 }, col, rounding);
     DL->AddRect(pos, pos + buttonSize, ImGui::GetColorU32(ImGuiCol_Border),
                 rounding);
     return clicked;

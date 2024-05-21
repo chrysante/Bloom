@@ -42,6 +42,7 @@ struct IBLGenTool: View {
     int sourceMipLevel = 0;
     int destside = 0;
     bool showFaceFillTool = false;
+    float clamp = 1;
     std::array<float3, 9> SHCoeffs;
 };
 
@@ -120,6 +121,7 @@ void IBLGenTool::display() {
         sourceView = makeView(source.get(), sourceside, sourceMipLevel);
     }
     imgDragDropButton(source, sourceView, sourceside);
+    ImGui::DragFloat("Clamp", &clamp);
     if (ImGui::Button("Generate Irradiance Coefficients")) {
         generateSH();
     }
@@ -148,7 +150,7 @@ void IBLGenTool::generateSH() {
         return;
     }
     auto* sourceData = reinterpret_cast<float4 const*>(source->pixelData.get());
-    auto coeffs = genLightingCoefficients(sourceData, source->size);
+    auto coeffs = genLightingCoefficients(sourceData, source->size, clamp);
     if (!dest->pixelData) {
         dest->pixelData =
             std::make_unique<uint8_t[]>(dest->getPixelDataByteSize());

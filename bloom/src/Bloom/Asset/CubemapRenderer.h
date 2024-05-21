@@ -17,7 +17,8 @@ void renderIrradianceMap(HardwareDevice& device, CommandBuffer& commandBuffer,
                          TextureHandle dest, TextureHandle source);
 
 std::array<vml::float3, 9> genLightingCoefficients(vml::float4 const* imageData,
-                                                   vml::usize2 resolution);
+                                                   vml::usize2 resolution,
+                                                   float clamp);
 
 } // namespace bloom
 

@@ -68,6 +68,7 @@ set(poppy_sources
   src/Poppy/Views/DirectoryView.cpp
   src/Poppy/Views/DirectoryView.h
   src/Poppy/Views/EntityInspector.cpp
+  src/Poppy/Views/IBLGenTool.cpp
   src/Poppy/Views/NodeEditor.cpp
   src/Poppy/Views/NodeEditor.h
   src/Poppy/Views/MaterialEditor.cpp

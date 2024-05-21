@@ -156,14 +156,16 @@ static std::array<float3, 9> genLightingCoefficientsForNormal(float3 N,
 }
 
 std::array<float3, 9> bloom::genLightingCoefficients(float4 const* imageData,
-                                                     usize2 resolution) {
+                                                     usize2 resolution,
+                                                     float clamp) {
     vml::vector<float3, 9> result{};
     float weightSum = 0;
     for (size_t s = 0; s < 6; ++s) {
         float4 const* sideData = imageData + s * resolution.x * resolution.y;
         for (size_t y = 0; y < resolution.y; ++y) {
             for (size_t x = 0; x < resolution.x; ++x) {
-                float3 L = sideData[y * resolution.x + x].xyz;
+                float3 L =
+                    vml::min(sideData[y * resolution.x + x].xyz, float3(clamp));
                 float2 coords = 2 * (float2(x, y) + 0.5f) / resolution - 1;
                 float temp = 1.0f + vml::length_squared(coords);
                 float weight = 4.0f / (std::sqrt(temp) * temp);

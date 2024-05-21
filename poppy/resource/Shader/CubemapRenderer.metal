@@ -2,6 +2,7 @@
 
 using namespace metal;
 
+// clang-format off
 constant float3 vertices[] = {
     // +X
     float3(1, -1, -1),
@@ -33,7 +34,7 @@ constant float3 vertices[] = {
     float3(-1,  1, -1),
     float3( 1, -1, -1),
     float3( 1,  1, -1),
-};
+}; // clang-format on
 
 struct CRVSOut {
     float4 position [[position]];
@@ -42,15 +43,15 @@ struct CRVSOut {
 };
 
 vertex CRVSOut cubeRendererVS(float4x4 device const& camera [[buffer(0)]],
-                                 uint32_t vertexID [[vertex_id]]) {
+                              uint32_t vertexID [[vertex_id]])
+{
     float3 position = vertices[vertexID];
-    return {
-        .position = camera * float4(position, 1),
-        .localPosition = position
-    };
+    return { .position = camera * float4(position, 1),
+             .localPosition = position };
 }
 
-static float2 sampleSphericalMap(float3 v) {
+static float2 sampleSphericalMap(float3 v)
+{
     float2 invAtan = { 0.1591, 0.3183 };
     float2 uv = { atan2(v.y, v.x), asin(v.z) };
     uv *= invAtan;
@@ -60,14 +61,15 @@ static float2 sampleSphericalMap(float3 v) {
 }
 
 fragment float4 cubemapRendererFS(CRVSOut in [[stage_in]],
-                                  texture2d<float> tex [[texture(0)]]) {
+                                  texture2d<float> tex [[texture(0)]])
+{
     float2 uv = sampleSphericalMap(normalize(in.localPosition));
-    constexpr sampler samplerState(min_filter::linear,
-                                   mag_filter::linear);
+    constexpr sampler samplerState(min_filter::linear, mag_filter::linear);
     return tex.sample(samplerState, uv);
 }
 
-static float RadicalInverse_VdC(uint bits) {
+static float RadicalInverse_VdC(uint bits)
+{
     bits = (bits << 16u) | (bits >> 16u);
     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
     bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
@@ -76,17 +78,19 @@ static float RadicalInverse_VdC(uint bits) {
     return float(bits) * 2.3283064365386963e-10; // / 0x100000000
 }
 
-static float2 Hammersley(uint i, uint N) {
-    return float2(float(i)/float(N), RadicalInverse_VdC(i));
+static float2 Hammersley(uint i, uint N)
+{
+    return float2(float(i) / float(N), RadicalInverse_VdC(i));
 }
 
 constant float PI = 3.14159265359;
 
-static float3 ImportanceSampleGGX(float2 Xi, float3 N, float roughness) {
-    float a = roughness*roughness;
+static float3 ImportanceSampleGGX(float2 Xi, float3 N, float roughness)
+{
+    float a = roughness * roughness;
     float phi = 2.0 * PI * Xi.x;
-    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
-    float sinTheta = sqrt(1.0 - cosTheta*cosTheta);
+    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
     // from spherical coordinates to cartesian coordinates
     float3 H = {
         cos(phi) * sinTheta,
@@ -94,8 +98,9 @@ static float3 ImportanceSampleGGX(float2 Xi, float3 N, float roughness) {
         cosTheta,
     };
     // from tangent-space vector to world-space sample vector
-    float3 up        = abs(N.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
-    float3 tangent   = normalize(cross(up, N));
+    float3 up = abs(N.z) < 0.999 ? float3(0.0, 0.0, 1.0) :
+                                   float3(1.0, 0.0, 0.0);
+    float3 tangent = normalize(cross(up, N));
     float3 bitangent = cross(N, tangent);
     float3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
     return normalize(sampleVec);
@@ -113,37 +118,39 @@ static float distributionGGX(float NdotH, float roughness)
     return num / denom;
 }
 
-constant uint SampleCount = 16 * 1024u;
+constant uint SampleCount = 64 * 1024u;
 
 fragment float4 specularIBLRendererFS(CRVSOut in [[stage_in]],
-                                       float device const& roughness [[buffer(0)]],
-                                       texturecube<float> source [[texture(0)]]) 
+                                      float device const& roughness
+                                      [[buffer(0)]],
+                                      texturecube<float> source [[texture(0)]])
 {
     float3 N = normalize(in.localPosition);
     float3 R = N;
     float3 V = R;
     float totalWeight = 0.0;
     float3 prefilteredColor{};
-    for(uint i = 0u; i < SampleCount; ++i) {
+    for (uint i = 0u; i < SampleCount; ++i) {
         float2 Xi = Hammersley(i, SampleCount);
-        float3 H  = ImportanceSampleGGX(Xi, N, roughness);
-        float3 L  = normalize(2.0 * dot(V, H) * H - V);
+        float3 H = ImportanceSampleGGX(Xi, N, roughness);
+        float3 L = normalize(2.0 * dot(V, H) * H - V);
         float NdotL = max(dot(N, L), 0.0);
         if (NdotL <= 0.0) {
             continue;
         }
         float NdotH = dot(N, H);
         float HdotV = dot(H, V);
-        float D   = distributionGGX(NdotH, roughness);
+        float D = distributionGGX(NdotH, roughness);
         float pdf = (D * NdotH / (4.0 * HdotV)) + 0.0001;
-        // FIXME: Pass the resolution in through buffer
-        float resolution = 512.0; // resolution of source cubemap (per face)
-        float saTexel  = 4.0 * PI / (6.0 * resolution * resolution);
+        float saTexel =
+            4.0 * PI / (6.0 * source.get_width() * source.get_height());
         float saSample = 1.0 / (float(SampleCount) * pdf + 0.0001);
-        float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
-        constexpr sampler s(min_filter::linear, mag_filter::linear, mip_filter::linear);
-        prefilteredColor += source.sample(s, L, min_lod_clamp(mipLevel)).rgb;
-        totalWeight      += NdotL;
+        float mipLevel = roughness == 0.0 ? 0.0 :
+                                            0.5 * log2(saSample / saTexel);
+        constexpr sampler s(min_filter::linear, mag_filter::linear,
+                            mip_filter::linear);
+        prefilteredColor += source.sample(s, L, level(mipLevel)).rgb * NdotL;
+        totalWeight += NdotL;
     }
     return float4(prefilteredColor / totalWeight, 1.0);
 }
@@ -153,7 +160,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
     float a = roughness;
     float k = (a * a) / 2.0;
 
-    float nom   = NdotV;
+    float nom = NdotV;
     float denom = NdotV * (1.0 - k) + k;
 
     return nom / denom;
@@ -172,17 +179,17 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 static float2 IntegrateBRDF(float NdotV, float roughness)
 {
     float3 V = {
-        sqrt(1.0 - NdotV*NdotV),
+        sqrt(1.0 - NdotV * NdotV),
         0.0,
         NdotV,
     };
     float A = 0.0;
     float B = 0.0;
     float3 N = float3(0.0, 0.0, 1.0);
-    for(uint i = 0u; i < SampleCount; ++i) {
+    for (uint i = 0u; i < SampleCount; ++i) {
         float2 Xi = Hammersley(i, SampleCount);
-        float3 H  = ImportanceSampleGGX(Xi, N, roughness);
-        float3 L  = normalize(2.0 * dot(V, H) * H - V);
+        float3 H = ImportanceSampleGGX(Xi, N, roughness);
+        float3 L = normalize(2.0 * dot(V, H) * H - V);
         float NdotL = max(L.z, 0.0);
         float NdotH = max(H.z, 0.0);
         float VdotH = max(dot(V, H), 0.0);
@@ -200,11 +207,11 @@ static float2 IntegrateBRDF(float NdotV, float roughness)
     return float2(A, B);
 }
 
-kernel void IntegrateBRDFKernel(
-    texture2d<float, access::write> dest [[texture(0)]],
-    uint2 position [[thread_position_in_grid]])
+kernel void IntegrateBRDFKernel(texture2d<float, access::write> dest
+                                [[texture(0)]],
+                                uint2 position [[thread_position_in_grid]])
 {
-    float2 uv = float2(position) / float2( dest.get_width(), dest.get_height());
+    float2 uv = float2(position) / float2(dest.get_width(), dest.get_height());
     uv.y = 1 - uv.y;
     float2 integratedBRDF = IntegrateBRDF(uv.x, uv.y);
     dest.write(float4(integratedBRDF, 0, 1), position);

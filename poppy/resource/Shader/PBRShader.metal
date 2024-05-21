@@ -41,7 +41,8 @@ static float geometrySmith(float3 N, float3 V, float3 L, float roughness)
     return ggx1 * ggx2;
 }
 
-static float3 computeF0(float3 albedo, float3 metallic) {
+static float3 computeF0(float3 albedo, float3 metallic)
+{
     float3 F0_dielectric = float3(0.04);
     return mix(F0_dielectric, albedo, metallic);
 }
@@ -245,32 +246,32 @@ static float3 computeSkyLights(PBRData pbr, uint numLights,
     return lightAcc;
 }
 
-static float3 calcSHIrradiance(float3 N, float3 device const* SH) {
+static float3 calcSHIrradiance(float3 N, float3 device const* SH)
+{
     float A0 = 3.141593;
     float A1 = 2.094395;
     float A2 = 0.785398;
-    float3 color = SH[0] * 0.282095f * A0
-         + SH[1] * 0.488603f * N.y * A1
-         + SH[2] * 0.488603f * N.z * A1
-         + SH[3] * 0.488603f * N.x * A1
-         + SH[4] * 1.092548f * N.x * N.y * A2
-         + SH[5] * 1.092548f * N.y * N.z * A2
-         + SH[6] * 0.315392f * (3.0f * N.z * N.z - 1.0f) * A2
-         + SH[7] * 1.092548f * N.x * N.z * A2
-         + SH[8] * 0.546274f * (N.x * N.x - N.y * N.y) * A2;
-    float PI =  3.14159265359;
+    float3 color = SH[0] * 0.282095f * A0 + SH[1] * 0.488603f * N.y * A1 +
+                   SH[2] * 0.488603f * N.z * A1 + SH[3] * 0.488603f * N.x * A1 +
+                   SH[4] * 1.092548f * N.x * N.y * A2 +
+                   SH[5] * 1.092548f * N.y * N.z * A2 +
+                   SH[6] * 0.315392f * (3.0f * N.z * N.z - 1.0f) * A2 +
+                   SH[7] * 1.092548f * N.x * N.z * A2 +
+                   SH[8] * 0.546274f * (N.x * N.x - N.y * N.y) * A2;
+    float PI = 3.14159265359;
     return color / PI;
 }
 
-float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness) 
+float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
-    return F0 + (max(float3(1.0 - roughness), F0) - F0) * 
-           pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+    return F0 + (max(float3(1.0 - roughness), F0) - F0) *
+                    pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-static float3 computeAmbient(PBRData data, float3 N, float3 V, float3 device const* SH,
+static float3 computeAmbient(PBRData data, float3 N, float3 V,
+                             float3 device const* SH,
                              texturecube<float> specularMap,
-                             texture2d<float> brdfMap) 
+                             texture2d<float> brdfMap)
 {
     float3 irradiance = calcSHIrradiance(N, SH);
     float3 diffuse = irradiance * data.albedo;
@@ -279,14 +280,14 @@ static float3 computeAmbient(PBRData data, float3 N, float3 V, float3 device con
     float3 kD = (1.0f - F) * (1.0f - data.metallic);
     float3 R = reflect(-V, N);
     float mipLevel = data.roughness * (specularMap.get_num_mip_levels() - 1);
-    constexpr sampler specSampler(min_filter::linear, mag_filter::linear, 
+    constexpr sampler specSampler(min_filter::linear, mag_filter::linear,
                                   mip_filter::linear);
-    float3 prefilteredColor = specularMap.sample(specSampler, R, 
-                                                 level(mipLevel)).rgb;
+    float3 prefilteredColor =
+        specularMap.sample(specSampler, R, level(mipLevel)).rgb;
     constexpr sampler brdfSampler(min_filter::linear, mag_filter::linear);
     float2 brdfUV = { max(dot(N, V), 0.0), data.roughness };
     float2 envBRDF = brdfMap.sample(brdfSampler, brdfUV).rg;
-    // TODO: envBRDF should not be NAN. This must be fixed when generating the 
+    // TODO: envBRDF should not be NAN. This must be fixed when generating the
     // texture
     if (isnan(envBRDF.x)) {
         envBRDF.x = 0;
@@ -299,13 +300,12 @@ static float3 computeAmbient(PBRData data, float3 N, float3 V, float3 device con
 }
 
 float3 bloom::PBRForwardShader(
-    PBRData pbr, float3 worldPosition,
-    float3 cameraPosition, device const float4x4* lightSpaceTransforms,
+    PBRData pbr, float3 worldPosition, float3 cameraPosition,
+    device const float4x4* lightSpaceTransforms,
     device const LightBufferContents& lights,
     device const ShadowRenderMetadata& shadowMetadata,
-    texture2d_array<float> shadowMaps,
-                               texturecube<float> specularMap,
-                               texture2d<float> brdfMap)
+    texture2d_array<float> shadowMaps, texturecube<float> specularMap,
+    texture2d<float> brdfMap)
 {
     float3 N = pbr.normal;
     float3 V = normalize(cameraPosition - worldPosition);
@@ -318,9 +318,8 @@ float3 bloom::PBRForwardShader(
                                  lights.numDirLights, lights.dirLights,
                                  shadowMetadata, shadowMaps);
     lightAcc += computeSkyLights(pbr, lights.numSkyLights, lights.skyLights);
-    lightAcc += computeAmbient(pbr, N, V, lights.irradianceCoefficients ,
-                               specularMap,
-                               brdfMap);
+    lightAcc += computeAmbient(pbr, N, V, lights.irradianceCoefficients,
+                               specularMap, brdfMap);
     lightAcc += pbr.emissive;
     return lightAcc;
 }

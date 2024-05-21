@@ -1,7 +1,7 @@
 #include <metal_stdlib>
 
-#include "Shader/Vertex.h"
 #include "Shader/SharedTypes.h"
+#include "Shader/Vertex.h"
 
 using namespace metal;
 using namespace bloom;

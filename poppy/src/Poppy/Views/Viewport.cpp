@@ -210,7 +210,7 @@ void Viewport::displayColorPicker(CommandBuffer& commandBuffer,
     {
         auto desc = finalColor.description();
         desc.size = { 1, 1, 1 };
-        desc.storageMode = StorageMode::Shared;
+        desc.storageMode = StorageMode::Managed;
         colorPickerTmpTex = editor().device().createTexture(desc);
     }
     encoder->copyTextureRegion(finalColor, 0, 0, { mouseCoord, 0 }, { 1, 1, 1 },

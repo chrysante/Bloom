@@ -186,7 +186,13 @@ public:
     /// visibility component is set to visible
     bool isVisible() const {
         auto* vis = tryGet<VisibilityComponent>();
-        return !vis || vis->value;
+        if (vis && !vis->value) {
+            return false;
+        }
+        if (auto parent = getParent()) {
+            return parent.isVisible();
+        }
+        return true;
     }
 
     /// \Returns the parent entity if this entity has a parent

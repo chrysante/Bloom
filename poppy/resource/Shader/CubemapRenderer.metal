@@ -211,7 +211,8 @@ kernel void IntegrateBRDFKernel(texture2d<float, access::write> dest
                                 [[texture(0)]],
                                 uint2 position [[thread_position_in_grid]])
 {
-    float2 uv = float2(position) / float2(dest.get_width(), dest.get_height());
+    float2 uv = (float2(position) + float2(0.5)) /
+                float2(dest.get_width(), dest.get_height());
     uv.y = 1 - uv.y;
     float2 integratedBRDF = IntegrateBRDF(uv.x, uv.y);
     dest.write(float4(integratedBRDF, 0, 1), position);

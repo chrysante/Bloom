@@ -228,7 +228,9 @@ void Renderer::setIBLTexture(Reference<Texture2D> IBL) {
     if (IBL && lights) {
         lights->setIrradianceCoefficients(IBL->irradianceSHCoefficients);
     }
-    specularTexture->assign(IBL->GPUHandle);
+    if (IBL) {
+        specularTexture->assign(IBL->GPUHandle);
+    }
     brdfTexture->assign(BRDF);
 }
 

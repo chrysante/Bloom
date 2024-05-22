@@ -619,13 +619,6 @@ void MetalBlitEncoder::copyTextureToBuffer(
                             options:MTLBlitOptionNone];
 }
 
-void MetalBlitEncoder::synchronizeTexture(TextureView texture, size_t slice,
-                                          size_t level) {
-    [commandEncoder synchronizeTexture:getNative(texture)
-                                 slice:slice
-                                 level:level];
-}
-
 void MetalBlitEncoder::copyBufferToTexture(
     BufferView source, size_t sourceOffset, size_t sourceBytesPerRow,
     size_t sourceBytesPerImage, usize3 sourceSize, TextureView dest,
@@ -644,6 +637,18 @@ void MetalBlitEncoder::copyBufferToTexture(
 
 void MetalBlitEncoder::generateMipmaps(TextureView texture) {
     [commandEncoder generateMipmapsForTexture:getNative(texture)];
+}
+
+void MetalBlitEncoder::synchronizeTexture(TextureView texture, size_t slice,
+                                          size_t level) {
+    [commandEncoder synchronizeTexture:getNative(texture)
+                                 slice:slice
+                                 level:level];
+}
+
+void MetalBlitEncoder::synchronizeResource(HardwareResourceView resource) {
+    [commandEncoder
+        synchronizeResource:(__bridge id<MTLResource>)resource.nativeHandle()];
 }
 
 void MetalBlitEncoder::end() { [commandEncoder endEncoding]; }

@@ -473,7 +473,8 @@ YAML::Node Viewport::serialize() const {
 void Viewport::deserialize(YAML::Node node) {
     cameraController = node["CameraController"].as<ViewportCameraController>();
     auto iblTexAsset = node["IBLTexture"].as<AssetHandle>();
-    iblTexture = as<Texture2D>(assetManager().get(iblTexAsset));
+    using enum AssetRepresentation;
+    iblTexture = as<Texture2D>(assetManager().get(iblTexAsset, CPU | GPU));
 }
 
 Toolbar Viewport::makeToolbar() {
@@ -574,8 +575,8 @@ void Viewport::dropdownMenu() {
         }
         beginProperty("IBL Texture");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        assetButton("###IBLTexture", iblTexture,
-                    { .repr = AssetRepresentation::CPU });
+        using enum AssetRepresentation;
+        assetButton("###IBLTexture", iblTexture, { .repr = CPU | GPU });
         endSection();
     }
     ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);

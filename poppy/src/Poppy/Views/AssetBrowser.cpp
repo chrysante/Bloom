@@ -95,6 +95,8 @@ struct AssetBrowser: View {
 
     AssetBrowser();
 
+    void importFiles();
+
     void init() override;
     void displayToolbar() override;
     void display() override;
@@ -129,6 +131,16 @@ BLOOM_MAKE_TEXT_SERIALIZER(AssetBrowserData, projectDir, currentDir);
 
 AssetBrowser::AssetBrowser() = default;
 
+void AssetBrowser::importFiles() {
+    bloom::OpenPanelDescription desc = { .allowsMultipleSelection = true };
+    showOpenPanel(desc,
+                  [this](std::span<std::filesystem::path const> filepaths) {
+        for (auto& path: filepaths) {
+            importAsset(path);
+        }
+    });
+}
+
 void AssetBrowser::init() {
     assetManager = &editor().coreSystems().assetManager();
     dirView.init(std::make_unique<DirViewDelegate>(this),
@@ -144,25 +156,12 @@ void AssetBrowser::init() {
         ToolbarIconButton(dirView.getCommand(GoUp), "up-open"),
         ToolbarSpacer{},
         ToolbarIconButton(dirView.getCommand(Rescan), "cw"),
-        ToolbarIconButton("angle-double-down")
-            .onClick([this] {
-                bloom::OpenPanelDescription desc;
-                showOpenPanel(desc, [this](std::string filepath) {
-                    importAsset(filepath);
-                });
-            })
+        ToolbarIconButton("download")
+            .onClick([this] { importFiles(); })
             .tooltip("Import..."),
         ToolbarIconButton("plus")
             .onClick([] { ImGui::OpenPopup("New Asset"); })
             .tooltip("Create Asset..."),
-        ToolbarIconButton("delicious")
-            .onClick([this] {
-                assetManager->createAsset(bloom::AssetType::Material,
-                                     "Default Material",
-                                     data.currentDir);
-                refreshFilesystem();
-            })
-            .tooltip("Create Default Material"),
         ToolbarButton("Compile Scripts")
             .onClick([this] {
                 assetManager->compileScripts();
@@ -191,37 +190,51 @@ void AssetBrowser::display() {
     dirView.display();
 }
 
-void AssetBrowser::newAssetPopup() {
-    if (ImGui::BeginPopupModal("New Asset", NULL, ImGuiWindowFlags_NoTitleBar))
-    {
-        static AssetType type = AssetType::Invalid;
-        if (ImGui::BeginCombo("Type", toString(type).data())) {
-            for (unsigned i = 0; i < EnumCount<AssetType>; ++i) {
-                // TODO: Check if type is concrete
-                AssetType t{ i };
-                bool selected = type == t;
-                if (ImGui::Selectable(toString(t).data(), selected)) {
-                    type = t;
-                }
-                if (selected) {
-                    ImGui::SetItemDefaultFocus();
-                }
-            }
-            ImGui::EndCombo();
-        }
-        static char nameBuffer[256]{};
-        ImGui::InputText("Name", nameBuffer, std::size(nameBuffer));
-        if (ImGui::Button("Cancel")) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Create")) {
-            assetManager->createAsset(type, nameBuffer, data.currentDir);
-            refreshFilesystem();
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
+static bool isConcreteAsset(AssetType t) {
+    switch (t) {
+#define BLOOM_ASSET_TYPE_DEF(Name, ...)                                        \
+    case AssetType::Name:                                                      \
+        return utl::dc::IDIsConcrete<AssetType::Name>;
+#include "Bloom/Asset/Assets.def"
     }
+}
+
+void AssetBrowser::newAssetPopup() {
+    if (!ImGui::BeginPopupModal("New Asset", NULL, ImGuiWindowFlags_NoTitleBar))
+    {
+        return;
+    }
+    static AssetType type = AssetType::Invalid;
+    if (ImGui::BeginCombo("Type", toString(type).data())) {
+        for (unsigned i = 0; i < EnumCount<AssetType>; ++i) {
+            AssetType t{ i };
+            if (!isConcreteAsset(t)) {
+                continue;
+            }
+            bool selected = type == t;
+            if (ImGui::Selectable(toString(t).data(), selected)) {
+                type = t;
+            }
+            if (selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    static char nameBuffer[256]{};
+    ImGui::InputText("Name", nameBuffer, std::size(nameBuffer));
+    if (ImGui::Button("Cancel")) {
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!isConcreteAsset(type));
+    if (ImGui::Button("Create")) {
+        assetManager->createAsset(type, nameBuffer, data.currentDir);
+        refreshFilesystem();
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndDisabled();
+    ImGui::EndPopup();
 }
 
 void AssetBrowser::displayNoOpenProject() {

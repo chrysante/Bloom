@@ -22,10 +22,15 @@ public:
     vml::usize2 size = 0;
 
     /// If this is set, this has
-    /// `size.x * size.y * <size-of-single-pixel> *  <num-slices>` number of
-    /// elements.
-    /// `<num-slices>` is 1 for 2D textures and 6 for cubemaps
+    ///
+    ///     sum over mip_sizes:
+    ///         mip_size.x * mip_size.y * <pixel-size> *  <num-slices>`
+    ///
+    /// number of elements. `<num-slices>` is 1 for 2D textures and 6 for
+    /// cubemaps
     std::unique_ptr<uint8_t[]> pixelData;
+    uint8_t numMipMaps = 1;
+    bool storesMipMaps = false;
     TextureHandle GPUHandle;
     std::vector<vml::float3> irradianceSHCoefficients;
 };

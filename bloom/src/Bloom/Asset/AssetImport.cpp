@@ -163,7 +163,7 @@ static void postprocessHDR(Texture2D& texture, HardwareDevice& device,
                                .pixelFormat = PixelFormat::RGBA32Float,
                                .size = { destSize, 1 },
                                .usage = TextureUsage::RenderTarget,
-                               .storageMode = StorageMode::Shared });
+                               .storageMode = StorageMode::Managed });
     auto equirectangular =
         device.createTexture({ .type = TextureType::Texture2D,
                                .pixelFormat = PixelFormat::RGBA32Float,

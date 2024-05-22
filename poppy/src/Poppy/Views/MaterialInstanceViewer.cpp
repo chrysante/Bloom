@@ -39,6 +39,7 @@ MaterialInstanceViewer::MaterialInstanceViewer() {
             .font(FontDesc::UIDefault().setWeight(FontWeight::Semibold)),
         ToolbarSpacer(),
     }); // clang-format on
+    setPadding({ std::nullopt, 0 });
 }
 
 static std::string makeLabel(std::string_view name) {
@@ -94,6 +95,7 @@ void MaterialInstanceViewer::display() {
         displayEmptyWithReason("No Material Instance Open");
         return;
     }
+    ImGui::BeginChild("Child");
     using namespace propertiesView;
     if (beginSection()) {
         beginProperty("Material");
@@ -124,6 +126,7 @@ void MaterialInstanceViewer::display() {
         displayParam(*inst, param);
     }
     endSection();
+    ImGui::EndChild();
 }
 
 void MaterialInstanceViewer::receiveData(std::any data) {

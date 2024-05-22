@@ -264,18 +264,22 @@ struct AssetManager::Impl {
     void uploadStaticMeshToGPU(StaticMesh& mesh, RegistryEntry const& entry);
     void uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry);
 
-    void flushToDisk(AssetHandle handle);
+    void flushToDisk(AssetHandle handle, bool force = false);
 
-    void flushToDiskImpl(StaticMesh const&, std::filesystem::path const& dest);
-    void flushToDiskImpl(SkeletalMesh const&,
-                         std::filesystem::path const& dest);
-    void flushToDiskImpl(Material const&, std::filesystem::path const& dest);
+    void flushToDiskImpl(StaticMesh const&, std::filesystem::path const& dest,
+                         bool force);
+    void flushToDiskImpl(SkeletalMesh const&, std::filesystem::path const& dest,
+                         bool force);
+    void flushToDiskImpl(Material const&, std::filesystem::path const& dest,
+                         bool force);
     void flushToDiskImpl(MaterialInstance const&,
-                         std::filesystem::path const& dest);
-    void flushToDiskImpl(Texture2D const&, std::filesystem::path const& dest);
-    void flushToDiskImpl(Scene const&, std::filesystem::path const& dest);
-    void flushToDiskImpl(ScriptSource const&,
-                         std::filesystem::path const& dest);
+                         std::filesystem::path const& dest, bool force);
+    void flushToDiskImpl(Texture2D const&, std::filesystem::path const& dest,
+                         bool force);
+    void flushToDiskImpl(Scene const&, std::filesystem::path const& dest,
+                         bool force);
+    void flushToDiskImpl(ScriptSource const&, std::filesystem::path const& dest,
+                         bool force);
 
     /// Deduces the asset type from the file extension \p ext of the source
     /// asset file
@@ -557,7 +561,7 @@ Reference<Asset> AssetManager::createAsset(AssetType type, std::string name,
     auto entry = impl->makeEntry(ref, handle, name, diskLocation);
     impl->assets.insert({ handle.ID(), std::move(entry) });
     impl->writeRegistryToDisk();
-    impl->flushToDisk(handle);
+    impl->flushToDisk(handle, /* force: */ true);
     return ref;
 }
 
@@ -599,7 +603,7 @@ AssetHandle AssetManager::importAsset(std::string name,
     }();
     auto handle = asset->handle();
     impl->doImport(*asset, source);
-    impl->flushToDisk(handle);
+    impl->flushToDisk(handle, /* force */ true);
     makeAvailable(handle, AssetRepresentation::GPU,
                   /* force: */ true);
     return handle;
@@ -986,12 +990,17 @@ struct StaticMeshHeader {
     size_t indexDataSize;
 };
 
+static constexpr uint32_t TextureFormatVersion = 0;
+
 struct Texture2DHeader {
+    uint32_t version = TextureFormatVersion;
     TextureType type = TextureType::Texture1D;
     PixelFormat pixelFormat = PixelFormat::Invalid;
-    usize2 dimensions = 0;
-    size_t numBytes = 0;
-    size_t numIrradianceSHCoefficients = 0;
+    vml::vector2<uint32_t> dimensions = 0;
+    uint32_t numBytes = 0;
+    uint8_t numMipMaps = 0;
+    bool storesMipMaps = false;
+    uint8_t numIrradianceSHCoefficients = 0;
 };
 
 } // namespace
@@ -1079,6 +1088,8 @@ void Impl::loadTextureFromDisk(Texture2D& texture,
     texture.pixelData = std::move(buffer);
     texture.irradianceSHCoefficients.resize(
         header->numIrradianceSHCoefficients);
+    texture.numMipMaps = header->numMipMaps;
+    texture.storesMipMaps = header->storesMipMaps;
     if (!readBytes(file, texture.irradianceSHCoefficients.data(),
                    header->numIrradianceSHCoefficients *
                        sizeof(texture.irradianceSHCoefficients[0])))
@@ -1148,31 +1159,39 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
         { .type = texture.type,
           .pixelFormat = texture.pixelFormat,
           .size = usize3(texture.size, 1),
-          .mipmapLevelCount = 1,
+          .mipmapLevelCount = texture.numMipMaps,
           .sampleCount = 1,
           .storageMode = StorageMode::Managed,
           .usage = TextureUsage::ShaderRead });
     size_t bytesPerRow = texture.size.x * pixelSize(texture.pixelFormat);
     size_t bytesPerImage =
         texture.size.x * texture.size.y * pixelSize(texture.pixelFormat);
-    switch (texture.type) {
-    case TextureType::Texture2D:
-        copyMemoryToTexture(RenderAPI::Metal, handle, texture.pixelData.get(),
-                            bytesPerRow,
-                            { usize3{}, handle.description().size }, 0);
-        break;
-    case TextureType::CubeTexture: {
-        uint8_t* data = texture.pixelData.get();
-        for (size_t i = 0; i < 6; ++i) {
-            copyMemoryToTexture(RenderAPI::Metal, handle,
-                                data + bytesPerImage * i, bytesPerRow,
-                                bytesPerImage,
-                                { usize3{}, handle.description().size }, 0, i);
+    usize3 levelSize = handle.description().size;
+    uint8_t* data = texture.pixelData.get();
+    for (size_t mipLevel = 0; mipLevel < texture.numMipMaps; ++mipLevel,
+                bytesPerRow /= 2, bytesPerImage /= 4,
+                levelSize = vml::max(levelSize / 2, size3(1)))
+    {
+        if (mipLevel >= 1 && !texture.storesMipMaps) {
+            break;
         }
-        break;
-    }
-    default:
-        BL_UNIMPLEMENTED();
+        switch (texture.type) {
+        case TextureType::Texture2D:
+            copyMemoryToTexture(RenderAPI::Metal, handle, data, bytesPerRow,
+                                { usize3{}, levelSize }, mipLevel);
+            data += bytesPerImage;
+            break;
+        case TextureType::CubeTexture: {
+            for (size_t i = 0; i < 6; ++i, data += bytesPerImage) {
+                copyMemoryToTexture(RenderAPI::Metal, handle, data, bytesPerRow,
+                                    bytesPerImage, { usize3{}, levelSize },
+                                    mipLevel, i);
+            }
+            break;
+        }
+        default:
+            BL_UNIMPLEMENTED();
+        }
     }
     texture.GPUHandle = handle;
     if (!hasMemoryRepr) {
@@ -1182,7 +1201,7 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
 
 /// MARK: - Memory -> Disk
 
-void Impl::flushToDisk(AssetHandle handle) {
+void Impl::flushToDisk(AssetHandle handle, bool force) {
     auto* entry = find(handle);
     if (!entry) {
         Logger::Error("Failed to write asset to disk: ", handle);
@@ -1193,14 +1212,14 @@ void Impl::flushToDisk(AssetHandle handle) {
         return;
     }
     visit(*asset, [&](auto& asset) {
-        flushToDiskImpl(asset, makeAbsolute(entry->diskLocation));
+        flushToDiskImpl(asset, makeAbsolute(entry->diskLocation), force);
     });
 }
 
 void Impl::flushToDiskImpl(StaticMesh const& mesh,
-                           std::filesystem::path const& dest) {
+                           std::filesystem::path const& dest, bool force) {
     auto* data = mesh.mData.get();
-    if (!data) {
+    if (!data && !force) {
         Logger::Warn("Could not write mesh to disk: mesh does not exist");
         return;
     }
@@ -1218,12 +1237,14 @@ void Impl::flushToDiskImpl(StaticMesh const& mesh,
     file.write((char*)data->indices.data(), indexDataSize);
 }
 
-void Impl::flushToDiskImpl(SkeletalMesh const&, std::filesystem::path const&) {
+void Impl::flushToDiskImpl(SkeletalMesh const&, std::filesystem::path const&,
+                           bool) {
     BL_UNIMPLEMENTED();
 }
 
 void Impl::flushToDiskImpl(Material const& mat,
-                           std::filesystem::path const& dest) {
+                           std::filesystem::path const& dest,
+                           [[maybe_unused]] bool force) {
     YAML::Emitter out;
     out << mat.model->serialize();
     std::ios::sync_with_stdio(false);
@@ -1233,7 +1254,8 @@ void Impl::flushToDiskImpl(Material const& mat,
 }
 
 void Impl::flushToDiskImpl(MaterialInstance const& inst,
-                           std::filesystem::path const& dest) {
+                           std::filesystem::path const& dest,
+                           [[maybe_unused]] bool force) {
     YAML::Emitter out;
     out << inst.serialize();
     std::ios::sync_with_stdio(false);
@@ -1243,20 +1265,24 @@ void Impl::flushToDiskImpl(MaterialInstance const& inst,
 }
 
 void Impl::flushToDiskImpl(Texture2D const& texture,
-                           std::filesystem::path const& dest) {
-    if (!texture.pixelData) {
+                           std::filesystem::path const& dest, bool force) {
+    if (!texture.pixelData && !force) {
         Logger::Warn("Could not write texture data to disk: no data");
         return;
     }
     std::ios::sync_with_stdio(false);
     auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
                                            std::ios::binary);
-    Texture2DHeader header{ .type = texture.type,
-                            .pixelFormat = texture.pixelFormat,
-                            .dimensions = texture.size,
-                            .numBytes = texture.getPixelDataByteSize(),
-                            .numIrradianceSHCoefficients =
-                                texture.irradianceSHCoefficients.size() };
+    Texture2DHeader header{
+        .type = texture.type,
+        .pixelFormat = texture.pixelFormat,
+        .dimensions = texture.size,
+        .numBytes = utl::narrow_cast<uint32_t>(texture.getPixelDataByteSize()),
+        .numIrradianceSHCoefficients = utl::narrow_cast<uint8_t>(
+            (texture.irradianceSHCoefficients.size())),
+        .numMipMaps = texture.numMipMaps,
+        .storesMipMaps = texture.storesMipMaps
+    };
     file.write((char*)&header, sizeof header);
     file.write((char*)texture.pixelData.get(), header.numBytes);
     file.write((char*)texture.irradianceSHCoefficients.data(),
@@ -1265,7 +1291,8 @@ void Impl::flushToDiskImpl(Texture2D const& texture,
 }
 
 void Impl::flushToDiskImpl(Scene const& scene,
-                           std::filesystem::path const& dest) {
+                           std::filesystem::path const& dest,
+                           [[maybe_unused]] bool force) {
     YAML::Emitter out;
     out << scene.serialize();
     std::ios::sync_with_stdio(false);
@@ -1275,7 +1302,8 @@ void Impl::flushToDiskImpl(Scene const& scene,
 }
 
 void Impl::flushToDiskImpl(ScriptSource const&,
-                           std::filesystem::path const& dest) {
+                           std::filesystem::path const& dest,
+                           [[maybe_unused]] bool force) {
     if (std::filesystem::exists(dest)) {
         Logger::Warn(
             "Script source is not written to disk because we don't have memory representation");

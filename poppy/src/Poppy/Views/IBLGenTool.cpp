@@ -1,5 +1,6 @@
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <range/v3/numeric.hpp>
 
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/AssetManager.h"
@@ -19,6 +20,7 @@
 using namespace poppy;
 using namespace bloom;
 using namespace vml::short_types;
+using namespace ranges::views;
 
 namespace {
 
@@ -113,6 +115,7 @@ void IBLGenTool::generateMipmapsFor(Texture2D& tex) {
         encoder->copyTexture(tex.GPUHandle, newHandle);
         tex.GPUHandle = newHandle;
     }
+    tex.numMipMaps = expectedMipapCount;
     encoder->generateMipmaps(tex.GPUHandle);
     encoder->end();
     commandBuffer->commit();
@@ -221,8 +224,27 @@ void IBLGenTool::generateSpec() {
     auto destHandle = dest->GPUHandle;
     renderSpecularIBL(editor().device(), *commandBuffer, destHandle,
                       source->GPUHandle);
+    auto blitEncoder = commandBuffer->makeBlitEncoder();
+    blitEncoder->synchronizeResource((TextureView)destHandle);
+    blitEncoder->end();
     commandBuffer->commit();
     commandBuffer->waitForCompletion();
+    dest->storesMipMaps = true;
+    size_t byteSize = dest->getPixelDataByteSize();
+    dest->pixelData = std::make_unique<uint8_t[]>(byteSize);
+    auto* data = dest->pixelData.get();
+    usize2 size = dest->size;
+    size_t bytesPerRow = size.x * pixelByteSize(dest->pixelFormat);
+    size_t bytesPerImage = size.y * bytesPerRow;
+    for (size_t mipLevel = 0; mipLevel < dest->numMipMaps;
+         ++mipLevel, bytesPerRow /= 2, bytesPerImage /= 4, size /= 2)
+    {
+        for (size_t face = 0; face < 6; ++face, data += bytesPerImage) {
+            copyTextureToMemory(RenderAPI::Metal, destHandle, data, bytesPerRow,
+                                bytesPerImage, { usize3{}, usize3(size, 1) },
+                                mipLevel, face);
+        }
+    }
 }
 
 void IBLGenTool::generateBRDF() {

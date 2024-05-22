@@ -151,10 +151,6 @@ public:
                                      size_t destBytesPerImage) = 0;
 
     ///
-    virtual void synchronizeTexture(TextureView texture, size_t slice,
-                                    size_t level) = 0;
-
-    ///
     virtual void copyBufferToTexture(BufferView source, size_t sourceOffset,
                                      size_t sourceBytesPerRow,
                                      size_t sourceBytesPerImage,
@@ -165,6 +161,13 @@ public:
 
     ///
     virtual void generateMipmaps(TextureView texture) = 0;
+
+    ///
+    virtual void synchronizeTexture(TextureView texture, size_t slice,
+                                    size_t level) = 0;
+
+    ///
+    virtual void synchronizeResource(HardwareResourceView resource) = 0;
 
 protected:
     BlitEncoder() = default;

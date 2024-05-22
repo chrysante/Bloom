@@ -184,8 +184,6 @@ public:
                              vml::uint3 sourceSize, BufferView destBuffer,
                              size_t destOffset, size_t destBytesPerRow,
                              size_t destBytesPerImage) final;
-    void synchronizeTexture(TextureView texture, size_t slice,
-                            size_t level) final;
     void copyBufferToTexture(BufferView source, size_t sourceOffset,
                              size_t sourceBytesPerRow,
                              size_t sourceBytesPerImage, vml::usize3 sourceSize,
@@ -193,6 +191,9 @@ public:
                              size_t destinationLevel,
                              vml::usize3 destinationOrigin) final;
     void generateMipmaps(TextureView texture) final;
+    void synchronizeTexture(TextureView texture, size_t slice,
+                            size_t level) final;
+    void synchronizeResource(HardwareResourceView resource) final;
     void end() final;
 
     id<MTLBlitCommandEncoder> commandEncoder;

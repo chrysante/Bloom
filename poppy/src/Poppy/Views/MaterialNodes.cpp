@@ -211,27 +211,19 @@ REGISTER_MATERIAL_NODE(OutputController, {
     }
 })
 
-enum class InputKind {
-    TextureCoords,
-    Normals,
-    Tangents,
-    Binormals,
-    WorldPosition
-};
-
 /// Any fragment shader input, i.e., rasterizer data
 struct InputController: MaterialNodeController {
     static constexpr auto Name = "InputController";
 
-    static NodeDesc Make(InputKind kind) {
+    static NodeDesc Make(RasterizerInputKind kind) {
         return { .name = std::string(magic_enum::enum_name(kind)),
                  .controller = std::make_unique<InputController>(kind) };
     }
 
-    explicit InputController(InputKind kind): kind(kind) {}
+    explicit InputController(RasterizerInputKind kind): kind(kind) {}
 
     explicit InputController(YAML::Node const& root) {
-        kind = root["Kind"].as<InputKind>();
+        kind = root["Kind"].as<RasterizerInputKind>();
     }
 
     YAML::Node serialize() const override {
@@ -244,49 +236,26 @@ struct InputController: MaterialNodeController {
     std::vector<PinDesc> makeInputDescriptors() override { return {}; }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
+        using enum RasterizerInputKind;
         switch (kind) {
-        case InputKind::TextureCoords:
-            return {
-                { .name = "Coords", .userType = mask(DataType::Float2) },
-                { .name = "U",
-                  .userType = mask(DataType::Float),
-                  .color = ColorChannelColors[0] },
-                { .name = "V",
-                  .userType = mask(DataType::Float),
-                  .color = ColorChannelColors[1] },
-            };
-
-        case InputKind::Normals:
+        case TextureCoords:
+            return { { .name = "Coords", .userType = mask(DataType::Float2) } };
+        case WorldNormals:
             [[fallthrough]];
-        case InputKind::Tangents:
+        case WorldTangents:
             [[fallthrough]];
-        case InputKind::Binormals:
+        case WorldBinormals:
             [[fallthrough]];
-        case InputKind::WorldPosition:
+        case WorldPosition:
+            [[fallthrough]];
+        case ModelNormals:
             return { { .name = "Vector", .userType = mask(DataType::Float3) } };
         }
     }
 
-    utl::small_vector<Value*> createGraphNodes(
-        Context& ctx, MaterialGraph& g) const override {
-        switch (kind) {
-        case InputKind::TextureCoords: {
-            auto* coords =
-                ctx.rasterizerInput(RasterizerInputKind::TextureCoords);
-            return { coords,
-                     g.addValue(allocate<VectorElement>(ctx, 0, coords)),
-                     g.addValue(allocate<VectorElement>(ctx, 1, coords)) };
-        }
-        case InputKind::Normals:
-            return { ctx.rasterizerInput(RasterizerInputKind::VertexNormals) };
-        case InputKind::Tangents:;
-            return { ctx.rasterizerInput(RasterizerInputKind::VertexTangents) };
-        case InputKind::Binormals:
-            return { ctx.rasterizerInput(
-                RasterizerInputKind::VertexBinormals) };
-        case InputKind::WorldPosition:
-            return { ctx.rasterizerInput(RasterizerInputKind::WorldPosition) };
-        }
+    utl::small_vector<Value*> createGraphNodes(Context& ctx,
+                                               MaterialGraph&) const override {
+        return { ctx.rasterizerInput(kind) };
     }
 
     float2 preferredContentSize() const override { return { 70, 0 }; }
@@ -296,11 +265,11 @@ struct InputController: MaterialNodeController {
     bool alwaysDisplayInputNames() const override { return false; }
     bool alwaysDisplayOutputNames() const override { return true; }
 
-    InputKind kind;
+    RasterizerInputKind kind;
 };
 
 REGISTER_MATERIAL_NODE(InputController, {
-    return enumMenu<InputKind, InputController>("Inputs");
+    return enumMenu<RasterizerInputKind, InputController>("Inputs");
 })
 
 struct ConstantController: MaterialNodeController {
@@ -815,7 +784,7 @@ struct SplitController: MaterialNodeController {
     int numComponents;
 };
 
-REGISTER_MATERIAL_NODE(AppendController, {
+REGISTER_MATERIAL_NODE(SplitController, {
     std::unique_ptr<Node> result;
     if (ImGui::BeginMenu("Split")) {
         for (int i = 2; i <= 4; ++i) {

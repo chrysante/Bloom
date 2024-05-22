@@ -73,8 +73,11 @@ struct NodeRegistry {
     using Entry = MaterialNodeRegistryEntry;
 
     void add(std::string name, NodeDeserializeFn deserialize, NodeMenuFn menu) {
-        entries.insert(
-            { std::move(name), std::move(deserialize), std::move(menu) });
+        bool success = entries
+                           .insert({ std::move(name), std::move(deserialize),
+                                     std::move(menu) })
+                           .second;
+        BL_ASSERT(success, "Failed to register material node");
     }
 
     utl::hashset<Entry, ProjectionHash<&Entry::name, utl::hash>,

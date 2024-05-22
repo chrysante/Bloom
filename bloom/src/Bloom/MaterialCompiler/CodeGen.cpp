@@ -395,6 +395,7 @@ void MetalCodeGenerator::writeVertexOutput() {
         writeItem("float3 tangentWS");
         writeItem("float3 binormalWS");
         writeItem("float3 positionWS");
+        writeItem("float3 normalMS");
         writeItem("float3 vertexColor");
         writeItem("float2 textureCoords");
     });
@@ -443,6 +444,7 @@ void MetalCodeGenerator::writeVertexFunction() {
         writeItem(".tangentWS = (transform * vertexTangentMS).xyz");
         writeItem(".binormalWS = (transform * vertexBitangentMS).xyz");
         writeItem(".positionWS = vertexPositionWS.xyz");
+        writeItem(".normalMS = vertexNormalMS.xyz");
         writeItem(".vertexColor = v.color.rgb");
         writeItem(".textureCoords = v.textureCoordinates[0]");
     });
@@ -717,14 +719,16 @@ std::string MetalCodeGenerator::genNameImpl(RasterizerInput const& input) {
     switch (input.kind()) {
     case TextureCoords:
         return "in.textureCoords";
-    case VertexNormals:
+    case WorldNormals:
         return "in.normalWS";
-    case VertexTangents:
+    case WorldTangents:
         return "in.tangentWS";
-    case VertexBinormals:
+    case WorldBinormals:
         return "in.binormalWS";
     case WorldPosition:
         return "in.positionWS";
+    case ModelNormals:
+        return "in.normalMS";
     }
 }
 

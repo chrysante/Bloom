@@ -48,9 +48,10 @@ enum class TextureSubType { Texture2D, TextureCube };
 
 enum class RasterizerInputKind {
     TextureCoords,
-    VertexNormals,
-    VertexTangents,
-    VertexBinormals,
+    WorldNormals,
+    WorldTangents,
+    WorldBinormals,
+    ModelNormals,
     WorldPosition,
 };
 

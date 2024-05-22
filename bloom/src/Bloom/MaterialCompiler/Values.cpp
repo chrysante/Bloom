@@ -28,13 +28,15 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     switch (kind) {
     case TextureCoords:
         return ctx.vectorType(2);
-    case VertexNormals:
+    case WorldNormals:
         [[fallthrough]];
-    case VertexTangents:
+    case WorldTangents:
         [[fallthrough]];
-    case VertexBinormals:
+    case WorldBinormals:
         [[fallthrough]];
     case WorldPosition:
+        [[fallthrough]];
+    case ModelNormals:
         return ctx.vectorType(3);
     }
 }

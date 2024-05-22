@@ -59,6 +59,10 @@ struct DebugDrawOptions {
     bloom::EntityHandle lightVizEntity;
 };
 
+struct RendererSettings {
+    uint2 shadowMapResolution = { 512, 512 };
+};
+
 static std::string toString(DebugDrawOptions::Mode mode) {
     return std::array{ "Lit", "Wireframe" }[(size_t)mode];
 };
@@ -98,6 +102,9 @@ struct Viewport: View, BasicSceneInspector {
     YAML::Node serialize() const override;
     void deserialize(YAML::Node) override;
     Toolbar makeToolbar();
+    void displayViewportSettings();
+    void displayRendererSettings();
+
     void dropdownMenu();
 
     void receiveData(std::any data) override;
@@ -116,6 +123,7 @@ struct Viewport: View, BasicSceneInspector {
     ViewData viewData;
     Reference<Texture2D> iblTexture;
     TextureHandle colorPickerTmpTex;
+    RendererSettings rendererSettings;
     bool showRenderGraphDebugger = false;
     bool gameView = false;
 };
@@ -227,7 +235,7 @@ void Viewport::drawScenes() {
         (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
     FrameParameters frameParams = {
         .screenSize = viewportSize,
-        .shadowMapSize = { 1024, 1024 },
+        .shadowMapSize = rendererSettings.shadowMapResolution,
         .drawWireframe = drawOptions.mode == DebugDrawOptions::Mode::Wireframe
     };
     auto* renderGraph = RenderGraphManager::get();
@@ -463,16 +471,20 @@ void Viewport::openScene(AssetHandle handle) {
 
 void Viewport::onInput(bloom::InputEvent&) {}
 
+BLOOM_MAKE_TEXT_SERIALIZER(RendererSettings, shadowMapResolution);
+
 YAML::Node Viewport::serialize() const {
     YAML::Node root;
     root["CameraController"] = cameraController;
     root["IBLTexture"] = iblTexture ? iblTexture->handle() : AssetHandle{};
+    root["RendererSettings"] = rendererSettings;
     return root;
 }
 
 void Viewport::deserialize(YAML::Node node) {
     cameraController = node["CameraController"].as<ViewportCameraController>();
     auto iblTexAsset = node["IBLTexture"].as<AssetHandle>();
+    rendererSettings = node["RendererSettings"].as<RendererSettings>();
     using enum AssetRepresentation;
     iblTexture = as<Texture2D>(assetManager().get(iblTexAsset, CPU | GPU));
 }
@@ -551,42 +563,74 @@ Toolbar Viewport::makeToolbar() {
     return toolbar;
 }
 
+void Viewport::displayViewportSettings() {
+    using namespace propertiesView;
+    beginProperty("Game View");
+    ImGui::Checkbox("###game-view", &gameView);
+    beginProperty("Field Of View");
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (float fov = cameraController.fieldOfView();
+        ImGui::SliderFloat("###field-of-view", &fov, 30, 180))
+    {
+        cameraController.setFieldOfView(fov);
+    }
+    beginProperty("Near Clip Plane");
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (float clip = cameraController.nearClipPlane();
+        ImGui::SliderFloat("###near-clip-plane", &clip, 0, 1))
+    {
+        cameraController.setNearClipPlane(clip);
+    }
+    beginProperty("Speed");
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (float speed = cameraController.speed();
+        ImGui::DragFloat("###speed", &speed))
+    {
+        cameraController.setSpeed(speed);
+    }
+    beginProperty("IBL Texture");
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    using enum AssetRepresentation;
+    assetButton("###IBLTexture", iblTexture, { .repr = CPU | GPU });
+    beginProperty("Show Render Graph Debugger");
+    ImGui::Checkbox("###ShowRGDebugger", &showRenderGraphDebugger);
+}
+
+static std::string formatResolution(uint2 res) {
+    return utl::strcat(res.x, "x", res.y);
+}
+
+void Viewport::displayRendererSettings() {
+    using namespace propertiesView;
+    beginProperty("Shadow Map Resolution");
+    auto& S = rendererSettings;
+    if (ImGui::BeginCombo("###ShadowMapRes",
+                          formatResolution(S.shadowMapResolution).c_str()))
+    {
+        for (int i = 7; i < 14; ++i) {
+            uint2 newRes(1 << i);
+            if (ImGui::MenuItem(formatResolution(newRes).c_str(), "",
+                                newRes == S.shadowMapResolution))
+            {
+                S.shadowMapResolution = newRes;
+            }
+        }
+        ImGui::EndCombo();
+    }
+}
+
 void Viewport::dropdownMenu() {
     using namespace propertiesView;
     ImGui::SetWindowSize({ ImGui::GetWindowSize().x,
                            std::min(ImGui::GetWindowSize().y, 250.0f) });
-    header("Viewport Settings");
-    if (beginSection()) {
-        beginProperty("Game View");
-        ImGui::Checkbox("###game-view", &gameView);
-        beginProperty("Field Of View");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (float fov = cameraController.fieldOfView();
-            ImGui::SliderFloat("###field-of-view", &fov, 30, 180))
-        {
-            cameraController.setFieldOfView(fov);
-        }
-        beginProperty("Near Clip Plane");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (float clip = cameraController.nearClipPlane();
-            ImGui::SliderFloat("###near-clip-plane", &clip, 0, 1))
-        {
-            cameraController.setNearClipPlane(clip);
-        }
-        beginProperty("Speed");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (float speed = cameraController.speed();
-            ImGui::DragFloat("###speed", &speed))
-        {
-            cameraController.setSpeed(speed);
-        }
-        beginProperty("IBL Texture");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        using enum AssetRepresentation;
-        assetButton("###IBLTexture", iblTexture, { .repr = CPU | GPU });
+    if (beginSection("Viewport Settings")) {
+        displayViewportSettings();
         endSection();
     }
-    ImGui::Checkbox("Show Render Graph Debugger", &showRenderGraphDebugger);
+    if (beginSection("Renderer Settings")) {
+        displayRendererSettings();
+        endSection();
+    }
 }
 
 void Viewport::receiveData(std::any data) {

@@ -43,7 +43,7 @@ public:
         return textures.values();
     }
 
-    void setParameter(void* data, size_t offset, size_t size);
+    void setParameter(void const* data, size_t offset, size_t size);
 
     void setTexture(int vertBinding, int fragBinding,
                     Reference<Texture2D> texture);

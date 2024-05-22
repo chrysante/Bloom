@@ -51,22 +51,21 @@ static bool displayParam(MaterialPrimitiveParameter& param) {
     beginProperty(param.name);
     std::string label = makeLabel(param.name);
     using enum MaterialDataType;
-    switch (param.dataType) {
+    switch (param.type) {
     case Float:
         fullWidth();
-        return ImGui::DragFloat(label.c_str(), param.defaultValue.data(), 0.01);
+        return ImGui::DragFloat(label.c_str(), param.value.data(), 0.01);
     case Float2:
         fullWidth();
-        return ImGui::DragFloat2(label.c_str(), param.defaultValue.data(),
-                                 0.01);
+        return ImGui::DragFloat2(label.c_str(), param.value.data(), 0.01);
     case Float3:
-        return ImGui::ColorEdit3(label.c_str(), param.defaultValue.data(),
+        return ImGui::ColorEdit3(label.c_str(), param.value.data(),
                                  ImGuiColorEditFlags_NoInputs |
                                      ImGuiColorEditFlags_NoLabel |
                                      ImGuiColorEditFlags_Float |
                                      ImGuiColorEditFlags_NoAlpha);
     case Float4:
-        return ImGui::ColorEdit4(label.c_str(), param.defaultValue.data(),
+        return ImGui::ColorEdit4(label.c_str(), param.value.data(),
                                  ImGuiColorEditFlags_NoInputs |
                                      ImGuiColorEditFlags_NoLabel |
                                      ImGuiColorEditFlags_Float);
@@ -85,7 +84,7 @@ static void displayParam(MaterialInstance& inst,
     if (assetButton(makeLabel(param.name).c_str(), tex,
                     { .style = AssetButtonStyle::Thumbnail, .repr = GPU }))
     {
-        param.defaultValue = tex ? tex->handle() : AssetHandle{};
+        param.value = tex ? tex->handle() : AssetHandle{};
         inst.setTexture(param.vertexBindingPoint, param.fragmentBindingPoint,
                         std::move(tex));
     }
@@ -121,8 +120,8 @@ void MaterialInstanceViewer::display() {
     }
     for (auto& param: primParams) {
         if (displayParam(param)) {
-            inst->setParameter(param.defaultValue.data(), param.bufferOffset,
-                               layoutSize(param.dataType));
+            inst->setParameter(param.value.data(), param.bufferOffset,
+                               layoutSize(param.type));
         }
     }
     for (auto& param: texParams) {

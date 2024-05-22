@@ -224,13 +224,13 @@ static size_t computeBufferLayout(
     std::span<MaterialPrimitiveParameter> params,
     std::span<VectorParameter const*> paramValues) {
     auto cmp = [](auto const& a, auto const& b) {
-        return (int)a.first.dataType < (int)b.first.dataType;
+        return (int)a.first.type < (int)b.first.type;
     };
     ranges::sort(zip(params, paramValues), cmp);
     auto itr = params.begin();
     uint32_t offset = 0;
     while (itr < params.end()) {
-        auto type = itr->dataType;
+        auto type = itr->type;
         assert((int)type < (int)MaterialDataType::Texture2D &&
                "This function must not be used with texture parameters");
         auto [size, align] = getSizeAndAlign(type);
@@ -239,7 +239,7 @@ static size_t computeBufferLayout(
             itr->bufferOffset = offset;
             offset += size;
             ++itr;
-        } while (itr < params.end() && itr->dataType == type);
+        } while (itr < params.end() && itr->type == type);
     }
     return offset;
 }
@@ -250,17 +250,17 @@ static AggregateType const* makeParameterBufferType(
         return nullptr;
     }
     return ctx.aggregateType(params | transform([&](auto& param) {
-        return translate(ctx, param.dataType);
+        return translate(ctx, param.type);
     }) | ranges::to<std::vector>);
 }
 
 static std::vector<MaterialPrimitiveParameter> makePrimitiveParameters(
     std::span<VectorParameter const* const> params) {
     return params | transform([](VectorParameter const* param) {
-        return MaterialPrimitiveParameter{ .dataType = translate(param->type()),
+        return MaterialPrimitiveParameter{ .type = translate(param->type()),
                                            .bufferOffset = 0,
                                            .name = param->name(),
-                                           .defaultValue = param->get() };
+                                           .value = param->get() };
     }) | ranges::to<std::vector>;
 }
 
@@ -696,7 +696,7 @@ static MaterialTextureParameter translate(TextureParameter const& param,
              .fragmentBindingPoint = fragmentIndex,
              .vertexBindingPoint = MaterialTextureParameter::UnusedBindingPoint,
              .name = param.name(),
-             .defaultValue = param.asset() };
+             .value = param.asset() };
 }
 
 std::string MetalCodeGenerator::genNameImpl(TextureValue const& tex) {

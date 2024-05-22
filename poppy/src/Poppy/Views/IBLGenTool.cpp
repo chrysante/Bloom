@@ -25,7 +25,7 @@ using namespace ranges::views;
 namespace {
 
 struct IBLGenTool: View {
-    void generateMipmapsFor(Texture2D& tex);
+    void generateMipmapsFor(Texture2D& tex, size_t expectedMipapCount = 0);
 
     void display();
     void displayFaceFillTool();
@@ -53,6 +53,7 @@ struct IBLGenTool: View {
     int sourceMipLevel = 0;
     int destside = 0;
     int destMipLevel = 0;
+    int specMipCutoff = 0;
     bool showFaceFillTool = false;
     bool applyWindowing = true;
     bool showSHCoeffs = false;
@@ -96,19 +97,20 @@ void IBLGenTool::imgDragDropButton(Reference<Texture2D>& tex,
     }
 }
 
-void IBLGenTool::generateMipmapsFor(Texture2D& tex) {
+void IBLGenTool::generateMipmapsFor(Texture2D& tex, size_t expectedMipapCount) {
     if (!tex.GPUHandle) {
         Logger::Error("Cannot generate mips: No GPU data");
         return;
     }
     usize2 size = tex.size;
-    size_t expectedMipapCount =
-        vml::ceil(vml::log2((float2)size)).fold(utl::max);
+    if (expectedMipapCount == 0) {
+        expectedMipapCount = vml::ceil(vml::log2((float2)size)).fold(utl::max);
+    }
     auto& device = editor().device();
     auto& commandQueue = editor().commandQueue();
     auto commandBuffer = commandQueue.createCommandBuffer();
     auto encoder = commandBuffer->makeBlitEncoder();
-    if (tex.GPUHandle.description().mipmapLevelCount < expectedMipapCount) {
+    if (tex.GPUHandle.description().mipmapLevelCount != expectedMipapCount) {
         auto desc = tex.GPUHandle.description();
         desc.mipmapLevelCount = expectedMipapCount;
         auto newHandle = device.createTexture(desc);
@@ -147,6 +149,7 @@ void IBLGenTool::display() {
     if (ImGui::Button("Generate Irradiance Coefficients")) {
         generateSH();
     }
+    ImGui::SliderInt("Spec Mip Cutoff", &specMipCutoff, 0, 10);
     if (ImGui::Button("Generate Specular Map")) {
         generateSpec();
     }
@@ -213,13 +216,18 @@ void IBLGenTool::generateSpec() {
     if (!verifySourceAndDest()) {
         return;
     }
+    generateMipmapsFor(*source);
     auto desc = source->GPUHandle.description();
     desc.usage = TextureUsage::ShaderRead | TextureUsage::RenderTarget;
     dest->GPUHandle = editor().device().createTexture(desc);
     dest->size = desc.size.xy;
     dest->type = desc.type;
     dest->pixelFormat = desc.pixelFormat;
-    generateMipmapsFor(*dest);
+    size_t numMips = vml::ceil(vml::log2((float2)dest->size)).fold(utl::max);
+    /// -N because we don't want to use a 1x1 pixel texture for the highest
+    /// roughness level
+    generateMipmapsFor(*dest,
+                       numMips - std::min((size_t)specMipCutoff, numMips));
     auto commandBuffer = editor().commandQueue().createCommandBuffer();
     auto destHandle = dest->GPUHandle;
     renderSpecularIBL(editor().device(), *commandBuffer, destHandle,

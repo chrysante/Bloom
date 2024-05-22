@@ -246,7 +246,7 @@ struct YAML::convert<poppy::DataTypeMask> {
     }
     static bool decode(Node const& node, poppy::DataTypeMask& mask) {
         for (auto& field: node) {
-            mask.set(node.as<poppy::DataType>());
+            mask.set(field.as<poppy::DataType>());
         }
         return true;
     }

@@ -14,7 +14,7 @@
 #include "Bloom/Core/Reference.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
-#include "Bloom/Graphics/Material/MaterialParameter.h"
+#include "Bloom/Graphics/Material/MaterialSourceData.h"
 
 namespace bloom {
 

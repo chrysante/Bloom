@@ -75,8 +75,6 @@ set(bloom_sources
   src/Bloom/Graphics/Material/Material.h
   src/Bloom/Graphics/Material/MaterialInstance.cpp
   src/Bloom/Graphics/Material/MaterialInstance.h
-  src/Bloom/Graphics/Material/MaterialParameters.h
-  src/Bloom/Graphics/Material/MaterialParameter.h
   src/Bloom/Graphics/Material/MaterialSourceData.h
 
   src/Bloom/Graphics/RenderGraph/Fwd.cpp

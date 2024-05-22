@@ -10,7 +10,7 @@
 #include "Bloom/Core/Reference.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/Material/Material.h"
-#include "Bloom/Graphics/Material/MaterialParameter.h"
+#include "Bloom/Graphics/Material/MaterialSourceData.h"
 
 namespace bloom {
 

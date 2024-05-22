@@ -1,6 +1,5 @@
 #include <metal_stdlib>
 
-#include "Shader/MaterialParameters.h"
 #include "Shader/PBRShader.h"
 #include "Shader/SharedTypes.h"
 #include "Shader/Vertex.h"

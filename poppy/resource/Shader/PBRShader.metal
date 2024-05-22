@@ -120,38 +120,127 @@ static float3 calculateLightProjection(float4 const positionLightSpace)
     return projCoords;
 }
 
-static float calculateDirLightShadow(texture2d_array<float> shadowMap,
-                                     int shadowMapIndex,
-                                     float3 const projCoords, float NdotL)
+constexpr sampler ShadowMapSampler(min_filter::linear, mag_filter::linear,
+                                   address::clamp_to_edge);
+
+constant int PCSSNumSamples = 32;
+
+constant float2 PoissonDisk[PCSSNumSamples] = {
+    float2(-0.945846, 0.111362),  float2(-0.501809, 0.0101627),
+    float2(-0.752087, 0.414698),  float2(-0.790488, -0.221313),
+    float2(-0.579649, 0.662069),  float2(-0.474825, 0.409264),
+    float2(-0.268089, 0.245859),  float2(-0.16168, 0.648969),
+    float2(-0.733055, -0.593517), float2(-0.328121, -0.291038),
+    float2(-0.162955, 0.918609),  float2(-0.212977, -0.0461858),
+    float2(-0.395393, -0.704939), float2(0.0183952, 0.195933),
+    float2(0.0236111, 0.456332),  float2(0.332141, 0.541443),
+    float2(0.249069, 0.940704),   float2(0.234766, 0.00782704),
+    float2(0.447583, 0.301704),   float2(0.118362, -0.483324),
+    float2(0.767799, 0.483794),   float2(0.500931, 0.745583),
+    float2(-0.196898, -0.905174), float2(0.100852, -0.840746),
+    float2(-0.137543, -0.592574), float2(0.423101, -0.648153),
+    float2(0.853664, 0.228194),   float2(0.620538, 0.0365713),
+    float2(0.851578, -0.17653),   float2(0.711663, -0.503453),
+    float2(0.380343, -0.253128),  float2(0.0429407, -0.169596),
+};
+
+constant float NEAR_PLANE = 9.5;
+
+struct BlockerSearchResult {
+    int numBlockers;
+    float avgBlockerDepth;
+};
+
+static BlockerSearchResult findBlockers(texture2d_array<float> shadowMap,
+                                        int shadowMapIndex, float2 uv,
+                                        float zReceiver, float lightSizeUV)
 {
-    if (!isInLightFrustum(projCoords)) {
-        return 1.0;
+    int numBlockers = 0;
+    float bias = 0;
+    float totalBlockerDistance = 0;
+    float searchWidth = lightSizeUV * (zReceiver - NEAR_PLANE) / zReceiver;
+    for (int i = 0; i < PCSSNumSamples; i++) {
+        float2 offset = PoissonDisk[i] * searchWidth;
+        float z =
+            shadowMap.sample(ShadowMapSampler, uv + offset, shadowMapIndex).r;
+        if (z < zReceiver - bias) {
+            numBlockers++;
+            totalBlockerDistance += z;
+        }
     }
-    constexpr sampler ShadowMapSampler;
-    float closestDepth =
-        shadowMap.sample(ShadowMapSampler, projCoords.xy, shadowMapIndex).r;
-    /// Get depth of current fragment from light's perspective
-    float currentDepth = projCoords.z;
-    float shadow = currentDepth > closestDepth ? 0.0 : 1.0;
-    return shadow;
+    return {
+        .numBlockers = numBlockers,
+        .avgBlockerDepth = totalBlockerDistance / numBlockers,
+    };
+}
+
+// Parallel plane estimation
+static float PenumbraSize(float zReceiver, float zBlocker)
+{
+    return (zReceiver - zBlocker) / zBlocker;
+}
+
+static float PCF_Filter(texture2d_array<float> shadowMap, int shadowMapIndex,
+                        float2 uv, float zReceiver, float filterRadiusUV)
+{
+    float sum = 0.0f;
+    for (int i = 0; i < PCSSNumSamples; ++i) {
+        float2 offset = PoissonDisk[i] * filterRadiusUV;
+        float pcfDepth =
+            shadowMap.sample(ShadowMapSampler, uv + offset, shadowMapIndex).r;
+        sum += zReceiver > pcfDepth ? 0.0 : 1.0;
+    }
+    return sum / PCSSNumSamples;
+}
+
+static float PCSS(texture2d_array<float> shadowMap, int shadowMapIndex,
+                  float3 coords, float lightSizeUV)
+{
+    float2 uv = coords.xy;
+    // Assumed to be eye-space z in this code
+    float zReceiver = coords.z;
+    // Step 1: blocker search
+    auto searchResult =
+        findBlockers(shadowMap, shadowMapIndex, uv, zReceiver, lightSizeUV);
+    // If there are no occluders so early out (this saves filtering)
+    if (searchResult.numBlockers == 0) {
+        return 1.0f;
+    }
+    // Step 2: Penumbra size
+    float penumbraRatio = PenumbraSize(zReceiver, searchResult.avgBlockerDepth);
+    float filterRadiusUV = penumbraRatio * lightSizeUV * NEAR_PLANE / zReceiver;
+    // Step 3: filtering
+    return PCF_Filter(shadowMap, shadowMapIndex, uv, zReceiver, filterRadiusUV);
+}
+
+static float calculateDirLightShadow(texture2d_array<float> shadowMap,
+                                     int shadowMapIndex, float3 projCoords,
+                                     float lightSizeUV)
+{
+    return PCSS(shadowMap, shadowMapIndex, projCoords, lightSizeUV);
 }
 
 static float calculateDirLightCascadedShadow(
-    texture2d_array<float> shadowMaps, int shadowMapOffset, int numCascades,
-    float4x4 device const* lightSpaceTransforms, float4 worldPosition,
-    float NdotL)
+    texture2d_array<float> shadowMaps, DirectionalLight light,
+    int shadowMapOffset, float4x4 device const* lightSpaceTransforms,
+    float4 worldPosition, float NdotL)
 {
     float shadow = 1;
-    for (int j = numCascades - 1; j >= 0; --j) {
+    float LIGHT_SIZE_UV = (0.05 / 3.75);
+    for (int j = 0; j < light.numCascades;
+         ++j, LIGHT_SIZE_UV /= light.cascadeDistributionExponent)
+    {
         int shadowMapIndex = shadowMapOffset + j;
         float4 positionLightSpace =
             lightSpaceTransforms[shadowMapIndex] * worldPosition;
         float3 projLightCoords = calculateLightProjection(positionLightSpace);
         bool isInFrustum = isInLightFrustum(projLightCoords);
-        if (isInFrustum) {
-            shadow = calculateDirLightShadow(shadowMaps, shadowMapIndex,
-                                             projLightCoords, NdotL);
+        if (!isInFrustum) {
+            continue;
         }
+        shadow = calculateDirLightShadow(shadowMaps, shadowMapIndex,
+                                         projLightCoords, LIGHT_SIZE_UV);
+        break;
     }
     return shadow;
 }
@@ -222,11 +311,11 @@ static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
             continue;
         }
         int numCascades = shadowData.numCascades[shadowCasterIndex];
-        float shadow =
-            calculateDirLightCascadedShadow(shadowMaps, shadowMapOffset,
-                                            numCascades, lightSpaceTransforms,
-                                            float4(worldPosition, 1),
-                                            dot(N, light.direction));
+        float shadow = calculateDirLightCascadedShadow(shadowMaps, light,
+                                                       shadowMapOffset,
+                                                       lightSpaceTransforms,
+                                                       float4(worldPosition, 1),
+                                                       dot(N, light.direction));
         shadowMapOffset += numCascades;
         ++shadowCasterIndex;
         lightAcc += shadow * dirLight;

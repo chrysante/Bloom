@@ -54,10 +54,11 @@ static bool displayParam(MaterialPrimitiveParameter& param) {
     switch (param.dataType) {
     case Float:
         fullWidth();
-        return ImGui::DragFloat(label.c_str(), param.defaultValue.data());
+        return ImGui::DragFloat(label.c_str(), param.defaultValue.data(), 0.01);
     case Float2:
         fullWidth();
-        return ImGui::DragFloat2(label.c_str(), param.defaultValue.data());
+        return ImGui::DragFloat2(label.c_str(), param.defaultValue.data(),
+                                 0.01);
     case Float3:
         return ImGui::ColorEdit3(label.c_str(), param.defaultValue.data(),
                                  ImGuiColorEditFlags_NoInputs |

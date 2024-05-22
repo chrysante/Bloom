@@ -51,8 +51,6 @@ set(bloom_sources
   src/Bloom/Core/Profile.h
   src/Bloom/Core/Ranges.h
   src/Bloom/Core/Reference.h
-  src/Bloom/Core/Serialize.cpp
-  src/Bloom/Core/Serialize.h
   src/Bloom/Core/Time.cpp
   src/Bloom/Core/Time.h
   src/Bloom/Core/Yaml.h

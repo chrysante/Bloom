@@ -14,7 +14,7 @@ struct HierarchyComponent {
 
 } // namespace bloom
 
-#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::HierarchyComponent, parent, prevSibling,
                            nextSibling, firstChild, lastChild);

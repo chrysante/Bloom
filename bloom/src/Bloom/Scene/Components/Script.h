@@ -4,7 +4,7 @@
 #include <scatha/Sema/Fwd.h>
 
 #include "Bloom/Core/Base.h"
-#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 #include "Bloom/Scene/Components/ComponentBase.h"
 
 namespace bloom {

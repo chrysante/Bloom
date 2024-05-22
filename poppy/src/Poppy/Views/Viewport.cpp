@@ -10,7 +10,7 @@
 
 #include "Bloom/Application/Window.h"
 #include "Bloom/Asset/AssetManager.h"
-#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 #include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"

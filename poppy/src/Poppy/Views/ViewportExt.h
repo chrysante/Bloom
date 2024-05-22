@@ -9,8 +9,8 @@
 
 #include "Bloom/Application/Input.h"
 #include "Bloom/Asset/Fwd.h"
-#include "Bloom/Core/Serialize.h"
 #include "Bloom/Core/Time.h"
+#include "Bloom/Core/Yaml.h"
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Scene/Components/Lights.h"
 #include "Bloom/Scene/Components/Transform.h"

@@ -15,7 +15,7 @@ struct TagComponent {
 
 } // namespace bloom
 
-#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::TagComponent, name);
 

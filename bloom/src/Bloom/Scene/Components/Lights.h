@@ -28,7 +28,7 @@ struct SkyLightComponent: SkyLight {
 
 } // namespace bloom
 
-#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 
 template <>
 struct YAML::convert<bloom::PointLightComponent> {

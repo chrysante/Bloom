@@ -1,7 +1,7 @@
 #ifndef BLOOM_GRAPHICS_LIGHTS_H
 #define BLOOM_GRAPHICS_LIGHTS_H
 
-#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 #include "Bloom/Shader/Lights.h"
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::LightCommon, color, intensity);

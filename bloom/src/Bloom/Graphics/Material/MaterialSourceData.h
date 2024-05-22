@@ -9,7 +9,7 @@
 
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/Serialization.h"
-#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/Graphics/Material/MaterialSourceData.h"
 

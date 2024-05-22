@@ -12,7 +12,6 @@
 #include "Bloom/Application/ResourceUtil.h"
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/AssetManager.h"
-#include "Bloom/Core/Serialize.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/Graphics/Texture.h"
 #include "Bloom/Scene/Components/Script.h"

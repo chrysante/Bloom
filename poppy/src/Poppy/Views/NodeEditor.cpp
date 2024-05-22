@@ -14,7 +14,6 @@
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/EnumCount.h"
 #include "Bloom/Core/Ranges.h"
-#include "Bloom/Core/Serialize.h"
 #include "Bloom/Core/Yaml.h"
 #include "Poppy/Core/SelectionManager.h"
 #include "Poppy/UI/Appearance.h"

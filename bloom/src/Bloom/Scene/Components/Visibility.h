@@ -1,7 +1,7 @@
 #ifndef BLOOM_SCENE_COMPONENTS_VISIBILITY_H
 #define BLOOM_SCENE_COMPONENTS_VISIBILITY_H
 
-#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 
 namespace bloom {
 

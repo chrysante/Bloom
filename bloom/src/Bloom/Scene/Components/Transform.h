@@ -31,7 +31,7 @@ struct TransformMatrixComponent {
 
 } // namespace bloom
 
-#include "Bloom/Core/Serialize.h"
+#include "Bloom/Core/Yaml.h"
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::Transform, position, orientation, scale);
 

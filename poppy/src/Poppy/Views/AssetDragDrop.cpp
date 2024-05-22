@@ -34,7 +34,7 @@ std::string poppy::selectAssetIcon(AssetType type) {
     case AssetType::SkeletalMesh:
         return "cube";
     case AssetType::Material:
-        return "leaf";
+        return "brush";
     case AssetType::MaterialInstance:
         return "delicious";
     case AssetType::Texture2D:

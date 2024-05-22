@@ -55,6 +55,7 @@ struct Editor::Impl {
         selection(editor->makeReceiver()) {}
 
     void deleteSelectedEntities();
+    void toggleSelectedEntitiesHidden();
 
     std::array<Command const*, 2> addSimCommands(CommandPalette& cmd);
 
@@ -196,6 +197,9 @@ void Editor::reactToSceneCommands(CommandPalette& cmd) {
     cmd.add({ "Delete Selected Entities",
               { Key::Backspace, ModFlags::Control },
               [this] { impl->deleteSelectedEntities(); } });
+    cmd.add({ "Toggle Selected Entities Hidden", { Key::H }, [this] {
+        impl->toggleSelectedEntitiesHidden();
+    } });
 }
 
 Editor::~Editor() = default;
@@ -400,4 +404,12 @@ void Editor::Impl::deleteSelectedEntities() {
         entity.scene().deleteEntity(entity);
     }
     selection.clear();
+}
+
+void Editor::Impl::toggleSelectedEntitiesHidden() {
+    for (EntityHandle entity: selection.entities()) {
+        if (auto* vis = entity.tryGet<VisibilityComponent>()) {
+            vis->value ^= true;
+        }
+    }
 }

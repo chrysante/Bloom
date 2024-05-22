@@ -145,6 +145,7 @@ constant float2 PoissonDisk[PCSSNumSamples] = {
 };
 
 constant float NEAR_PLANE = 9.5;
+constant float DepthBias = -0.0005;
 
 struct BlockerSearchResult {
     int numBlockers;
@@ -156,14 +157,13 @@ static BlockerSearchResult findBlockers(texture2d_array<float> shadowMap,
                                         float zReceiver, float lightSizeUV)
 {
     int numBlockers = 0;
-    float bias = 0;
     float totalBlockerDistance = 0;
     float searchWidth = lightSizeUV * (zReceiver - NEAR_PLANE) / zReceiver;
     for (int i = 0; i < PCSSNumSamples; i++) {
         float2 offset = PoissonDisk[i] * searchWidth;
         float z =
             shadowMap.sample(ShadowMapSampler, uv + offset, shadowMapIndex).r;
-        if (z < zReceiver - bias) {
+        if (z < zReceiver) {
             numBlockers++;
             totalBlockerDistance += z;
         }
@@ -174,23 +174,25 @@ static BlockerSearchResult findBlockers(texture2d_array<float> shadowMap,
     };
 }
 
-// Parallel plane estimation
-static float PenumbraSize(float zReceiver, float zBlocker)
-{
-    return (zReceiver - zBlocker) / zBlocker;
-}
-
-static float PCF_Filter(texture2d_array<float> shadowMap, int shadowMapIndex,
-                        float2 uv, float zReceiver, float filterRadiusUV)
+static float sampleShadowPCF(texture2d_array<float> shadowMap,
+                             int shadowMapIndex, float2 uv, float zReceiver,
+                             float filterRadiusUV)
 {
     float sum = 0.0f;
     for (int i = 0; i < PCSSNumSamples; ++i) {
         float2 offset = PoissonDisk[i] * filterRadiusUV;
         float pcfDepth =
             shadowMap.sample(ShadowMapSampler, uv + offset, shadowMapIndex).r;
-        sum += zReceiver > pcfDepth ? 0.0 : 1.0;
+
+        sum += pcfDepth < zReceiver - DepthBias ? 0.0 : 1.0;
     }
     return sum / PCSSNumSamples;
+}
+
+// Parallel plane estimation
+static float PenumbraSize(float zReceiver, float zBlocker)
+{
+    return (zReceiver - zBlocker) / zBlocker;
 }
 
 static float PCSS(texture2d_array<float> shadowMap, int shadowMapIndex,
@@ -210,7 +212,8 @@ static float PCSS(texture2d_array<float> shadowMap, int shadowMapIndex,
     float penumbraRatio = PenumbraSize(zReceiver, searchResult.avgBlockerDepth);
     float filterRadiusUV = penumbraRatio * lightSizeUV * NEAR_PLANE / zReceiver;
     // Step 3: filtering
-    return PCF_Filter(shadowMap, shadowMapIndex, uv, zReceiver, filterRadiusUV);
+    return sampleShadowPCF(shadowMap, shadowMapIndex, uv, zReceiver,
+                           filterRadiusUV);
 }
 
 static float calculateDirLightShadow(texture2d_array<float> shadowMap,
@@ -220,13 +223,21 @@ static float calculateDirLightShadow(texture2d_array<float> shadowMap,
     return PCSS(shadowMap, shadowMapIndex, projCoords, lightSizeUV);
 }
 
+static float cascadeTransition(float2 uv, float fraction)
+{
+    float2 result = max(float2(), abs(2 * uv - 1) - 1 + fraction);
+    return max(result.x, result.y);
+}
+
 static float calculateDirLightCascadedShadow(
     texture2d_array<float> shadowMaps, DirectionalLight light,
     int shadowMapOffset, float4x4 device const* lightSpaceTransforms,
     float4 worldPosition, float NdotL)
 {
     float shadow = 1;
-    float LIGHT_SIZE_UV = (0.05 / 3.75);
+    float LIGHT_SIZE_UV = (.05 / 3.75);
+    bool foundFrustum = false;
+    float transition = 0;
     for (int j = 0; j < light.numCascades;
          ++j, LIGHT_SIZE_UV /= light.cascadeDistributionExponent)
     {
@@ -238,9 +249,18 @@ static float calculateDirLightCascadedShadow(
         if (!isInFrustum) {
             continue;
         }
-        shadow = calculateDirLightShadow(shadowMaps, shadowMapIndex,
-                                         projLightCoords, LIGHT_SIZE_UV);
-        break;
+        float cascade = calculateDirLightShadow(shadowMaps, shadowMapIndex,
+                                                projLightCoords, LIGHT_SIZE_UV);
+        if (!foundFrustum) {
+            shadow = cascade;
+            foundFrustum = true;
+            transition = cascadeTransition(projLightCoords.xy,
+                                           light.cascadeTransitionFraction);
+        }
+        else {
+            shadow = mix(cascade, shadow, transition);
+            break;
+        }
     }
     return shadow;
 }

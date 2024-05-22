@@ -111,9 +111,11 @@ void MaterialInstanceViewer::display() {
     auto primParams = inst->getPrimitiveParameterDescriptors();
     auto texParams = inst->getTextureParameterDescriptors();
     if (primParams.empty() && texParams.empty()) {
+        ImGui::EndChild();
         return;
     }
     if (!beginSection("Parameters")) {
+        ImGui::EndChild();
         return;
     }
     for (auto& param: primParams) {

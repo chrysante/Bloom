@@ -35,21 +35,6 @@ std::unique_ptr<bloom::Application> bloom::createApplication() {
 Application* Application::gInstance = nullptr;
 
 struct Application::Impl {
-    struct AppWindowDelegate: WindowDelegate {
-        AppWindowDelegate(Application* app): app(app) {}
-
-        void onResize(int2) override {
-            if (!window()->requestedResize()) {
-                /// Very important that we don't wait on events when resizing.
-                /// Otherwise the application might freeze during resize because
-                /// no events are being sent
-                app->doFrame(RunLoopMode::None);
-            }
-        }
-
-        Application* app;
-    };
-
     int inputCallbackID = 0;
     RenderThread renderThread;
 };
@@ -75,10 +60,18 @@ Emitter Application::makeEmitter() { return messageSystem->makeEmitter(); }
 
 Receiver Application::makeReceiver() { return messageSystem->makeReceiver(); }
 
-Window& Application::createWindow(WindowDescription const& desc) {
-    auto window = Window::Create(desc);
-    window->addDelegate(std::make_unique<Impl::AppWindowDelegate>(this));
-    mWindows.push_back(std::move(window));
+Window& Application::createWindow(WindowDescription desc) {
+    if (!desc.frameCallback) {
+        desc.frameCallback = [this](Window& window) {
+            if (!window.requestedResize()) {
+                /// Very important that we don't wait on events when resizing.
+                /// Otherwise the application might freeze during resize because
+                /// no events are being sent
+                doFrame(RunLoopMode::None);
+            }
+        };
+    }
+    mWindows.push_back(Window::Create(desc));
     return *mWindows.back();
 }
 

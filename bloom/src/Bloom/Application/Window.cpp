@@ -41,6 +41,7 @@ void Window::destroy() {
 
 Window::Window(WindowDescription const& d): impl(std::make_shared<Impl>()) {
     static_cast<WindowDescription&>(*impl) = d;
+    impl->window = this;
     impl->fullscreen = false;
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_FOCUSED, d.focused);
@@ -278,6 +279,9 @@ void Window::setCallbacks() {
             posCallback(impl, position);
         }
         impl.invokeDelegates(&WindowDelegate::onResize, newSize);
+        if (impl.frameCallback) {
+            impl.frameCallback(*impl.window);
+        }
         if (impl.requestedResizes > 0) {
             --impl.requestedResizes;
         }

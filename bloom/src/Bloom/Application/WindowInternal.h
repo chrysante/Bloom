@@ -51,6 +51,7 @@ struct Window::Impl: WindowDescription {
     Reference<Swapchain> swapchain;
     std::vector<std::unique_ptr<WindowDelegate>> delegates;
     std::shared_ptr<Window::Impl> _self;
+    Window* window = nullptr;
 };
 
 } // namespace bloom

@@ -64,6 +64,9 @@ struct WindowDescription {
 
     /// If set to `true` the window can become the main window by clicking on it
     bool canBecomeMain = true;
+
+    /// Called when resizing the window after invoking all callbacks
+    std::function<void(Window&)> frameCallback;
 };
 
 /// Provides user callbacks for window events

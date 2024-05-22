@@ -966,8 +966,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* v)
     bloom::WindowDescription windowDesc{};
     windowDesc.position = viewport->Pos;
     windowDesc.size = viewport->Size;
-    /// We let the ImGui Metal backend perform the resizing because for reasons I don't understand it looks cleaner
-    windowDesc.autoResizeSwapchain = false;
+    windowDesc.autoResizeSwapchain = true;
     if (viewport->Flags & ImGuiViewportFlags_NoDecoration) {
         windowDesc.noDecoration = true;
         windowDesc.focused = false;

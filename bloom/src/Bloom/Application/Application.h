@@ -77,7 +77,7 @@ public:
 
     /// Creates a new window with from window description \p desc and window
     /// delegate \p delegate
-    Window& createWindow(WindowDescription const& desc);
+    Window& createWindow(WindowDescription desc);
 
     /// Immediately destroy \p window
     void destroyWindow(Window& window);

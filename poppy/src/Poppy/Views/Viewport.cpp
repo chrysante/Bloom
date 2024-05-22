@@ -573,6 +573,13 @@ void Viewport::dropdownMenu() {
         {
             cameraController.setNearClipPlane(clip);
         }
+        beginProperty("Speed");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (float speed = cameraController.speed();
+            ImGui::DragFloat("###speed", &speed))
+        {
+            cameraController.setSpeed(speed);
+        }
         beginProperty("IBL Texture");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         using enum AssetRepresentation;

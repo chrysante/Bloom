@@ -61,6 +61,12 @@ public:
     ///
     void setNearClipPlane(float clip) { data.nearClip = clip; }
 
+    /// \Returns the current speed
+    float speed() const { return data.speed; }
+
+    /// Sets the speed
+    void setSpeed(float speed) { data.speed = speed; }
+
     ///
     bloom::Camera const& camera() const { return cam; }
 

@@ -368,7 +368,8 @@ static float3 calcSHIrradiance(float3 N, float3 device const* SH)
                    SH[7] * 1.092548f * N.x * N.z * A2 +
                    SH[8] * 0.546274f * (N.x * N.x - N.y * N.y) * A2;
     float PI = 3.14159265359;
-    return color / PI;
+    return color / (4 * PI); // According to theory this should be divided by 1
+                             // PI only, however this looks much better
 }
 
 float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)

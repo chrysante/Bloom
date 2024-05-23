@@ -4,25 +4,15 @@
 #include <array>
 #include <type_traits>
 
+#include <magic_enum.hpp>
+
 #include "Bloom/Core/Debug.h"
 
 namespace bloom {
 
 template <typename E>
     requires std::is_enum_v<E>
-inline constexpr std::size_t EnumCount = []() -> std::size_t {
-    if constexpr (requires { E::COUNT; }) {
-        return (std::size_t)E::COUNT;
-    }
-    else if constexpr (requires { E::LAST; }) {
-        return 1 + (std::size_t)E::LAST;
-    }
-    else {
-        static_assert(!std::is_same_v<E, E>,
-                      "EnumCount requires either E::COUNT or E::LAST");
-        BL_UNREACHABLE();
-    }
-}();
+inline constexpr std::size_t EnumCount = magic_enum::enum_count<E>();
 
 /// Wrapper around `std::array` that has as many elements are there are cases in
 /// `E` and that can be indexed with values from `E`. This relies on the

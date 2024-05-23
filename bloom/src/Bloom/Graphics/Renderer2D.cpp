@@ -11,23 +11,14 @@ using namespace bloom;
 using namespace vml::short_types;
 using namespace ranges::views;
 
-void Renderer2D::begin() {
-    scenes.clear();
-    vertices.clear();
-}
-
-void Renderer2D::beginScene() { scenes.push_back({ vertices.size(), 0 }); }
-
-void Renderer2D::endScene() {}
-
-void Renderer2D::line(float3 begin, float3 end, float4 color, float thickness) {
-    vertices.push_back({ begin, end, 1, thickness, color });
-    vertices.push_back({ begin, end, -1, thickness, color });
-    vertices.push_back({ end, begin, -1, thickness, color });
-    vertices.push_back({ begin, end, -1, thickness, color });
-    vertices.push_back({ end, begin, 1, thickness, color });
-    vertices.push_back({ end, begin, -1, thickness, color });
-    current().vertexCount += 6;
+void Renderer2DScene::addLine(float3 begin, float3 end, float4 color,
+                              float thickness) {
+    _vertices.push_back({ begin, end, 1, thickness, color });
+    _vertices.push_back({ begin, end, -1, thickness, color });
+    _vertices.push_back({ end, begin, -1, thickness, color });
+    _vertices.push_back({ begin, end, -1, thickness, color });
+    _vertices.push_back({ end, begin, 1, thickness, color });
+    _vertices.push_back({ end, begin, -1, thickness, color });
 }
 
 static void fillBuffer(HardwareDevice& device, BufferHandle& buffer,
@@ -61,11 +52,13 @@ static DepthStencilHandle createDepthStencil(HardwareDevice& device) {
     });
 }
 
-void Renderer2D::draw(BufferHandle cameraBuffer, HardwareDevice& device,
-                      CommandBuffer& commandBuffer,
-                      RenderPassDescription const& renderPassDesc) {
+void Renderer2D::drawInWorldCoords(
+    Renderer2DScene const& scene, HardwareDevice& device,
+    CommandBuffer& commandBuffer, BufferHandle cameraBuffer,
+    RenderPassDescription const& renderPassDesc) {
+    auto vertices = scene.vertices();
     fillBuffer(device, vertexBuffer, vertices.data(),
-               vertices.size() * sizeof(LineVertex2D));
+               vertices.size() * sizeof vertices[0]);
     if (!pipeline) {
         pipeline = createPipeline(device, renderPassDesc);
     }
@@ -78,13 +71,6 @@ void Renderer2D::draw(BufferHandle cameraBuffer, HardwareDevice& device,
     encoder->setVertexBuffer(cameraBuffer, 0);
     encoder->setVertexBuffer(vertexBuffer, 1);
     encoder->setTriangleCullMode(TriangleCullMode::None);
-    for (auto [vertexBegin, vertexCount]: scenes) {
-        encoder->draw(PrimitiveType::Triangle, vertexBegin, vertexCount);
-    }
+    encoder->draw(PrimitiveType::Triangle, 0, vertices.size());
     encoder->end();
-}
-
-Renderer2DScene::reference Renderer2D::current() {
-    BL_ASSERT(!scenes.empty(), "No current scene");
-    return scenes.back();
 }

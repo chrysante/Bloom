@@ -310,21 +310,8 @@ static void copyTexture(TextureHandle source, TextureHandle dest,
     encoder.end();
 }
 
-void GridPass::doExecute(FrameParameters const& params,
-                         CommandBuffer& commandBuffer) {
-    copyTexture(colorIn, colorOut, *commandBuffer.makeBlitEncoder());
-
-    RenderPassDescription desc = { .colorAttachments = { {
-                                       .texture = colorOut,
-                                       .loadAction = LoadAction::Load,
-                                   } },
-                                   .depthAttachment = {
-                                       .texture = depth,
-                                       .loadAction = LoadAction::DontCare } };
-
-    renderer.begin();
-    renderer.beginScene();
-
+void GridPass::doExecute(FrameParameters const&, CommandBuffer& commandBuffer) {
+    Renderer2DScene scene;
     float4 gridColor = { 0.5, 0.5, 0.5, 1 };
     float4 gridColorAlt = { 0.75, 0.75, 0.75, 1 };
     float lineWidth = 3;
@@ -332,26 +319,21 @@ void GridPass::doExecute(FrameParameters const& params,
     for (int i = -1000, j = 0; i <= 1000; i += 100, ++j) {
         float4 color = j % 2 == 0 ? gridColor : gridColorAlt;
         float width = j % 2 == 0 ? lineWidth : lineWidthAlt;
-        renderer.line({ i, -1000, 0 }, { i, 1000, 0 }, color, width);
-        renderer.line({ -1000, i, 0 }, { 1000, i, 0 }, color, width);
+        scene.addLine({ i, -1000, 0 }, { i, 1000, 0 }, color, width);
+        scene.addLine({ -1000, i, 0 }, { 1000, i, 0 }, color, width);
     }
-
-    //    renderer.line({ 50, 0, 0 }, { 50, 0, 200 });
-    renderer.draw(cameraBuffer, device(), commandBuffer, desc);
-
-    //    auto encoder = commandBuffer.makeRenderEncoder(
-    //        { .colorAttachments = { {
-    //              .texture = colorOut,
-    //              .loadAction = LoadAction::Load,
-    //          } },
-    //          .depthAttachment = { .texture = depth,
-    //                               .loadAction = LoadAction::DontCare } });
-    //    encoder->setVertexBuffer(cameraBuffer, 0);
-    //    encoder->setPipeline(pipeline);
-    //    encoder->setTriangleCullMode(TriangleCullMode::None);
-    //    encoder->setDepthStencil(depthStencil);
-    //    encoder->draw(PrimitiveType::TriangleStrip, 0, 4);
-    //    encoder->end();
+    copyTexture(colorIn, colorOut, *commandBuffer.makeBlitEncoder());
+    // clang-format off
+    RenderPassDescription desc = {
+        .colorAttachments = { 
+            { .texture = colorOut, .loadAction = LoadAction::Load }
+        },
+        .depthAttachment = {
+            .texture = depth, .loadAction = LoadAction::DontCare
+        }
+    }; // clang-format on
+    renderer.drawInWorldCoords(scene, device(), commandBuffer, cameraBuffer,
+                               desc);
 }
 
 void GridPass::doAllocateResources(FrameParameters const&,

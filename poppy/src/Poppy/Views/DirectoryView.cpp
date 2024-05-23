@@ -142,6 +142,25 @@ struct DirEntryEqual {
 using SelectionManager =
     BasicSelectionManager<DirectoryEntry, DirEntryHash, DirEntryEqual>;
 
+struct CaseInsensitiveLess {
+    bool operator()(auto&& a, auto&& b) {
+        return std::lexicographical_compare(ranges::begin(a), ranges::end(a),
+                                            ranges::begin(b), ranges::end(b),
+                                            [](auto x, auto y) {
+            return std::tolower((int)x) < std::tolower((int)y);
+        });
+    }
+};
+
+struct CaseInsensitiveEqual {
+    bool operator()(auto&& a, auto&& b) {
+        return std::equal(ranges::begin(a), ranges::end(a), ranges::begin(b),
+                          ranges::end(b), [](auto x, auto y) {
+            return std::tolower((int)x) == std::tolower((int)y);
+        });
+    }
+};
+
 struct ScannedDirectory {
     static ScannedDirectory Build(DirectoryViewDelegate& delegate,
                                   SortCondition condition,
@@ -171,13 +190,18 @@ struct ScannedDirectory {
     void sort(SortCondition condition) {
         switch (condition) {
         case SortCondition::Name:
-            ranges::sort(entries, [&](auto& a, auto& b) {
-                return a.path().filename() < b.path().filename();
-            });
+            ranges::sort(entries, CaseInsensitiveLess{},
+                         [](auto& a) { return a.path().filename().string(); });
             break;
         case SortCondition::Extension:
             ranges::sort(entries, [&](auto& a, auto& b) {
-                return a.path().extension() < b.path().extension();
+                auto aExt = a.path().extension().string();
+                auto bExt = b.path().extension().string();
+                if (CaseInsensitiveEqual{}(aExt, bExt)) {
+                    return CaseInsensitiveLess{}(a.path().filename().string(),
+                                                 b.path().filename().string());
+                }
+                return CaseInsensitiveLess{}(aExt, bExt);
             });
             break;
         }

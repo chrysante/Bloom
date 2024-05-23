@@ -153,6 +153,18 @@ void AssetBrowser::init() {
         ToolbarIconButton(dirView.getCommand(GoBack), "left-open"),
         ToolbarIconButton(dirView.getCommand(GoForward), "right-open"),
         ToolbarIconButton(dirView.getCommand(GoUp), "up-open"),
+        ToolbarDropdownMenu()
+            .icon([] { return "sort-alt-up"; })
+            .content([this] {
+                using enum DirectoryView::SortCondition;
+                auto cond = dirView.sortCondition();
+                if (ImGui::MenuItem("Sort by Name", "", cond == Name)) {
+                    dirView.setSortCondition(Name);
+                }
+                if (ImGui::MenuItem("Sort by Type", "", cond == Extension)) {
+                    dirView.setSortCondition(Extension);
+                }
+            }),
         ToolbarSpacer{},
         ToolbarIconButton(dirView.getCommand(Rescan), "cw"),
         ToolbarIconButton("download")

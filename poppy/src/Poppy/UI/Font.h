@@ -57,9 +57,9 @@ enum class FontStyle { Roman, Italic, Monospaced, LAST = Monospaced };
 /// Font attribute descriptor. Used to identify fonts when interacting with the
 /// font manager
 struct FontDesc {
-    FontSize size;
-    FontWeight weight;
-    FontStyle style;
+    FontSize size = FontSize::Medium;
+    FontWeight weight = FontWeight::Regular;
+    FontStyle style = FontStyle::Roman;
 
     /// \Returns the font descriptor used for most UI elements
     static FontDesc UIDefault();

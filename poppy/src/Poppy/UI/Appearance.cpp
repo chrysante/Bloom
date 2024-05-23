@@ -147,8 +147,7 @@ void Appearance::update(bool force) {
 }
 
 static void showWarning() {
-    ImGui::PushFont(FontManager::get(
-        { .size = FontSize::Large, .weight = FontWeight::Bold }));
+    ImGui::PushFont(FontManager::get({ .weight = FontWeight::Bold }));
     ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0, 1, 1 });
     ImGui::TextWrapped(
         "Warning: Edits need to be made in code in Appearance.cpp to be persistent");
@@ -157,10 +156,11 @@ static void showWarning() {
 }
 
 void Appearance::showInspector(bool* open) {
-    if (!ImGui::Begin("Style Editor", open)) {
+    bool isOpen = ImGui::Begin("Style Editor", open);
+    utl_defer { ImGui::End(); };
+    if (!isOpen) {
         return;
     }
-    utl_defer { ImGui::End(); };
     showWarning();
     auto& style = staticInstance().mStyle;
     bool update = false;

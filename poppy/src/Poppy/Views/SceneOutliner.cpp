@@ -37,6 +37,8 @@ struct TreeNodeDescription {
     bool isLeaf = true;
     bool haveEyeButton = false;
     bool eyeButtonCrossed = false;
+    bool entityVisible = true; /// This differs from `eyeButtonCrossed` because
+                               /// a parent entity may be hidden
     std::string_view name;
     utl::function_view<void()> itemCallback = {};
 };
@@ -92,10 +94,15 @@ void SceneOutliner::display() {
     for (auto scene: scenes()) {
         displayScene(*scene);
     }
+    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() &&
+        ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+    {
+        selection().clear();
+    }
 }
 
 static bool eyeButton(float2 nodePosLocal, bool selectedOrHovered,
-                      bool crossed) {
+                      bool disabled, bool crossed) {
     auto& g = *GImGui;
     auto& style = ImGui::GetStyle();
     float2 stashedPos = ImGui::GetCursorScreenPos();
@@ -107,13 +114,14 @@ static bool eyeButton(float2 nodePosLocal, bool selectedOrHovered,
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
     ImGui::PushStyleColor(ImGuiCol_Border, 0);
     ImGui::PushStyleColor(ImGuiCol_Text, 0);
-    bool pressed = ImGui::Button("###EyeButton", { size.x, size.y + 1 });
+    ImGui::Button("###EyeButton", { size.x, size.y + 1 });
+    bool pressed = ImGui::IsItemClicked();
     ImGui::PopStyleColor(5);
     auto* DL = ImGui::GetWindowDrawList();
-    auto eyeCol =
-        selectedOrHovered ?
-            IM_COL32_WHITE :
-            ImGui::GetColorU32(crossed ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+    auto eyeCol = selectedOrHovered ?
+                      IM_COL32_WHITE :
+                      ImGui::GetColorU32(disabled ? ImGuiCol_TextDisabled :
+                                                    ImGuiCol_Text);
     auto icon =
         FontManager::get({ IconSize::_16 }, crossed ? "eye-off" : "eye");
     float iconSize = 0.9;
@@ -145,7 +153,7 @@ TreeNodeResult SceneOutliner::treeNode(TreeNodeDescription const& desc) {
     ImGui::SetNextItemAllowOverlap();
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 0, 0 });
     ImGui::PushStyleColor(ImGuiCol_Text,
-                          ImGui::GetStyleColorVec4(desc.eyeButtonCrossed ?
+                          ImGui::GetStyleColorVec4(!desc.entityVisible ?
                                                        ImGuiCol_TextDisabled :
                                                        ImGuiCol_Text));
     bool isExpanded =
@@ -163,7 +171,8 @@ TreeNodeResult SceneOutliner::treeNode(TreeNodeDescription const& desc) {
     if (desc.haveEyeButton) {
         result.isEyeButtonPressed =
             eyeButton(pos, ImGui::IsItemHovered() || desc.selected,
-                      desc.eyeButtonCrossed);
+                      /* disabled: */ !desc.entityVisible,
+                      /* crossed: */ desc.eyeButtonCrossed);
     }
     return result;
 }
@@ -252,6 +261,7 @@ void SceneOutliner::displayEntity(EntityHandle entity) {
                    .isLeaf = entity.scene().isLeaf(entity),
                    .haveEyeButton = vis != nullptr,
                    .eyeButtonCrossed = vis && !vis->value,
+                   .entityVisible = entity.isVisible(),
                    .itemCallback = itemCallback });
     setExpanded(entity, isExpanded);
     if (isClicked && !isToggledOpen) {

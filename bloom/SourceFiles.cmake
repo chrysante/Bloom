@@ -108,6 +108,8 @@ set(bloom_sources
   src/Bloom/Graphics/StaticMesh.h
   src/Bloom/Graphics/Texture.cpp
   src/Bloom/Graphics/Texture.h
+  src/Bloom/Graphics/Renderer2D.cpp
+  src/Bloom/Graphics/Renderer2D.h
 
   src/Bloom/Platform/MacOS/Autorelease.mm
   src/Bloom/Platform/MacOS/CocoaImpl.h

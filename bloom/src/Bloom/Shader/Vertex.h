@@ -14,6 +14,14 @@ struct Vertex3D {
     vml::float2 textureCoordinates[4];
 };
 
+struct LineVertex2D {
+    vml::packed_float3 position;
+    vml::packed_float3 nextPosition;
+    float orientation;
+    float thickness;
+    vml::float4 color;
+};
+
 } // namespace bloom
 
 #endif // BLOOM_SHADER_VERTEX_H

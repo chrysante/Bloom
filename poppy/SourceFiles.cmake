@@ -98,4 +98,5 @@ set(poppy_shader_sources
   resource/Shader/EditorPasses.metal
   resource/Shader/MaterialShaders.metal
   resource/Shader/CubemapRenderer.metal
+  resource/Shader/Renderer2D.metal
 )

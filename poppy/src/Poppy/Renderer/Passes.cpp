@@ -5,6 +5,7 @@
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
+#include "Bloom/Graphics/Renderer2D.h"
 #include "Bloom/Shader/SharedTypes.h"
 
 using namespace poppy;
@@ -241,6 +242,8 @@ struct GridPass: PassImpl<GridPass> {
 
     GridPass(): PassImpl("Grid Pass") {}
 
+    Renderer2D renderer;
+
     // Sinks
     BufferHandle cameraBuffer;
     TextureHandle colorIn;
@@ -307,21 +310,48 @@ static void copyTexture(TextureHandle source, TextureHandle dest,
     encoder.end();
 }
 
-void GridPass::doExecute(FrameParameters const&, CommandBuffer& commandBuffer) {
+void GridPass::doExecute(FrameParameters const& params,
+                         CommandBuffer& commandBuffer) {
     copyTexture(colorIn, colorOut, *commandBuffer.makeBlitEncoder());
-    auto encoder = commandBuffer.makeRenderEncoder(
-        { .colorAttachments = { {
-              .texture = colorOut,
-              .loadAction = LoadAction::Load,
-          } },
-          .depthAttachment = { .texture = depth,
-                               .loadAction = LoadAction::DontCare } });
-    encoder->setVertexBuffer(cameraBuffer, 0);
-    encoder->setPipeline(pipeline);
-    encoder->setTriangleCullMode(TriangleCullMode::None);
-    encoder->setDepthStencil(depthStencil);
-    encoder->draw(PrimitiveType::TriangleStrip, 0, 4);
-    encoder->end();
+
+    RenderPassDescription desc = { .colorAttachments = { {
+                                       .texture = colorOut,
+                                       .loadAction = LoadAction::Load,
+                                   } },
+                                   .depthAttachment = {
+                                       .texture = depth,
+                                       .loadAction = LoadAction::DontCare } };
+
+    renderer.begin();
+    renderer.beginScene();
+
+    float4 gridColor = { 0.5, 0.5, 0.5, 1 };
+    float4 gridColorAlt = { 0.75, 0.75, 0.75, 1 };
+    float lineWidth = 3;
+    float lineWidthAlt = 1.5;
+    for (int i = -1000, j = 0; i <= 1000; i += 100, ++j) {
+        float4 color = j % 2 == 0 ? gridColor : gridColorAlt;
+        float width = j % 2 == 0 ? lineWidth : lineWidthAlt;
+        renderer.line({ i, -1000, 0 }, { i, 1000, 0 }, color, width);
+        renderer.line({ -1000, i, 0 }, { 1000, i, 0 }, color, width);
+    }
+
+    //    renderer.line({ 50, 0, 0 }, { 50, 0, 200 });
+    renderer.draw(cameraBuffer, device(), commandBuffer, desc);
+
+    //    auto encoder = commandBuffer.makeRenderEncoder(
+    //        { .colorAttachments = { {
+    //              .texture = colorOut,
+    //              .loadAction = LoadAction::Load,
+    //          } },
+    //          .depthAttachment = { .texture = depth,
+    //                               .loadAction = LoadAction::DontCare } });
+    //    encoder->setVertexBuffer(cameraBuffer, 0);
+    //    encoder->setPipeline(pipeline);
+    //    encoder->setTriangleCullMode(TriangleCullMode::None);
+    //    encoder->setDepthStencil(depthStencil);
+    //    encoder->draw(PrimitiveType::TriangleStrip, 0, 4);
+    //    encoder->end();
 }
 
 void GridPass::doAllocateResources(FrameParameters const&,

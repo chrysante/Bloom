@@ -565,7 +565,7 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
         auto argScope = makeScope(ScopeType::Paran);
         writeItem("pbr");
         writeItem("in.positionWS");
-        writeItem("cameraBuffer.cameraPosition");
+        writeItem("cameraBuffer.position");
         writeItem("lightSpaceTransforms");
         writeItem("lights");
         writeItem("shadowMetadata");

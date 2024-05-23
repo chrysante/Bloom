@@ -263,11 +263,11 @@ static BloomParameters makeBloomParams(BloomSettings settings) {
 
 static CameraInput makeCameraInput(Camera const& camera) {
     auto viewProj = vml::transpose(camera.viewProjection());
-    return {
-        .camera = viewProj,
-        .inverseCamera = vml::inverse(viewProj),
-        .cameraPosition = camera.position(),
-    };
+    return { .camera = viewProj,
+             .inverseCamera = vml::inverse(viewProj),
+             .position = camera.position(),
+             .front = camera.front(),
+             .viewportSize = camera.viewportSize() };
 }
 
 void Renderer::draw(CommandBuffer& commandBuffer) {

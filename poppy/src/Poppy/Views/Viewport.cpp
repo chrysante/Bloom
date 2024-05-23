@@ -429,7 +429,7 @@ void Viewport::readInput() {
     }
     mouseState = ::detectViewportInput(ImGuiButtonFlags_MouseButtonRight);
     if (mouseState.held) {
-        cameraController.update(Timestep{ 0, 0.166 }, editor().input());
+        cameraController.update(editor().time(), editor().input());
     }
 }
 

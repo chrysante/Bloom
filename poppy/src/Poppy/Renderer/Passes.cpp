@@ -322,6 +322,7 @@ void GridPass::doExecute(FrameParameters const&, CommandBuffer& commandBuffer) {
         scene.addLine({ i, -1000, 0 }, { i, 1000, 0 }, color, width);
         scene.addLine({ -1000, i, 0 }, { 1000, i, 0 }, color, width);
     }
+    scene.addCircle({ 0, 0, 100 }, { 1, 0, 0 }, 100, { 0, .5, 1, 1 }, 5);
     copyTexture(colorIn, colorOut, *commandBuffer.makeBlitEncoder());
     // clang-format off
     RenderPassDescription desc = {

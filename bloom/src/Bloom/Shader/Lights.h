@@ -24,15 +24,16 @@ struct SpotLightRenderData {
 };
 
 struct DirectionalLightRenderData {
-    vml::packed_float3 color;
+    vml::packed_float3 color;            //
     float intensity;                     // 16 bytes
     vml::packed_float3 direction;        //
+    float sourceSize;                    // 16 bytes
     bool castsShadows;                   //
-    int16_t numCascades;                 // 16 bytes
+    int16_t numCascades;                 //
     float shadowDistance;                //
     float shadowDistanceZ;               //
-    float cascadeDistributionExponent;   //
-    float cascadeTransitionFraction;     // 16 bytes
+    float cascadeDistributionExponent;   // 16 bytes
+    float cascadeTransitionFraction;     //
     float shadowDistanceFadeoutFraction; //
 };
 

@@ -181,9 +181,10 @@ static float sampleShadowPCF(texture2d_array<float> shadowMap,
     float sum = 0.0f;
     for (int i = 0; i < PCSSNumSamples; ++i) {
         float2 offset = PoissonDisk[i] * filterRadiusUV;
+        float2 sampleUV = uv + offset;
+        int sampleIndex = shadowMapIndex;
         float pcfDepth =
-            shadowMap.sample(ShadowMapSampler, uv + offset, shadowMapIndex).r;
-
+            shadowMap.sample(ShadowMapSampler, sampleUV, sampleIndex).r;
         sum += pcfDepth < zReceiver - DepthBias ? 0.0 : 1.0;
     }
     return sum / PCSSNumSamples;
@@ -225,7 +226,7 @@ static float PCSS(texture2d_array<float> shadowMap, int shadowMapIndex,
                            filterRadiusUV);
 }
 
-#define USE_PCSS
+#define USE_PCSS 1
 
 static float calculateDirLightShadow(texture2d_array<float> shadowMap,
                                      int shadowMapIndex, float3 projCoords,
@@ -240,7 +241,7 @@ static float calculateDirLightShadow(texture2d_array<float> shadowMap,
 
 static float cascadeTransition(float2 uv, float fraction)
 {
-    float2 result = max(float2(), abs(2 * uv - 1) - 1 + fraction);
+    float2 result = max(float2(), abs(2 * uv - 1) - 1 + fraction) / (fraction);
     return max(result.x, result.y);
 }
 
@@ -250,7 +251,7 @@ static float calculateDirLightCascadedShadow(
     float4 worldPosition, float NdotL)
 {
     float shadow = 1;
-    float LIGHT_SIZE_UV = (.05 / 3.75);
+    float LIGHT_SIZE_UV = light.sourceSize / (100 * 3.75);
     bool foundFrustum = false;
     float transition = 0;
     for (int j = 0; j < light.numCascades;
@@ -273,7 +274,7 @@ static float calculateDirLightCascadedShadow(
                                            light.cascadeTransitionFraction);
         }
         else {
-            shadow = mix(cascade, shadow, transition);
+            shadow = mix(shadow, cascade, transition);
             break;
         }
     }
@@ -289,13 +290,13 @@ constant float3 shadowVizColors[10] = {
 
 [[maybe_unused]] static float3 visualizeShadowCascade(
     int shadowMapOffset, int numCascades,
-    float4x4 device const* lightSpaceTransforms, float4 worldPosition)
+    float4x4 device const* lightSpaceTransforms, float3 worldPosition)
 {
     float3 shadowViz = 0.5;
     for (int j = numCascades - 1; j >= 0; --j) {
         int lightMapIndex = shadowMapOffset + j;
         float4 positionLightSpace =
-            lightSpaceTransforms[lightMapIndex] * worldPosition;
+            lightSpaceTransforms[lightMapIndex] * float4(worldPosition, 1);
         float3 projLightCoords = calculateLightProjection(positionLightSpace);
         bool isInFrustum = isInLightFrustum(projLightCoords);
         if (isInFrustum) {

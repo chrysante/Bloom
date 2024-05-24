@@ -34,8 +34,9 @@ BLOOM_MAKE_TEXT_SERIALIZER(bloom::PointLight, color, intensity, position,
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::SpotLight, color, intensity, position,
                            direction, innerCutoff, outerCutoff, radius);
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::DirectionalLight, color, intensity, direction,
-                           castsShadows, numCascades, shadowDistance,
-                           shadowDistanceZ, cascadeDistributionExponent,
+                           sourceSize, castsShadows, numCascades,
+                           shadowDistance, shadowDistanceZ,
+                           cascadeDistributionExponent,
                            cascadeTransitionFraction,
                            shadowDistanceFadeoutFraction);
 

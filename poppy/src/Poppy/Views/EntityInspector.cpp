@@ -425,6 +425,9 @@ void EntityInspector::inspectSpotLight(bloom::SpotLight& light) {
 void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
     using namespace propertiesView;
     inspectLightCommon(light, LightType::DirectionalLight);
+    beginProperty("Source Size");
+    fullWidth();
+    ImGui::DragFloat("source-size", &light.sourceSize, 0.01, 0, FLT_MAX);
     beginProperty("Casts Shadow");
     ImGui::Checkbox("##-casts-shadow", &light.castsShadows);
     if (!light.castsShadows) {

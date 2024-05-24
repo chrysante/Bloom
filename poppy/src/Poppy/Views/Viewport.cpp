@@ -61,6 +61,8 @@ struct DebugDrawOptions {
 
 struct RendererSettings {
     uint2 shadowMapResolution = { 512, 512 };
+    BloomSettings bloomSettings;
+    PostProcessSettings postProcessSettings;
 };
 
 static std::string toString(DebugDrawOptions::Mode mode) {
@@ -248,7 +250,9 @@ void Viewport::drawScenes() {
     }
     renderer = &getSceneRenderer(renderGraph, editor().commandQueue());
     cameraController.applyProjection(viewportSize);
-    renderer->begin(frameParams, cameraController.camera());
+    renderer->begin(frameParams, cameraController.camera(),
+                    rendererSettings.bloomSettings,
+                    rendererSettings.postProcessSettings);
     auto& sceneSystem = editor().coreSystems().sceneSystem();
     std::unique_lock lock = sceneSystem.lock();
     sceneSystem.applyTransformHierarchy();
@@ -465,7 +469,8 @@ void Viewport::openScene(AssetHandle handle) {
 
 void Viewport::onInput(bloom::InputEvent&) {}
 
-BLOOM_MAKE_TEXT_SERIALIZER(RendererSettings, shadowMapResolution);
+BLOOM_MAKE_TEXT_SERIALIZER(RendererSettings, shadowMapResolution, bloomSettings,
+                           postProcessSettings);
 
 YAML::Node Viewport::serialize() const {
     YAML::Node root;
@@ -587,9 +592,10 @@ static std::string formatResolution(uint2 res) {
 }
 
 void Viewport::displayRendererSettings() {
+    auto& S = rendererSettings;
     using namespace propertiesView;
     beginProperty("Shadow Map Resolution");
-    auto& S = rendererSettings;
+    fullWidth();
     if (ImGui::BeginCombo("###ShadowMapRes",
                           formatResolution(S.shadowMapResolution).c_str()))
     {
@@ -602,6 +608,41 @@ void Viewport::displayRendererSettings() {
             }
         }
         ImGui::EndCombo();
+    }
+    header("Postprocessing");
+    beginProperty("Tone Mapping");
+    fullWidth();
+    char const* const items[] = { "ACES", "Reinhard" };
+    ImGui::Combo("###tone-mapping",
+                 (int*)&S.postProcessSettings.toneMappingFunction, items, 2);
+    header("Bloom/Veil");
+    beginProperty("Enabled");
+    bool bloomEnabled = true;
+    ImGui::Checkbox("###enabled", &bloomEnabled);
+    beginProperty("Physically Correct");
+    ImGui::Checkbox("##physically-correct", &S.bloomSettings.physicallyCorrect);
+    if (!S.bloomSettings.physicallyCorrect) {
+        beginProperty("Intensity");
+        fullWidth();
+        ImGui::SliderFloat("###intensity", &S.bloomSettings.intensity, 0, 10);
+        beginProperty("Threshold");
+        fullWidth();
+        ImGui::SliderFloat("###threshold", &S.bloomSettings.threshold, 0, 10);
+        beginProperty("Soft Knee");
+        fullWidth();
+        ImGui::SliderFloat("###knee", &S.bloomSettings.knee, 0, 1);
+    }
+    beginProperty("Clamp");
+    fullWidth();
+    ImGui::DragFloat("###clamp", &S.bloomSettings.clamp, 0.1, 0, FLT_MAX);
+    beginProperty("Diffusion");
+    fullWidth();
+    ImGui::SliderFloat("###diffusion", &S.bloomSettings.diffusion, 0, 10);
+    if (S.bloomSettings.physicallyCorrect) {
+        beginProperty("Contribution");
+        fullWidth();
+        ImGui::SliderFloat("###contribution", &S.bloomSettings.contribution, 0,
+                           1);
     }
 }
 

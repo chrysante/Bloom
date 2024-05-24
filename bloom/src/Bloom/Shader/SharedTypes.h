@@ -33,7 +33,7 @@ struct LightBufferContents {
 };
 
 /// Different tone mapping functions
-enum class ToneMappingFunction { ACES, reinhard };
+enum class ToneMappingFunction { ACES, Reinhard };
 
 /// Parameter structure for the bloom shaders
 struct BloomParameters {

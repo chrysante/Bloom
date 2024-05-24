@@ -108,9 +108,13 @@ Renderer::Renderer(RenderGraph* renderGraph, CommandQueue& commandQueue):
     commandBuffer->waitForCompletion();
 }
 
-void Renderer::begin(FrameParameters const& frameParams, Camera const& camera) {
+void Renderer::begin(FrameParameters const& frameParams, Camera const& camera,
+                     BloomSettings bloomSettings,
+                     PostProcessSettings postProcessSettings) {
     this->frameParams = frameParams;
     this->camera = camera;
+    this->bloomSettings = bloomSettings;
+    this->postProcessSettings = postProcessSettings;
     if (geometry) {
         geometry->clear();
     }
@@ -227,33 +231,6 @@ void Renderer::submit(Scene const& scene) {
     }
 }
 
-namespace {
-
-struct BloomSettings {
-    bool physicallyCorrect;
-    float intensity;
-    float threshold;
-    float knee;
-    float clamp;
-    float diffusion;
-    float contribution;
-};
-
-} // namespace
-
-static BloomParameters makeBloomParams(BloomSettings settings) {
-    BloomParameters params{};
-    params.intensity = settings.intensity;
-    params.curve = { settings.threshold - settings.knee, 2 * settings.knee,
-                     0.25 / settings.knee };
-    params.physicallyCorrect = settings.physicallyCorrect;
-    params.threshold = settings.threshold;
-    params.scale = settings.diffusion;
-    params.clamp = settings.clamp;
-    params.contribution = settings.contribution;
-    return params;
-}
-
 static CameraInput makeCameraInput(Camera const& camera) {
     auto viewProj = vml::transpose(camera.viewProjection());
     return { .camera = viewProj,
@@ -261,6 +238,24 @@ static CameraInput makeCameraInput(Camera const& camera) {
              .position = camera.position(),
              .front = camera.front(),
              .viewportSize = camera.viewportSize() };
+}
+
+static BloomParameters makeBloomParams(BloomSettings const& settings) {
+    return {
+        .intensity = settings.intensity,
+        .curve = { settings.threshold - settings.knee, 2 * settings.knee,
+                   0.25 / settings.knee },
+        .physicallyCorrect = settings.physicallyCorrect,
+        .threshold = settings.threshold,
+        .scale = settings.diffusion,
+        .clamp = settings.clamp,
+        .contribution = settings.contribution,
+    };
+}
+
+static PostProcessParameters makePostProcessParams(
+    PostProcessSettings const& settings) {
+    return { .toneMappingFunction = settings.toneMappingFunction };
 }
 
 void Renderer::draw(CommandBuffer& commandBuffer) {
@@ -289,21 +284,13 @@ void Renderer::draw(CommandBuffer& commandBuffer) {
         }
     }
     if (bloomParams && bloomParams->handle()) {
-        BloomParameters values = makeBloomParams({
-            .physicallyCorrect = false,
-            .intensity = 0.7,
-            .threshold = 1,
-            .knee = 0.1,
-            .clamp = 100,
-            .diffusion = 1,
-        });
+        BloomParameters values = makeBloomParams(bloomSettings);
         device.fillManagedBuffer(bloomParams->handle(), &values, sizeof values);
     }
     if (postProcessParams && postProcessParams->handle()) {
-        PostProcessParameters values{ .toneMappingFunction =
-                                          ToneMappingFunction::ACES };
-        device.fillManagedBuffer(postProcessParams->handle(), &values,
-                                 sizeof values);
+        auto value = makePostProcessParams(postProcessSettings);
+        device.fillManagedBuffer(postProcessParams->handle(), &value,
+                                 sizeof value);
     }
     mRenderGraph->execute(frameParams, commandBuffer);
 }

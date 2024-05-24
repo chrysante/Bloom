@@ -22,7 +22,7 @@ static float3 tonemap(float3 colorIn, ToneMappingFunction function)
     switch (function) {
     case ToneMappingFunction::ACES:
         return ACESFilm(colorIn);
-    case ToneMappingFunction::reinhard:
+    case ToneMappingFunction::Reinhard:
         return reinhard(colorIn);
     default:
         return colorIn;

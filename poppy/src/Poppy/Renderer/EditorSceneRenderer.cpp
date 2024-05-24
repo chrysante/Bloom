@@ -101,11 +101,13 @@ EditorSceneRenderer::EditorSceneRenderer(
 }
 
 void EditorSceneRenderer::begin(bloom::FrameParameters const& frameParams,
-                                bloom::Camera const& camera) {
+                                bloom::Camera const& camera,
+                                BloomSettings bloomSettings,
+                                PostProcessSettings postProcessSettings) {
     if (!mRenderer) {
         return;
     }
-    mRenderer->begin(frameParams, camera);
+    mRenderer->begin(frameParams, camera, bloomSettings, postProcessSettings);
     if (selectedGeometry) {
         selectedGeometry->clear();
     }

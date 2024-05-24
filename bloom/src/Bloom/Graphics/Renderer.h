@@ -12,6 +12,7 @@
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Reference.h"
+#include "Bloom/Core/Yaml.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/Camera.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
@@ -48,6 +49,20 @@ struct EntityHandleEncoding {
     uint32_t sceneIndex : 8;
 };
 
+struct BloomSettings {
+    bool physicallyCorrect;
+    float intensity;
+    float threshold;
+    float knee;
+    float clamp;
+    float diffusion;
+    float contribution;
+};
+
+struct PostProcessSettings {
+    ToneMappingFunction toneMappingFunction;
+};
+
 /// Wrapper around a render graph that provides a simple scene submission
 /// interface
 class BLOOM_API Renderer {
@@ -63,7 +78,9 @@ public:
 
     /// Resets the internal scene state and reallocates textures and other
     /// resource as necessary if \p frameParams changed since last frame
-    void begin(FrameParameters const& frameParams, Camera const& camera);
+    void begin(FrameParameters const& frameParams, Camera const& camera,
+               BloomSettings bloomSettings,
+               PostProcessSettings postProcessSettings);
 
     /// Submits geometry and lights in \p scene to the corresponding resources
     void submit(Scene const& scene);
@@ -91,9 +108,16 @@ private:
     BufferResource* postProcessParams = nullptr;
     FrameParameters frameParams;
     Camera camera;
+    BloomSettings bloomSettings;
+    PostProcessSettings postProcessSettings;
     size_t sceneIndex = 0;
 };
 
 } // namespace bloom
+
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::BloomSettings, physicallyCorrect, intensity,
+                           threshold, knee, clamp, diffusion, contribution);
+
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::PostProcessSettings, toneMappingFunction);
 
 #endif // BLOOM_GRAPHICS_RENDERER_H

@@ -20,7 +20,8 @@ public:
         std::unique_ptr<bloom::RenderGraph> renderGraph,
         bloom::CommandQueue& commandQueue);
     void begin(bloom::FrameParameters const& frameParams,
-               bloom::Camera const& camera);
+               bloom::Camera const& camera, bloom::BloomSettings bloomSettings,
+               bloom::PostProcessSettings postProcessSettings);
     void submit(bloom::Scene const& scene,
                 EntitySelectionManager const& selectionManager);
     void draw(bloom::CommandBuffer& commandBuffer);

@@ -38,11 +38,6 @@ BEGIN_RENDERGRAPH_SINK_DECL(Renderer) {
         {}
     },
     BufferInterface{
-        "Shadow Metadata",
-        nullptr,
-        { .size = sizeof(ShadowRenderMetadata) }
-    },
-    BufferInterface{
         "Bloom Parameters",
         nullptr,
         { .size = sizeof(BloomParameters) }
@@ -95,11 +90,10 @@ Renderer::Renderer(RenderGraph* renderGraph, CommandQueue& commandQueue):
     lights = getResource<LightsResource>(renderGraph, 1);
     cameraBuffer = getResource<BufferResource>(renderGraph, 2);
     lightSpaceTransformBuffer = getResource<BufferResource>(renderGraph, 3);
-    shadowMetadataBuffer = getResource<BufferResource>(renderGraph, 4);
-    bloomParams = getResource<BufferResource>(renderGraph, 5);
-    postProcessParams = getResource<BufferResource>(renderGraph, 6);
-    specularTexture = getResource<TextureResource>(renderGraph, 7);
-    brdfTexture = getResource<TextureResource>(renderGraph, 8);
+    bloomParams = getResource<BufferResource>(renderGraph, 4);
+    postProcessParams = getResource<BufferResource>(renderGraph, 5);
+    specularTexture = getResource<TextureResource>(renderGraph, 6);
+    brdfTexture = getResource<TextureResource>(renderGraph, 7);
 
     /// Generate BRDF map
     auto& device = renderGraph->device();
@@ -197,7 +191,6 @@ void Renderer::submit(Scene const& scene) {
             light.direction = vml::normalize(
                 (transform.matrix * vml::float4{ 1, 0, 0, 0 }).xyz);
         });
-        shadowMetadata.numShadowCasters = 0;
         submitLights<DirectionalLightComponent>(
             *lights, scene,
             [&](TransformMatrixComponent const& transform,
@@ -214,8 +207,6 @@ void Renderer::submit(Scene const& scene) {
                     vml::transpose(lightSpaceTransform));
                 distance *= light.cascadeDistributionExponent;
             }
-            shadowMetadata.numCascades[shadowMetadata.numShadowCasters++] =
-                light.numCascades;
             frameParams.numShadowMaps += light.numCascades;
         });
         submitLights<SkyLightComponent>(*lights, scene);
@@ -280,10 +271,6 @@ void Renderer::draw(CommandBuffer& commandBuffer) {
     if (cameraBuffer && cameraBuffer->handle()) {
         auto value = makeCameraInput(camera);
         device.fillManagedBuffer(cameraBuffer->handle(), &value, sizeof value);
-    }
-    if (shadowMetadataBuffer && shadowMetadataBuffer->handle()) {
-        device.fillManagedBuffer(shadowMetadataBuffer->handle(),
-                                 &shadowMetadata, sizeof shadowMetadata);
     }
     if (lightSpaceTransformBuffer) {
         size_t byteSize = std::max(size_t{ 1 }, lightSpaceTransforms.size()) *

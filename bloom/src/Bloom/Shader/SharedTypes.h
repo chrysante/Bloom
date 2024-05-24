@@ -34,15 +34,6 @@ struct LightBufferContents {
     vml::float3 irradianceCoefficients[9];
 };
 
-/// Describes the layout of the shadow map texture array
-struct alignas(vml::float4x4) ShadowRenderMetadata {
-    /// The number of lights that cast shadows
-    int numShadowCasters;
-
-    /// For each shadow caster the number of cascades
-    int numCascades[NumMaxShadowCasters];
-};
-
 /// Different tone mapping functions
 enum class ToneMappingFunction { ACES, reinhard };
 

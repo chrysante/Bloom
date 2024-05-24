@@ -84,8 +84,6 @@ private:
     TextureHandle BRDF;
     std::vector<vml::float4x4> lightSpaceTransforms;
     BufferResource* lightSpaceTransformBuffer = nullptr;
-    ShadowRenderMetadata shadowMetadata;
-    BufferResource* shadowMetadataBuffer;
     LightsResource* lights = nullptr;
     BufferResource* bloomParams = nullptr;
     BufferResource* postProcessParams = nullptr;

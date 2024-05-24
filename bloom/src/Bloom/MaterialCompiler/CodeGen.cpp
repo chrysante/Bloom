@@ -516,8 +516,6 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
               getBindIndex(Fragment, Lights), ")]]");
     writeItem("float4x4 device const* lightSpaceTransforms [[buffer(",
               getBindIndex(Fragment, LightSpaceTransforms), ")]]");
-    writeItem("ShadowRenderMetadata device const& shadowMetadata [[buffer(",
-              getBindIndex(Fragment, ShadowMetadata), ")]]");
     writeItem("uint32_t device const& entityID [[buffer(",
               getBindIndex(Fragment, GeometryIDBuffer), ")]]");
     if (paramBufferType) {
@@ -568,7 +566,6 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
         writeItem("cameraBuffer.position");
         writeItem("lightSpaceTransforms");
         writeItem("lights");
-        writeItem("shadowMetadata");
         writeItem("shadowMaps");
         writeItem("specularMap");
         writeItem("brdfMap");

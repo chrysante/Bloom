@@ -31,7 +31,6 @@ struct ForwardShadingPass: PassImpl<ForwardShadingPass> {
     LightsResource* lights;
     BufferHandle cameraBuffer;
     BufferHandle lightSpaceTransforms;
-    BufferHandle shadowMetadata;
     TextureHandle shadowMaps;
     TextureHandle specularTexture;
     TextureHandle brdfTexture;
@@ -63,11 +62,6 @@ BEGIN_SINK_DECL(ForwardShadingPass) {
     BufferInterface{
         "Light Space Transforms",
         &ForwardShadingPass::lightSpaceTransforms,
-        {}
-    },
-    BufferInterface{
-        "Shadow Metadata",
-        &ForwardShadingPass::shadowMetadata,
         {}
     },
     TextureInterface{
@@ -162,8 +156,6 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
                                getBindIndex(Fragment, Lights));
     encoder->setFragmentBuffer(lightSpaceTransforms,
                                getBindIndex(Fragment, LightSpaceTransforms));
-    encoder->setFragmentBuffer(shadowMetadata,
-                               getBindIndex(Fragment, ShadowMetadata));
     encoder->setFragmentBuffer(geometry->IDBuffer(),
                                getBindIndex(Fragment, GeometryIDBuffer));
     encoder->setFragmentTexture(shadowMaps, getBindIndex(Fragment, ShadowMaps));

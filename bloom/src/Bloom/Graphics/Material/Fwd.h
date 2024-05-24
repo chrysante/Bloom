@@ -45,7 +45,6 @@ enum class GlobalMaterialBindingType {
     Geometry,
     Lights,
     LightSpaceTransforms,
-    ShadowMetadata,
     ShadowMaps,
     MaterialParameterBuffer,
     GeometryIDBuffer,
@@ -85,8 +84,6 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
             return { Buffer, 1 };
         case LightSpaceTransforms:
             return { Buffer, 2 };
-        case ShadowMetadata:
-            return { Buffer, 3 };
         case ShadowMaps:
             return { Texture, 0 };
         case MaterialParameterBuffer:

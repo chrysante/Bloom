@@ -332,7 +332,6 @@ static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
                                float4x4 const device* lightSpaceTransforms,
                                uint numLights,
                                DirectionalLight device const* lights,
-                               ShadowRenderMetadata const device& shadowData,
                                texture2d_array<float> shadowMaps)
 {
     float3 lightAcc{};
@@ -345,7 +344,7 @@ static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
             lightAcc += dirLight;
             continue;
         }
-        int numCascades = shadowData.numCascades[shadowCasterIndex];
+        int numCascades = light.numCascades;
         float shadow = calculateDirLightCascadedShadow(shadowMaps, light,
                                                        shadowMapOffset,
                                                        lightSpaceTransforms,
@@ -424,13 +423,13 @@ static float3 computeAmbient(PBRData data, float3 N, float3 V,
     return (kD * diffuse + specular) * data.ao;
 }
 
-float3 bloom::PBRForwardShader(
-    PBRData pbr, float3 worldPosition, float3 cameraPosition,
-    device const float4x4* lightSpaceTransforms,
-    device const LightBufferContents& lights,
-    device const ShadowRenderMetadata& shadowMetadata,
-    texture2d_array<float> shadowMaps, texturecube<float> specularMap,
-    texture2d<float> brdfMap)
+float3 bloom::PBRForwardShader(PBRData pbr, float3 worldPosition,
+                               float3 cameraPosition,
+                               device const float4x4* lightSpaceTransforms,
+                               device const LightBufferContents& lights,
+                               texture2d_array<float> shadowMaps,
+                               texturecube<float> specularMap,
+                               texture2d<float> brdfMap)
 {
     float3 N = pbr.normal;
     float3 V = normalize(cameraPosition - worldPosition);
@@ -441,7 +440,7 @@ float3 bloom::PBRForwardShader(
                                   lights.numSpotLights, lights.spotLights);
     lightAcc += computeDirLights(pbr, N, V, worldPosition, lightSpaceTransforms,
                                  lights.numDirLights, lights.dirLights,
-                                 shadowMetadata, shadowMaps);
+                                 shadowMaps);
     lightAcc += computeSkyLights(pbr, lights.numSkyLights, lights.skyLights);
     lightAcc += computeAmbient(pbr, N, V, lights.irradianceCoefficients,
                                specularMap, brdfMap);

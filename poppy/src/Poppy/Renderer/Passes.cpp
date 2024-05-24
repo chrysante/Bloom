@@ -315,10 +315,16 @@ static void addGrid(Renderer2DScene& scene) {
     float lineWidth = 3;
     float lineWidthAlt = 1.5;
     for (int i = -1000, j = 0; i <= 1000; i += 100, ++j) {
-        float4 color = j % 2 == 0 ? gridColor : gridColorAlt;
+        auto [xCol, yCol] = [&] {
+            if (i == 0) {
+                return std::pair{ float4(1, 0, 0, 1), float4(0, 1, 0, 1) };
+            }
+            float4 tmp = j % 2 == 0 ? gridColor : gridColorAlt;
+            return std::pair{ tmp, tmp };
+        }();
         float width = j % 2 == 0 ? lineWidth : lineWidthAlt;
-        scene.addLine({ i, -1000, 0 }, { i, 1000, 0 }, color, width);
-        scene.addLine({ -1000, i, 0 }, { 1000, i, 0 }, color, width);
+        scene.addLine({ i, -1000, 0 }, { i, 1000, 0 }, xCol, width);
+        scene.addLine({ -1000, i, 0 }, { 1000, i, 0 }, yCol, width);
     }
 }
 

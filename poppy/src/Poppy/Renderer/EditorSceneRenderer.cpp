@@ -182,12 +182,6 @@ void EditorSceneRenderer::submit(
     }
 }
 
-void EditorSceneRenderer::setIBLTexture(Reference<Texture2D> tex) {
-    if (mRenderer) {
-        mRenderer->setIBLTexture(std::move(tex));
-    }
-}
-
 void EditorSceneRenderer::draw(bloom::CommandBuffer& commandBuffer) {
     if (!mRenderer) {
         return;

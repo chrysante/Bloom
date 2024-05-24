@@ -121,7 +121,6 @@ struct Viewport: View, BasicSceneInspector {
     MouseState mouseState;
     EditorSceneRenderer* renderer = nullptr;
     ViewData viewData;
-    Reference<Texture2D> iblTexture;
     TextureHandle colorPickerTmpTex;
     RendererSettings rendererSettings;
     bool showRenderGraphDebugger = false;
@@ -257,11 +256,6 @@ void Viewport::drawScenes() {
         renderer->submit(*scene, selection());
     }
     lock.unlock();
-    if (iblTexture && iblTexture->irradianceSHCoefficients.empty()) {
-        assetManager().makeAvailable(iblTexture->handle(),
-                                     AssetRepresentation::CPU);
-    }
-    renderer->setIBLTexture(iblTexture);
     auto commandBuffer = editor().commandQueue().createCommandBuffer();
     renderer->draw(*commandBuffer);
     if (renderGraph->sources().empty()) {
@@ -476,17 +470,13 @@ BLOOM_MAKE_TEXT_SERIALIZER(RendererSettings, shadowMapResolution);
 YAML::Node Viewport::serialize() const {
     YAML::Node root;
     root["CameraController"] = cameraController;
-    root["IBLTexture"] = iblTexture ? iblTexture->handle() : AssetHandle{};
     root["RendererSettings"] = rendererSettings;
     return root;
 }
 
 void Viewport::deserialize(YAML::Node node) {
     cameraController = node["CameraController"].as<ViewportCameraController>();
-    auto iblTexAsset = node["IBLTexture"].as<AssetHandle>();
     rendererSettings = node["RendererSettings"].as<RendererSettings>();
-    using enum AssetRepresentation;
-    iblTexture = as<Texture2D>(assetManager().get(iblTexAsset, CPU | GPU));
 }
 
 Toolbar Viewport::makeToolbar() {
@@ -588,10 +578,6 @@ void Viewport::displayViewportSettings() {
     {
         cameraController.setSpeed(speed);
     }
-    beginProperty("IBL Texture");
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    using enum AssetRepresentation;
-    assetButton("###IBLTexture", iblTexture, { .repr = CPU | GPU });
     beginProperty("Show Render Graph Debugger");
     ImGui::Checkbox("###ShowRGDebugger", &showRenderGraphDebugger);
 }

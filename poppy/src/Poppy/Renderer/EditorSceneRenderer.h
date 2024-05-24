@@ -23,7 +23,6 @@ public:
                bloom::Camera const& camera);
     void submit(bloom::Scene const& scene,
                 EntitySelectionManager const& selectionManager);
-    void setIBLTexture(bloom::Reference<bloom::Texture2D> tex);
     void draw(bloom::CommandBuffer& commandBuffer);
 
     bloom::TextureView sceneColor() const;

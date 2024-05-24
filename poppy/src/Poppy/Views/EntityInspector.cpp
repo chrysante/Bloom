@@ -458,6 +458,11 @@ void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
 
 void EntityInspector::inspectSkyLight(bloom::SkyLight& light) {
     inspectLightCommon(light, LightType::SkyLight);
+    using namespace propertiesView;
+    beginProperty("IBL Texture");
+    fullWidth();
+    using enum AssetRepresentation;
+    assetButton("###IBLTexture", light.cubemap, { .repr = GPU | CPU });
 }
 
 void EntityInspector::inspectScript(bloom::EntityHandle entity) {

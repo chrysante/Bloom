@@ -48,25 +48,27 @@ struct EntityHandleEncoding {
     uint32_t sceneIndex : 8;
 };
 
-///
+/// Wrapper around a render graph that provides a simple scene submission
+/// interface
 class BLOOM_API Renderer {
 public:
     static std::span<InterfaceUnion const> Sinks();
 
     static std::span<InterfaceUnion const> Sources();
 
+    /// Constructs a renderer from a render graph. The lifetime of the renderer
+    /// is tied to the render graph. If the render graph changes a new renderer
+    /// must be constructed
     explicit Renderer(RenderGraph* renderGraph, CommandQueue& commandQueue);
 
-    ///
+    /// Resets the internal scene state and reallocates textures and other
+    /// resource as necessary if \p frameParams changed since last frame
     void begin(FrameParameters const& frameParams, Camera const& camera);
 
-    ///
+    /// Submits geometry and lights in \p scene to the corresponding resources
     void submit(Scene const& scene);
 
-    ///
-    void setIBLTexture(Reference<Texture2D> IBL);
-
-    ///
+    /// Executes the render graph
     void draw(CommandBuffer& commandBuffer);
 
     ///

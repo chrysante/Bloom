@@ -30,8 +30,6 @@ struct LightBufferContents {
 
     uint32_t numSkyLights;
     SkyLightRenderData skyLights[32];
-
-    vml::float3 irradianceCoefficients[9];
 };
 
 /// Different tone mapping functions

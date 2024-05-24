@@ -123,7 +123,8 @@ void Renderer::begin(FrameParameters const& frameParams, Camera const& camera) {
 
 template <typename LightComponent>
 static void submitLights(LightsResource& lights, Scene const& scene,
-                         auto&& lightModifier) {
+                         auto&& lightModifier,
+                         TextureResource* specularMap = nullptr) {
     auto view =
         scene.view<TransformMatrixComponent const, LightComponent const>();
     view.each([&](EntityID ID, TransformMatrixComponent const& transform,
@@ -132,13 +133,23 @@ static void submitLights(LightsResource& lights, Scene const& scene,
             return;
         }
         lightModifier(transform, light);
+        if constexpr (std::same_as<LightComponent, SkyLightComponent>) {
+            if (light.cubemap) {
+                ranges::copy(light.cubemap->irradianceSHCoefficients,
+                             light.SHCoefficients);
+            }
+            if (specularMap && light.cubemap) {
+                specularMap->assign(light.cubemap->GPUHandle);
+            }
+        }
         lights.add(light);
     });
 }
 
 template <typename Light>
-static void submitLights(LightsResource& lights, Scene const& scene) {
-    submitLights<Light>(lights, scene, [](auto&...) {});
+static void submitLights(LightsResource& lights, Scene const& scene,
+                         TextureResource* specularMap = nullptr) {
+    submitLights<Light>(lights, scene, [](auto&...) {}, specularMap);
 }
 
 static void submitGeometry(size_t sceneIndex, Scene const& scene,
@@ -209,18 +220,11 @@ void Renderer::submit(Scene const& scene) {
             }
             frameParams.numShadowMaps += light.numCascades;
         });
-        submitLights<SkyLightComponent>(*lights, scene);
+        submitLights<SkyLightComponent>(*lights, scene, specularTexture);
+        /// We reassign this every frame for now because I don't know where else
+        /// to put it
+        brdfTexture->assign(BRDF);
     }
-}
-
-void Renderer::setIBLTexture(Reference<Texture2D> IBL) {
-    if (IBL && lights) {
-        lights->setIrradianceCoefficients(IBL->irradianceSHCoefficients);
-    }
-    if (IBL) {
-        specularTexture->assign(IBL->GPUHandle);
-    }
-    brdfTexture->assign(BRDF);
 }
 
 namespace {

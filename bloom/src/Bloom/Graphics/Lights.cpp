@@ -34,6 +34,24 @@ DirectionalLight DirectionalLight::Default() {
 }
 
 SkyLight SkyLight::Default() {
-    return { { .color = { 1, 1, 1 }, .intensity = 0.4 },
-             .cubemap = AssetHandle{} };
+    return { { .color = { 1, 1, 1 }, .intensity = 0.4 }, .cubemap = nullptr };
+}
+
+YAML::Node YAML::convert<bloom::SkyLight>::encode(SkyLight const& light) {
+    Node node;
+    node["color"] = light.color;
+    node["intensity"] = light.intensity;
+    node["cubemap"] = light.cubemap ? light.cubemap->handle() : AssetHandle{};
+    return node;
+}
+
+bool YAML::convert<bloom::SkyLight>::decode(Node const& node, SkyLight& light) {
+    light.color = node["color"].as<vml::float3>(vml::float3{});
+    light.intensity = node["intensity"].as<float>(0);
+    using enum AssetRepresentation;
+    light.cubemap =
+        getAsset<bloom::Texture2D>(node["cubemap"].as<bloom::AssetHandle>(
+                                       AssetHandle{}),
+                                   GPU | CPU);
+    return true;
 }

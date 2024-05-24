@@ -1,8 +1,10 @@
 #ifndef BLOOM_GRAPHICS_LIGHTS_H
 #define BLOOM_GRAPHICS_LIGHTS_H
 
-#include "Bloom/Asset/AssetHandle.h"
+#include "Bloom/Asset/Serialization.h"
+#include "Bloom/Core/Reference.h"
 #include "Bloom/Core/Yaml.h"
+#include "Bloom/Graphics/Texture.h"
 #include "Bloom/Shader/Lights.h"
 
 namespace bloom {
@@ -20,7 +22,7 @@ struct DirectionalLight: DirectionalLightRenderData {
 };
 
 struct SkyLight: SkyLightRenderData {
-    AssetHandle cubemap;
+    Reference<Texture2D> cubemap;
 
     static SkyLight Default();
 };
@@ -37,6 +39,10 @@ BLOOM_MAKE_TEXT_SERIALIZER(bloom::DirectionalLight, color, intensity, direction,
                            cascadeTransitionFraction,
                            shadowDistanceFadeoutFraction);
 
-BLOOM_MAKE_TEXT_SERIALIZER(bloom::SkyLight, color, intensity);
+template <>
+struct YAML::convert<bloom::SkyLight> {
+    static Node encode(bloom::SkyLight const& light);
+    static bool decode(Node const& node, bloom::SkyLight& light);
+};
 
 #endif // BLOOM_GRAPHICS_LIGHTS_H

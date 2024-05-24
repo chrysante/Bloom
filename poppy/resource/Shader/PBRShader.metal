@@ -305,6 +305,54 @@ constant float3 shadowVizColors[10] = {
     return shadowViz;
 }
 
+static float3 calcSHIrradiance(float3 N, packed_float3 device const* SH)
+{
+    float A0 = 3.141593;
+    float A1 = 2.094395;
+    float A2 = 0.785398;
+    float3 color = SH[0] * 0.282095f * A0 + SH[1] * 0.488603f * N.y * A1 +
+                   SH[2] * 0.488603f * N.z * A1 + SH[3] * 0.488603f * N.x * A1 +
+                   SH[4] * 1.092548f * N.x * N.y * A2 +
+                   SH[5] * 1.092548f * N.y * N.z * A2 +
+                   SH[6] * 0.315392f * (3.0f * N.z * N.z - 1.0f) * A2 +
+                   SH[7] * 1.092548f * N.x * N.z * A2 +
+                   SH[8] * 0.546274f * (N.x * N.x - N.y * N.y) * A2;
+    float PI = 3.14159265359;
+    return color / (4 * PI); // According to theory this should be divided by 1
+                             // PI only, however this looks much better
+}
+
+float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
+{
+    return F0 + (max(float3(1.0 - roughness), F0) - F0) *
+                    pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+static float3 computeSkylight(PBRData data, float3 N, float3 V,
+                              SkyLightRenderData device const& light,
+                              texturecube<float> specularMap,
+                              texture2d<float> brdfMap)
+{
+    float3 irradiance = calcSHIrradiance(N, light.SHCoefficients) *
+                        light.color * light.intensity;
+    float3 diffuse = irradiance * data.albedo;
+    float3 F0 = computeF0(data.albedo, data.metallic);
+    float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, data.roughness);
+    float3 kD = (1.0f - F) * (1.0f - data.metallic);
+    float3 R = reflect(-V, N);
+    float mipLevel = data.roughness * (specularMap.get_num_mip_levels() - 1);
+    constexpr sampler specSampler(min_filter::linear, mag_filter::linear,
+                                  mip_filter::linear);
+    float3 prefilteredColor =
+        specularMap.sample(specSampler, R, level(mipLevel)).rgb;
+    constexpr sampler brdfSampler(min_filter::linear, mag_filter::linear);
+    float2 brdfUV = { max(dot(N, V), 0.0), data.roughness };
+    float2 envBRDF = brdfMap.sample(brdfSampler, brdfUV).rg;
+    float3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y) *
+                      light.color * light.intensity;
+    return (kD * diffuse + specular) * data.ao;
+}
+
 static float3 computePointLights(PBRData pbr, float3 N, float3 V,
                                  float3 worldPosition, uint numLights,
                                  PointLightRenderData device const* lights)
@@ -357,69 +405,16 @@ static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
     return lightAcc;
 }
 
-static float3 computeSkyLights(PBRData pbr, uint numLights,
-                               SkyLightRenderData device const* lights)
+static float3 computeSkyLights(PBRData pbr, float3 N, float3 V, uint numLights,
+                               SkyLightRenderData device const* lights,
+                               texturecube<float> specularMap,
+                               texture2d<float> brdfMap)
 {
     float3 lightAcc{};
     for (uint i = 0; i < numLights; ++i) {
-        SkyLightRenderData light = lights[i];
-        lightAcc += pbr.albedo * pbr.ao * light.color * light.intensity;
+        lightAcc += computeSkylight(pbr, N, V, lights[i], specularMap, brdfMap);
     }
     return lightAcc;
-}
-
-static float3 calcSHIrradiance(float3 N, float3 device const* SH)
-{
-    float A0 = 3.141593;
-    float A1 = 2.094395;
-    float A2 = 0.785398;
-    float3 color = SH[0] * 0.282095f * A0 + SH[1] * 0.488603f * N.y * A1 +
-                   SH[2] * 0.488603f * N.z * A1 + SH[3] * 0.488603f * N.x * A1 +
-                   SH[4] * 1.092548f * N.x * N.y * A2 +
-                   SH[5] * 1.092548f * N.y * N.z * A2 +
-                   SH[6] * 0.315392f * (3.0f * N.z * N.z - 1.0f) * A2 +
-                   SH[7] * 1.092548f * N.x * N.z * A2 +
-                   SH[8] * 0.546274f * (N.x * N.x - N.y * N.y) * A2;
-    float PI = 3.14159265359;
-    return color / (4 * PI); // According to theory this should be divided by 1
-                             // PI only, however this looks much better
-}
-
-float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
-{
-    return F0 + (max(float3(1.0 - roughness), F0) - F0) *
-                    pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}
-
-static float3 computeAmbient(PBRData data, float3 N, float3 V,
-                             float3 device const* SH,
-                             texturecube<float> specularMap,
-                             texture2d<float> brdfMap)
-{
-    float3 irradiance = calcSHIrradiance(N, SH);
-    float3 diffuse = irradiance * data.albedo;
-    float3 F0 = computeF0(data.albedo, data.metallic);
-    float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, data.roughness);
-    float3 kD = (1.0f - F) * (1.0f - data.metallic);
-    float3 R = reflect(-V, N);
-    float mipLevel = data.roughness * (specularMap.get_num_mip_levels() - 1);
-    constexpr sampler specSampler(min_filter::linear, mag_filter::linear,
-                                  mip_filter::linear);
-    float3 prefilteredColor =
-        specularMap.sample(specSampler, R, level(mipLevel)).rgb;
-    constexpr sampler brdfSampler(min_filter::linear, mag_filter::linear);
-    float2 brdfUV = { max(dot(N, V), 0.0), data.roughness };
-    float2 envBRDF = brdfMap.sample(brdfSampler, brdfUV).rg;
-    // TODO: envBRDF should not be NAN. This must be fixed when generating the
-    // texture
-    if (isnan(envBRDF.x)) {
-        envBRDF.x = 0;
-    }
-    if (isnan(envBRDF.y)) {
-        envBRDF.y = 0;
-    }
-    float3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
-    return (kD * diffuse + specular) * data.ao;
 }
 
 float3 bloom::PBRForwardShader(PBRData pbr, float3 worldPosition,
@@ -440,9 +435,8 @@ float3 bloom::PBRForwardShader(PBRData pbr, float3 worldPosition,
     lightAcc += computeDirLights(pbr, N, V, worldPosition, lightSpaceTransforms,
                                  lights.numDirLights, lights.dirLights,
                                  shadowMaps);
-    lightAcc += computeSkyLights(pbr, lights.numSkyLights, lights.skyLights);
-    lightAcc += computeAmbient(pbr, N, V, lights.irradianceCoefficients,
-                               specularMap, brdfMap);
+    lightAcc += computeSkyLights(pbr, N, V, lights.numSkyLights,
+                                 lights.skyLights, specularMap, brdfMap);
     lightAcc += pbr.emissive;
     return lightAcc;
 }

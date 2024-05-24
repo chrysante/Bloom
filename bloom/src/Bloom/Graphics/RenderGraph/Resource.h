@@ -173,7 +173,6 @@ public:
     void add(SpotLightRenderData const& light);
     void add(DirectionalLightRenderData const& light);
     void add(SkyLightRenderData const& light);
-    void setIrradianceCoefficients(std::span<vml::float3 const> coeffiencts);
 
     ///
     void clear();
@@ -189,7 +188,6 @@ private:
     std::vector<SpotLightRenderData> spotLights;
     std::vector<DirectionalLightRenderData> dirLights;
     std::vector<SkyLightRenderData> skyLights;
-    std::array<vml::float3, 9> irradianceCoefficients{};
 
     BufferHandle buffer;
 };

@@ -382,11 +382,12 @@ void AssetManager::doInit() {
             Logger::Error("AssetManager: Failed to satisfy asset request");
             return;
         }
-        if (msg.handle) {
+        if (msg.asset) {
             *msg.asset = std::move(asset);
         }
         if (msg.diskLocation) {
-            *msg.diskLocation = impl->getEntry(msg.handle.ID())->diskLocation;
+            *msg.diskLocation = impl->makeAbsolute(
+                impl->getEntry(msg.handle.ID())->diskLocation);
         }
     });
 }

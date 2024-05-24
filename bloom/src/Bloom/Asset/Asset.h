@@ -53,8 +53,11 @@ inline AssetType dyncast_get_type(std::derived_from<Asset> auto const& asset) {
 /// Asset manager events
 
 /// This message instructs the asset manager to retrieve the asset with
-/// \p handle and assign it to \p asset The representation \p makeAvailable is
-/// made available
+/// \p handle and assign it to \p asset
+///
+/// The representation \p makeAvailable is made available
+///
+/// \p diskLocation will be an absolute path (if set)
 struct BLOOM_API AMGetAsset {
     AssetHandle handle;
     Reference<Asset>* asset = nullptr;

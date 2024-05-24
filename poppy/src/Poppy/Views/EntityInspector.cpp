@@ -476,7 +476,7 @@ void EntityInspector::inspectScript(bloom::EntityHandle entity) {
     auto& component = entity.get<ScriptComponent>();
     auto& preservedData = entity.get<ScriptPreservedData>();
     if (!sym) {
-        displayEmptyWithError("No symbol table", { 0, 50 });
+        ImGui::Text("Error: No symbol table");
         return;
     }
     if (!beginComponentSection<ScriptComponent>("Script Component", entity)) {

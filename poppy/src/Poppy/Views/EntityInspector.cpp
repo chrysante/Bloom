@@ -56,7 +56,7 @@ private:
     void inspectLight(bloom::EntityHandle);
     void inspectLightType(LightType&, bloom::EntityHandle);
 
-    void inspectLightCommon(bloom::LightCommon&, LightType type);
+    void inspectLightCommon(auto& light, LightType type);
     void inspectPointLight(bloom::PointLight&);
     void inspectSpotLight(bloom::SpotLight&);
     void inspectDirectionalLight(bloom::DirectionalLight&);
@@ -361,18 +361,19 @@ void EntityInspector::inspectLightType(LightType& type,
         ImGui::EndCombo();
     }
     if (newType != type) {
-        auto color = getLightCommon(type, entity).color;
+        auto color = dispatchLightComponent(type, [&]<typename C>(utl::tag<C>) {
+            return entity.get<C>().color;
+        });
         dispatchLightComponent(newType, [&]<typename C>(utl::tag<C>) {
             auto& c = entity.add(C{ C::Light::Default() });
-            c.common.color = color;
+            c.color = color;
         });
         removeLightComponent(type, entity);
     }
     type = newType;
 }
 
-void EntityInspector::inspectLightCommon(bloom::LightCommon& light,
-                                         LightType type) {
+void EntityInspector::inspectLightCommon(auto& light, LightType type) {
     using namespace propertiesView;
     beginProperty("Color");
     ImGui::ColorEdit3("##light-color", light.color.data(),
@@ -391,7 +392,7 @@ void EntityInspector::inspectLightCommon(bloom::LightCommon& light,
 
 void EntityInspector::inspectPointLight(bloom::PointLight& light) {
     using namespace propertiesView;
-    inspectLightCommon(light.common, LightType::PointLight);
+    inspectLightCommon(light, LightType::PointLight);
     beginProperty("Radius");
     fullWidth();
     ImGui::SliderFloat("radius", &light.radius, 0, 100);
@@ -403,7 +404,7 @@ void EntityInspector::inspectPointLight(bloom::PointLight& light) {
 
 void EntityInspector::inspectSpotLight(bloom::SpotLight& light) {
     using namespace propertiesView;
-    inspectLightCommon(light.common, LightType::SpotLight);
+    inspectLightCommon(light, LightType::SpotLight);
     beginProperty("Radius");
     fullWidth();
     ImGui::SliderFloat("radius", &light.radius, 0, 100);
@@ -423,7 +424,7 @@ void EntityInspector::inspectSpotLight(bloom::SpotLight& light) {
 
 void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
     using namespace propertiesView;
-    inspectLightCommon(light.common, LightType::DirectionalLight);
+    inspectLightCommon(light, LightType::DirectionalLight);
     beginProperty("Casts Shadow");
     ImGui::Checkbox("##-casts-shadow", &light.castsShadows);
     if (!light.castsShadows) {
@@ -456,7 +457,7 @@ void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
 }
 
 void EntityInspector::inspectSkyLight(bloom::SkyLight& light) {
-    inspectLightCommon(light.common, LightType::SkyLight);
+    inspectLightCommon(light, LightType::SkyLight);
 }
 
 void EntityInspector::inspectScript(bloom::EntityHandle entity) {

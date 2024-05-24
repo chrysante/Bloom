@@ -5,13 +5,9 @@
 
 namespace bloom {
 
-struct LightCommon {
+struct PointLight {
     vml::packed_float3 color;
     float intensity;
-};
-
-struct PointLight {
-    LightCommon common;
     vml::float3 position;
     float radius;
     float falloff;
@@ -20,7 +16,8 @@ struct PointLight {
 };
 
 struct SpotLight {
-    LightCommon common;
+    vml::packed_float3 color;
+    float intensity;
     vml::float3 position;
     vml::float3 direction;
     float innerCutoff;
@@ -31,8 +28,8 @@ struct SpotLight {
 };
 
 struct DirectionalLight {
-    LightCommon common; // 16 bytes
-
+    vml::packed_float3 color;
+    float intensity;                     // 16 bytes
     vml::packed_float3 direction;        //
     bool castsShadows;                   //
     int16_t numCascades;                 // 16 bytes
@@ -46,7 +43,8 @@ struct DirectionalLight {
 };
 
 struct SkyLight {
-    LightCommon common;
+    vml::packed_float3 color;
+    float intensity;
 
     static SkyLight Default();
 };

@@ -73,7 +73,7 @@ static float3 calculatePointLight(PBRData pbrData, PointLight light, float3 V,
     float dist =
         max(length(light.position - worldPosition) - light.radius, 0.0001);
     float attenuation = 1.0 / (light.radius + 1 + light.falloff * dist * dist);
-    float3 radiance = light.common.color * light.common.intensity * attenuation;
+    float3 radiance = light.color * light.intensity * attenuation;
     return PBRLighting(pbrData, radiance, N, V, L, H);
 }
 
@@ -91,8 +91,7 @@ static float3 calculateSpotlight(PBRData pbrData, SpotLight light, float3 V,
     float dist =
         max(length(light.position - worldPosition) - light.radius, 0.0001);
     float attenuation = 1.0 / (dist * dist);
-    float3 radiance =
-        intensity * light.common.color * light.common.intensity * attenuation;
+    float3 radiance = intensity * light.color * light.intensity * attenuation;
     return PBRLighting(pbrData, radiance, N, V, L, H);
 }
 
@@ -101,7 +100,7 @@ static float3 calculateDirectionalLight(PBRData pbrData, DirectionalLight light,
 {
     float3 L = light.direction;
     float3 H = normalize(V + L);
-    float3 radiance = light.common.color * light.common.intensity;
+    float3 radiance = light.color * light.intensity;
     return PBRLighting(pbrData, radiance, N, V, L, H);
 }
 
@@ -363,8 +362,7 @@ static float3 computeSkyLights(PBRData pbr, uint numLights,
     float3 lightAcc{};
     for (uint i = 0; i < numLights; ++i) {
         SkyLight light = lights[i];
-        lightAcc +=
-            pbr.albedo * pbr.ao * light.common.color * light.common.intensity;
+        lightAcc += pbr.albedo * pbr.ao * light.color * light.intensity;
     }
     return lightAcc;
 }

@@ -3,14 +3,16 @@
 using namespace bloom;
 
 PointLight PointLight::Default() {
-    return { .common = { .color = { 1, 1, 1 }, .intensity = 1'000 },
+    return { .color = { 1, 1, 1 },
+             .intensity = 1'000,
              .position = { 0, 0, 0 },
              .radius = 10,
              .falloff = 1 };
 }
 
 SpotLight SpotLight::Default() {
-    return { .common = { .color = { 1, 1, 1 }, .intensity = 1'000 },
+    return { .color = { 1, 1, 1 },
+             .intensity = 1'000,
              .position = { 0, 0, 0 },
              .direction = { 1, 0, 0 },
              .innerCutoff = 0,
@@ -19,7 +21,8 @@ SpotLight SpotLight::Default() {
 }
 
 DirectionalLight DirectionalLight::Default() {
-    return { .common = { .color = { 1, 1, 1 }, .intensity = 1 },
+    return { .color = { 1, 1, 1 },
+             .intensity = 1,
              .direction = { 0, 0, 1 },
              .castsShadows = true,
              .numCascades = 5,
@@ -32,6 +35,7 @@ DirectionalLight DirectionalLight::Default() {
 
 SkyLight SkyLight::Default() {
     return {
-        .common = { .color = { 1, 1, 1 }, .intensity = 0.4 },
+        .color = { 1, 1, 1 },
+        .intensity = 0.4,
     };
 }

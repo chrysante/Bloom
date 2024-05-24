@@ -52,14 +52,6 @@ std::optional<LightType> BasicSceneInspector::getLightType(
     return std::nullopt;
 }
 
-bloom::LightCommon BasicSceneInspector::getLightCommon(
-    LightType type, bloom::EntityHandle entity) const {
-    return dispatchLightComponent(type, [&]<typename T>(utl::tag<T>) {
-        auto const result = entity.get<T>().common;
-        return result;
-    });
-}
-
 void BasicSceneInspector::removeLightComponent(LightType type,
                                                bloom::EntityHandle entity) {
     dispatchLightComponent(type, [&]<typename T>(utl::tag<T>) {

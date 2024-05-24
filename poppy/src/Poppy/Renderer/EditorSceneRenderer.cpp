@@ -148,8 +148,7 @@ static void addSphereVis(Renderer2DScene& overlay, float3 position,
 
 static float pointLightInfluence(PointLight l,
                                  float minAttenuation = 2.0 / 256) {
-    float tmp =
-        (l.common.intensity / minAttenuation - l.radius - 1) / l.falloff;
+    float tmp = (l.intensity / minAttenuation - l.radius - 1) / l.falloff;
     return std::sqrt(tmp);
 }
 
@@ -161,7 +160,7 @@ static void submitPointlightOverlay(ConstEntityHandle entity,
         return;
     }
     float3 pos = transform->matrix.column(3).xyz;
-    float4 color(light->common.color, 1);
+    float4 color(light->color, 1);
     float influence = pointLightInfluence(*light);
     addSphereVis(overlayScene, pos, influence, color, 6);
     addSphereVis(overlayScene, pos, light->radius, color, 6);

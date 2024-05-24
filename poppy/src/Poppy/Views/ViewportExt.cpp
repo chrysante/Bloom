@@ -204,7 +204,7 @@ struct Draw {
 
     void operator()(EntityHandle, bool selected, float2 position,
                     Transform const&, PointLightComponent const& light) const {
-        float3 color = light.common.color;
+        float3 color = light.color;
         float size = 20;
         float alphaFactor = selected ? 1.0 : 0.5;
         auto* DL = ImGui::GetWindowDrawList();
@@ -218,7 +218,7 @@ struct Draw {
 
     void operator()(EntityHandle entity, bool selected, float2 position,
                     Transform const&, SpotLight const& light) const {
-        float3 color = light.common.color;
+        float3 color = light.color;
         float radius = 25;
         float2 v0 = float2(0, 1) * radius + position;
         float angle1 = vml::constants<>::pi * (0.5 + 2. / 3.);
@@ -234,9 +234,7 @@ struct Draw {
         if (selected) {
             drawSpotlightVizWS(entity, light.radius,
                                (light.innerCutoff + light.outerCutoff) / 2,
-                               (light.common.color +
-                                vml::colors<float3>::white) /
-                                   2,
+                               (light.color + vml::colors<float3>::white) / 2,
                                WStoSS);
         }
     }
@@ -244,7 +242,7 @@ struct Draw {
     void operator()(EntityHandle, bool /*selected*/, float2 position,
                     Transform const&,
                     DirectionalLightComponent const& light) const {
-        float3 color = light.common.color;
+        float3 color = light.color;
         float size = 18;
         float2 line = float2(-1, 2) * size;
         auto doDraw = [&](float4 color, float thickness) {
@@ -259,7 +257,7 @@ struct Draw {
 
     void operator()(EntityHandle, bool /*selected*/, float2 position,
                     Transform const&, SkyLightComponent const& light) const {
-        float3 color = light.common.color;
+        float3 color = light.color;
         float size = 20;
         float lineSize = size;
         auto doDraw = [&](float4 color, float thickness) {

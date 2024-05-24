@@ -69,8 +69,6 @@ public:
 
     std::optional<LightType> getLightType(bloom::EntityHandle) const;
 
-    bloom::LightCommon getLightCommon(LightType, bloom::EntityHandle) const;
-
     void removeLightComponent(LightType, bloom::EntityHandle);
 
 private:

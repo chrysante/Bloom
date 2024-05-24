@@ -130,19 +130,21 @@ void GeometryResource::prepare(HardwareDevice& device) {
     device.fillManagedBuffer(IDs, objects.data().entityID, idBufferSize);
 }
 
-void LightsResource::add(PointLight const& light) {
+void LightsResource::add(PointLightRenderData const& light) {
     pointLights.push_back(light);
 }
 
-void LightsResource::add(SpotLight const& light) {
+void LightsResource::add(SpotLightRenderData const& light) {
     spotLights.push_back(light);
 }
 
-void LightsResource::add(DirectionalLight const& light) {
+void LightsResource::add(DirectionalLightRenderData const& light) {
     dirLights.push_back(light);
 }
 
-void LightsResource::add(SkyLight const& light) { skyLights.push_back(light); }
+void LightsResource::add(SkyLightRenderData const& light) {
+    skyLights.push_back(light);
+}
 
 void LightsResource::setIrradianceCoefficients(
     std::span<vml::float3 const> coefficients) {

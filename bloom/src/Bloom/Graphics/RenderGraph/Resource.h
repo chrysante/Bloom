@@ -169,10 +169,10 @@ public:
     ///
     LightsResource* handle() { return this; }
 
-    void add(PointLight const& light);
-    void add(SpotLight const& light);
-    void add(DirectionalLight const& light);
-    void add(SkyLight const& light);
+    void add(PointLightRenderData const& light);
+    void add(SpotLightRenderData const& light);
+    void add(DirectionalLightRenderData const& light);
+    void add(SkyLightRenderData const& light);
     void setIrradianceCoefficients(std::span<vml::float3 const> coeffiencts);
 
     ///
@@ -185,10 +185,10 @@ public:
     BufferHandle const& lightBuffer() const { return buffer; }
 
 private:
-    std::vector<PointLight> pointLights;
-    std::vector<SpotLight> spotLights;
-    std::vector<DirectionalLight> dirLights;
-    std::vector<SkyLight> skyLights;
+    std::vector<PointLightRenderData> pointLights;
+    std::vector<SpotLightRenderData> spotLights;
+    std::vector<DirectionalLightRenderData> dirLights;
+    std::vector<SkyLightRenderData> skyLights;
     std::array<vml::float3, 9> irradianceCoefficients{};
 
     BufferHandle buffer;

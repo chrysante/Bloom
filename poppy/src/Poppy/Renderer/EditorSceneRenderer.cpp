@@ -146,7 +146,7 @@ static void addSphereVis(Renderer2DScene& overlay, float3 position,
     overlay.addCircle(position, { 0, 0, 1 }, radius, color, width, 64);
 }
 
-static float pointLightInfluence(PointLight l,
+static float pointLightInfluence(PointLightRenderData l,
                                  float minAttenuation = 2.0 / 256) {
     float tmp = (l.intensity / minAttenuation - l.radius - 1) / l.falloff;
     return std::sqrt(tmp);

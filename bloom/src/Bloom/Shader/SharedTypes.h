@@ -20,16 +20,16 @@ BLOOM_SHADER_CONSTANT int NumMaxShadowCasters = 32;
 ///
 struct LightBufferContents {
     uint32_t numPointLights;
-    PointLight pointLights[32];
+    PointLightRenderData pointLights[32];
 
     uint32_t numSpotLights;
-    SpotLight spotLights[32];
+    SpotLightRenderData spotLights[32];
 
     uint32_t numDirLights;
-    DirectionalLight dirLights[32];
+    DirectionalLightRenderData dirLights[32];
 
     uint32_t numSkyLights;
-    SkyLight skyLights[32];
+    SkyLightRenderData skyLights[32];
 
     vml::float3 irradianceCoefficients[9];
 };

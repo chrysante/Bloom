@@ -65,8 +65,8 @@ static float3 PBRLighting(PBRData data, float3 const radiance, float3 const N,
     return (kD * data.albedo / PI + specular) * radiance * NdotL;
 }
 
-static float3 calculatePointLight(PBRData pbrData, PointLight light, float3 V,
-                                  float3 N, float3 worldPosition)
+static float3 calculatePointLight(PBRData pbrData, PointLightRenderData light,
+                                  float3 V, float3 N, float3 worldPosition)
 {
     float3 L = normalize(light.position - worldPosition);
     float3 H = normalize(V + L);
@@ -77,8 +77,8 @@ static float3 calculatePointLight(PBRData pbrData, PointLight light, float3 V,
     return PBRLighting(pbrData, radiance, N, V, L, H);
 }
 
-static float3 calculateSpotlight(PBRData pbrData, SpotLight light, float3 V,
-                                 float3 N, float3 worldPosition)
+static float3 calculateSpotlight(PBRData pbrData, SpotLightRenderData light,
+                                 float3 V, float3 N, float3 worldPosition)
 {
     float3 L = normalize(light.position - worldPosition);
     float theta = dot(L, -light.direction);
@@ -95,7 +95,8 @@ static float3 calculateSpotlight(PBRData pbrData, SpotLight light, float3 V,
     return PBRLighting(pbrData, radiance, N, V, L, H);
 }
 
-static float3 calculateDirectionalLight(PBRData pbrData, DirectionalLight light,
+static float3 calculateDirectionalLight(PBRData pbrData,
+                                        DirectionalLightRenderData light,
                                         float3 V, float3 N)
 {
     float3 L = light.direction;
@@ -244,7 +245,7 @@ static float cascadeTransition(float2 uv, float fraction)
 }
 
 static float calculateDirLightCascadedShadow(
-    texture2d_array<float> shadowMaps, DirectionalLight light,
+    texture2d_array<float> shadowMaps, DirectionalLightRenderData light,
     int shadowMapOffset, float4x4 device const* lightSpaceTransforms,
     float4 worldPosition, float NdotL)
 {
@@ -306,7 +307,7 @@ constant float3 shadowVizColors[10] = {
 
 static float3 computePointLights(PBRData pbr, float3 N, float3 V,
                                  float3 worldPosition, uint numLights,
-                                 PointLight device const* lights)
+                                 PointLightRenderData device const* lights)
 {
     float3 lightAcc{};
     for (uint i = 0; i < numLights; ++i) {
@@ -317,7 +318,7 @@ static float3 computePointLights(PBRData pbr, float3 N, float3 V,
 
 static float3 computeSpotLights(PBRData pbr, float3 N, float3 V,
                                 float3 worldPosition, uint numLights,
-                                SpotLight device const* lights)
+                                SpotLightRenderData device const* lights)
 {
     float3 lightAcc{};
     for (uint i = 0; i < numLights; ++i) {
@@ -330,7 +331,7 @@ static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
                                float3 worldPosition,
                                float4x4 const device* lightSpaceTransforms,
                                uint numLights,
-                               DirectionalLight device const* lights,
+                               DirectionalLightRenderData device const* lights,
                                texture2d_array<float> shadowMaps)
 {
     float3 lightAcc{};
@@ -357,11 +358,11 @@ static float3 computeDirLights(PBRData pbr, float3 N, float3 V,
 }
 
 static float3 computeSkyLights(PBRData pbr, uint numLights,
-                               SkyLight device const* lights)
+                               SkyLightRenderData device const* lights)
 {
     float3 lightAcc{};
     for (uint i = 0; i < numLights; ++i) {
-        SkyLight light = lights[i];
+        SkyLightRenderData light = lights[i];
         lightAcc += pbr.albedo * pbr.ao * light.color * light.intensity;
     }
     return lightAcc;

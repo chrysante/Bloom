@@ -5,17 +5,15 @@
 
 namespace bloom {
 
-struct PointLight {
+struct PointLightRenderData {
     vml::packed_float3 color;
     float intensity;
     vml::float3 position;
     float radius;
     float falloff;
-
-    static PointLight Default();
 };
 
-struct SpotLight {
+struct SpotLightRenderData {
     vml::packed_float3 color;
     float intensity;
     vml::float3 position;
@@ -23,11 +21,9 @@ struct SpotLight {
     float innerCutoff;
     float outerCutoff;
     float radius;
-
-    static SpotLight Default();
 };
 
-struct DirectionalLight {
+struct DirectionalLightRenderData {
     vml::packed_float3 color;
     float intensity;                     // 16 bytes
     vml::packed_float3 direction;        //
@@ -38,15 +34,12 @@ struct DirectionalLight {
     float cascadeDistributionExponent;   //
     float cascadeTransitionFraction;     // 16 bytes
     float shadowDistanceFadeoutFraction; //
-
-    static DirectionalLight Default();
 };
 
-struct SkyLight {
+struct SkyLightRenderData {
     vml::packed_float3 color;
     float intensity;
-
-    static SkyLight Default();
+    vml::packed_float3 SHCoefficients[9];
 };
 
 } // namespace bloom

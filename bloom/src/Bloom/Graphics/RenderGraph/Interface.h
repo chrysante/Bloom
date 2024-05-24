@@ -229,6 +229,22 @@ private:
     InterfaceAccessor<GeometryResource*> acc;
 };
 
+class Geometry2DInterface: public Interface {
+public:
+    using Resource = Geometry2DResource;
+
+    explicit Geometry2DInterface(
+        std::string name, InterfaceAccessor<Geometry2DResource*> accessor,
+        InterfaceFlags flags = InterfaceFlags::None):
+        Interface(InterfaceType::Geometry2DInterface, std::move(name), flags),
+        acc(accessor) {}
+
+private:
+    friend class Interface;
+
+    InterfaceAccessor<Geometry2DResource*> acc;
+};
+
 class LightsInterface: public Interface {
 public:
     using Resource = LightsResource;

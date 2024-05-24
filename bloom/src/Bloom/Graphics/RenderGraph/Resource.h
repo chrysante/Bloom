@@ -14,6 +14,7 @@
 #include "Bloom/Graphics/Lights.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
+#include "Bloom/Graphics/Renderer2D.h"
 #include "Bloom/Graphics/StaticMesh.h"
 
 namespace bloom {
@@ -143,6 +144,19 @@ private:
     utl::structure_of_arrays<Geometry> objects;
     BufferHandle transforms;
     BufferHandle IDs;
+};
+
+/// Wrapper around `Renderer2DScene`
+class Geometry2DResource: public Resource {
+public:
+    using ViewType = Geometry2DResource*;
+
+    Geometry2DResource(): Resource(ResourceNodeType::Geometry2DResource) {}
+
+    ///
+    Geometry2DResource* handle() { return this; }
+
+    Renderer2DScene scene;
 };
 
 /// Set of lights in a scene. This is rebuild every frame

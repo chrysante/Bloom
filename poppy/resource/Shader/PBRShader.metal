@@ -72,7 +72,7 @@ static float3 calculatePointLight(PBRData pbrData, PointLight light, float3 V,
     float3 H = normalize(V + L);
     float dist =
         max(length(light.position - worldPosition) - light.radius, 0.0001);
-    float attenuation = 1.0 / (dist * dist);
+    float attenuation = 1.0 / (light.radius + 1 + light.falloff * dist * dist);
     float3 radiance = light.common.color * light.common.intensity * attenuation;
     return PBRLighting(pbrData, radiance, N, V, L, H);
 }
@@ -189,12 +189,21 @@ static float sampleShadowPCF(texture2d_array<float> shadowMap,
     return sum / PCSSNumSamples;
 }
 
+[[maybe_unused]]
+static float sampleShadow(texture2d_array<float> shadowMap, int shadowMapIndex,
+                          float2 uv, float zReceiver)
+{
+    float depth = shadowMap.sample(ShadowMapSampler, uv, shadowMapIndex).r;
+    return depth < zReceiver - DepthBias ? 0.0 : 1.0;
+}
+
 // Parallel plane estimation
 static float PenumbraSize(float zReceiver, float zBlocker)
 {
     return (zReceiver - zBlocker) / zBlocker;
 }
 
+[[maybe_unused]]
 static float PCSS(texture2d_array<float> shadowMap, int shadowMapIndex,
                   float3 coords, float lightSizeUV)
 {
@@ -216,11 +225,17 @@ static float PCSS(texture2d_array<float> shadowMap, int shadowMapIndex,
                            filterRadiusUV);
 }
 
+#define USE_PCSS
+
 static float calculateDirLightShadow(texture2d_array<float> shadowMap,
                                      int shadowMapIndex, float3 projCoords,
                                      float lightSizeUV)
 {
+#ifdef USE_PCSS
     return PCSS(shadowMap, shadowMapIndex, projCoords, lightSizeUV);
+#else
+    return sampleShadow(shadowMap, shadowMapIndex, projCoords.xy, projCoords.z);
+#endif
 }
 
 static float cascadeTransition(float2 uv, float fraction)

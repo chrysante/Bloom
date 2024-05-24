@@ -231,16 +231,13 @@ void CompositionPass::doAllocateResources(FrameParameters const&,
 
 namespace {
 
-struct GridPass: PassImpl<GridPass> {
+struct OverlayPass: PassImpl<OverlayPass> {
     void doExecute(FrameParameters const& params,
                    CommandBuffer& commandBuffer) override;
 
-    void doAllocateResources(FrameParameters const& params,
-                             HardwareDevice& device) override;
-
     using PassImpl::PassImpl;
 
-    GridPass(): PassImpl("Grid Pass") {}
+    OverlayPass(): PassImpl("Overlay Pass") {}
 
     Renderer2D renderer;
 
@@ -248,42 +245,44 @@ struct GridPass: PassImpl<GridPass> {
     BufferHandle cameraBuffer;
     TextureHandle colorIn;
     TextureHandle depth;
+    Geometry2DResource* geometry;
 
     // Sources
     TextureHandle colorOut;
-
-    // Internal
-    RenderPipelineHandle pipeline;
-    DepthStencilHandle depthStencil;
 };
 
 } // namespace
 
 // clang-format off
 
-BEGIN_SINK_DECL(GridPass) {
+BEGIN_SINK_DECL(OverlayPass) {
     TextureInterface {
         "Color",
-        &GridPass::colorIn,
+        &OverlayPass::colorIn,
         {}
     },
     TextureInterface {
         "Depth",
-        &GridPass::depth,
+        &OverlayPass::depth,
         {}
     },
     BufferInterface {
         "Camera",
-        &GridPass::cameraBuffer,
+        &OverlayPass::cameraBuffer,
+        {}
+    },
+    Geometry2DInterface {
+        "Geometry",
+        &OverlayPass::geometry,
         {}
     },
 }
 END_DECL()
 
-BEGIN_SOURCE_DECL(GridPass) {
+BEGIN_SOURCE_DECL(OverlayPass) {
     TextureInterface{
         "Color",
-        &GridPass::colorOut,
+        &OverlayPass::colorOut,
         [](FrameParameters const& params) {
             return TextureInterfaceDescriptor{
                 .pixelFormat = PixelFormat::RGBA8Unorm,
@@ -296,8 +295,8 @@ END_DECL()
 
 // clang-format on
 
-std::unique_ptr<Pass> poppy::makeGridPass() {
-    return std::make_unique<GridPass>();
+std::unique_ptr<Pass> poppy::makeOverlayPass() {
+    return std::make_unique<OverlayPass>();
 }
 
 static void copyTexture(TextureHandle source, TextureHandle dest,
@@ -310,8 +309,7 @@ static void copyTexture(TextureHandle source, TextureHandle dest,
     encoder.end();
 }
 
-void GridPass::doExecute(FrameParameters const&, CommandBuffer& commandBuffer) {
-    Renderer2DScene scene;
+static void addGrid(Renderer2DScene& scene) {
     float4 gridColor = { 0.5, 0.5, 0.5, 1 };
     float4 gridColorAlt = { 0.75, 0.75, 0.75, 1 };
     float lineWidth = 3;
@@ -322,7 +320,12 @@ void GridPass::doExecute(FrameParameters const&, CommandBuffer& commandBuffer) {
         scene.addLine({ i, -1000, 0 }, { i, 1000, 0 }, color, width);
         scene.addLine({ -1000, i, 0 }, { 1000, i, 0 }, color, width);
     }
-    scene.addCircle({ 0, 0, 100 }, { 1, 0, 0 }, 100, { 0, .5, 1, 1 }, 5);
+}
+
+void OverlayPass::doExecute(FrameParameters const&,
+                            CommandBuffer& commandBuffer) {
+    auto& scene = geometry->scene;
+    addGrid(scene);
     copyTexture(colorIn, colorOut, *commandBuffer.makeBlitEncoder());
     // clang-format off
     RenderPassDescription desc = {
@@ -335,25 +338,4 @@ void GridPass::doExecute(FrameParameters const&, CommandBuffer& commandBuffer) {
     }; // clang-format on
     renderer.drawInWorldCoords(scene, device(), commandBuffer, cameraBuffer,
                                desc);
-}
-
-void GridPass::doAllocateResources(FrameParameters const&,
-                                   HardwareDevice& device) {
-    pipeline = device.createRenderPipeline(
-        { .colorAttachments = { {
-              .pixelFormat = PixelFormat::RGBA8Unorm,
-              .blendingEnabled = true,
-              .sourceRGBBlendFactor = BlendFactor::SourceAlpha,
-              .destinationRGBBlendFactor = BlendFactor::OneMinusSourceAlpha,
-              .rgbBlendOperation = BlendOperation::Add,
-              .sourceAlphaBlendFactor = BlendFactor::One,
-              .destinationAlphaBlendFactor = BlendFactor::Zero,
-              .alphaBlendOperation = BlendOperation::Add,
-          } },
-          .depthAttachmentPixelFormat = PixelFormat::Depth32Float,
-          .vertexFunction = device.createFunction("rgGridPassVS"),
-          .fragmentFunction = device.createFunction("rgGridPassFS") });
-    depthStencil = device.createDepthStencil(
-        { .depthCompareFunction = CompareFunction::LessEqual,
-          .depthWrite = false });
 }

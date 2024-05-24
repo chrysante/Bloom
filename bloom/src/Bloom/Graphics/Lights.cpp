@@ -5,7 +5,8 @@ using namespace bloom;
 PointLight PointLight::Default() {
     return { .common = { .color = { 1, 1, 1 }, .intensity = 1'000 },
              .position = { 0, 0, 0 },
-             .radius = 10 };
+             .radius = 10,
+             .falloff = 1 };
 }
 
 SpotLight SpotLight::Default() {

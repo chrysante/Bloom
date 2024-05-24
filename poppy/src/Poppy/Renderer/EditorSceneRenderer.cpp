@@ -3,6 +3,7 @@
 #include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/CommandQueue.h"
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
+#include "Bloom/Graphics/Renderer2D.h"
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Renderer/Passes.h"
 
@@ -51,11 +52,13 @@ EditorSceneRenderer::EditorSceneRenderer(
                                                  sceneRenderGraph->device());
     wrapRenderGraph(*mRenderGraph, std::move(sceneRenderGraphOwner));
     auto* selPass = mRenderGraph->addPass(makeSelectionPass());
-    auto* gridPass = mRenderGraph->addPass(makeGridPass());
+    auto* overlaysPass = mRenderGraph->addPass(makeOverlayPass());
     auto* compPass = mRenderGraph->addPass(makeCompositionPass());
 
     auto* selGeo = mRenderGraph->declareSink(
         GeometryInterface{ "Selected Geometry", nullptr });
+    auto* overlays = mRenderGraph->declareSink(
+        Geometry2DInterface{ "Debug Overlays", nullptr });
     auto* camera = mRenderGraph->findInputSource("Camera");
     auto* compositeColor = mRenderGraph->declareSource(
         TextureInterface{ "Composite Color", nullptr, {} });
@@ -65,18 +68,20 @@ EditorSceneRenderer::EditorSceneRenderer(
     mRenderGraph->addLink(selGeo->internalSource(),
                           selPass->findSink("Selected Geometry"));
     mRenderGraph->addLink(camera, selPass->findSink("Camera"));
-    // Link grid pass
+    // Link overlays pass
     mRenderGraph->addLink(sceneRenderGraph->findSource("Depth"),
-                          gridPass->findSink("Depth"));
+                          overlaysPass->findSink("Depth"));
     mRenderGraph->addLink(sceneRenderGraph->findSource("Color"),
-                          gridPass->findSink("Color"));
-    mRenderGraph->addLink(camera, gridPass->findSink("Camera"));
+                          overlaysPass->findSink("Color"));
+    mRenderGraph->addLink(camera, overlaysPass->findSink("Camera"));
+    mRenderGraph->addLink(overlays->internalSource(),
+                          overlaysPass->findSink("Geometry"));
     // Link composition pass
     mRenderGraph->addLink(selPass->findSource("Selection Map"),
                           compPass->findSink("Selection Map"));
     mRenderGraph->addLink(selPass->findSource("Selection Depth"),
                           compPass->findSink("Selection Depth"));
-    mRenderGraph->addLink(gridPass->findSource("Color"),
+    mRenderGraph->addLink(overlaysPass->findSource("Color"),
                           compPass->findSink("Scene Color"));
     mRenderGraph->addLink(sceneRenderGraph->findSource("Depth"),
                           compPass->findSink("Scene Depth"));
@@ -88,6 +93,7 @@ EditorSceneRenderer::EditorSceneRenderer(
     }
     mRenderGraph->allocateBackingResources();
     selectedGeometry = dyncast<GeometryResource*>(selGeo->resource());
+    this->overlayScene = dyncast<Geometry2DResource*>(overlays->resource());
     idMap = dyncast<TextureResource*>(idMapSource->resource());
     mCompositeColor = dyncast<TextureResource*>(compositeColor->resource());
     mSceneColor = dyncast<TextureResource*>(sceneColor->resource());
@@ -102,6 +108,9 @@ void EditorSceneRenderer::begin(bloom::FrameParameters const& frameParams,
     mRenderer->begin(frameParams, camera);
     if (selectedGeometry) {
         selectedGeometry->clear();
+    }
+    if (overlayScene) {
+        overlayScene->scene = {};
     }
 }
 
@@ -130,6 +139,34 @@ static void submitSelectedGeometry(
     });
 }
 
+static void addSphereVis(Renderer2DScene& overlay, float3 position,
+                         float radius, float4 color, float width) {
+    overlay.addCircle(position, { 1, 0, 0 }, radius, color, width, 64);
+    overlay.addCircle(position, { 0, 1, 0 }, radius, color, width, 64);
+    overlay.addCircle(position, { 0, 0, 1 }, radius, color, width, 64);
+}
+
+static float pointLightInfluence(PointLight l,
+                                 float minAttenuation = 2.0 / 256) {
+    float tmp =
+        (l.common.intensity / minAttenuation - l.radius - 1) / l.falloff;
+    return std::sqrt(tmp);
+}
+
+static void submitPointlightOverlay(ConstEntityHandle entity,
+                                    Renderer2DScene& overlayScene) {
+    auto* light = entity.tryGet<PointLightComponent>();
+    auto* transform = entity.tryGet<TransformMatrixComponent>();
+    if (!light || !transform) {
+        return;
+    }
+    float3 pos = transform->matrix.column(3).xyz;
+    float4 color(light->common.color, 1);
+    float influence = pointLightInfluence(*light);
+    addSphereVis(overlayScene, pos, influence, color, 6);
+    addSphereVis(overlayScene, pos, light->radius, color, 6);
+}
+
 void EditorSceneRenderer::submit(
     bloom::Scene const& scene, EntitySelectionManager const& selectionManager) {
     if (!mRenderer) {
@@ -138,6 +175,11 @@ void EditorSceneRenderer::submit(
     mRenderer->submit(scene);
     if (selectedGeometry) {
         submitSelectedGeometry(scene, *selectedGeometry, selectionManager);
+    }
+    if (overlayScene) {
+        for (auto& entity: selectionManager) {
+            submitPointlightOverlay(entity, overlayScene->scene);
+        }
     }
 }
 

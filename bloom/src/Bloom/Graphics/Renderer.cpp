@@ -134,9 +134,7 @@ static void submitLights(LightsResource& lights, Scene const& scene,
         scene.view<TransformMatrixComponent const, LightComponent const>();
     view.each([&](EntityID ID, TransformMatrixComponent const& transform,
                   LightComponent light) {
-        if (auto* vis = scene.tryGetComponent<VisibilityComponent>(ID);
-            vis && !vis->value)
-        {
+        if (!ConstEntityHandle(ID, &scene).isVisible()) {
             return;
         }
         lightModifier(transform, light);

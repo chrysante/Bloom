@@ -5,7 +5,8 @@
 #include "Bloom/Shader/Lights.h"
 
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::LightCommon, color, intensity);
-BLOOM_MAKE_TEXT_SERIALIZER(bloom::PointLight, common, position, radius);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::PointLight, common, position, radius,
+                           falloff);
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::SpotLight, common, position, direction,
                            innerCutoff, outerCutoff, radius);
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::DirectionalLight, common, direction,

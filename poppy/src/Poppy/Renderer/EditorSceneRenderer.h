@@ -39,6 +39,7 @@ private:
     std::unique_ptr<bloom::Renderer> mRenderer;
     std::unique_ptr<bloom::RenderGraph> mRenderGraph;
     bloom::GeometryResource* selectedGeometry = nullptr;
+    bloom::Geometry2DResource* overlayScene = nullptr;
     bloom::TextureResource* idMap = nullptr;
     bloom::TextureResource* mCompositeColor = nullptr;
     bloom::TextureResource* mSceneColor = nullptr;

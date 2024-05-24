@@ -690,6 +690,7 @@ static void displayResource(Resource const& resource) {
                         resource.handle().description().storageMode);
         },
         [&](GeometryResource const&) {},
+        [&](Geometry2DResource const&) {},
         [&](LightsResource const&) {}
     }); // clang-format on
     if (ImGui::TreeNodeEx((void*)&resource, ImGuiTreeNodeFlags_DefaultOpen,

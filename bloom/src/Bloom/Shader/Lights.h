@@ -14,6 +14,7 @@ struct PointLight {
     LightCommon common;
     vml::float3 position;
     float radius;
+    float falloff;
 
     static PointLight Default();
 };

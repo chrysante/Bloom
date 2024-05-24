@@ -138,7 +138,15 @@ struct YAML::convert<E> {
         try {
 
 #define _BLOOM_TEXT_DESERIALIZE_FIELD(FieldName)                               \
-    t.FieldName = _node[#FieldName].as<decltype(t.FieldName)>()
+    do {                                                                       \
+        using __Type = std::remove_cvref_t<decltype(t.FieldName)>;             \
+        if constexpr (std::is_default_constructible_v<__Type>) {               \
+            t.FieldName = _node[#FieldName].as<__Type>(__Type{});              \
+        }                                                                      \
+        else {                                                                 \
+            t.FieldName = _node[#FieldName].as<__Type>();                      \
+        }                                                                      \
+    } while (0);
 
 #define _BLOOM_TEXT_DESERIALIZE_FUNC_END()                                     \
     return true;                                                               \

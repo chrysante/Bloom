@@ -395,6 +395,10 @@ void EntityInspector::inspectPointLight(bloom::PointLight& light) {
     beginProperty("Radius");
     fullWidth();
     ImGui::SliderFloat("radius", &light.radius, 0, 100);
+    beginProperty("Falloff");
+    fullWidth();
+    ImGui::DragFloat("falloff", &light.falloff,
+                     /* speed: */ 0.01, /* min: */ 0.01, /* max: */ FLT_MAX);
 }
 
 void EntityInspector::inspectSpotLight(bloom::SpotLight& light) {

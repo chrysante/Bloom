@@ -71,6 +71,7 @@ ViewManager::~ViewManager() = default;
 View* ViewManager::openView(ViewRegistryEntry const& regEntry) {
     views.push_back(regEntry.createView(*editor));
     auto* view = views.back().get();
+    view->data.position = { 250, 250 };
     view->doInit();
     return view;
 }

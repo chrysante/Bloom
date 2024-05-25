@@ -34,8 +34,9 @@ void MessageSystem::flush() {
         try {
             sendNow(std::move(msg));
         }
-        catch (...) {
-            std::terminate();
+        catch (std::exception const& e) {
+            Logger::Error("Dispatched message failed with expection: ",
+                          e.what());
         }
     }
     flushing = false;

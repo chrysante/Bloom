@@ -148,46 +148,43 @@ public:
     using runtime_error::runtime_error;
 };
 
-/// Object stored by the asset manager for each asset
-struct RegistryEntry {
-    ///
-    WeakReference<Asset> asset;
-
-    /// Handle of the asset
-    AssetHandle handle;
-
-    /// Name of the asset
-    std::string name;
-
-    /// Location on disk relative to the project directory
-    std::filesystem::path diskLocation;
-};
-
 } // namespace
 
-template <>
-struct YAML::convert<RegistryEntry> {
-    static Node encode(RegistryEntry const& entry) {
-        Node node;
-        node["Handle"] = entry.handle;
-        node["Name"] = entry.name;
-        node["Location"] = entry.diskLocation;
-        return node;
-    }
+AssetRegistryEntry const* AssetRegistry::find(utl::uuid ID) const {
+    auto itr = elementMap.find(ID);
+    return itr != elementMap.end() ? &itr->second : nullptr;
+}
 
-    static bool decode(Node const& node, RegistryEntry& entry) {
-        entry.handle = node["Handle"].as<AssetHandle>();
-        entry.name = node["Name"].as<std::string>();
-        entry.diskLocation = node["Location"].as<std::filesystem::path>();
-        return true;
-    }
-};
+AssetRegistryEntry* AssetRegistry::find(utl::uuid ID) {
+    return const_cast<AssetRegistryEntry*>(std::as_const(*this).find(ID));
+}
+
+AssetRegistryEntry const* AssetRegistry::find(AssetHandle handle) const {
+    return find(handle.ID());
+}
+
+AssetRegistryEntry const* AssetRegistry::findByName(
+    std::string_view name) const {
+    auto itr = ranges::find(*this, name, &AssetRegistryEntry::name);
+    return itr != end() ? std::to_address(itr) : nullptr;
+}
+
+AssetRegistryEntry* AssetRegistry::insert(AssetRegistryEntry entry) {
+    auto [itr, success] =
+        elementMap.insert({ entry.handle.ID(), std::move(entry) });
+    return success ? &itr->second : nullptr;
+}
+
+void AssetRegistry::clear() { elementMap.clear(); }
+
+bool AssetRegistry::erase(utl::uuid ID) { return elementMap.erase(ID) == 1; }
 
 using Impl = AssetManager::Impl;
+using RegistryEntry = AssetRegistryEntry;
 
 struct AssetManager::Impl {
     AssetManager* assetManager;
-    utl::hashmap<utl::uuid, RegistryEntry> assets;
+    AssetRegistry registry;
     std::filesystem::path rootDir;
     Reference<ShaderCompiler> shaderCompiler;
 
@@ -218,14 +215,6 @@ struct AssetManager::Impl {
 
     /// Allocates an asset of the correct derived type for \p handle
     Reference<Asset> allocateAsset(AssetHandle handle, std::string name) const;
-
-    /// \Returns the directory entry of the asset \p handle or null if it does
-    /// not exist
-    RegistryEntry* find(AssetHandle handle);
-
-    /// \Returns the registry entry of the asset handle \p handle or null if it
-    /// does not exist
-    RegistryEntry const* find(AssetHandle handle) const;
 
     /// \Returns the registry entry of the asset at \p location or null if the
     /// file does not exist _in the registry_.
@@ -304,6 +293,9 @@ struct AssetManager::Impl {
                             std::string name,
                             std::filesystem::path diskLocation);
 
+    YAML::Node serializeEntry(RegistryEntry const& entry);
+    std::optional<RegistryEntry> deserializeEntry(YAML::Node const& node);
+
     /// \Returns \p path relative to the current project directory. If \p path
     /// is already relative it is returned as is
     std::filesystem::path makeRelative(std::filesystem::path const& path) const;
@@ -338,16 +330,6 @@ struct AssetManager::Impl {
                                   std::ios_base::openmode mode) const;
 };
 
-RegistryEntry* Impl::getEntry(utl::uuid ID) {
-    return const_cast<RegistryEntry*>(
-        static_cast<Impl const*>(this)->getEntry(ID));
-}
-
-RegistryEntry const* Impl::getEntry(utl::uuid ID) const {
-    auto itr = assets.find(ID);
-    return itr != assets.end() ? &itr->second : nullptr;
-}
-
 namespace {
 
 template <AssetRepresentation>
@@ -369,6 +351,8 @@ AssetManager::AssetManager() {}
 
 AssetManager::~AssetManager() = default;
 
+AssetRegistry const& AssetManager::registry() const { return impl->registry; }
+
 void AssetManager::doInit() {
     impl = std::make_unique<Impl>(this);
     listen([this](GetAssetManager msg) {
@@ -386,8 +370,10 @@ void AssetManager::doInit() {
             *msg.asset = std::move(asset);
         }
         if (msg.diskLocation) {
-            *msg.diskLocation = impl->makeAbsolute(
-                impl->getEntry(msg.handle.ID())->diskLocation);
+            auto* entry = registry().find(msg.handle);
+            BL_ASSERT(entry,
+                      "We found an asset so we must find a registry entry");
+            *msg.diskLocation = entry->diskLocation;
         }
     });
 }
@@ -404,7 +390,7 @@ void AssetManager::openProject(std::filesystem::path path) {
         std::filesystem::create_directories(impl->rootDir);
     }
     /// Load working dir
-    impl->assets.clear();
+    impl->registry.clear();
     refreshProject();
 }
 
@@ -456,14 +442,11 @@ void Impl::openRegistry() {
     }
     for (auto node: root) {
         try {
-            auto diskEntry = node.as<RegistryEntry>();
-            if (!std::filesystem::exists(makeAbsolute(diskEntry.diskLocation)))
-            {
-                Logger::Warn("Registered asset file does not exist: ",
-                             diskEntry.diskLocation);
+            auto diskEntry = deserializeEntry(node);
+            if (!diskEntry) {
                 continue;
             }
-            assets.insert({ diskEntry.handle.ID(), diskEntry });
+            registry.insert(*std::move(diskEntry));
         }
         catch (std::exception const& e) {
             Logger::Error("Failed to read registry entry");
@@ -473,14 +456,11 @@ void Impl::openRegistry() {
 
 /// \Returns the filename without extension
 static std::string pathToName(std::filesystem::path const& path) {
-    auto filename = path.filename();
-    filename.replace_extension();
-    return filename;
+    return path.filename().stem();
 }
 
 bool Impl::amendRegistry() {
-    auto knownAssets = assets.values() | values |
-                       transform(&RegistryEntry::diskLocation) |
+    auto knownAssets = registry | transform(&RegistryEntry::diskLocation) |
                        ranges::to<utl::hashset<std::filesystem::path>>;
     auto dirItr = std::filesystem::recursive_directory_iterator(rootDir);
     auto filtered = dirItr | filter([](auto& entry) {
@@ -491,7 +471,7 @@ bool Impl::amendRegistry() {
     bool modified = false;
     utl::hashset<std::filesystem::path> existingAssetPaths;
     for (auto& dirEntry: filtered) {
-        auto path = std::filesystem::relative(dirEntry.path(), rootDir);
+        auto path = dirEntry.path();
         existingAssetPaths.insert(path);
         if (knownAssets.contains(path)) {
             continue;
@@ -503,31 +483,31 @@ bool Impl::amendRegistry() {
         }
         modified = true;
         auto ID = utl::uuid::generate();
-        assets.insert({ ID, makeEntry({}, AssetHandle(*type, ID),
-                                      pathToName(path), path) });
+        registry.insert(
+            makeEntry({}, AssetHandle(*type, ID), pathToName(path), path));
     }
     utl::small_vector<utl::uuid> IDsToDelete;
-    for (auto& [ID, entry]: assets) {
+    for (auto& entry: registry) {
         if (!existingAssetPaths.contains(entry.diskLocation)) {
             Logger::Error("Asset in registry does not exist: ", entry.name,
                           " - deleting registry entry");
-            IDsToDelete.push_back(ID);
+            IDsToDelete.push_back(entry.handle.ID());
         }
     }
     for (auto ID: IDsToDelete) {
-        assets.erase(ID);
+        registry.erase(ID);
     }
     return modified;
 }
 
 void Impl::writeRegistryToDisk() {
-    auto entries = assets.values() | values | ranges::to<std::vector>;
+    auto entries = ranges::to<std::vector>(registry);
     /// We sort the entries by disk path to make sure we only modify the file if
     /// the content changes in a meaningful way
     ranges::sort(entries, std::ranges::less{}, &RegistryEntry::diskLocation);
     YAML::Node root;
     for (auto& entry: entries) {
-        root.push_back(YAML::Node(entry));
+        root.push_back(serializeEntry(entry));
     }
     YAML::Emitter out;
     out << root;
@@ -560,7 +540,7 @@ Reference<Asset> AssetManager::createAsset(AssetType type, std::string name,
     auto handle = AssetHandle::generate(type);
     Reference<Asset> ref = impl->allocateAsset(handle, name);
     auto entry = impl->makeEntry(ref, handle, name, diskLocation);
-    impl->assets.insert({ handle.ID(), std::move(entry) });
+    impl->registry.insert(std::move(entry));
     impl->writeRegistryToDisk();
     impl->flushToDisk(handle, /* force: */ true);
     return ref;
@@ -592,12 +572,9 @@ AssetHandle AssetManager::importAsset(std::string name,
         else {
             auto handle = AssetHandle::generate(*type);
             auto asset = impl->allocateAsset(handle, name);
-            bool success = impl->assets
-                               .insert({ handle.ID(),
-                                         impl->makeEntry(asset, asset->handle(),
-                                                         name, diskLocation) })
-                               .second;
-            BL_ASSERT(success, "We checked above that this does not exist");
+            entry = impl->registry.insert(
+                impl->makeEntry(asset, asset->handle(), name, diskLocation));
+            BL_ASSERT(entry, "We checked above that this does not exist");
             impl->writeRegistryToDisk();
             return asset;
         }
@@ -619,46 +596,38 @@ static std::filesystem::path replaceFilename(std::filesystem::path path,
 }
 
 void AssetManager::renameAsset(AssetHandle handle, std::string name) {
-    auto const itr = impl->assets.find(handle.ID());
-    if (itr == impl->assets.end()) {
+    auto* entry = impl->registry.find(handle.ID());
+    if (!entry) {
         Logger::Warn("Failed to rename asset, does not exist: ", handle);
         return;
     }
-    auto& entry = itr->second;
-    entry.name = name;
-    auto oldPath = entry.diskLocation;
+    entry->name = name;
+    auto oldPath = entry->diskLocation;
     auto newPath = replaceFilename(oldPath, name);
-    std::filesystem::rename(impl->makeAbsolute(oldPath),
-                            impl->makeAbsolute(newPath));
-    entry.diskLocation = newPath;
+    std::filesystem::rename(oldPath, newPath);
+    entry->diskLocation = newPath;
     impl->writeRegistryToDisk();
-    if (auto asset = entry.asset.lock()) {
+    if (auto asset = entry->asset.lock()) {
         asset->mName = name;
     }
 }
 
 void AssetManager::deleteAsset(AssetHandle handle) {
-    auto const itr = impl->assets.find(handle.ID());
-    if (itr == impl->assets.end()) {
+    if (!impl->registry.erase(handle.ID())) {
         Logger::Warn("Failed to delete asset, does not exist: ", handle);
         return;
     }
-    auto& entry = itr->second;
-    Logger::Trace("Deleting ", entry.diskLocation);
-    std::filesystem::remove(entry.diskLocation);
-    impl->assets.erase(itr);
     impl->writeRegistryToDisk();
 }
 
-AssetHandle AssetManager::findAsset(std::string_view name) {
-    auto entries = impl->assets | values;
-    auto itr = ranges::find(entries, name, &RegistryEntry::name);
-    return itr != entries.end() ? itr->handle : AssetHandle{};
+AssetHandle AssetManager::findByName(std::string_view name) const {
+    auto* entry = registry().findByName(name);
+    return entry ? entry->handle : AssetHandle{};
 }
 
 Reference<Asset> AssetManager::get(AssetHandle handle,
                                    AssetRepresentation repr) {
-    auto* entry = impl->getEntry(handle.ID());
+    auto* entry = impl->registry.find(handle.ID());
     if (!entry) {
         Logger::Error("Failed to find asset ", handle);
         return nullptr;
@@ -678,46 +647,53 @@ Reference<Asset> AssetManager::get(AssetHandle handle,
 }
 
 std::string AssetManager::getName(AssetHandle handle) const {
-    if (auto* entry = impl->find(handle)) {
-        return entry->name;
-    }
-    return std::string{};
+    auto* entry = impl->registry.find(handle);
+    return entry ? entry->name : std::string{};
 }
 
 std::filesystem::path AssetManager::getAbsoluteFilepath(
     AssetHandle handle) const {
-    auto rel = getRelativeFilepath(handle);
-    return rel.empty() ? rel : impl->makeAbsolute(rel);
-}
-
-std::filesystem::path AssetManager::getRelativeFilepath(
-    AssetHandle handle) const {
-    if (auto* entry = impl->find(handle)) {
+    if (auto* entry = impl->registry.find(handle)) {
         return entry->diskLocation;
     }
     return std::filesystem::path{};
 }
 
+std::filesystem::path AssetManager::getRelativeFilepath(
+    AssetHandle handle) const {
+    auto abs = getAbsoluteFilepath(handle);
+    return abs.empty() ? abs : impl->makeRelative(abs);
+}
+
 static constexpr std::string_view MakeAvailErrorPrelude =
     "Failed to make asset available: ";
+
+bool AssetManager::makeAvailable(RegistryEntry const& entry,
+                                 AssetRepresentation repr, bool forceReload) {
+    if (repr == AssetRepresentation::None) {
+        return false;
+    }
+    auto asset = entry.asset.lock();
+    if (!asset) {
+        Logger::Error(MakeAvailErrorPrelude,
+                      "No references to asset: ", entry.name);
+        return false;
+    }
+    return impl->makeAvail(*asset, const_cast<RegistryEntry&>(entry), repr,
+                           forceReload);
+}
 
 bool AssetManager::makeAvailable(AssetHandle handle, AssetRepresentation repr,
                                  bool forceReload) {
     if (repr == AssetRepresentation::None) {
         return false;
     }
-    auto* entry = impl->find(handle);
+    auto* entry = impl->registry.find(handle);
     if (!entry) {
         Logger::Error(MakeAvailErrorPrelude, "ID not found: ", handle.ID());
         return false;
     }
-    auto asset = entry->asset.lock();
-    if (!asset) {
-        Logger::Error(MakeAvailErrorPrelude,
-                      "No references to asset: ", entry->name);
-        return false;
-    }
-    return impl->makeAvail(*asset, *entry, repr, forceReload);
+    return makeAvailable(*entry, repr, forceReload);
 }
 
 bool Impl::makeAvail(Asset& asset, RegistryEntry const& entry,
@@ -845,7 +821,7 @@ bool Impl::makeAvailImpl(ScriptSource&, RegistryEntry const&,
 }
 
 bool AssetManager::isValid(AssetHandle handle) const {
-    return impl->find(handle);
+    return registry().find(handle) != nullptr;
 }
 
 void AssetManager::saveToDisk(AssetHandle handle) { impl->flushToDisk(handle); }
@@ -862,7 +838,7 @@ void AssetManager::saveAll() {
     }
     Logger::Trace("Saving asset directory: ", impl->rootDir);
     impl->writeRegistryToDisk();
-    for (auto& [ID, entry]: impl->assets) {
+    for (auto& entry: impl->registry) {
         saveToDisk(entry.handle);
     }
 }
@@ -912,7 +888,7 @@ void AssetManager::compileScripts() {
         inv.setLibSearchPaths({ engineLibDir });
         inv.setOptLevel(1);
         inv.setLinkerOptions({ .searchHost = true });
-        auto sources = impl->assets | values | filter([](auto& entry) {
+        auto sources = impl->registry | filter([](auto& entry) {
             return entry.handle.type() == AssetType::ScriptSource;
         }) | transform([&](auto& entry) {
             return SourceFile::load(impl->makeAbsolute(entry.diskLocation));
@@ -935,7 +911,7 @@ void AssetManager::compileScripts() {
 
 std::vector<AssetHandle> AssetManager::getAssetsOfType(AssetType type) const {
     std::vector<AssetHandle> result;
-    for (auto& [ID, entry]: impl->assets) {
+    for (auto& entry: impl->registry) {
         if (entry.handle.type() == type) {
             result.push_back(entry.handle);
         }
@@ -951,32 +927,16 @@ Reference<Asset> Impl::allocateAsset(AssetHandle handle,
     });
 }
 
-RegistryEntry* Impl::find(AssetHandle handle) {
-    return const_cast<RegistryEntry*>(utl::as_const(*this).find(handle));
-}
-
-RegistryEntry const* Impl::find(AssetHandle handle) const {
-    if (!handle) {
-        return nullptr;
-    }
-    auto const itr = assets.find(handle.ID());
-    if (itr == assets.end()) {
-        return nullptr;
-    }
-    return &itr->second;
-}
-
 RegistryEntry* Impl::findByDiskLocation(std::filesystem::path path) {
-    if (path.is_absolute()) {
-        BL_EXPECT(isAbsoluteInProjDir(path));
-        path = makeRelative(path);
+    if (path.is_relative()) {
+        path = makeAbsolute(path);
     }
-    auto entries = assets.values() | values;
-    auto itr = ranges::find(entries, path, &RegistryEntry::diskLocation);
-    if (itr == entries.end()) {
+    BL_EXPECT(isAbsoluteInProjDir(path));
+    auto itr = ranges::find(registry, path, &RegistryEntry::diskLocation);
+    if (itr == registry.end()) {
         return nullptr;
     }
-    return const_cast<RegistryEntry*>(&*itr);
+    return std::to_address(itr);
 }
 
 /// MARK: - Disk -> Memory
@@ -1203,7 +1163,7 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
 /// MARK: - Memory -> Disk
 
 void Impl::flushToDisk(AssetHandle handle, bool force) {
-    auto* entry = find(handle);
+    auto* entry = registry.find(handle);
     if (!entry) {
         Logger::Error("Failed to write asset to disk: ", handle);
         return;
@@ -1349,14 +1309,34 @@ void Impl::doImportImpl(StaticMesh& dest,
 RegistryEntry Impl::makeEntry(WeakReference<Asset> asset, AssetHandle handle,
                               std::string name,
                               std::filesystem::path diskLocation) {
-    if (diskLocation.is_absolute()) {
-        BL_ASSERT(isAbsoluteInProjDir(diskLocation));
-        diskLocation = makeRelative(diskLocation);
+    if (diskLocation.is_relative()) {
+        diskLocation = makeAbsolute(diskLocation);
     }
-    return RegistryEntry{ .asset = std::move(asset),
-                          .handle = handle,
-                          .name = std::move(name),
-                          .diskLocation = std::move(diskLocation) };
+    BL_ASSERT(isAbsoluteInProjDir(diskLocation));
+    return RegistryEntry(RegistryEntry::SecretTag{}, std::move(asset), handle,
+                         std::move(name), std::move(diskLocation));
+}
+
+YAML::Node Impl::serializeEntry(RegistryEntry const& entry) {
+    YAML::Node node;
+    node["Handle"] = entry.handle;
+    node["Name"] = entry.name;
+    node["Location"] = makeRelative(entry.diskLocation);
+    return node;
+}
+
+std::optional<RegistryEntry> Impl::deserializeEntry(YAML::Node const& node) {
+    try {
+        return RegistryEntry(RegistryEntry::SecretTag{}, {},
+                             node["Handle"].as<AssetHandle>(),
+                             node["Name"].as<std::string>(),
+                             makeAbsolute(
+                                 node["Location"].as<std::filesystem::path>()));
+    }
+    catch (YAML::Exception const& e) {
+        Logger::Error("Failed to read registry entry: ", e.what());
+        return std::nullopt;
+    }
 }
 
 std::filesystem::path Impl::makeRelative(
@@ -1418,8 +1398,8 @@ std::fstream Impl::openOrCreateFile(std::filesystem::path const& path,
 }
 
 AssetHandle AssetManager::getHandleFromFile(std::filesystem::path path) const {
-    if (path.is_absolute()) {
-        path = impl->makeRelative(path);
+    if (path.is_relative()) {
+        path = impl->makeAbsolute(path);
     }
     auto* entry = impl->findByDiskLocation(path);
     return entry ? entry->handle : AssetHandle{};

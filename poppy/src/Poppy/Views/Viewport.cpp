@@ -151,7 +151,7 @@ void Viewport::init() {
     setToolbar(makeToolbar());
     editor().reactToSceneCommands(commandPaletteWrite());
     if (auto* defaultScene = std::getenv("DEFAULT_SCENE")) {
-        AssetHandle handle = assetManager().findAsset(defaultScene);
+        AssetHandle handle = assetManager().findByName(defaultScene);
         if (handle) {
             openScene(handle);
         }

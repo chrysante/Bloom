@@ -5,10 +5,11 @@
 #include <future>
 #include <memory>
 #include <optional>
+#include <set>
 #include <span>
 
-#include <utl/hashmap.hpp>
-#include <utl/vector.hpp>
+#include <range/v3/view.hpp>
+#include <utl/hashtable.hpp>
 
 #include "Bloom/Application/CoreSystem.h"
 #include "Bloom/Asset/Asset.h"
@@ -22,6 +23,88 @@ namespace bloom {
 class HardwareDevice;
 struct StaticMeshData;
 
+/// Object stored by the asset manager for each asset
+class AssetRegistryEntry {
+    friend class AssetRegistry;
+    friend class AssetManager;
+
+    enum class SecretTag : int;
+
+public:
+    AssetRegistryEntry() = default;
+
+    AssetRegistryEntry(SecretTag, WeakReference<Asset> asset,
+                       AssetHandle handle, std::string name,
+                       std::filesystem::path diskLocation):
+        asset(std::move(asset)),
+        handle(std::move(handle)),
+        name(std::move(name)),
+        diskLocation(std::move(diskLocation)) {}
+
+    ///
+    WeakReference<Asset> asset;
+
+    /// Handle of the asset
+    AssetHandle handle;
+
+    /// Name of the asset
+    std::string name;
+
+    /// Absolute location on disk
+    std::filesystem::path diskLocation;
+};
+
+/// Registry of all assets in a project
+class AssetRegistry {
+    auto elementView() { return elementMap | ranges::views::values; }
+    auto elementView() const { return elementMap | ranges::views::values; }
+
+public:
+    /// Amortized constant time lookup by ID
+    AssetRegistryEntry const* find(utl::uuid ID) const;
+
+    /// \overload
+    AssetRegistryEntry* find(utl::uuid ID);
+
+    /// Amortized constant time lookup by handle
+    /// \Returns `find(handle.ID())`
+    AssetRegistryEntry const* find(AssetHandle handle) const;
+
+    /// Linear time lookup by name.
+    ///
+    /// \Returns the handle of an asset with name \p name or a null handle if
+    /// no such asset exists. If multiple such assets exists it is unspecified
+    /// which asset is returned
+    AssetRegistryEntry const* findByName(std::string_view name) const;
+
+    /// # Modifiers
+
+    ///
+    AssetRegistryEntry* insert(AssetRegistryEntry entry);
+
+    ///
+    void clear();
+
+    ///
+    bool erase(utl::uuid ID);
+
+    /// Range interface @{
+    auto begin() const { return elementView().begin(); }
+    auto begin() { return elementView().begin(); }
+    auto end() const { return elementView().end(); }
+    auto end() { return elementView().end(); }
+    size_t size() const { return elementMap.size(); }
+    size_t empty() const { return elementMap.empty(); }
+    /// @}
+
+private:
+    friend class AssetManager;
+
+    AssetRegistry() = default;
+
+    utl::node_hashmap<utl::uuid, AssetRegistryEntry> elementMap;
+};
+
 /// Manages lifetime and representation of all assets.
 /// Assets can be loaded from disk to CPU or GPU memory and vice versa
 class BLOOM_API AssetManager: public CoreSystem {
@@ -32,6 +115,9 @@ public:
 
     ///
     ~AssetManager();
+
+    /// \Returns the asset registry
+    AssetRegistry const& registry() const;
 
     /// Opens the project at \p path
     ///
@@ -86,9 +172,10 @@ public:
     /// \Param handle Handle to the asset to be deleted
     void deleteAsset(AssetHandle handle);
 
-    /// \Returns the handle of the asset with name \p name or a null handle if
-    /// it does not exist
-    AssetHandle findAsset(std::string_view name);
+    /// \Returns the handle of an asset with name \p name or a null handle if
+    /// no such asset exists. If multiple such assets exists it is unspecified
+    /// which asset is returned
+    AssetHandle findByName(std::string_view name) const;
 
     /// Retrieves an asset from an AssetHandle. Does not load the asset into
     /// memory. Use `makeAvailable()` to load the asset into memory.
@@ -139,6 +226,10 @@ public:
     ///
     bool makeAvailable(AssetHandle handle, AssetRepresentation repr,
                        bool forceReload = false);
+
+    /// \overload
+    bool makeAvailable(AssetRegistryEntry const& entry,
+                       AssetRepresentation repr, bool forceReload = false);
 
     /// Check if an AssetHandle is valid, i.e. refers to an asset in this
     /// manager.

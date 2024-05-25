@@ -49,6 +49,7 @@ set(bloom_sources
   src/Bloom/Core/EnumCount.h
   src/Bloom/Core/Profile.cpp
   src/Bloom/Core/Profile.h
+  src/Bloom/Core/Utils.h
   src/Bloom/Core/Ranges.h
   src/Bloom/Core/Reference.h
   src/Bloom/Core/Time.cpp
@@ -159,4 +160,5 @@ set(bloom_sources
 set(bloom_test_sources
   test/Runtime/RuntimeSystem.t.cpp
   test/GPU/HardwareResourceHandle.t.cpp
+  test/Core/Utils.t.cpp
 )

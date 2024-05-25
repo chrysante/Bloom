@@ -91,7 +91,7 @@ public:
         GoBack,
         GoForward,
         Rescan,
-        LAST = Rescan
+        CreateFolder
     };
 
     DirectoryView();

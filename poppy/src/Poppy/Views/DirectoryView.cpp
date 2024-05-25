@@ -1,6 +1,7 @@
 #include "Poppy/Views/DirectoryView.h"
 
 #include <numeric>
+#include <optional>
 #include <vector>
 
 #include <imgui.h>
@@ -171,9 +172,14 @@ struct ScannedDirectory {
         return result;
     }
 
-    void rescan(DirectoryViewDelegate& delegate, SortCondition condition) {
+    bool rescan(DirectoryViewDelegate& delegate, SortCondition condition) {
         entries.clear();
-        for (auto entry: std::filesystem::directory_iterator(path)) {
+        std::error_code err;
+        auto itr = std::filesystem::directory_iterator(path, err);
+        if (err) {
+            return false;
+        }
+        for (auto entry: itr) {
             if (!utl::is_hidden(entry.path())) {
                 entries.push_back({ entry, delegate.makeUserData(entry) });
             }
@@ -185,6 +191,7 @@ struct ScannedDirectory {
             return !set.contains(entry);
         }) | ToSmallVector<>;
         ranges::for_each(toErase, [&](auto& entry) { selection.erase(entry); });
+        return true;
     }
 
     void sort(SortCondition condition) {
@@ -205,6 +212,14 @@ struct ScannedDirectory {
             });
             break;
         }
+    }
+
+    /// \Returns the directory entry matching \p filename if it exists
+    std::optional<DirectoryEntry> find(std::filesystem::path const& filename) {
+        auto itr = ranges::find(entries, filename, [](auto& entry) {
+            return entry.path().filename();
+        });
+        return itr != entries.end() ? std::optional(*itr) : std::nullopt;
     }
 
     std::filesystem::path path;
@@ -266,8 +281,12 @@ struct DirectoryLine {
     }
 
     void rescan() {
-        for (auto& directory: line) {
-            directory.rescan(*delegate, sortCondition);
+        for (auto itr = line.begin(); itr != line.end(); ++itr) {
+            if (!itr->rescan(*delegate, sortCondition)) {
+                line.erase(itr, line.end());
+                activeIndex = std::min(line.size() - 1, activeIndex);
+                break;
+            }
         }
     }
 
@@ -314,6 +333,13 @@ struct DirectoryLine {
 
     ScannedDirectory& current() { return line[activeIndex]; }
     ScannedDirectory const& current() const { return line[activeIndex]; }
+    ScannedDirectory* next() {
+        return const_cast<ScannedDirectory*>(std::as_const(*this).next());
+    }
+    ScannedDirectory const* next() const {
+        return activeIndex != line.size() - 1 ? &line[activeIndex + 1] :
+                                                nullptr;
+    }
     ScannedDirectory& root() { return front(); }
     ScannedDirectory const& root() const { return front(); }
 
@@ -391,7 +417,6 @@ struct DirectoryView::Impl: Emitter {
     void displayColumnViewItem(ScannedDirectory& directory,
                                size_t directoryIndex, size_t entryIndex);
     void displayPreviewColumn();
-
     void displayEntry(ScannedDirectory& directory, size_t directoryIndex,
                       size_t entryIndex, Rect itemBB, Rect labelBB, Rect iconBB,
                       TextAlign textAlign, int frameDrawFlags);
@@ -428,6 +453,8 @@ struct DirectoryView::Impl: Emitter {
 
     void moveSelection(int offset, SelectionMode mode);
 
+    void createFolder();
+
     void displayDebugger();
 
     std::unique_ptr<DirectoryViewDelegate> delegate;
@@ -436,6 +463,7 @@ struct DirectoryView::Impl: Emitter {
     FilesystemHistory history;
     ViewData viewData;
     EnumArray<CommandType, Command const*> commands{};
+    bool showDebugger = false;
 };
 
 DirectoryView::DirectoryView(): impl(std::make_unique<Impl>()) {}
@@ -471,6 +499,8 @@ void Impl::assignCommands(CommandPalette& commandPalette) {
                                              [this] { return canGoForward(); });
     commands[Rescan] =
         commandPalette.add("Rescan", {}, [this] { directoryLine.rescan(); });
+    commands[CreateFolder] =
+        commandPalette.add("Create Folder", {}, [this] { createFolder(); });
     commandPalette.add("Open", { .key = Key::O, .modFlags = ModFlags::Control },
                        [this] { activateSelectedEntries(); }, [this] {
         return !directoryLine.current().selection.empty();
@@ -485,9 +515,12 @@ void Impl::assignCommands(CommandPalette& commandPalette) {
     commandPalette.add("Expand selection down",
                        { .key = Key::DownArrow, .modFlags = ModFlags::Shift },
                        [this] { moveSelection(1, SelectionMode::Toggle); });
-
     commandPalette.add("Apply rename", { .key = Key::Enter },
                        [this] { toggleRenaming(); });
+    commandPalette.add("Apply rename",
+                       { .key = Key::D,
+                         .modFlags = ModFlags::Control | ModFlags::Shift },
+                       [this] { showDebugger ^= true; });
 }
 
 Toolbar DirectoryView::makeToolbar() { return impl->makeToolbar(); }
@@ -523,6 +556,9 @@ void DirectoryView::display() {
     }
 
     impl->viewData.updateLate();
+    if (impl->showDebugger) {
+        impl->displayDebugger();
+    }
 }
 
 void DirectoryView::openDirectory(std::filesystem::path directory) {
@@ -935,7 +971,7 @@ void Impl::displayEntryRenameField(DirectoryEntry const& entry, Rect labelBB) {
                               (float2)ImGui::GetStyle().FramePadding);
     ImGui::SetNextItemWidth(labelBB.size().x);
     ImGui::InputText("###Rename field", RenameBuffer.data(),
-                     RenameBuffer.size());
+                     RenameBuffer.size(), ImGuiInputTextFlags_AutoSelectAll);
     ImGui::SetCursorPos(stashedCursor);
     viewData.startRenaming = false;
 }
@@ -943,7 +979,27 @@ void Impl::displayEntryRenameField(DirectoryEntry const& entry, Rect labelBB) {
 void Impl::toggleRenaming() {
     if (viewData.renamingEntry) {
         auto& entry = *viewData.renamingEntry;
-        delegate->renameEntry(entry, std::string(RenameBuffer.data()));
+        if (entry.is_directory()) {
+            auto oldPath = entry.path();
+            auto newPath = oldPath.parent_path() / RenameBuffer.data();
+            entry.replace_filename(RenameBuffer.data());
+            std::filesystem::rename(oldPath, newPath);
+            if (auto* next = directoryLine.next();
+                next && next->path == oldPath)
+            {
+                next->path = entry.path();
+            }
+            directoryLine.current().selection.transform(
+                [&](DirectoryEntry elem) {
+                if (elem.path() == oldPath) {
+                    return entry;
+                }
+                return elem;
+            });
+        }
+        else {
+            delegate->renameEntry(entry, std::string(RenameBuffer.data()));
+        }
         viewData.renamingEntry = std::nullopt;
         dispatch(DispatchToken::NextFrame, [this] { directoryLine.rescan(); });
     }
@@ -1259,6 +1315,28 @@ void Impl::moveSelection(int offset, SelectionMode mode) {
     }
 }
 
+void Impl::createFolder() {
+    auto& dir = directoryLine.current();
+    auto baseName = "New Folder";
+    std::string name = baseName;
+    int i = 2;
+    while (true) {
+        if (!dir.find(name)) {
+            break;
+        }
+        name = utl::strcat(baseName, " ", i++);
+    }
+    std::filesystem::create_directory(dir.path / name);
+    directoryLine.rescan();
+    auto entry = dir.find(name);
+    if (!entry) {
+        Logger::Error(
+            "Internal error occurred. Failed to locate newly created folder");
+        return;
+    }
+    startRenaming(*entry);
+}
+
 void Impl::displayDebugger() {
     ImGui::Begin("DirViewDebugger");
     ImGui::Text("Current directory: %s", directoryLine.current().path.c_str());
@@ -1271,17 +1349,27 @@ void Impl::displayDebugger() {
         ImGui::Text("selectionRectDirectoryIndex: %d",
                     (int)viewData.selectionRectDirectoryIndex);
     }
+    ImGui::Text("Rename Buffer: %s", RenameBuffer.data());
+    if (viewData.renamingEntry) {
+        ImGui::Text("renamingEntry: %s",
+                    viewData.renamingEntry->path().c_str());
+    }
     ImGui::SeparatorText("Directory Line");
     for (auto& dir: directoryLine) {
         if (ImGui::TreeNodeEx(dir.path.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
         {
-            ImGui::SeparatorText("Entries");
-            for (auto& entry: dir.entries) {
-                ImGui::Text("%s", entry.path().c_str());
+            if (ImGui::TreeNode("Entries")) {
+                for (auto& entry: dir.entries) {
+                    ImGui::Text("%s", entry.path().c_str());
+                }
+                ImGui::TreePop();
             }
-            ImGui::SeparatorText("Selection");
-            for (auto& entry: dir.selection) {
-                ImGui::Text("%s", entry.path().c_str());
+            if (ImGui::TreeNodeEx("Selection", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                for (auto& entry: dir.selection) {
+                    ImGui::Text("%s", entry.path().c_str());
+                }
+                ImGui::TreePop();
             }
             ImGui::TreePop();
         }

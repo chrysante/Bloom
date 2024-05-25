@@ -166,6 +166,7 @@ void AssetBrowser::init() {
                 }
             }),
         ToolbarSpacer{},
+        ToolbarIconButton(dirView.getCommand(CreateFolder), "plus-circled"),
         ToolbarIconButton(dirView.getCommand(Rescan), "cw"),
         ToolbarIconButton("download")
             .onClick([this] { importFiles(); })

@@ -53,7 +53,9 @@ Window::Window(WindowDescription const& d): impl(std::make_shared<Impl>()) {
     impl->glfwWnd.reset(w);
     platformInit();
     glfwSetWindowUserPointer(GLFW_WND, impl.get());
-    glfwSetWindowPos(GLFW_WND, impl->position.x, impl->position.y);
+    setPosition(impl->position);
+    setSize(impl->size);
+    glfwGetWindowPos(GLFW_WND, &impl->position.x, &impl->position.y);
     glfwGetWindowSize(GLFW_WND, &impl->size.x, &impl->size.y);
     glfwGetWindowContentScale(GLFW_WND, &impl->contentScaleFactor.x,
                               &impl->contentScaleFactor.y);

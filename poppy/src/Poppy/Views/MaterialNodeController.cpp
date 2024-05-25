@@ -11,6 +11,7 @@
 #include <utl/strcat.hpp>
 #include <vml/vml.hpp>
 
+#include "Bloom/Core/Utils.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
@@ -28,47 +29,6 @@ bool poppy::isDataTypeCompatible(DataTypeMask out, DataTypeMask in) {
 
 namespace {
 
-template <auto Proj, template <class T> class Hash = std::hash>
-struct ProjectionHash {
-    using is_transparent = void;
-    using ProjT = decltype(Proj);
-
-    template <typename T>
-        requires std::invocable<ProjT, T const&>
-    size_t operator()(T const& t) const {
-        using M = std::decay_t<std::invoke_result_t<ProjT, T const&>>;
-        return Hash<M>{}(std::invoke(Proj, t));
-    }
-    template <typename T>
-    size_t operator()(T const& t) const {
-        return Hash<std::decay_t<T const&>>{}(t);
-    }
-};
-
-template <auto Proj>
-struct ProjectionEqual {
-    using is_transparent = void;
-    using ProjT = decltype(Proj);
-
-    template <typename T>
-        requires std::invocable<ProjT, T const&>
-    bool operator()(T const& a, T const& b) const {
-        return std::equal_to<>{}(std::invoke(Proj, a), std::invoke(Proj, b));
-    }
-
-    template <typename T>
-        requires std::invocable<ProjT, T const&>
-    bool operator()(T const& t, auto const& other) const {
-        return std::equal_to<>{}(std::invoke(Proj, t), other);
-    }
-
-    template <typename T>
-        requires std::invocable<ProjT, T const&>
-    bool operator()(auto const& other, T const& t) const {
-        return operator()(t, other);
-    }
-};
-
 struct NodeRegistry {
     using Entry = MaterialNodeRegistryEntry;
 
@@ -80,8 +40,8 @@ struct NodeRegistry {
         BL_ASSERT(success, "Failed to register material node");
     }
 
-    utl::hashset<Entry, ProjectionHash<&Entry::name, utl::hash>,
-                 ProjectionEqual<&Entry::name>>
+    utl::hashset<Entry, ProjectionHash<&Entry::name, utl::hash<std::string>>,
+                 ProjectionCompare<&Entry::name, std::equal_to<>>>
         entries;
 };
 

@@ -102,6 +102,59 @@ struct CompareCaseInsensitive {
     }
 };
 
+/// Projected hash function. Objects are projected using \p Proj and then hashed
+/// using \p Hash
+template <auto Proj, typename Hash>
+struct ProjectionHash: private Hash {
+    using is_transparent = void;
+    using ProjT = decltype(Proj);
+
+    template <typename... Args>
+    constexpr ProjectionHash(Args&&... args):
+        Hash(std::forward<Args>(args)...) {}
+
+    template <typename T>
+        requires std::invocable<ProjT, T const&>
+    constexpr size_t operator()(T const& t) const {
+        return static_cast<Hash const&>(*this)(std::invoke(Proj, t));
+    }
+    template <typename T>
+    constexpr size_t operator()(T const& t) const {
+        return static_cast<Hash const&>(*this)(t);
+    }
+};
+
+/// Projected compare function. Objects are projected using \p Proj and then
+/// compared using \p Comp
+template <auto Proj, typename Comp>
+struct ProjectionCompare: private Comp {
+    using is_transparent = void;
+    using ProjT = decltype(Proj);
+
+    template <typename... Args>
+    constexpr ProjectionCompare(Args&&... args):
+        Comp(std::forward<Args>(args)...) {}
+
+    template <typename T>
+        requires std::invocable<ProjT, T const&>
+    constexpr bool operator()(T const& a, T const& b) const {
+        return static_cast<Comp const&>(*this)(std::invoke(Proj, a),
+                                               std::invoke(Proj, b));
+    }
+
+    template <typename T>
+        requires std::invocable<ProjT, T const&>
+    constexpr bool operator()(T const& t, auto const& other) const {
+        return static_cast<Comp const&>(*this)(std::invoke(Proj, t), other);
+    }
+
+    template <typename T>
+        requires std::invocable<ProjT, T const&>
+    constexpr bool operator()(auto const& other, T const& t) const {
+        return static_cast<Comp const&>(*this)(other, std::invoke(Proj, t));
+    }
+};
+
 } // namespace bloom
 
 #endif // BLOOM_CORE_UTILS_H

@@ -939,7 +939,7 @@ void AssetManager::compileScripts() {
     using namespace scatha;
     std::optional<scatha::Target> target;
     try {
-        auto engineLibDir = projectRootDir() / "int";
+        auto engineLibDir = projectRootDir() / ".int";
         if (!compileEngineLibrary(engineLibDir)) {
             return;
         }

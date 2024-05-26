@@ -144,7 +144,7 @@ public:
             Logger::Error("Filesystem error: ", err.message());
         }
         for (auto& entry: itr) {
-            if (entry.is_directory()) {
+            if (entry.is_directory() && !utl::is_hidden(entry.path())) {
                 result.push_back(Make(This, nullptr, entry.path()));
             }
         }

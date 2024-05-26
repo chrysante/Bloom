@@ -649,10 +649,10 @@ void AssetManager::relocateFolder(std::filesystem::path oldLocation,
 }
 
 void AssetManager::deleteAsset(AssetHandle handle) {
-    if (!impl->registry.erase(handle.ID())) {
-        Logger::Warn("Failed to delete asset, does not exist: ", handle);
-        return;
-    }
+    auto* entry = impl->registry.find(handle);
+    BL_ASSERT(entry);
+    std::filesystem::remove(entry->diskLocation);
+    impl->registry.erase(handle.ID());
     impl->writeRegistryToDisk();
 }
 

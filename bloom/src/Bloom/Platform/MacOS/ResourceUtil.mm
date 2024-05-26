@@ -61,3 +61,12 @@ void bloom::showOpenPanel(
         }
     }];
 }
+
+void bloom::showFileInFileExplorer(std::filesystem::path path) {
+    auto root = path.parent_path();
+    [[NSWorkspace sharedWorkspace]
+                      selectFile:[[NSString alloc]
+                                     initWithUTF8String:path.c_str()]
+        inFileViewerRootedAtPath:[[NSString alloc]
+                                     initWithUTF8String:root.c_str()]];
+}

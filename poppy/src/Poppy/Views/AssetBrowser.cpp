@@ -92,7 +92,13 @@ public:
 
     bool isDirectory() const override { return !regEntry; }
 
-    void erase() override {}
+    void erase() override {
+        if (regEntry) {
+            This.assetManager->deleteAsset(regEntry->handle);
+        }
+        else {
+        }
+    }
 
     void rename(std::string newName) override {
         auto newLocation = path().parent_path() / newName;

@@ -45,6 +45,9 @@ BLOOM_API void showOpenPanel(
     OpenPanelDescription const& desc,
     std::function<void(std::filesystem::path const&)> completion);
 
+/// Opens the system file explorer with given path selected
+BLOOM_API void showFileInFileExplorer(std::filesystem::path path);
+
 } // namespace bloom
 
 #endif // BLOOM_APPLICATION_RESOURCEUTIL_H

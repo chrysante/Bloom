@@ -15,6 +15,7 @@
 #include <utl/stack.hpp>
 #include <utl/strcat.hpp>
 
+#include "Bloom/Application/ResourceUtil.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Core/Utils.h"
@@ -278,9 +279,10 @@ public:
         _selectionModified = true;
     }
 
-    bool madeActive() { return std::exchange(_madeActive, false); }
-
-    void setMadeActive(bool value = true) { _madeActive = value; }
+    size_t size() const { return entries().size(); }
+    bool empty() const { return entries().empty(); }
+    DirectoryEntry* front() const { return entries().front(); }
+    DirectoryEntry* back() const { return entries().back(); }
 
 private:
     friend struct DirectoryView::Impl; // For now
@@ -294,7 +296,6 @@ private:
     SelectionManager _selection;
     /// Tested at the end of each frame to update view layout
     bool _selectionModified = false;
-    bool _madeActive = false;
 };
 
 SelectionManager const& NavEntryStack::selection() const {
@@ -388,7 +389,6 @@ struct DirectoryLine {
         }
         BL_ASSERT(activeIndex > 0);
         --activeIndex;
-        current().setMadeActive();
         return true;
     }
 
@@ -405,7 +405,6 @@ struct DirectoryLine {
         if (current().entries().empty()) {
             --activeIndex;
         }
-        current().setMadeActive();
         return true;
     }
 
@@ -484,6 +483,7 @@ struct ViewData: ActiveViewData, FrameData {
 
     DirectoryEntry* renamingEntry;
     bool startRenaming = false;
+    bool didNavigate = false;
 };
 
 void ViewData::updateEarly() {
@@ -502,6 +502,7 @@ void ViewData::updateLate() {
     {
         renamingEntry = nullptr;
     }
+    didNavigate = false;
 }
 
 using Impl = DirectoryView::Impl;
@@ -537,6 +538,7 @@ struct DirectoryView::Impl: Emitter {
 
     void activateEntry(DirectoryEntry& entry);
     void activateSelectedEntries();
+    void deleteSelectedEntries(ScannedDirectory const& dir);
     DirectoryItemDescription makeItemDesc(DirectoryEntry const& entry) const;
 
     /// Navigation
@@ -546,7 +548,10 @@ struct DirectoryView::Impl: Emitter {
     void goBack();
     void goForward();
     bool navEnabled() const { return !viewData.renamingEntry; }
-    void didNavigate() { viewData.renamingEntry = nullptr; }
+    void didNavigate() {
+        viewData.renamingEntry = nullptr;
+        viewData.didNavigate = true;
+    }
     bool canGoUp() const;
     bool canGoDown() const;
     bool canGoBack() const;
@@ -619,7 +624,12 @@ void Impl::assignCommands(CommandPalette& commandPalette) {
                        [this] { moveSelection(1, SelectionMode::Toggle); });
     commandPalette.add("Apply rename", { .key = Key::Enter },
                        [this] { toggleRenaming(); });
-    commandPalette.add("Apply rename",
+    commandPalette.add("Delete selected",
+                       { .key = Key::Backspace, .modFlags = ModFlags::Control },
+                       [this] {
+        deleteSelectedEntries(directoryLine.current());
+    });
+    commandPalette.add("Show Debugger",
                        { .key = Key::D,
                          .modFlags = ModFlags::Control | ModFlags::Shift },
                        [this] { showDebugger ^= true; });
@@ -698,6 +708,7 @@ Toolbar Impl::makeToolbar() {
 }
 
 void Impl::display() {
+    ImGui::BeginChild("DirectoryView");
     viewData.updateEarly();
     switch (layout) {
     case Layout::Columns:
@@ -709,6 +720,7 @@ void Impl::display() {
     }
     monitorSelectionChange();
     viewData.updateLate();
+    ImGui::EndChild();
     if (showDebugger) {
         displayDebugger();
     }
@@ -741,10 +753,14 @@ void Impl::displayColumns() {
     ImGuiTableFlags tableFlags =
         ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX |
         ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoClip;
-    bool hasPreviewColumn = !directoryLine.back().selection().empty();
-    int numColumns = (int)directoryLine.size() + hasPreviewColumn;
-
-    if (!ImGui::BeginTable("column-view", numColumns, tableFlags)) {
+    bool havePreviewColumn = &directoryLine.current() ==
+                                 &directoryLine.back() &&
+                             !directoryLine.current().selection().empty();
+    int numColumns = (int)directoryLine.size() + havePreviewColumn;
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 0, 0 });
+    bool open = ImGui::BeginTable("column-view", numColumns, tableFlags);
+    ImGui::PopStyleVar();
+    if (!open) {
         return;
     }
     // Setup
@@ -753,25 +769,29 @@ void Impl::displayColumns() {
         ImGui::TableSetupColumn(directory.entry()->path().c_str(),
                                 ImGuiTableColumnFlags_WidthFixed, defaultWidth);
     }
-    if (hasPreviewColumn) {
+    if (havePreviewColumn) {
         ImGui::TableSetupColumn("##preview-column",
                                 ImGuiTableColumnFlags_WidthFixed, defaultWidth);
     }
     // Display
     for (auto& dir: directoryLine) {
         ImGui::TableNextColumn();
-        if (dir.madeActive()) {
+        if (viewData.didNavigate && &dir == &directoryLine.current()) {
             ImGui::SetScrollHereX();
         }
         displayColumn(dir);
     }
-    if (hasPreviewColumn) {
+    if (havePreviewColumn) {
         ImGui::TableNextColumn();
+        if (viewData.didNavigate) {
+            ImGui::SetScrollHereX();
+        }
         displayPreviewColumn();
     }
     ImGui::EndTable();
 }
 
+/// To reduce window height if we have horizontal scroll
 static float2 contentSizeWithoutScrollbar() {
     float2 windowSize = ImGui::GetContentRegionAvail();
     auto* window = ImGui::GetCurrentWindowRead();
@@ -782,31 +802,34 @@ static float2 contentSizeWithoutScrollbar() {
     return windowSize;
 }
 
-void Impl::displayColumn(ScannedDirectory& directory) {
-    if (&directoryLine.front() == &directory) {
-        ImGui::SetCursorPosX(ImGui::GetStyle().WindowPadding.x);
-    }
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+static bool beginColumnChild(char const* ID, int flags = 0) {
     auto clipRect = ImGui::GetCurrentWindowRead()->ClipRect;
-    ImGui::BeginChild(directory.entry()->path().c_str(),
-                      contentSizeWithoutScrollbar());
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+    bool open = ImGui::BeginChild(ID, contentSizeWithoutScrollbar(), flags);
+    ImGui::PopStyleVar();
+    ImGui::PushClipRect(clipRect.Min, clipRect.Max, false);
+    return open;
+}
+static void endColumnChild() {
+    ImGui::PopClipRect();
+    ImGui::EndChild();
+}
+
+void Impl::displayColumn(ScannedDirectory& directory) {
+    beginColumnChild(directory.entry()->path().c_str());
     if (viewData.focused && &directoryLine.current() == &directory &&
         !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
     {
         ImGui::FocusWindow(ImGui::GetCurrentWindowRead());
     }
-    ImGui::PopStyleVar();
-    ImGui::PushClipRect(clipRect.Min, clipRect.Max, false);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() +
                          ImGui::GetStyle().WindowPadding.y);
     for (auto* entry: directory.entries()) {
         displayColumnViewItem(directory, entry);
     }
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() +
-                         ImGui::GetStyle().WindowPadding.y);
+    ImGui::Dummy({ 0, ImGui::GetStyle().WindowPadding.y });
     displayBackground(directory);
-    ImGui::PopClipRect();
-    ImGui::EndChild();
+    endColumnChild();
 }
 
 void Impl::displayColumnViewItem(ScannedDirectory& directory,
@@ -814,10 +837,11 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
     auto& style = ImGui::GetStyle();
     auto* window = ImGui::GetCurrentWindow();
     float itemHeight = ImGui::GetFontSize() + 2 * style.FramePadding.y;
-    float itemWidth = ImGui::GetWindowWidth() - style.ScrollbarSize;
+    float itemWidth = ImGui::GetWindowWidth() - 2 * style.WindowPadding.x;
     float2 itemSize = float2(itemWidth, itemHeight);
     float2 framePadding = style.FramePadding;
-    float2 cursorPos = window->DC.CursorPos;
+    float2 cursorPos =
+        (float2)window->DC.CursorPos + float2(style.WindowPadding.x, 0);
     auto itemBB = Rect::from_size(cursorPos, itemSize);
     auto iconBB = Rect::from_size(cursorPos + framePadding + float2(3, 0),
                                   float2(itemHeight) - 2 * framePadding);
@@ -857,17 +881,15 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
 }
 
 void Impl::displayPreviewColumn() {
-    ImGui::BeginChild("preview-column", contentSizeWithoutScrollbar());
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,
+                        { ImGui::GetStyle().WindowPadding.x, 0 });
+    beginColumnChild("###PreviewColumn",
+                     ImGuiChildFlags_AlwaysUseWindowPadding);
+    ImGui::PopStyleVar();
     auto& dir = directoryLine.current();
-    if (dir.selection().empty()) {
-        displayEmptyWithError("No entry selected");
-    }
-    else if (dir.selection().size() == 1) {
+    if (dir.selection().size() == 1) {
         auto* entry = *dir.selection().begin();
-        if (entry->isDirectory()) {
-            displayEmptyWithError("Folder preview should not show up");
-        }
-        else if (!entry->displayPreview()) {
+        if (!entry->isDirectory() && !entry->displayPreview()) {
             displayEmptyWithReason("No Preview");
         }
     }
@@ -875,7 +897,7 @@ void Impl::displayPreviewColumn() {
         displayEmptyWithReason(
             utl::strcat(dir.selection().size(), " Objects Selected"));
     }
-    ImGui::EndChild();
+    endColumnChild();
 }
 
 static void drawEntryFrame(Rect BB, ImU32 color, ImDrawFlags drawFlags) {
@@ -1127,7 +1149,13 @@ void Impl::startRenaming(DirectoryEntry* entry) {
     viewData.startRenaming = true;
 }
 
-void Impl::entryContextMenu(ScannedDirectory const& directory,
+#ifdef __APPLE__
+#define FILE_EXPLORER_NAME "Finder"
+#else
+#define FILE_EXPLORER_NAME "Explorer"
+#endif
+
+void Impl::entryContextMenu(ScannedDirectory const& dir,
                             DirectoryEntry* entry) {
     std::string popupID = utl::strcat("EntryPopup-", entry->path());
     ImGui::OpenPopupOnItemClick(popupID.c_str());
@@ -1135,20 +1163,27 @@ void Impl::entryContextMenu(ScannedDirectory const& directory,
         if (!entry->isDirectory() && ImGui::MenuItem("Open")) {
             activateSelectedEntries();
         }
-        if (directory.selection().size() == 1 && ImGui::MenuItem("Rename")) {
+        if (ImGui::MenuItem("Reveal in " FILE_EXPLORER_NAME)) {
+            showFileInFileExplorer((*dir.selection().begin())->path());
+        }
+        if (dir.selection().size() == 1 && ImGui::MenuItem("Rename")) {
             startRenaming(entry);
         }
         if (ImGui::MenuItem("Delete")) {
-            for (auto* s: directory.selection()) {
-                s->erase();
-            }
             dispatch(DispatchToken::NextFrame,
-                     [this] { directoryLine.rescan(); });
+                     [this, &dir] { deleteSelectedEntries(dir); });
         }
         ImGui::Separator();
         entry->contextMenu();
         ImGui::EndPopup();
     }
+}
+
+void Impl::deleteSelectedEntries(ScannedDirectory const& dir) {
+    for (auto* s: dir.selection()) {
+        s->erase();
+    }
+    directoryLine.rescan();
 }
 
 static void writeUserDataSize(auto out, uint32_t size) {
@@ -1428,12 +1463,24 @@ void Impl::moveSelection(int offset, SelectionMode mode) {
     }
     auto& dir = directoryLine.current();
     BL_ASSERT(mode != SelectionMode::Add);
-    auto* navEntry = dir.navEntry();
+    auto* navEntry = [&]() -> DirectoryEntry* {
+        if (auto* n = dir.navEntry()) {
+            return n;
+        }
+        BL_ASSERT(dir.selection().empty());
+        if (dir.empty()) {
+            return nullptr;
+        }
+        return offset > 0 ? dir.front() : dir.back();
+    }();
     if (!navEntry) {
         return;
     }
     auto& s = dir.selection();
-    BL_ASSERT(s.contains(navEntry));
+    if (!s.contains(navEntry)) {
+        dir.amendSelection(navEntry, mode);
+        return;
+    }
     auto indexValid = [size = (int)dir.entries().size()](int i) {
         return i >= 0 && i < size;
     };

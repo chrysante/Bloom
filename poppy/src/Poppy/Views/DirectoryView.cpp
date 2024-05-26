@@ -253,10 +253,10 @@ public:
 
     SelectionManager const& selection() const { return _selection; }
 
-    void clearSelection() {
+    void clearSelection(bool setModified = true) {
         _selection.clear();
         navStack().clear();
-        _selectionModified = true;
+        _selectionModified = setModified;
     }
 
     bool amendSelection(DirectoryEntry* entry, SelectionMode mode) {
@@ -391,6 +391,7 @@ struct DirectoryLine {
             return false;
         }
         BL_ASSERT(activeIndex > 0);
+        current().clearSelection(false);
         --activeIndex;
         return true;
     }
@@ -659,6 +660,7 @@ void Impl::monitorSelectionChange() {
         dispatch(DispatchToken::NextFrame, [=, this] {
             makeDirectoryCurrent(toOpen);
             directoryLine.setCurrentIndex(index);
+            viewData.didNavigate = true;
         });
         directory._selectionModified = false;
         break;
@@ -821,20 +823,24 @@ static void endColumnChild() {
     ImGui::EndChild();
 }
 
-void Impl::displayColumn(ScannedDirectory& directory) {
-    beginColumnChild(directory.entry()->path().c_str());
-    if (viewData.focused && &directoryLine.current() == &directory &&
+void Impl::displayColumn(ScannedDirectory& dir) {
+    beginColumnChild(dir.entry()->path().c_str());
+    bool isCurrent = &directoryLine.current() == &dir;
+    if (viewData.focused && isCurrent &&
         !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
     {
         ImGui::FocusWindow(ImGui::GetCurrentWindowRead());
     }
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() +
                          ImGui::GetStyle().WindowPadding.y);
-    for (auto [index, entry]: directory.entries() | enumerate) {
-        displayColumnViewItem(directory, entry, index);
+    for (auto [index, entry]: dir.entries() | enumerate) {
+        displayColumnViewItem(dir, entry, index);
+        if (viewData.didNavigate && isCurrent && dir.navEntry() == entry) {
+            ImGui::SetScrollHereY();
+        }
     }
     ImGui::Dummy({ 0, ImGui::GetStyle().WindowPadding.y });
-    displayBackground(directory);
+    displayBackground(dir);
     endColumnChild();
 }
 

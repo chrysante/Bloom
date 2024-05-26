@@ -17,11 +17,6 @@ namespace poppy {
 
 class Toolbar;
 
-class DirViewDelegate {
-public:
-    virtual ~DirViewDelegate() = default;
-};
-
 ///
 class DirectoryEntry {
 public:

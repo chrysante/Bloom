@@ -618,6 +618,36 @@ void AssetManager::renameAsset(AssetHandle handle, std::string name) {
     }
 }
 
+void AssetManager::relocateAsset(AssetHandle handle,
+                                 std::filesystem::path newLocation) {
+    auto* entry = impl->registry.find(handle.ID());
+    if (!entry) {
+        Logger::Warn("Failed to rename asset, does not exist: ", handle);
+        return;
+    }
+    BL_ASSERT(newLocation.filename().stem() == entry->name);
+    std::filesystem::rename(entry->diskLocation, newLocation);
+    entry->diskLocation = newLocation;
+    impl->writeRegistryToDisk();
+}
+
+void AssetManager::relocateFolder(std::filesystem::path oldLocation,
+                                  std::filesystem::path newLocation) {
+    BL_ASSERT(impl->isAbsoluteInProjDir(oldLocation));
+    BL_ASSERT(impl->isAbsoluteInProjDir(newLocation));
+    std::filesystem::rename(oldLocation, newLocation);
+    for (auto& entry: impl->registry) {
+        auto end = std::mismatch(oldLocation.begin(), oldLocation.end(),
+                                 entry.diskLocation.begin())
+                       .first;
+        if (end == oldLocation.end()) {
+            entry.diskLocation =
+                newLocation /
+                entry.diskLocation.lexically_relative(oldLocation);
+        }
+    }
+}
+
 void AssetManager::deleteAsset(AssetHandle handle) {
     if (!impl->registry.erase(handle.ID())) {
         Logger::Warn("Failed to delete asset, does not exist: ", handle);

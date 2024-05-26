@@ -198,7 +198,7 @@ public:
     }
 
 private:
-    friend class poppy::DirectoryView; // For now
+    friend struct poppy::DirectoryView::Impl; // For now
     DirectoryEntry* _entry;
     std::vector<std::unique_ptr<DirectoryEntry>> _entries;
     SelectionManager _selection;
@@ -215,13 +215,8 @@ struct DirectoryLine {
         _root = std::move(root);
     }
 
-    bool makeCurrent(std::filesystem::path path) {
-        if (!std::filesystem::is_directory(path)) {
-            return false;
-        }
-        if (!path.is_absolute()) {
-            return false;
-        }
+    void rebuildToDirectory(std::filesystem::path path) {
+        BL_ASSERT(std::filesystem::is_directory(path) && path.is_absolute());
         std::vector<std::filesystem::path> newLine;
         for (auto p = path;; p = p.parent_path()) {
             if (auto itr =
@@ -243,22 +238,46 @@ struct DirectoryLine {
             line.back().rebuild(entry, sortCondition);
         }
         activeIndex = line.size() - 1;
-        return true;
+    }
+
+    bool makeCurrent(std::filesystem::path path) {
+        BL_ASSERT(std::filesystem::is_directory(path) && path.is_absolute());
+        bool modified = false;
+        if (path != current().entry()->path()) {
+            rebuildToDirectory(path);
+            modified = true;
+        }
+        auto elem = current().selection().single();
+        if (!elem) {
+            return modified;
+        }
+        if ((*elem)->isDirectory() && activeIndex == line.size() - 1) {
+            line.emplace_back();
+            line.back().rebuild(*elem, sortCondition);
+        }
+        if (!(*elem)->isDirectory()) {
+            line.erase(line.begin() + activeIndex + 1, line.end());
+        }
+        return modified;
     }
 
     void rescan() {
         DirectoryEntry* parent = root().entry();
         for (auto itr = line.begin();; ++itr) {
+            auto next = std::next(itr);
+            auto nextPath = next != line.end() ? next->entry()->path() :
+                                                 std::filesystem::path{};
             itr->rebuild(parent, sortCondition);
-            if (std::next(itr) == line.end()) {
+            if (next == line.end()) {
                 break;
             }
-            parent = itr->find(std::next(itr)->entry()->path());
+            parent = itr->find(nextPath);
             if (parent) {
                 continue;
             }
-            line.erase(std::next(itr), line.end());
+            line.erase(next, line.end());
             activeIndex = std::min(line.size() - 1, activeIndex);
+            break;
         }
     }
 
@@ -274,7 +293,6 @@ struct DirectoryLine {
             Logger::Error("Cannot go up, already in root directory");
             return false;
         }
-        line.pop_back();
         BL_ASSERT(activeIndex > 0);
         --activeIndex;
         return true;
@@ -388,6 +406,7 @@ struct DirectoryView::Impl: Emitter {
     void assignCommands(CommandPalette& commandPalette);
     Toolbar makeToolbar();
 
+    void monitorSelectionChange();
     void displayBackground(ScannedDirectory& directory);
     void displayColumns();
     void displayColumn(ScannedDirectory& directory);
@@ -406,6 +425,8 @@ struct DirectoryView::Impl: Emitter {
         ScannedDirectory const& directory,
         utl::function_view<void(DirectoryEntry const&, float2)> drawFn);
     void itemDragTarget(DirectoryEntry const& entry);
+    void relocateItem(DirectoryEntry const& dest,
+                      std::filesystem::path const& item);
     void beginDragSelection(ScannedDirectory& directory);
     void updateDragSelection(ScannedDirectory& directory);
 
@@ -501,6 +522,28 @@ void Impl::assignCommands(CommandPalette& commandPalette) {
 
 Toolbar DirectoryView::makeToolbar() { return impl->makeToolbar(); }
 
+void Impl::monitorSelectionChange() {
+    for (auto [index, directory]: directoryLine | enumerate) {
+        if (!directory.selectionModified()) {
+            continue;
+        }
+        viewData.renamingEntry = nullptr;
+        auto toOpen = [&] {
+            auto sel = directory.selection().single();
+            if (sel && (*sel)->isDirectory()) {
+                return (*sel)->path();
+            }
+            return directory.entry()->path();
+        }();
+        dispatch(DispatchToken::NextFrame, [=, this] {
+            makeDirectoryCurrent(toOpen);
+            directoryLine.setCurrentIndex(index);
+        });
+        directory._selectionModified = false;
+        break;
+    }
+}
+
 void DirectoryView::display() {
     impl->viewData.updateEarly();
     switch (impl->layout) {
@@ -511,26 +554,7 @@ void DirectoryView::display() {
         BL_UNIMPLEMENTED();
         break;
     }
-    bool dispatched = false;
-    for (auto [index, directory]: impl->directoryLine | enumerate) {
-        if (!dispatched && directory.selectionModified()) {
-            impl->viewData.renamingEntry = nullptr;
-            auto& sel = directory.selection();
-            auto toOpen = [&] {
-                if (sel.size() == 1 && (*sel.begin())->isDirectory()) {
-                    return (*sel.begin())->path();
-                }
-                return directory.entry()->path();
-            }();
-            impl->dispatch(DispatchToken::NextFrame, [=, impl = impl.get()] {
-                impl->makeDirectoryCurrent(toOpen);
-                impl->directoryLine.setCurrentIndex(index);
-            });
-            dispatched = true;
-        }
-        directory._selectionModified = false;
-    }
-
+    impl->monitorSelectionChange();
     impl->viewData.updateLate();
     if (impl->showDebugger) {
         impl->displayDebugger();
@@ -722,7 +746,11 @@ void Impl::displayPreviewColumn() {
         displayEmptyWithError("No entry selected");
     }
     else if (dir.selection().size() == 1) {
-        if (!(*dir.selection().begin())->displayPreview()) {
+        auto* entry = *dir.selection().begin();
+        if (entry->isDirectory()) {
+            displayEmptyWithError("Folder preview should not show up");
+        }
+        else if (!entry->displayPreview()) {
             displayEmptyWithReason("No Preview");
         }
     }
@@ -1092,7 +1120,7 @@ void Impl::itemDragTarget(DirectoryEntry const& entry) {
     }
     DragDropDelivery delivery;
     if (auto* payload = ImGui::GetDragDropPayload();
-        payload && payload->DataType == delegate->imguiDragDropType())
+        payload && payload->IsDataType(delegate->imguiDragDropType()))
     {
         delivery = unpackDragDropPayload((char const*)payload->Data,
                                          payload->DataSize);
@@ -1119,18 +1147,27 @@ void Impl::itemDragTarget(DirectoryEntry const& entry) {
         ImGui::EndDragDropTarget();
         return;
     }
-    for (auto& [path, userData]: delivery) {
-        if (!path.has_parent_path() || path.parent_path() == entry.path()) {
-            continue;
+    dispatch(DispatchToken::NextFrame, [=, &entry, this] {
+        bool movedAny = false;
+        for (auto& [path, userData]: delivery) {
+            if (!path.has_parent_path() || path.parent_path() == entry.path()) {
+                continue;
+            }
+            relocateItem(entry, path);
+            movedAny = true;
         }
-        dispatch(DispatchToken::NextFrame, [=, this] {
-            BL_UNIMPLEMENTED();
-            //            if (moveElement(path, entry.path())) {
-            //                directoryLine.rescan();
-            //            }
-        });
-    }
+        if (movedAny) {
+            directoryLine.rescan();
+        }
+    });
     ImGui::EndDragDropTarget();
+}
+
+void Impl::relocateItem(DirectoryEntry const& dest,
+                        std::filesystem::path const& item) {
+    BL_ASSERT(dest.isDirectory());
+    auto entry = delegate->makeEntry(item);
+    entry->relocate(dest.path() / item.filename());
 }
 
 void Impl::beginDragSelection(ScannedDirectory& directory) {
@@ -1226,9 +1263,9 @@ bool Impl::canGoForward() const { return history.canUnpop(); }
 
 void Impl::makeDirectoryCurrent(std::filesystem::path const& path,
                                 bool pushHistory) {
-    if (directoryLine.current().entry()->path() == path) {
-        return;
-    }
+    //    if (directoryLine.current().entry()->path() == path) {
+    //        return;
+    //    }
     if (directoryLine.makeCurrent(path)) {
         if (pushHistory) {
             history.push(path);

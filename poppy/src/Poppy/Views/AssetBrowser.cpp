@@ -69,7 +69,7 @@ struct AssetBrowser: View {
     TextureViewer textureViewer;
 };
 
-class CBDirEntry: public DirectoryEntry {
+class CBDirEntry final: public DirectoryEntry {
 public:
     static std::unique_ptr<DirectoryEntry> Make(
         AssetBrowser& This, AssetRegistryEntry const* regEntry,
@@ -85,7 +85,10 @@ public:
 
     explicit CBDirEntry(AssetBrowser& This, AssetRegistryEntry const* regEntry,
                         std::filesystem::path path):
-        This(This), regEntry(regEntry), _path(std::move(path)) {}
+        This(This),
+        regEntry(regEntry),
+        _path(std::move(path)),
+        _displayName(regEntry ? std::string{} : _path.filename().string()) {}
 
     bool isDirectory() const override { return !regEntry; }
 
@@ -93,17 +96,28 @@ public:
 
     void rename(std::string newName) override {
         if (regEntry) {
+            BL_ASSERT(!std::filesystem::is_directory(path()));
             This.assetManager->renameAsset(regEntry->handle, newName);
+        }
+        else {
+            BL_ASSERT(std::filesystem::is_directory(path()));
+            This.assetManager->relocateFolder(path(),
+                                              path().parent_path() / newName);
         }
     }
 
-    void relocate(std::filesystem::path newLocation) override {}
-
-    std::string_view displayName() const override {
-        return regEntry ? std::string_view(regEntry->name) : "FOLDER NAME";
+    void relocate(std::filesystem::path newLocation) override {
+        if (regEntry) {
+            This.assetManager->relocateAsset(regEntry->handle, newLocation);
+        }
+        else {
+            This.assetManager->relocateFolder(path(), newLocation);
+        }
     }
 
-    std::string extension() const override { return {}; }
+    std::string_view displayName() const override {
+        return regEntry ? std::string_view(regEntry->name) : _displayName;
+    }
 
     std::filesystem::path path() const override { return _path; }
 
@@ -114,10 +128,22 @@ public:
                 result.push_back(Make(This, &entry, entry.diskLocation));
             }
         }
+        std::error_code err;
+        auto itr = std::filesystem::directory_iterator(path(), err);
+        if (err) {
+            Logger::Error("Filesystem error: ", err.message());
+        }
+        for (auto& entry: itr) {
+            if (entry.is_directory()) {
+                result.push_back(Make(This, nullptr, entry.path()));
+            }
+        }
         return result;
     }
 
-    void createFolder(std::string name) override {}
+    void createFolder(std::string name) override {
+        std::filesystem::create_directory(_path / name);
+    }
 
     void open() const override {
         BL_ASSERT(regEntry);
@@ -149,6 +175,7 @@ public:
     AssetBrowser& This;
     AssetRegistryEntry const* regEntry;
     std::filesystem::path _path;
+    std::string _displayName;
 };
 
 class DirViewDelegate: public DirectoryViewDelegate {

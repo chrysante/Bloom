@@ -197,6 +197,13 @@ public:
     /// \Returns the last selected element
     std::optional<T> last() const { return _last; }
 
+    /// \Returns the single selected element or `std::nullopt` or none or
+    /// multiple elements are selected
+    std::optional<T> single() const {
+        return _elems.size() == 1 ? std::optional(*_elems.begin()) :
+                                    std::nullopt;
+    }
+
 private:
     template <typename... Args>
     bool amendImpl(SelectionMode mode, Args&&... args) {

@@ -179,6 +179,11 @@ public:
     /// Updates the registry and asset filename
     void relocateAsset(AssetHandle handle, std::filesystem::path newLocation);
 
+    /// Renames \p oldLocation to \p newLocation and updates the registry for
+    /// all assets in \p oldLocation
+    void relocateFolder(std::filesystem::path oldLocation,
+                        std::filesystem::path newLocation);
+
     /// Deletes asset from memory and from working directory
     ///
     /// \Param handle Handle to the asset to be deleted

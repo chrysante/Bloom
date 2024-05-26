@@ -155,6 +155,26 @@ struct ProjectionCompare: private Comp {
     }
 };
 
+/// # Function objects
+
+template <typename T>
+struct ToAddressFn {
+    constexpr auto operator()(auto&& p) const {
+        if constexpr (std::is_same_v<T, void>) {
+            return std::to_address((decltype(p)&&)p);
+        }
+        else {
+            return [&]() -> T* { return std::to_address((decltype(p)&&)p); }();
+        }
+    }
+};
+
+/// Function object wrapper around `std::to_address`
+template <typename T = void>
+inline constexpr ToAddressFn<T> ToAddress{};
+
+/// # Range Utils
+
 } // namespace bloom
 
 #endif // BLOOM_CORE_UTILS_H

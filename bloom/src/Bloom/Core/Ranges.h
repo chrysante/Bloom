@@ -9,16 +9,6 @@
 
 namespace bloom {
 
-template <typename T = void>
-inline constexpr auto ToAddress = ranges::views::transform([](auto&& p) {
-    if constexpr (std::is_same_v<T, void>) {
-        return std::to_address((decltype(p)&&)p);
-    }
-    else {
-        return [&]() -> T* { return std::to_address((decltype(p)&&)p); }();
-    }
-});
-
 template <size_t N>
 struct ToSmallVectorImpl {};
 

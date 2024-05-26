@@ -10,6 +10,7 @@
 #include "Bloom/Core/Autorelease.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/Core/Utils.h"
 
 using namespace bloom;
 using namespace vml::short_types;
@@ -53,7 +54,7 @@ Application::~Application() {
 }
 
 utl::small_vector<Window*> Application::getWindows() {
-    return mWindows | ToAddress<> | ToSmallVector<>;
+    return mWindows | ranges::views::transform(ToAddress<>) | ToSmallVector<>;
 }
 
 Emitter Application::makeEmitter() { return messageSystem->makeEmitter(); }

@@ -9,6 +9,7 @@
 #include <utl/uuid.hpp>
 
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/Core/Utils.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/ImGuiHelpers.h"
@@ -289,7 +290,7 @@ void Toolbar::displayBlock(Block const& block) {
 }
 
 void Toolbar::cook() {
-    activeItems = allItems | ToAddress<> | filter([](auto* item) {
+    activeItems = allItems | transform(ToAddress<>) | filter([](auto* item) {
         return /* !item->isHidden() */ true;
     }) | ranges::to<std::vector>;
     blocks.clear();

@@ -4,6 +4,7 @@
 #include <utl/overload.hpp>
 
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/Core/Utils.h"
 #include "Bloom/GPU/CommandBuffer.h"
 
 using namespace bloom;
@@ -159,7 +160,7 @@ static bool isSinkPass(Pass const* pass) {
 bool RenderGraph::compile() {
     /// We assert this for now until we fiugre out what to do in this case
     BL_ASSERT(!isCompiled());
-    auto allPasses = passes | ToAddress<> | ToSmallVector<>;
+    auto allPasses = passes | transform(ToAddress<>) | ToSmallVector<>;
     if (!validate(allPasses)) {
         return false;
     }

@@ -5,6 +5,7 @@
 
 #include "Bloom/Core/Dyncast.h"
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/Core/Utils.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 
@@ -16,10 +17,14 @@ public:
     Resource* allocate(InterfaceUnion const& interface);
 
     /// \Returns a view over the allocated resources
-    auto resources() { return _resources | ToAddress<>; }
+    auto resources() {
+        return _resources | ranges::views::transform(ToAddress<>);
+    }
 
     /// \overload
-    auto resources() const { return _resources | ToAddress<Resource const>; }
+    auto resources() const {
+        return _resources | ranges::views::transform(ToAddress<Resource const>);
+    }
 
     /// Destroys all resources
     void clear() { _resources.clear(); }

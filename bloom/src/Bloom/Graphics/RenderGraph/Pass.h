@@ -10,6 +10,7 @@
 
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/Core/Utils.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Interface.h"
@@ -58,10 +59,12 @@ public:
     }
 
     /// \Returns a view over the resource sinks of this pass
-    auto sinks() { return _sinks | ToAddress<>; }
+    auto sinks() { return _sinks | ranges::views::transform(ToAddress<>); }
 
     /// \overload
-    auto sinks() const { return _sinks | ToAddress<PassSink const>; }
+    auto sinks() const {
+        return _sinks | ranges::views::transform(ToAddress<PassSink const>);
+    }
 
     /// \Returns a view over the sinks that are connected to a resource
     auto activeSinks() {
@@ -88,10 +91,12 @@ public:
     }
 
     /// \Returns a view over the resource sources of this pass
-    auto sources() { return _sources | ToAddress<>; }
+    auto sources() { return _sources | ranges::views::transform(ToAddress<>); }
 
     /// \overload
-    auto sources() const { return _sources | ToAddress<PassSource const>; }
+    auto sources() const {
+        return _sources | ranges::views::transform(ToAddress<PassSource const>);
+    }
 
 protected:
     explicit Pass(std::string name, HardwareDevice* device = nullptr):

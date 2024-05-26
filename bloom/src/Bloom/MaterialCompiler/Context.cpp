@@ -5,6 +5,7 @@
 #include <utl/vector.hpp>
 
 #include "Bloom/Core/Ranges.h"
+#include "Bloom/Core/Utils.h"
 #include "Bloom/MaterialCompiler/Types.h"
 #include "Bloom/MaterialCompiler/Values.h"
 
@@ -144,7 +145,8 @@ RasterizerInput* Context::rasterizerInput(RasterizerInputKind kind) {
 }
 
 std::vector<Type const*> Context::types() const {
-    return impl->typeOwners | ToAddress<Type const> | ranges::to<std::vector>;
+    return impl->typeOwners | transform(ToAddress<Type const>) |
+           ranges::to<std::vector>;
 }
 
 std::vector<TextureConstant const*> Context::textureConstants() const {

@@ -24,8 +24,10 @@ SelectionMode getSelectionMode();
 
 /// Generic selection manager that supports replace-, add-, toggle- and multiple
 /// seletion
-template <typename T, typename Hash = utl::hash<T>,
-          typename KeyEq = std::equal_to<>>
+template <typename T,
+          typename OptT =
+              std::conditional_t<std::is_pointer_v<T>, T, std::optional<T>>,
+          typename Hash = utl::hash<T>, typename KeyEq = std::equal_to<>>
 class BasicSelectionManager {
 public:
     using SetType = utl::hashset<T, Hash, KeyEq>;
@@ -94,7 +96,7 @@ public:
         auto itr = _elems.find(elem);
         if (itr != _elems.end()) {
             _elems.erase(itr);
-            _last = std::nullopt;
+            _last = OptT{};
             return false;
         }
         else {
@@ -150,7 +152,7 @@ public:
     /// Unselectes all elements
     void clear() {
         _elems.clear();
-        _last = std::nullopt;
+        _last = OptT{};
     }
 
     /// \Returns a view over all selected elements
@@ -195,13 +197,12 @@ public:
     }
 
     /// \Returns the last selected element
-    std::optional<T> last() const { return _last; }
+    OptT last() const { return _last; }
 
-    /// \Returns the single selected element or `std::nullopt` or none or
+    /// \Returns the single selected element or `OptT{}` or none or
     /// multiple elements are selected
-    std::optional<T> single() const {
-        return _elems.size() == 1 ? std::optional(*_elems.begin()) :
-                                    std::nullopt;
+    OptT single() const {
+        return _elems.size() == 1 ? OptT(*_elems.begin()) : OptT{};
     }
 
 private:
@@ -230,7 +231,7 @@ private:
 
     SetType _elems;
     SetType _candidates;
-    std::optional<T> _last;
+    OptT _last = {};
     std::optional<SelectionMode> _candidateMode;
 };
 

@@ -500,11 +500,13 @@ void ViewData::updateLate() {
     {
         static_cast<ActiveViewData&>(*this) = {};
     }
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape) ||
-        !ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+    if ((ImGui::IsKeyPressed(ImGuiKey_Escape) ||
+         !ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows)) &&
+        !startRenaming)
     {
         renamingEntry = nullptr;
     }
+    startRenaming = false;
     didNavigate = false;
 }
 
@@ -645,7 +647,9 @@ void Impl::monitorSelectionChange() {
         if (!directory.selectionModified()) {
             continue;
         }
-        viewData.renamingEntry = nullptr;
+        if (!viewData.startRenaming) {
+            viewData.renamingEntry = nullptr;
+        }
         auto toOpen = [&] {
             auto sel = directory.selection().single();
             if (sel && sel->isDirectory()) {
@@ -1122,13 +1126,19 @@ void Impl::displayEntryRenameField(DirectoryEntry const& entry, Rect labelBB) {
                      RenameBuffer.size());
     }
     float2 stashedCursor = ImGui::GetCursorPos();
-    ImGui::SetCursorScreenPos(labelBB.lower_bound() -
-                              (float2)ImGui::GetStyle().FramePadding);
+    float2 padding = { 2, 0 };
+    float rounding = 2;
+    ImGui::SetCursorScreenPos(labelBB.lower_bound() - padding);
     ImGui::SetNextItemWidth(labelBB.size().x);
+    auto& style = ImGui::GetStyle();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, padding);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, rounding);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, style.Colors[ImGuiCol_ChildBg]);
     ImGui::InputText("###Rename field", RenameBuffer.data(),
                      RenameBuffer.size(), ImGuiInputTextFlags_AutoSelectAll);
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(2);
     ImGui::SetCursorPos(stashedCursor);
-    viewData.startRenaming = false;
 }
 
 void Impl::toggleRenaming() {
@@ -1512,16 +1522,25 @@ void Impl::moveSelection(int offset, SelectionMode mode) {
 
 void Impl::createFolder() {
     auto& dir = directoryLine.current();
-    dir.entry()->createFolder("New Folder");
-    dispatch(DispatchToken::NextFrame, [&] { directoryLine.rescan(); });
-    //    auto entry = dir.find(name);
-    //    if (!entry) {
-    //        Logger::Error(
-    //            "Internal error occurred. Failed to locate newly created
-    //            folder");
-    //        return;
-    //    }
-    //    startRenaming(*entry);
+    auto baseName = "New Folder";
+    std::string name = baseName;
+    int counter = 2;
+    while (ranges::contains(dir.entries(), name, &DirectoryEntry::displayName))
+    {
+        name = utl::strcat(baseName, counter++);
+    }
+    dir.entry()->createFolder(name);
+    dispatch(DispatchToken::NextFrame, [this, &dir, name] {
+        directoryLine.rescan();
+        auto* entry = dir.find(dir.entry()->path() / name);
+        if (!entry) {
+            Logger::Error(
+                "Failed to start renaming. Newly created folder does not exist");
+            return;
+        }
+        startRenaming(entry);
+        dir.amendSelection(entry, SelectionMode::Replace);
+    });
 }
 
 static void debugItemImpl(std::string_view name, auto const&... args) {

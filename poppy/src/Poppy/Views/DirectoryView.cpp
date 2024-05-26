@@ -32,6 +32,18 @@ using namespace poppy;
 using namespace vml::short_types;
 using namespace ranges::views;
 
+DeleteConfirmResponse const DeleteConfirmResponse::MayDelete;
+
+DeleteConfirmResponse DeleteConfirmResponse::ConfirmNumItems(size_t numItems) {
+    return DeleteConfirmResponse(
+        false, utl::strcat("Are you sure you want to delete the seleted ",
+                           numItems, " item", numItems != 1 ? "s" : "", "?"));
+}
+
+DeleteConfirmResponse DeleteConfirmResponse::Confirm(std::string message) {
+    return DeleteConfirmResponse(false, std::move(message));
+}
+
 namespace {
 
 struct Style {
@@ -540,6 +552,7 @@ struct DirectoryView::Impl: Emitter {
                       std::filesystem::path const& item);
     void beginDragSelection(ScannedDirectory& directory);
     void updateDragSelection(ScannedDirectory& directory);
+    void displayDeleteValidationPopup();
 
     void activateEntry(DirectoryEntry& entry);
     void activateSelectedEntries();
@@ -576,6 +589,8 @@ struct DirectoryView::Impl: Emitter {
     FilesystemHistory history;
     ViewData viewData;
     EnumArray<CommandType, Command const*> commands{};
+    std::function<void()> deleteContinuation;
+    DeleteConfirmResponse deleteConfirmResponse;
     bool showDebugger = false;
 };
 
@@ -726,6 +741,7 @@ void Impl::display() {
         BL_UNIMPLEMENTED();
         break;
     }
+    displayDeleteValidationPopup();
     monitorSelectionChange();
     viewData.updateLate();
     ImGui::EndChild();
@@ -1199,6 +1215,9 @@ void Impl::entryContextMenu(ScannedDirectory& dir, DirectoryEntry* entry) {
 }
 
 void Impl::deleteSelectedEntries(ScannedDirectory& dir) {
+    if (dir.selection().empty()) {
+        return;
+    }
     auto selectedIndex = [&]() -> std::optional<size_t> {
         auto single = dir.selection().single();
         if (!single) {
@@ -1206,13 +1225,25 @@ void Impl::deleteSelectedEntries(ScannedDirectory& dir) {
         }
         return dir.getIndex(single);
     }();
-    for (auto* s: dir.selection()) {
-        s->erase();
+    auto action = [=, this, &dir] {
+        for (auto* s: dir.selection()) {
+            s->erase();
+        }
+        directoryLine.rescan();
+        if (selectedIndex) {
+            auto* entry = dir.entryAt(std::min(*selectedIndex, dir.size() - 1));
+            dir.amendSelection(entry, SelectionMode::Replace);
+        }
+    };
+    auto entries = dir.selection() | ToSmallVector<>;
+    deleteConfirmResponse = delegate->confirmDeletion(entries);
+    if (deleteConfirmResponse.mayDelete()) {
+        action();
     }
-    directoryLine.rescan();
-    if (selectedIndex) {
-        auto* entry = dir.entryAt(std::min(*selectedIndex, dir.size() - 1));
-        dir.amendSelection(entry, SelectionMode::Replace);
+    else {
+        deleteContinuation = [=, this] {
+            dispatch(DispatchToken::NextFrame, action);
+        };
     }
 }
 
@@ -1396,6 +1427,58 @@ void Impl::updateDragSelection(ScannedDirectory& dir) {
     auto* DL = window.DrawList;
     DL->AddRectFilled(min, max, ImGui::ColorConvertFloat4ToU32(rectColor));
     DL->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_Border));
+}
+
+void Impl::displayDeleteValidationPopup() {
+    static constexpr auto DeleteValidationPopupName = "DeleteValidationPopup";
+    if (!deleteConfirmResponse.mayDelete()) {
+        ImGui::OpenPopup(DeleteValidationPopupName);
+    }
+    ImGui::SetNextWindowSize({ 300, 0 });
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 15, 15 });
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 15, 15 });
+    utl::scope_guard guard = [&] { ImGui::PopStyleVar(2); };
+    if (!ImGui::BeginPopupModal(DeleteValidationPopupName, nullptr,
+                                ImGuiWindowFlags_NoTitleBar |
+                                    ImGuiWindowFlags_NoResize))
+    {
+        return;
+    }
+    float2 windowSize = ImGui::GetWindowSize();
+    auto& message = deleteConfirmResponse.message();
+    ImGui::PushFont(
+        FontManager::get(FontDesc::UIDefault().setWeight(FontWeight::Bold)));
+    ImGui::TextWrapped("%s", message.c_str());
+    ImGui::PopFont();
+    auto& style = ImGui::GetStyle();
+    float2 padding = style.FramePadding;
+    float2 spacing = style.ItemSpacing;
+    float confirmWidth =
+        ImGui::CalcTextSize("Confirm Delete").x + 2 * padding.x;
+    float cancelWidth = ImGui::CalcTextSize("Cancel").x + 2 * padding.x;
+    float controlWidth = confirmWidth + cancelWidth + spacing.x;
+    float controlPos = (windowSize.x - controlWidth) / 2;
+    ImGui::SetCursorPosX(controlPos);
+    bool done = false;
+    if (ImGui::Button("Confirm Delete")) {
+        if (deleteContinuation) {
+            deleteContinuation();
+        }
+        done = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::IsWindowAppearing()) {
+        ImGui::SetKeyboardFocusHere();
+    }
+    if (ImGui::Button("Cancel")) {
+        done = true;
+    }
+    if (done) {
+        deleteContinuation = {};
+        deleteConfirmResponse = DeleteConfirmResponse::MayDelete;
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
 }
 
 void Impl::activateEntry(DirectoryEntry& entry) {

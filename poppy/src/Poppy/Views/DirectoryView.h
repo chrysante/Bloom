@@ -51,6 +51,27 @@ public:
     virtual utl::small_vector<char> imguiDragDropUserData() const { return {}; }
 };
 
+struct DeleteConfirmResponse {
+    static DeleteConfirmResponse const MayDelete;
+
+    static DeleteConfirmResponse ConfirmNumItems(size_t numItems);
+
+    static DeleteConfirmResponse Confirm(std::string message);
+
+    DeleteConfirmResponse() = default;
+
+    std::string const& message() const { return _message; }
+
+    bool mayDelete() const { return _mayDelete; }
+
+private:
+    explicit DeleteConfirmResponse(bool mayDelete, std::string message):
+        _mayDelete(mayDelete), _message(std::move(message)) {}
+
+    bool _mayDelete = true;
+    std::string _message;
+};
+
 ///
 class DirectoryViewDelegate {
 public:
@@ -60,6 +81,11 @@ public:
         std::filesystem::path path) = 0;
 
     virtual char const* imguiDragDropType() const { return "FILE_DRAG_DROP"; }
+
+    virtual DeleteConfirmResponse confirmDeletion(
+        [[maybe_unused]] std::span<DirectoryEntry const* const> entries) const {
+        return DeleteConfirmResponse::MayDelete;
+    }
 };
 
 struct DirectoryViewDragDropItem {

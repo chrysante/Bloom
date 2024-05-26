@@ -199,6 +199,33 @@ public:
 
     char const* imguiDragDropType() const override { return AssetDragDropType; }
 
+    DeleteConfirmResponse confirmDeletion(
+        std::span<DirectoryEntry const* const> entries) const override {
+        BL_ASSERT(!entries.empty());
+        if (entries.size() > 1) {
+            return DeleteConfirmResponse::ConfirmNumItems(entries.size());
+        }
+        auto* entry = dynamic_cast<CBDirEntry const*>(entries.front());
+        if (!entry->isDirectory()) {
+            return DeleteConfirmResponse::MayDelete;
+        }
+        auto& reg = This.assetManager->registry();
+        auto path = entry->path();
+        size_t numItems = 0;
+        for (auto& e: reg) {
+            auto pathEnd =
+                std::mismatch(path.begin(), path.end(), e.diskLocation.begin())
+                    .first;
+            if (pathEnd == path.end()) {
+                ++numItems;
+            }
+        }
+        if (numItems > 0) {
+            return DeleteConfirmResponse::ConfirmNumItems(entries.size());
+        }
+        return DeleteConfirmResponse::MayDelete;
+    }
+
     AssetBrowser& This;
 };
 
@@ -292,7 +319,8 @@ static bool isConcreteAsset(AssetType t) {
 }
 
 void AssetBrowser::newAssetPopup() {
-    if (!ImGui::BeginPopupModal("New Asset", NULL, ImGuiWindowFlags_NoTitleBar))
+    if (!ImGui::BeginPopupModal("New Asset", nullptr,
+                                ImGuiWindowFlags_NoTitleBar))
     {
         return;
     }

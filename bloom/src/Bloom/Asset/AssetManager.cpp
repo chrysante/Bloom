@@ -169,6 +169,12 @@ AssetRegistryEntry const* AssetRegistry::findByName(
     return itr != end() ? std::to_address(itr) : nullptr;
 }
 
+AssetRegistryEntry const* AssetRegistry::findByDiskLocation(
+    std::filesystem::path location) const {
+    auto itr = ranges::find(*this, location, &AssetRegistryEntry::diskLocation);
+    return itr != end() ? std::to_address(itr) : nullptr;
+}
+
 AssetRegistryEntry* AssetRegistry::insert(AssetRegistryEntry entry) {
     auto [itr, success] =
         elementMap.insert({ entry.handle.ID(), std::move(entry) });

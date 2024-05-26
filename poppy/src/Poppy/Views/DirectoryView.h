@@ -9,6 +9,9 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
+
+#include <utl/vector.hpp>
 
 namespace poppy {
 
@@ -19,70 +22,66 @@ public:
     virtual ~DirViewDelegate() = default;
 };
 
-/// Passed to directory view callbacks
-struct DirectoryEntry: std::filesystem::directory_entry {
-    explicit DirectoryEntry(std::filesystem::path const& path):
-        std::filesystem::directory_entry(path) {}
-    DirectoryEntry(std::filesystem::directory_entry const& entry,
-                   std::any userData):
-        std::filesystem::directory_entry(entry),
-        userData(std::move(userData)) {}
+///
+class DirectoryEntry {
+public:
+    virtual ~DirectoryEntry() = default;
 
-    std::any userData;
-};
+    virtual bool isDirectory() const = 0;
 
-/// Set of callbacks to control the behaviour of a `DirectoryView`
-struct DirectoryViewDelegate {
-    virtual ~DirectoryViewDelegate() = default;
+    virtual void erase() = 0;
 
-    /// Action performed when a file is double clicked
-    virtual void openFile(DirectoryEntry const&) {}
+    virtual void rename(std::string newName) = 0;
 
-    /// Callback to handle renaming of directory entries
-    virtual void renameEntry(DirectoryEntry const&, std::string /* newName */) {
-    }
+    virtual void relocate(std::filesystem::path newLocation) = 0;
 
-    /// Callback to handle deletion of directory entries
-    virtual void entryDeleted(DirectoryEntry const&) {}
+    virtual std::string_view displayName() const = 0;
 
-    /// Shall return a CSS icon name for the given file. This will change in the
-    /// future when we have proper thumbnails
-    virtual std::string selectIcon(DirectoryEntry const&) { return "doc"; }
+    virtual std::string extension() const { return path().extension(); }
 
-    /// Used to create user data that will be associated with every directory
-    /// entry and passed with it to the other callbacks
-    virtual std::any makeUserData(std::filesystem::directory_entry const&) {
-        return {};
-    }
+    virtual std::filesystem::path path() const = 0;
 
-    /// Use this callback to draw ImGui menu item into the popup menu for the
-    /// given file
-    virtual void entryContextMenu(DirectoryEntry const&) {}
+    virtual std::vector<std::unique_ptr<DirectoryEntry>> makeChildEntries() = 0;
 
-    /// Display a preview of the directory entry in the preview pane. Return
-    /// true if a preview is drawn
-    virtual bool displayPreview(DirectoryEntry const&) { return false; }
+    virtual void createFolder(std::string name) = 0;
 
-    ///
-    virtual std::string makeDragDropType() { return "FILE_DRAG_DROP"; }
+    virtual void open() const {}
 
-    ///
-    virtual std::vector<uint8_t> makeDragDropUserData(
-        std::span<DirectoryEntry const>) {
-        return {};
-    }
+    virtual std::string iconName() const { return "doc"; }
+
+    virtual void contextMenu() {}
+
+    virtual bool displayPreview() { return false; }
+
+    virtual utl::small_vector<char> imguiDragDropUserData() const { return {}; }
 };
 
 ///
-std::span<uint8_t const> peekFileDragDropUserData();
+class DirectoryViewDelegate {
+public:
+    virtual ~DirectoryViewDelegate() = default;
+
+    virtual std::unique_ptr<DirectoryEntry> makeEntry(
+        std::filesystem::path path) = 0;
+
+    virtual char const* imguiDragDropType() const { return "FILE_DRAG_DROP"; }
+};
+
+struct DirectoryViewDragDropItem {
+    std::filesystem::path path;
+    utl::small_vector<char> userData;
+};
+
+///
+std::vector<DirectoryViewDragDropItem> peekFileDragDropData();
 
 /// General purpose file directory viewer, meant to be used as a subview of a
 /// `View`-derived class
 class DirectoryView {
 public:
-    enum class Layout { Columns, Table, List, LAST = List };
+    enum class Layout { Columns, Table, List };
 
-    enum class SortCondition { Name, Extension, LAST = Extension };
+    enum class SortCondition { Name, Extension };
 
     /// List of commands that are added to the command palette by `init()`
     enum class CommandType {
@@ -105,8 +104,8 @@ public:
 
     void display();
 
-    /// Opens \p directory in this viewer
-    void openDirectory(std::filesystem::path directory);
+    /// Opens \p directory in this view
+    void openDirectory(std::filesystem::path path);
 
     /// \Returns the corresponding command.
     /// \Warning this must be called after `init()` to return nonnull values

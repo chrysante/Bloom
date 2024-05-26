@@ -38,60 +38,7 @@ struct AssetBrowserData {
     std::filesystem::path currentDir; // absolute path
 };
 
-static AssetHandle getHandle(DirectoryEntry const& entry) {
-    auto* handle = std::any_cast<AssetHandle>(&entry.userData);
-    return handle ? *handle : AssetHandle();
-}
-
 struct AssetBrowser: View {
-    struct DirViewDelegate: DirectoryViewDelegate {
-        AssetBrowser* This;
-
-        explicit DirViewDelegate(AssetBrowser* This): This(This) {}
-
-        void openFile(DirectoryEntry const& entry) override {
-            auto handle = getHandle(entry);
-            if (!handle) {
-                return;
-            }
-            openAsset(handle);
-        }
-        void renameEntry(DirectoryEntry const& entry,
-                         std::string newName) override {
-            auto handle = getHandle(entry);
-            /// Kinda hacky but the asset manager expects a name without
-            /// extension for renaming, so we just discard the extension here
-            auto name =
-                std::filesystem::path(newName).replace_extension().string();
-            This->assetManager->renameAsset(handle, name);
-        }
-        std::string selectIcon(DirectoryEntry const& entry) override {
-            auto handle = getHandle(entry);
-            return selectAssetIcon(handle.type());
-        }
-        std::any makeUserData(
-            std::filesystem::directory_entry const& entry) override {
-            return This->assetManager->getHandleFromFile(entry.path());
-        }
-        void entryContextMenu(DirectoryEntry const&) override {}
-        bool displayPreview(DirectoryEntry const& entry) override {
-            return This->displayPreview(entry);
-        }
-        std::string makeDragDropType() override {
-            return std::string(AssetDragDropType);
-        }
-        std::vector<uint8_t> makeDragDropUserData(
-            std::span<DirectoryEntry const> entries) override {
-            if (entries.size() == 1) {
-                auto handle = getHandle(entries.front());
-                std::vector<uint8_t> result(sizeof handle);
-                std::memcpy(result.data(), &handle, sizeof handle);
-                return result;
-            }
-            return {};
-        }
-    };
-
     AssetBrowser();
 
     void importFiles();
@@ -111,7 +58,7 @@ struct AssetBrowser: View {
     void openProject(std::filesystem::path const&);
     void openSubdirectory(std::filesystem::path const&);
     void refreshFilesystem();
-    bool displayPreview(DirectoryEntry const& entry);
+    bool displayPreview(AssetHandle handle);
 
     /// The applications asset manager
     bloom::AssetManager* assetManager = nullptr;
@@ -120,6 +67,102 @@ struct AssetBrowser: View {
     AssetBrowserData data;
     DirectoryView dirView;
     TextureViewer textureViewer;
+};
+
+class CBDirEntry: public DirectoryEntry {
+public:
+    static std::unique_ptr<DirectoryEntry> Make(
+        AssetBrowser& This, AssetRegistryEntry const* regEntry,
+        std::filesystem::path path) {
+        return std::make_unique<CBDirEntry>(This, regEntry, std::move(path));
+    }
+
+    static std::unique_ptr<DirectoryEntry> Make(AssetBrowser& This,
+                                                std::filesystem::path path) {
+        auto* entry = This.assetManager->registry().findByDiskLocation(path);
+        return Make(This, entry, std::move(path));
+    }
+
+    explicit CBDirEntry(AssetBrowser& This, AssetRegistryEntry const* regEntry,
+                        std::filesystem::path path):
+        This(This), regEntry(regEntry), _path(std::move(path)) {}
+
+    bool isDirectory() const override { return !regEntry; }
+
+    void erase() override {}
+
+    void rename(std::string newName) override {
+        if (regEntry) {
+            This.assetManager->renameAsset(regEntry->handle, newName);
+        }
+    }
+
+    void relocate(std::filesystem::path newLocation) override {}
+
+    std::string_view displayName() const override {
+        return regEntry ? std::string_view(regEntry->name) : "FOLDER NAME";
+    }
+
+    std::string extension() const override { return {}; }
+
+    std::filesystem::path path() const override { return _path; }
+
+    std::vector<std::unique_ptr<DirectoryEntry>> makeChildEntries() override {
+        std::vector<std::unique_ptr<DirectoryEntry>> result;
+        for (auto& entry: This.assetManager->registry()) {
+            if (entry.diskLocation.parent_path() == _path) {
+                result.push_back(Make(This, &entry, entry.diskLocation));
+            }
+        }
+        return result;
+    }
+
+    void createFolder(std::string name) override {}
+
+    void open() const override {
+        BL_ASSERT(regEntry);
+        openAsset(regEntry->handle);
+    }
+
+    std::string iconName() const override {
+        return isDirectory() ? "folder" :
+                               selectAssetIcon(regEntry->handle.type());
+    }
+
+    void contextMenu() override {}
+
+    bool displayPreview() override {
+        BL_ASSERT(!isDirectory());
+        return This.displayPreview(regEntry->handle);
+    }
+
+    utl::small_vector<char> imguiDragDropUserData() const override {
+        if (isDirectory()) {
+            return {};
+        }
+        auto handle = regEntry->handle;
+        utl::small_vector<char> result(sizeof handle);
+        std::memcpy(result.data(), &handle, sizeof handle);
+        return result;
+    }
+
+    AssetBrowser& This;
+    AssetRegistryEntry const* regEntry;
+    std::filesystem::path _path;
+};
+
+class DirViewDelegate: public DirectoryViewDelegate {
+public:
+    DirViewDelegate(AssetBrowser& This): This(This) {}
+
+    std::unique_ptr<DirectoryEntry> makeEntry(
+        std::filesystem::path path) override {
+        return CBDirEntry::Make(This, std::move(path));
+    }
+
+    char const* imguiDragDropType() const override { return AssetDragDropType; }
+
+    AssetBrowser& This;
 };
 
 } // namespace
@@ -142,7 +185,7 @@ void AssetBrowser::importFiles() {
 
 void AssetBrowser::init() {
     assetManager = &editor().coreSystems().assetManager();
-    dirView.init(std::make_unique<DirViewDelegate>(this),
+    dirView.init(std::make_unique<DirViewDelegate>(*this),
                  editor().makeEmitter(), commandPaletteWrite());
     if (!data.projectDir.empty()) {
         openProject(data.projectDir);
@@ -326,11 +369,7 @@ void AssetBrowser::refreshFilesystem() {
     dirView.openDirectory(data.currentDir);
 }
 
-bool AssetBrowser::displayPreview(DirectoryEntry const& entry) {
-    AssetHandle handle = getHandle(entry);
-    if (!handle) {
-        return false;
-    }
+bool AssetBrowser::displayPreview(AssetHandle handle) {
     if (handle.type() == AssetType::Texture2D) {
         if (!textureViewer.getTexture() ||
             textureViewer.getTexture()->handle() != handle)

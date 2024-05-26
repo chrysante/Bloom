@@ -59,12 +59,12 @@ std::optional<AssetHandle> poppy::acceptAssetDragDrop(
     {
         return std::nullopt;
     }
-    auto userData = peekFileDragDropUserData();
-    if (userData.size() != sizeof(AssetHandle)) {
+    auto data = peekFileDragDropData();
+    if (data.size() != 1) {
         return std::nullopt;
     }
     AssetHandle assetHandle;
-    std::memcpy(&assetHandle, userData.data(), userData.size());
+    std::memcpy(&assetHandle, data[0].userData.data(), data[0].userData.size());
     if (!ranges::contains(types, assetHandle.type())) {
         return std::nullopt;
     }

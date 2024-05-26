@@ -77,6 +77,10 @@ public:
     /// which asset is returned
     AssetRegistryEntry const* findByName(std::string_view name) const;
 
+    /// Linear time lookup by disk location
+    AssetRegistryEntry const* findByDiskLocation(
+        std::filesystem::path location) const;
+
     /// # Modifiers
 
     ///
@@ -164,8 +168,16 @@ public:
 
     /// Renames the asset \p handle to \p name
     ///
-    /// Updates the registry and asset filename
+    /// Updates the registry and asset name
     void renameAsset(AssetHandle handle, std::string name);
+
+    /// Moves the file of asset \p handle to \p newLocation
+    ///
+    /// \param newLocation must be an absolute path in the project directory or
+    /// a path relative to the project directory
+    ///
+    /// Updates the registry and asset filename
+    void relocateAsset(AssetHandle handle, std::filesystem::path newLocation);
 
     /// Deletes asset from memory and from working directory
     ///

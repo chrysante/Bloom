@@ -547,7 +547,7 @@ struct DirectoryView::Impl: Emitter {
     void itemDragSource(
         ScannedDirectory const& directory,
         utl::function_view<void(DirectoryEntry const&, float2)> drawFn);
-    void itemDragTarget(DirectoryEntry const& entry);
+    bool itemDragTarget(DirectoryEntry const& entry, bool hasTargetColor);
     void relocateItem(DirectoryEntry const& dest,
                       std::filesystem::path const& item);
     void beginDragSelection(ScannedDirectory& directory);
@@ -761,7 +761,7 @@ void Impl::displayBackground(ScannedDirectory& directory) {
     {
         directory.clearSelection();
     }
-    itemDragTarget(*directory.entry());
+    itemDragTarget(*directory.entry(), true);
 #if 0
     backgroundContextMenu(directory);
 #endif
@@ -1100,7 +1100,7 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
         drawEntry(localLabelBB, localIconBB, textAlign, ddItemDesc.label,
                   ddItemDesc.iconName, IM_COL32_WHITE, false);
     });
-    itemDragTarget(*entry);
+    bool isTarget = itemDragTarget(*entry, false);
     // Draw Frame
     auto [frameColor, textColor] = [&]() -> std::pair<ImU32, ImU32> {
         std::pair<ImU32, ImU32> noFrame = { 0,
@@ -1113,6 +1113,9 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
                 getStyleColors().itemInactiveSelected),
             ImGui::GetColorU32(ImGuiCol_Text)
         };
+        if (isTarget) {
+            return selectedActive;
+        }
         if (!entrySelected) {
             return noFrame;
         }
@@ -1121,7 +1124,7 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
         }
         return selectedInactive;
     }();
-    if (entrySelected) {
+    if (entrySelected || isTarget) {
         drawEntryFrame(itemBB, frameColor, frameDrawFlags);
     }
     bool isRenamingEntry = viewData.renamingEntry == entry;
@@ -1336,9 +1339,9 @@ void Impl::itemDragSource(
     ImGui::PopStyleColor();
 }
 
-void Impl::itemDragTarget(DirectoryEntry const& entry) {
+bool Impl::itemDragTarget(DirectoryEntry const& entry, bool hasTargetColor) {
     if (!entry.isDirectory()) {
-        return;
+        return false;
     }
     DragDropDelivery delivery;
     if (auto* payload = ImGui::GetDragDropPayload();
@@ -1347,27 +1350,31 @@ void Impl::itemDragTarget(DirectoryEntry const& entry) {
         delivery = unpackDragDropPayload((char const*)payload->Data,
                                          payload->DataSize);
         if (delivery.empty()) {
-            return;
+            return false;
         }
         /// Not drop into ourself
         if (ranges::contains(delivery, entry.path(),
                              &DirectoryViewDragDropItem::path))
         {
-            return;
+            return false;
         }
         /// Not drop into parent directory
         if (delivery.front().path.parent_path() == entry.path()) {
-            return;
+            return false;
         }
     }
-    if (!ImGui::BeginDragDropTarget()) {
-        return;
+    auto col = hasTargetColor ? ImGui::GetColorU32(ImGuiCol_Header) : 0;
+    ImGui::PushStyleColor(ImGuiCol_DragDropTarget, col);
+    utl::scope_guard guard = [] { ImGui::PopStyleColor(); };
+    bool isTarget = ImGui::BeginDragDropTarget();
+    if (!isTarget) {
+        return false;
     }
     ImGuiPayload const* payload =
         ImGui::AcceptDragDropPayload(delegate->imguiDragDropType());
     if (!payload) {
         ImGui::EndDragDropTarget();
-        return;
+        return true;
     }
     dispatch(DispatchToken::NextFrame, [=, &entry, this] {
         bool movedAny = false;
@@ -1383,6 +1390,7 @@ void Impl::itemDragTarget(DirectoryEntry const& entry) {
         }
     });
     ImGui::EndDragDropTarget();
+    return true;
 }
 
 void Impl::relocateItem(DirectoryEntry const& dest,

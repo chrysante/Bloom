@@ -159,6 +159,9 @@ public:
 
     void clear() { stack.clear(); }
 
+    auto begin() const { return stack.begin(); }
+    auto end() const { return stack.end(); }
+
 private:
     SelectionManager const& selection() const;
 
@@ -175,26 +178,37 @@ public:
 
     ScannedDirectory() = default;
 
+    static std::vector<std::filesystem::path> backupPaths(auto&& range) {
+        return range | transform([](auto* entry) { return entry->path(); }) |
+               ranges::to<std::vector>;
+    }
+
     void rebuild(DirectoryEntry* entry, SortCondition sortCondition) {
         /// Backup selection
-        auto selectedPaths = selection() |
-                             transform([](auto* s) { return s->path(); }) |
-                             ranges::to<std::vector>;
+        auto selBackup = backupPaths(selection());
+        auto navBackup = backupPaths(navStack());
         _entry = entry;
         _entries = _entry->makeChildEntries();
         sort(sortCondition);
-        if (selectedPaths.empty()) {
+        if (selBackup.empty() && navBackup.empty()) {
             return;
         }
-        /// Restore selection to new entries
+        /// Restore selection and nav stack to new entries
         auto entryMap = _entries | transform([](auto& entry) {
             return std::pair{ entry->path(), entry.get() };
         }) | ranges::to<utl::hashmap<std::filesystem::path, DirectoryEntry*>>;
         _selection.clear();
-        for (auto& path: selectedPaths) {
+        for (auto& path: selBackup) {
             auto itr = entryMap.find(path);
             if (itr != entryMap.end()) {
                 _selection.add(itr->second);
+            }
+        }
+        navStack().clear();
+        for (auto& path: navBackup) {
+            auto itr = entryMap.find(path);
+            if (itr != entryMap.end()) {
+                navStack().push(itr->second);
             }
         }
     }
@@ -264,6 +278,10 @@ public:
         _selectionModified = true;
     }
 
+    bool madeActive() { return std::exchange(_madeActive, false); }
+
+    void setMadeActive(bool value = true) { _madeActive = value; }
+
 private:
     friend struct DirectoryView::Impl; // For now
     friend class NavEntryStack;        // To cast to derived
@@ -276,6 +294,7 @@ private:
     SelectionManager _selection;
     /// Tested at the end of each frame to update view layout
     bool _selectionModified = false;
+    bool _madeActive = false;
 };
 
 SelectionManager const& NavEntryStack::selection() const {
@@ -323,16 +342,14 @@ struct DirectoryLine {
             rebuildToDirectory(path);
             modified = true;
         }
-        auto elem = current().selection().single();
-        if (!elem) {
+        auto single = current().selection().single();
+        if (!single || !single->isDirectory()) {
+            line.erase(line.begin() + activeIndex + 1, line.end());
             return modified;
         }
-        if (elem->isDirectory() && activeIndex == line.size() - 1) {
+        if (activeIndex == line.size() - 1) {
             line.emplace_back();
-            line.back().rebuild(elem, sortCondition);
-        }
-        if (!elem->isDirectory()) {
-            line.erase(line.begin() + activeIndex + 1, line.end());
+            line.back().rebuild(single, sortCondition);
         }
         return modified;
     }
@@ -371,6 +388,7 @@ struct DirectoryLine {
         }
         BL_ASSERT(activeIndex > 0);
         --activeIndex;
+        current().setMadeActive();
         return true;
     }
 
@@ -380,10 +398,14 @@ struct DirectoryLine {
             return false;
         }
         makeCurrent((*current().selection().begin())->path());
-        if (!current().entries().empty()) {
+        if (current().selection().empty() && !current().entries().empty()) {
             current().amendSelection(current().entries().front(),
                                      SelectionMode::Replace);
         }
+        if (current().entries().empty()) {
+            --activeIndex;
+        }
+        current().setMadeActive();
         return true;
     }
 
@@ -453,6 +475,7 @@ struct FrameData {
     utl::hashmap<DirectoryEntry const*, Rect> entryBBs;
     DirectoryEntry* hoveredEntry = nullptr;
     DirectoryEntry* hoveredEntryBelowActive = nullptr;
+    bool focused = false;
 };
 
 struct ViewData: ActiveViewData, FrameData {
@@ -463,7 +486,10 @@ struct ViewData: ActiveViewData, FrameData {
     bool startRenaming = false;
 };
 
-void ViewData::updateEarly() { static_cast<FrameData&>(*this) = {}; }
+void ViewData::updateEarly() {
+    static_cast<FrameData&>(*this) = {};
+    focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+}
 
 void ViewData::updateLate() {
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
@@ -485,6 +511,7 @@ struct DirectoryView::Impl: Emitter {
     Toolbar makeToolbar();
 
     void monitorSelectionChange();
+    void display();
     void displayBackground(ScannedDirectory& directory);
     void displayColumns();
     void displayColumn(ScannedDirectory& directory);
@@ -622,22 +649,7 @@ void Impl::monitorSelectionChange() {
     }
 }
 
-void DirectoryView::display() {
-    impl->viewData.updateEarly();
-    switch (impl->layout) {
-    case Layout::Columns:
-        impl->displayColumns();
-        break;
-    default:
-        BL_UNIMPLEMENTED();
-        break;
-    }
-    impl->monitorSelectionChange();
-    impl->viewData.updateLate();
-    if (impl->showDebugger) {
-        impl->displayDebugger();
-    }
-}
+void DirectoryView::display() { impl->display(); }
 
 void DirectoryView::openDirectory(std::filesystem::path directory) {
     impl->directoryLine.setRoot(impl->delegate->makeEntry(directory));
@@ -685,6 +697,23 @@ Toolbar Impl::makeToolbar() {
     }; // clang-format on
 }
 
+void Impl::display() {
+    viewData.updateEarly();
+    switch (layout) {
+    case Layout::Columns:
+        displayColumns();
+        break;
+    default:
+        BL_UNIMPLEMENTED();
+        break;
+    }
+    monitorSelectionChange();
+    viewData.updateLate();
+    if (showDebugger) {
+        displayDebugger();
+    }
+}
+
 void Impl::displayBackground(ScannedDirectory& directory) {
     ImGui::SetCursorPos({ ImGui::GetScrollX(), ImGui::GetScrollY() });
     float2 size =
@@ -729,9 +758,12 @@ void Impl::displayColumns() {
                                 ImGuiTableColumnFlags_WidthFixed, defaultWidth);
     }
     // Display
-    for (auto&& [index, directory]: directoryLine | enumerate) {
+    for (auto& dir: directoryLine) {
         ImGui::TableNextColumn();
-        displayColumn(directory);
+        if (dir.madeActive()) {
+            ImGui::SetScrollHereX();
+        }
+        displayColumn(dir);
     }
     if (hasPreviewColumn) {
         ImGui::TableNextColumn();
@@ -758,6 +790,11 @@ void Impl::displayColumn(ScannedDirectory& directory) {
     auto clipRect = ImGui::GetCurrentWindowRead()->ClipRect;
     ImGui::BeginChild(directory.entry()->path().c_str(),
                       contentSizeWithoutScrollbar());
+    if (viewData.focused && &directoryLine.current() == &directory &&
+        !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+    {
+        ImGui::FocusWindow(ImGui::GetCurrentWindowRead());
+    }
     ImGui::PopStyleVar();
     ImGui::PushClipRect(clipRect.Min, clipRect.Max, false);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() +
@@ -1014,12 +1051,12 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
     itemDragTarget(*entry);
     // Draw Frame
     auto [frameColor, textColor] = [&]() -> std::pair<ImU32, ImU32> {
-        std::pair<ImU32, ImU32> const noFrame = { 0, ImGui::GetColorU32(
-                                                         ImGuiCol_Text) };
-        std::pair<ImU32, ImU32> const selectedActive = {
+        std::pair<ImU32, ImU32> noFrame = { 0,
+                                            ImGui::GetColorU32(ImGuiCol_Text) };
+        std::pair<ImU32, ImU32> selectedActive = {
             ImGui::GetColorU32(ImGuiCol_Header), IM_COL32_WHITE
         };
-        std::pair<ImU32, ImU32> const selectedInactive = {
+        std::pair<ImU32, ImU32> selectedInactive = {
             ImGui::ColorConvertFloat4ToU32(
                 getStyleColors().itemInactiveSelected),
             ImGui::GetColorU32(ImGuiCol_Text)
@@ -1027,7 +1064,7 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
         if (!entrySelected) {
             return noFrame;
         }
-        if (&directory == &directoryLine.current()) {
+        if (viewData.focused && &directory == &directoryLine.current()) {
             return selectedActive;
         }
         return selectedInactive;
@@ -1069,10 +1106,16 @@ void Impl::displayEntryRenameField(DirectoryEntry const& entry, Rect labelBB) {
 
 void Impl::toggleRenaming() {
     if (viewData.renamingEntry) {
-        auto& entry = *viewData.renamingEntry;
-        entry.rename(std::string(RenameBuffer.data()));
+        auto* entry = viewData.renamingEntry;
         viewData.renamingEntry = nullptr;
-        dispatch(DispatchToken::NextFrame, [this] { directoryLine.rescan(); });
+        std::string newName = RenameBuffer.data();
+        RenameBuffer = {};
+        if (entry->displayName() != newName) {
+            dispatch(DispatchToken::NextFrame, [=, this] {
+                entry->rename(newName);
+                directoryLine.rescan();
+            });
+        }
     }
     else if (directoryLine.current().selection().size() == 1) {
         startRenaming(*directoryLine.current().selection().begin());
@@ -1347,10 +1390,11 @@ bool Impl::canGoForward() const { return history.canUnpop(); }
 
 void Impl::makeDirectoryCurrent(std::filesystem::path const& path,
                                 bool pushHistory) {
-    if (directoryLine.makeCurrent(path)) {
-        if (pushHistory) {
-            history.push(path);
-        }
+    if (!directoryLine.makeCurrent(path)) {
+        return;
+    }
+    if (pushHistory) {
+        history.push(path);
     }
 }
 
@@ -1459,32 +1503,37 @@ void Impl::displayDebugger() {
     debugItem("renamingEntry", viewData.renamingEntry);
     ImGui::SeparatorText("Directory Line");
     for (auto& dir: directoryLine) {
-        if (ImGui::TreeNodeEx(dir.entry()->path().c_str(),
-                              ImGuiTreeNodeFlags_DefaultOpen))
+        auto font = FontDesc::UIDefault();
+        if (&dir == &directoryLine.current()) {
+            font.setWeight(FontWeight::Bold);
+        }
+        ImGui::PushFont(FontManager::get(font));
+        bool open = ImGui::TreeNodeEx(dir.entry()->path().c_str(),
+                                      ImGuiTreeNodeFlags_DefaultOpen);
+        ImGui::PopFont();
+        if (!open) {
+            continue;
+        }
+        if (ImGui::TreeNodeEx("navEntryStack", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            if (ImGui::TreeNodeEx("navEntryStack",
-                                  ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                for (auto* entry: dir.getNavEntryStack().get() | reverse) {
-                    debugItem("", entry);
-                }
-                ImGui::TreePop();
-            }
-            if (ImGui::TreeNodeEx("Selection", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                for (auto* entry: dir.selection()) {
-                    debugItem("", entry);
-                }
-                ImGui::TreePop();
-            }
-            if (ImGui::TreeNode("Entries")) {
-                for (auto* entry: dir.entries()) {
-                    debugItem("", entry);
-                }
-                ImGui::TreePop();
+            for (auto* entry: dir.getNavEntryStack().get() | reverse) {
+                debugItem("", entry);
             }
             ImGui::TreePop();
         }
+        if (ImGui::TreeNodeEx("Selection", ImGuiTreeNodeFlags_DefaultOpen)) {
+            for (auto* entry: dir.selection()) {
+                debugItem("", entry);
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Entries")) {
+            for (auto* entry: dir.entries()) {
+                debugItem("", entry);
+            }
+            ImGui::TreePop();
+        }
+        ImGui::TreePop();
     }
     ImGui::SeparatorText("History");
     history.displayDebugger();

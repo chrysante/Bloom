@@ -95,15 +95,16 @@ public:
     void erase() override {}
 
     void rename(std::string newName) override {
+        auto newLocation = path().parent_path() / newName;
         if (regEntry) {
             BL_ASSERT(!std::filesystem::is_directory(path()));
             This.assetManager->renameAsset(regEntry->handle, newName);
         }
         else {
             BL_ASSERT(std::filesystem::is_directory(path()));
-            This.assetManager->relocateFolder(path(),
-                                              path().parent_path() / newName);
+            This.assetManager->relocateFolder(path(), newLocation);
         }
+        _path = newLocation;
     }
 
     void relocate(std::filesystem::path newLocation) override {
@@ -113,6 +114,7 @@ public:
         else {
             This.assetManager->relocateFolder(path(), newLocation);
         }
+        _path = newLocation;
     }
 
     std::string_view displayName() const override {

@@ -5360,8 +5360,8 @@ static int DecodeChunk(EXRImage* exr_image, EXRHeader const* exr_header,
             if (err) {
                 std::stringstream ss;
                 ss << "data_with or data_height too large. data_width: "
-                   << data_width << ", " << "data_height = " << data_height
-                   << std::endl;
+                   << data_width << ", "
+                   << "data_height = " << data_height << std::endl;
                 (*err) += ss.str();
             }
             return TINYEXR_ERROR_INVALID_DATA;

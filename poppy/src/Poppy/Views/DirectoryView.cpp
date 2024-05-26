@@ -244,6 +244,9 @@ public:
     DirectoryEntry* entryAt(size_t index) const {
         return _entries[index].get();
     }
+    bool isSelected(size_t index) const {
+        return selection().contains(entryAt(index));
+    }
     DirectoryEntry* navEntry() const { return navStack().top(); }
     void pushNavEntry(DirectoryEntry* entry) { navStack().push(entry); }
     NavEntryStack const& getNavEntryStack() const { return navStack(); }
@@ -517,7 +520,7 @@ struct DirectoryView::Impl: Emitter {
     void displayColumns();
     void displayColumn(ScannedDirectory& directory);
     void displayColumnViewItem(ScannedDirectory& directory,
-                               DirectoryEntry* entry);
+                               DirectoryEntry* entry, size_t index);
     void displayPreviewColumn();
     void displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
                       Rect itemBB, Rect labelBB, Rect iconBB,
@@ -776,17 +779,17 @@ void Impl::displayColumns() {
     // Display
     for (auto& dir: directoryLine) {
         ImGui::TableNextColumn();
+        displayColumn(dir);
         if (viewData.didNavigate && &dir == &directoryLine.current()) {
             ImGui::SetScrollHereX();
         }
-        displayColumn(dir);
     }
     if (havePreviewColumn) {
         ImGui::TableNextColumn();
-        if (viewData.didNavigate) {
-            ImGui::SetScrollHereX();
-        }
         displayPreviewColumn();
+        if (viewData.didNavigate) {
+            ImGui::SetScrollHereX(1);
+        }
     }
     ImGui::EndTable();
 }
@@ -824,8 +827,8 @@ void Impl::displayColumn(ScannedDirectory& directory) {
     }
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() +
                          ImGui::GetStyle().WindowPadding.y);
-    for (auto* entry: directory.entries()) {
-        displayColumnViewItem(directory, entry);
+    for (auto [index, entry]: directory.entries() | enumerate) {
+        displayColumnViewItem(directory, entry, index);
     }
     ImGui::Dummy({ 0, ImGui::GetStyle().WindowPadding.y });
     displayBackground(directory);
@@ -833,7 +836,7 @@ void Impl::displayColumn(ScannedDirectory& directory) {
 }
 
 void Impl::displayColumnViewItem(ScannedDirectory& directory,
-                                 DirectoryEntry* entry) {
+                                 DirectoryEntry* entry, size_t index) {
     auto& style = ImGui::GetStyle();
     auto* window = ImGui::GetCurrentWindow();
     float itemHeight = ImGui::GetFontSize() + 2 * style.FramePadding.y;
@@ -850,26 +853,21 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
                         float2(itemBB.upper_bound() - framePadding));
     bool selected = directory.selection().contains(entry);
     ImDrawFlags frameDrawFlags = 0;
+    bool prevSelected = false;
+    bool nextSelected = false;
     if (selected) {
-        //        bool prevSelected =
-        //            entry != directory.entries().front() &&
-        //            directory.selection().contains(directory.entries[entryIndex
-        //            - 1]);
-        //        bool nextSelected =
-        //            entryIndex < directory.entries.size() - 1 &&
-        //            directory.selection.contains(directory.entries[entryIndex
-        //            + 1]);
-        //        if (prevSelected && nextSelected) {
-        //            frameDrawFlags = ImDrawFlags_RoundCornersNone;
-        //        }
-        //        else if (prevSelected) {
-        //            frameDrawFlags = ImDrawFlags_RoundCornersBottom;
-        //        }
-        //        else if (nextSelected) {
-        //            frameDrawFlags = ImDrawFlags_RoundCornersTop;
-        //        }
-        frameDrawFlags = ImDrawFlags_RoundCornersTop |
-                         ImDrawFlags_RoundCornersBottom;
+        prevSelected = index > 0 && directory.isSelected(index - 1);
+        nextSelected = index < directory.entries().size() - 1 &&
+                       directory.isSelected(index + 1);
+        if (prevSelected && nextSelected) {
+            frameDrawFlags = ImDrawFlags_RoundCornersNone;
+        }
+        else if (prevSelected) {
+            frameDrawFlags = ImDrawFlags_RoundCornersBottom;
+        }
+        else if (nextSelected) {
+            frameDrawFlags = ImDrawFlags_RoundCornersTop;
+        }
     }
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 0, 0 });
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
@@ -877,6 +875,13 @@ void Impl::displayColumnViewItem(ScannedDirectory& directory,
     displayEntry(directory, entry, itemBB, labelBB, iconBB, TextAlign::Left,
                  frameDrawFlags);
     ImGui::PopStyleVar(2);
+    if (selected && nextSelected) {
+        auto* DL = ImGui::GetWindowDrawList();
+        float2 begin = cursorPos + float2(framePadding.x, itemSize.y - 1);
+        float2 end = begin + float2(itemSize.x - 2 * framePadding.x, 0);
+        DL->AddLine(begin, end,
+                    ImGui::ColorConvertFloat4ToU32({ 1, 1, 1, 0.33 }));
+    }
     entryContextMenu(directory, entry);
 }
 

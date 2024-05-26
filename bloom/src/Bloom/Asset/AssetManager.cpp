@@ -610,6 +610,7 @@ void AssetManager::renameAsset(AssetHandle handle, std::string name) {
     entry->name = name;
     auto oldPath = entry->diskLocation;
     auto newPath = replaceFilename(oldPath, name);
+    Logger::Trace("Renaming asset to: ", newPath);
     std::filesystem::rename(oldPath, newPath);
     entry->diskLocation = newPath;
     impl->writeRegistryToDisk();
@@ -626,6 +627,7 @@ void AssetManager::relocateAsset(AssetHandle handle,
         return;
     }
     BL_ASSERT(newLocation.filename().stem() == entry->name);
+    Logger::Trace("Moving asset to: ", newLocation);
     std::filesystem::rename(entry->diskLocation, newLocation);
     entry->diskLocation = newLocation;
     impl->writeRegistryToDisk();
@@ -641,9 +643,10 @@ void AssetManager::relocateFolder(std::filesystem::path oldLocation,
                                  entry.diskLocation.begin())
                        .first;
         if (end == oldLocation.end()) {
-            entry.diskLocation =
-                newLocation /
-                entry.diskLocation.lexically_relative(oldLocation);
+            auto newPath = newLocation /
+                           entry.diskLocation.lexically_relative(oldLocation);
+            Logger::Trace("Moving asset to: ", newPath);
+            entry.diskLocation = newPath;
         }
     }
 }
@@ -651,9 +654,29 @@ void AssetManager::relocateFolder(std::filesystem::path oldLocation,
 void AssetManager::deleteAsset(AssetHandle handle) {
     auto* entry = impl->registry.find(handle);
     BL_ASSERT(entry);
+    Logger::Trace("Deleting asset: ", entry->name);
     std::filesystem::remove(entry->diskLocation);
     impl->registry.erase(handle.ID());
     impl->writeRegistryToDisk();
+}
+
+void AssetManager::deleteFolder(std::filesystem::path dir) {
+    BL_ASSERT(impl->isAbsoluteInProjDir(dir));
+    utl::small_vector<RegistryEntry const*> toDelete;
+    for (auto& entry: impl->registry) {
+        auto end =
+            std::mismatch(dir.begin(), dir.end(), entry.diskLocation.begin())
+                .first;
+        if (end == dir.end()) {
+            toDelete.push_back(&entry);
+        }
+    }
+    for (auto* entry: toDelete) {
+        Logger::Trace("Deleting asset: ", entry->name);
+        impl->registry.erase(entry->handle.ID());
+    }
+    impl->writeRegistryToDisk();
+    std::filesystem::remove_all(dir);
 }
 
 AssetHandle AssetManager::findByName(std::string_view name) const {

@@ -166,11 +166,12 @@ void View::doFrame() {
     if (data.maximized) {
         ImGui::PopStyleVar();
     }
-    data.isFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+    imguiWindow = ImGui::GetCurrentWindow();
+    imguiWindow->UserPointer = this;
+    data.imguiWindow = imguiWindow;
+    data.isFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) &&
+                     !ImGui::FindBlockingModal(imguiWindow);
     if (open) {
-        auto* imguiWindow = ImGui::GetCurrentWindow();
-        imguiWindow->UserPointer = this;
-        data.imguiWindow = imguiWindow;
         data.position = imguiWindow->WorkRect.Min;
         data.size = imguiWindow->Size;
         data.docked = isDocked(imguiWindow);

@@ -97,20 +97,22 @@ public:
             This.assetManager->deleteAsset(regEntry->handle);
         }
         else {
+            This.assetManager->deleteFolder(path());
         }
     }
 
     void rename(std::string newName) override {
-        auto newLocation = path().parent_path() / newName;
         if (regEntry) {
             BL_ASSERT(!std::filesystem::is_directory(path()));
             This.assetManager->renameAsset(regEntry->handle, newName);
+            _path = regEntry->diskLocation;
         }
         else {
             BL_ASSERT(std::filesystem::is_directory(path()));
+            auto newLocation = path().parent_path() / newName;
             This.assetManager->relocateFolder(path(), newLocation);
+            _path = newLocation;
         }
-        _path = newLocation;
     }
 
     void relocate(std::filesystem::path newLocation) override {

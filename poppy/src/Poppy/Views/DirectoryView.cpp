@@ -530,8 +530,7 @@ struct DirectoryView::Impl: Emitter {
     void displayEntryRenameField(DirectoryEntry const& entry, Rect labelBB);
     void toggleRenaming();
     void startRenaming(DirectoryEntry* entry);
-    void entryContextMenu(ScannedDirectory const& directory,
-                          DirectoryEntry* entry);
+    void entryContextMenu(ScannedDirectory& directory, DirectoryEntry* entry);
     void itemDragSource(
         ScannedDirectory const& directory,
         utl::function_view<void(DirectoryEntry const&, float2)> drawFn);
@@ -543,7 +542,7 @@ struct DirectoryView::Impl: Emitter {
 
     void activateEntry(DirectoryEntry& entry);
     void activateSelectedEntries();
-    void deleteSelectedEntries(ScannedDirectory const& dir);
+    void deleteSelectedEntries(ScannedDirectory& dir);
     DirectoryItemDescription makeItemDesc(DirectoryEntry const& entry) const;
 
     /// Navigation
@@ -1170,8 +1169,7 @@ void Impl::startRenaming(DirectoryEntry* entry) {
 #define FILE_EXPLORER_NAME "Explorer"
 #endif
 
-void Impl::entryContextMenu(ScannedDirectory const& dir,
-                            DirectoryEntry* entry) {
+void Impl::entryContextMenu(ScannedDirectory& dir, DirectoryEntry* entry) {
     std::string popupID = utl::strcat("EntryPopup-", entry->path());
     ImGui::OpenPopupOnItemClick(popupID.c_str());
     if (ImGui::BeginPopup(popupID.c_str())) {
@@ -1194,11 +1192,22 @@ void Impl::entryContextMenu(ScannedDirectory const& dir,
     }
 }
 
-void Impl::deleteSelectedEntries(ScannedDirectory const& dir) {
+void Impl::deleteSelectedEntries(ScannedDirectory& dir) {
+    auto selectedIndex = [&]() -> std::optional<size_t> {
+        auto single = dir.selection().single();
+        if (!single) {
+            return std::nullopt;
+        }
+        return dir.getIndex(single);
+    }();
     for (auto* s: dir.selection()) {
         s->erase();
     }
     directoryLine.rescan();
+    if (selectedIndex) {
+        auto* entry = dir.entryAt(std::min(*selectedIndex, dir.size() - 1));
+        dir.amendSelection(entry, SelectionMode::Replace);
+    }
 }
 
 static void writeUserDataSize(auto out, uint32_t size) {

@@ -189,6 +189,9 @@ public:
     /// \Param handle Handle to the asset to be deleted
     void deleteAsset(AssetHandle handle);
 
+    /// Deletes all assets if the folder \p dir
+    void deleteFolder(std::filesystem::path dir);
+
     /// \Returns the handle of an asset with name \p name or a null handle if
     /// no such asset exists. If multiple such assets exists it is unspecified
     /// which asset is returned

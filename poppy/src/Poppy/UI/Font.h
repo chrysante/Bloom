@@ -68,22 +68,19 @@ struct FontDesc {
     static FontDesc MonoDefault();
 
     ///
-    [[nodiscard]] FontDesc setSize(FontSize size) const {
-        auto result = *this;
-        result.size = size;
-        return result;
+    FontDesc& setSize(FontSize size) {
+        this->size = size;
+        return *this;
     }
 
-    [[nodiscard]] FontDesc setWeight(FontWeight weight) const {
-        auto result = *this;
-        result.weight = weight;
-        return result;
+    FontDesc& setWeight(FontWeight weight) {
+        this->weight = weight;
+        return *this;
     }
 
-    [[nodiscard]] FontDesc setStyle(FontStyle style) const {
-        auto result = *this;
-        result.style = style;
-        return result;
+    FontDesc& setStyle(FontStyle style) {
+        this->style = style;
+        return *this;
     }
 
     bool operator==(FontDesc const& rhs) const = default;

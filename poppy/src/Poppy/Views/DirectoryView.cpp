@@ -1213,7 +1213,8 @@ void Impl::entryContextMenu(ScannedDirectory& dir, DirectoryEntry* entry) {
             showFileInFileExplorer((*dir.selection().begin())->path());
         }
         if (dir.selection().size() == 1 && ImGui::MenuItem("Rename")) {
-            startRenaming(entry);
+            dispatch(DispatchToken::NextFrame,
+                     [=, this] { startRenaming(entry); });
         }
         if (ImGui::MenuItem("Delete")) {
             dispatch(DispatchToken::NextFrame,

@@ -1,8 +1,6 @@
 #ifndef BLOOM_SCENE_ENTITY_H
 #define BLOOM_SCENE_ENTITY_H
 
-#include <iosfwd>
-
 #include <entt/entt.hpp>
 #include <utl/common.hpp>
 #include <utl/hash.hpp>
@@ -12,45 +10,12 @@
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/Scene/Components/ComponentBase.h"
+#include "Bloom/Scene/Components/Hierarchy.h"
+#include "Bloom/Scene/Components/Tag.h"
+#include "Bloom/Scene/Components/Visibility.h"
+#include "Bloom/Scene/EntityID.h"
 
 namespace bloom {
-
-struct HierarchyComponent;
-struct VisibilityComponent;
-
-/// Unique entity identifier
-struct BLOOM_API EntityID {
-public:
-    friend class Scene;
-    using RawType = std::underlying_type_t<entt::entity>;
-
-    ///
-    EntityID() = default;
-
-    /// Construct from an `entt::entity`
-    EntityID(entt::entity value): _value(value) {}
-
-    /// Construct from a raw ID value
-    explicit EntityID(RawType value): _value((entt::entity)value) {}
-
-    /// \Returns the underlying `entt::entity`
-    entt::entity value() const { return _value; }
-
-    /// \Returns the underlying identifier value
-    RawType raw() const { return utl::to_underlying(_value); }
-
-    /// \Returns `true` is this is not the null entity
-    explicit operator bool() const { return value() != entt::null; }
-
-    /// Compares the underlying values
-    friend bool operator==(EntityID const&, EntityID const&) = default;
-
-private:
-    entt::entity _value = entt::null;
-};
-
-///
-BLOOM_API std::ostream& operator<<(std::ostream&, EntityID);
 
 class Scene;
 
@@ -195,23 +160,57 @@ public:
         return true;
     }
 
-    /// \Returns the parent entity if this entity has a parent
+    /// \Returns the name of this entity
+    std::string_view name() const {
+        if (auto* t = tryGet<TagComponent>()) {
+            return t->name;
+        }
+        return {};
+    }
+
+    /// \Returns the parent entity if this entity has a hierarchy component
     EntityHandleEx getParent() const {
+        return getHierarchyImpl(&HierarchyComponent::parent);
+    }
+
+    /// \Returns the next sibling entity if this entity has a hierarchy
+    /// component
+    EntityHandleEx getNextSibling() const {
+        return getHierarchyImpl(&HierarchyComponent::nextSibling);
+    }
+
+    /// \Returns the previous sibling entity if this entity has a hierarchy
+    /// component
+    EntityHandleEx getPrevSibling() const {
+        return getHierarchyImpl(&HierarchyComponent::prevSibling);
+    }
+
+    /// \Returns the first child entity if this entity has a hierarchy component
+    EntityHandleEx getFirstChild() const {
+        return getHierarchyImpl(&HierarchyComponent::firstChild);
+    }
+
+    /// \Returns the last child entity if this entity has a hierarchy component
+    EntityHandleEx getLastChild() const {
+        return getHierarchyImpl(&HierarchyComponent::lastChild);
+    }
+
+    ///
+    void detachFromHieararchy() const
+        requires(!IsConst)
+    {
+        scene().detachFromHierarchy(ID());
+    }
+
+private:
+    EntityHandleEx getHierarchyImpl(auto f) const {
         auto* hierarchy = tryGet<HierarchyComponent>();
         if (!hierarchy) {
             return {};
         }
-        return scene().getHandle(hierarchy->parent);
+        return scene().getHandle(std::invoke(f, hierarchy));
     }
 
-    ///
-    void unparent() const
-        requires(!IsConst)
-    {
-        scene().unparent(ID());
-    }
-
-private:
     SceneT* _scene = nullptr;
 };
 
@@ -221,33 +220,16 @@ using EntityHandle = EntityHandleEx<Scene>;
 /// Typedef for handle of readonly entity
 using ConstEntityHandle = EntityHandleEx<Scene const>;
 
-} // namespace bloom
+BLOOM_API std::ostream& operator<<(std::ostream& ostream, EntityHandle entity);
+BLOOM_API std::ostream& operator<<(std::ostream& ostream,
+                                   ConstEntityHandle entity);
 
-template <>
-struct std::hash<bloom::EntityID> {
-    std::size_t operator()(bloom::EntityID ID) const {
-        return std::hash<decltype(ID.raw())>{}(ID.raw());
-    }
-};
+} // namespace bloom
 
 template <typename SceneT>
 struct std::hash<bloom::EntityHandleEx<SceneT>> {
     std::size_t operator()(bloom::EntityHandleEx<SceneT> const& entity) const {
         return utl::hash_combine(entity.ID(), &entity.scene());
-    }
-};
-
-template <>
-struct YAML::convert<bloom::EntityID> {
-    static Node encode(bloom::EntityID const& e) {
-        Node node;
-        node = static_cast<int32_t>(e.raw());
-        return node;
-    }
-
-    static bool decode(Node const& node, bloom::EntityID& e) {
-        e = bloom::EntityID((bloom::EntityID::RawType)node.as<int32_t>());
-        return true;
     }
 };
 

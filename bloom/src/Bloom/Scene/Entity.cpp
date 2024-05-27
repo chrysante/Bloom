@@ -4,10 +4,18 @@
 
 #include <utl/utility.hpp>
 
-namespace bloom {
+#include "Bloom/Scene/Scene.h"
 
-BLOOM_API std::ostream& operator<<(std::ostream& str, EntityID id) {
+using namespace bloom;
+
+std::ostream& bloom::operator<<(std::ostream& str, EntityID id) {
     return str << utl::to_underlying(id.value());
 }
 
-} // namespace bloom
+std::ostream& bloom::operator<<(std::ostream& str, EntityHandle entity) {
+    return str << entity.name() << "[" << entity.ID() << "]";
+}
+
+std::ostream& bloom::operator<<(std::ostream& str, ConstEntityHandle entity) {
+    return str << entity.name() << "[" << entity.ID() << "]";
+}

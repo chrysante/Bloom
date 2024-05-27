@@ -294,7 +294,8 @@ void SceneOutliner::entityContextMenu(EntityHandle entity, ImGuiID popupID) {
         });
     }
     if (entity.getParent() && ImGui::MenuItem("Unparent")) {
-        dispatch(DispatchToken::NextFrame, [entity] { entity.unparent(); });
+        dispatch(DispatchToken::NextFrame,
+                 [entity] { entity.detachFromHieararchy(); });
     }
     ImGui::EndPopup();
 }
@@ -332,7 +333,7 @@ void SceneOutliner::dragDropTarget(EntityHandle parent) {
             Logger::Warn("Hierarchy Error");
             return;
         }
-        child.unparent();
+        child.detachFromHieararchy();
         if (parent) {
             scene.parent(child, parent);
             setExpanded(parent, true);

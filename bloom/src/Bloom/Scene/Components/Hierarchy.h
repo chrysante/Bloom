@@ -2,7 +2,7 @@
 #define BLOOM_SCENE_COMPONENTS_HIERARCHY_H
 
 #include "Bloom/Scene/Components/ComponentBase.h"
-#include "Bloom/Scene/Entity.h"
+#include "Bloom/Scene/EntityID.h"
 
 namespace bloom {
 

@@ -400,6 +400,8 @@ Command const* Editor::addCommand(Command command) {
 void Editor::saveAll() { coreSystems().assetManager().saveAll(); }
 
 void Editor::Impl::deleteSelectedEntities() {
+    auto& sceneSystem = editor->coreSystems().sceneSystem();
+    std::unique_lock lock = sceneSystem.lock();
     for (EntityHandle entity: selection.entities()) {
         entity.scene().deleteEntity(entity);
     }

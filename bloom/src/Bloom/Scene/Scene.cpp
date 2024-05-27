@@ -49,7 +49,12 @@ EntityHandle Scene::cloneEntity(EntityID from) {
     return result;
 }
 
-void Scene::deleteEntity(EntityID id) { _registry.destroy(id.value()); }
+void Scene::deleteEntity(EntityID ID) {
+    if (hasComponent<HierarchyComponent>(ID)) {
+        detachFromHierarchyImpl(ID);
+    }
+    _registry.destroy(ID.value());
+}
 
 Reference<Scene> Scene::clone() {
     utl::hashmap<EntityID, EntityID> idMap;
@@ -161,13 +166,12 @@ void Scene::deserialize(YAML::Node const& root, AssetManager& assetManager) {
             if (std::find(parentsChildren.begin(), parentsChildren.end(),
                           entityID) == parentsChildren.end())
             {
-                Logger::Fatal("Entity ", entityID, " [",
-                              scene->getComponent<TagComponent>(entityID).name,
-                              "] thinks Entity ", parentID, " [",
-                              scene->getComponent<TagComponent>(parentID).name,
-                              "] is its "
+                Logger::Fatal(scene->getHandle(entityID), " thinks ",
+                              scene->getHandle(parentID),
+                              " is its "
                               "parent but ",
-                              parentID, " doesn't know about it.");
+                              scene->getHandle(parentID),
+                              " doesn't know about it");
                 BL_UNREACHABLE();
             }
         }
@@ -242,11 +246,8 @@ void Scene::parent(EntityID c, EntityID p) {
 #endif
 }
 
-void Scene::unparent(EntityID c) {
+void Scene::detachFromHierarchyImpl(EntityID c) {
     auto& child = getComponent<HierarchyComponent>(c);
-    if (!child.parent) {
-        return;
-    }
     auto& parent = getComponent<HierarchyComponent>(child.parent);
     auto& leftSibling = getComponent<HierarchyComponent>(child.prevSibling);
     auto& rightSibling = getComponent<HierarchyComponent>(child.nextSibling);
@@ -261,26 +262,33 @@ void Scene::unparent(EntityID c) {
         parent.lastChild = child.prevSibling;
     }
     /// Either both are true or neither is true
-    assert(!((parent.firstChild == c) ^ (parent.lastChild == c)));
+    BL_ASSERT(!((parent.firstChild == c) ^ (parent.lastChild == c)));
     /// Only one element was in the list
     if (parent.firstChild == c) {
-        assert(c == child.prevSibling);
-        assert(c == child.nextSibling);
+        BL_ASSERT(c == child.prevSibling);
+        BL_ASSERT(c == child.nextSibling);
         parent.lastChild = {};
         parent.firstChild = {};
     }
-    auto& t = getComponent<Transform>(c);
-    vml::float4x4 const parentWorldTransform =
-        calculateTransformRelativeToWorld(child.parent);
-    vml::float4x4 const childWorldTransform =
-        parentWorldTransform * t.calculate();
-    t = Transform::fromMatrix(childWorldTransform);
     child.parent = {};
     child.prevSibling = {};
     child.nextSibling = {};
 #if BLOOM_DEBUGLEVEL
     sanitizeHierachy(this);
 #endif
+}
+
+void Scene::detachFromHierarchy(EntityID c) {
+    auto* child = tryGetComponent<HierarchyComponent>(c);
+    if (!child || !child->parent) {
+        return;
+    }
+    auto& t = getComponent<Transform>(c);
+    vml::float4x4 parentWorldTransform =
+        calculateTransformRelativeToWorld(child->parent);
+    vml::float4x4 childWorldTransform = parentWorldTransform * t.calculate();
+    t = Transform::fromMatrix(childWorldTransform);
+    detachFromHierarchyImpl(c);
 }
 
 bool Scene::descendsFrom(EntityID descended, EntityID ancestor) const {

@@ -153,7 +153,7 @@ public:
     void parent(EntityID child, EntityID parent);
 
     /// Extracts \p entity from any hierarchy it is in
-    void unparent(EntityID entity);
+    void detachFromHierarchy(EntityID entity);
 
     /// \Returns `true` if \p descendend is below \p ancestor in the entity
     /// hierarchy or if they are the same entity
@@ -175,6 +175,9 @@ public:
     vml::float4x4 calculateTransformRelativeToWorld(EntityID entity) const;
 
 private:
+    /// Detatches \p entity without adjusting its transform
+    void detachFromHierarchyImpl(EntityID entity);
+
     entt::registry _registry;
 };
 

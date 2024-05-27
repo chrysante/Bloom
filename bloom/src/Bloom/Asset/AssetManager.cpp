@@ -495,8 +495,8 @@ bool Impl::amendRegistry() {
     utl::small_vector<utl::uuid> IDsToDelete;
     for (auto& entry: registry) {
         if (!existingAssetPaths.contains(entry.diskLocation)) {
-            Logger::Error("Asset in registry does not exist: ", entry.name,
-                          " - deleting registry entry");
+            Logger::Error("Asset in registry does not exist: ",
+                          entry.diskLocation, " - deleting registry entry");
             IDsToDelete.push_back(entry.handle.ID());
         }
     }
@@ -649,6 +649,7 @@ void AssetManager::relocateFolder(std::filesystem::path oldLocation,
             entry.diskLocation = newPath;
         }
     }
+    impl->writeRegistryToDisk();
 }
 
 void AssetManager::deleteAsset(AssetHandle handle) {

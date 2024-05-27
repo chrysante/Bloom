@@ -145,7 +145,7 @@ constant float2 PoissonDisk[PCSSNumSamples] = {
 };
 
 constant float NEAR_PLANE = 9.5;
-constant float DepthBias = -0.0005;
+constant float DepthBias = -0.000;
 
 struct BlockerSearchResult {
     int numBlockers;
@@ -323,7 +323,8 @@ static float3 calcSHIrradiance(float3 N, packed_float3 device const* SH)
                              // PI only, however this looks much better
 }
 
-float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
+static float3 fresnelSchlickRoughness(float cosTheta, float3 F0,
+                                      float roughness)
 {
     return F0 + (max(float3(1.0 - roughness), F0) - F0) *
                     pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);

@@ -14,6 +14,7 @@
 #include "Bloom/Application/ResourceUtil.h"
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/AssetManager.h"
+#include "Bloom/Core/Utils.h"
 #include "Bloom/Graphics/Texture.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Poppy/Editor/Editor.h"
@@ -26,6 +27,7 @@
 using namespace poppy;
 using namespace bloom;
 using namespace vml::short_types;
+using namespace ranges::views;
 
 std::string poppy::selectAssetIcon(AssetType type) {
     switch (type) {
@@ -75,18 +77,40 @@ std::optional<AssetHandle> poppy::acceptAssetDragDrop(
     return std::nullopt;
 }
 
+namespace {
+
+struct AssetList {
+    std::vector<AssetRegistryEntry const*> entries;
+};
+
+} // namespace
+
 static AssetHandle displayAssetListPopup(ImGuiID popupID, ImRect bb,
                                          AssetManager& AM, AssetType type,
                                          AssetHandle existingHandle) {
     if (!ImGui::BeginComboPopup(popupID, bb, ImGuiPopupFlags_None)) {
         return {};
     }
-    auto assets = AM.getAssetsOfType(type);
+    // FIXME: This leaks because the storage is bound to the local ID
+    auto** storagePtr =
+        ImGui::GetStateStorage()->GetVoidPtrRef(ImGui::GetID("AssetList"));
+    if (!*storagePtr) {
+        *storagePtr = new AssetList();
+    }
+    auto& assetList = *(AssetList*)*storagePtr;
+    if (ImGui::IsWindowAppearing()) {
+        assetList.entries =
+            AM.registry() | transform([](auto& e) { return &e; }) |
+            filter([&](auto* entry) { return entry->handle.type() == type; }) |
+            ranges::to<std::vector>;
+        ranges::sort(assetList.entries, CompareCaseInsensitive<>{},
+                     &AssetRegistryEntry::name);
+    }
     AssetHandle handle;
-    for (auto asset: assets) {
-        bool selected = asset == existingHandle;
-        if (ImGui::Selectable(AM.getName(asset).c_str(), selected)) {
-            handle = asset;
+    for (auto* entry: assetList.entries) {
+        bool selected = entry->handle == existingHandle;
+        if (ImGui::Selectable(entry->name.c_str(), selected)) {
+            handle = entry->handle;
         }
     }
     ImGui::EndCombo();

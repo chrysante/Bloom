@@ -24,6 +24,7 @@ target_link_libraries(bloom
     glfw
     scatha
     libsvm
+    Jolt
     utility
     yaml-cpp
     termfmt

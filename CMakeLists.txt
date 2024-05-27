@@ -46,6 +46,16 @@ CPMAddPackage("gh:jbeder/yaml-cpp#master")
 set(termfmt_SHARED ON)
 CPMAddPackage("gh:chrysante/termfmt#main")
 CPMAddPackage("gh:Neargye/magic_enum@0.9.5")
+CPMAddPackage(
+  NAME Jolt
+  GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
+  VERSION 5.0.0
+  DOWNLOAD_ONLY YES
+)
+if(Jolt_ADDED)
+  add_subdirectory(${Jolt_SOURCE_DIR}/Build)
+endif()
+
 if(BLOOM_BUILD_TESTS)
   CPMAddPackage("gh:catchorg/Catch2@3.4.0")
 endif()

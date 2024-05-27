@@ -50,6 +50,8 @@ public:
     static DataTypeMask const FloatN;
     static DataTypeMask const VectorN;
 
+    DataTypeMask() = default;
+
     constexpr DataTypeMask(nodeEditor::PinUserType userType):
         bits(std::bit_cast<uint64_t>(userType)) {}
 
@@ -108,7 +110,27 @@ public:
         return std::nullopt;
     }
 
+    DataTypeMask operator|(DataTypeMask rhs) const {
+        return DataTypeMask(bits | rhs.bits);
+    }
+
+    DataTypeMask operator&(DataTypeMask rhs) const {
+        return DataTypeMask(bits & rhs.bits);
+    }
+
+    DataTypeMask operator^(DataTypeMask rhs) const {
+        return DataTypeMask(bits ^ rhs.bits);
+    }
+
+    DataTypeMask& operator|=(DataTypeMask rhs) & { return *this = *this | rhs; }
+
+    DataTypeMask& operator&=(DataTypeMask rhs) & { return *this = *this & rhs; }
+
+    DataTypeMask& operator^=(DataTypeMask rhs) & { return *this = *this ^ rhs; }
+
 private:
+    explicit constexpr DataTypeMask(uint64_t bits): bits(bits) {}
+
     uint64_t bits = 0;
 };
 

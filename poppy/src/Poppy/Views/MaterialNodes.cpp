@@ -826,9 +826,16 @@ struct ArithmeticController: OverloadableNodeController {
     }
 
     DataTypeMask selectOutputType() const {
+        using enum DataType;
         auto a = inputType(0);
         auto b = inputType(1);
-        return a.count() < b.count() ? a : b;
+        if (a == DataTypeMask(Float)) {
+            return b;
+        }
+        if (b == DataTypeMask(Float)) {
+            return a;
+        }
+        return a.count() < b.count() ? b : a;
     }
 
     std::vector<PinDesc> makeOutputDescriptors() override {

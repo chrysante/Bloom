@@ -179,7 +179,8 @@ struct Delegate: NodeEditorDelegate {
 
 POPPY_REGISTER_VIEW(MaterialEditor, "Material Editor");
 
-MaterialEditor::MaterialEditor(): nodeEditor(commandPaletteWrite()) {
+MaterialEditor::MaterialEditor():
+    View({ .defaultSize = { 1000, 800 } }), nodeEditor(commandPaletteWrite()) {
     auto& cmd = commandPaletteWrite();
     auto* compileCmd = cmd.add("Compile", { Key::B, ModFlags::Control },
                                [this] { compile(); },

@@ -162,6 +162,7 @@ void Viewport::init() {
             renderGraphDirty = true;
         }
     });
+    listen([this](UnloadSceneEvent event) { renderGraphDirty = true; });
     if (auto* defaultScene = std::getenv("DEFAULT_SCENE")) {
         AssetHandle handle = assetManager().findByName(defaultScene);
         if (handle) {
@@ -196,6 +197,10 @@ void Viewport::display() {
         }
     }
     else {
+        if (renderGraphDirty) {
+            renderer = nullptr;
+            renderGraphDirty = false;
+        }
         displayEmptyWithReason("No Active Scene");
     }
     displayToolbarWithBackground();

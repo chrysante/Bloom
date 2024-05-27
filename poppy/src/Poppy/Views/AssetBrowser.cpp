@@ -36,6 +36,7 @@ namespace {
 struct AssetBrowserData {
     std::filesystem::path projectDir; // absolute path
     std::filesystem::path currentDir; // absolute path
+    bool showAssetManagerDebugger = false;
 };
 
 struct AssetBrowser: View {
@@ -59,6 +60,8 @@ struct AssetBrowser: View {
     void openSubdirectory(std::filesystem::path const&);
     void refreshFilesystem();
     bool displayPreview(AssetHandle handle);
+
+    void displayAssetManagerDebugger();
 
     /// The applications asset manager
     bloom::AssetManager* assetManager = nullptr;
@@ -233,7 +236,8 @@ public:
 
 POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser");
 
-BLOOM_MAKE_TEXT_SERIALIZER(AssetBrowserData, projectDir, currentDir);
+BLOOM_MAKE_TEXT_SERIALIZER(AssetBrowserData, projectDir, currentDir,
+                           showAssetManagerDebugger);
 
 AssetBrowser::AssetBrowser() = default;
 
@@ -284,6 +288,11 @@ void AssetBrowser::init() {
         ToolbarButton("Compile Scripts")
             .onClick([this] {
                 assetManager->compileScripts();
+            }),
+        ToolbarDropdownMenu()
+            .content([this] {
+                ImGui::MenuItem("Show Asset Manager Debugger", "",
+                                &data.showAssetManagerDebugger);
             })
     }); // clang-format on
     setPadding({ 0, 0 });
@@ -307,6 +316,9 @@ void AssetBrowser::display() {
     }
     newAssetPopup();
     dirView.display();
+    if (data.showAssetManagerDebugger) {
+        displayAssetManagerDebugger();
+    }
 }
 
 static bool isConcreteAsset(AssetType t) {
@@ -449,6 +461,36 @@ bool AssetBrowser::displayPreview(AssetHandle handle) {
         return true;
     }
     return false;
+}
+
+static void displayEntry(AssetRegistryEntry const& entry) {
+    int useCount = (int)entry.asset.use_count();
+    auto font = FontDesc::UIDefault().setWeight(
+        useCount == 0 ? FontWeight::Regular : FontWeight::Bold);
+    ImGui::PushFont(FontManager::get(font));
+    bool open = ImGui::TreeNodeEx(entry.name.c_str());
+    ImGui::PopFont();
+    if (!open) {
+        return;
+    }
+    ImGui::Text("Location: %s", entry.diskLocation.c_str());
+    ImGui::Text("ID: %s", utl::strcat(entry.handle.ID()).c_str());
+    ImGui::Text("Ref Count: %d", useCount);
+    ImGui::TreePop();
+}
+
+void AssetBrowser::displayAssetManagerDebugger() {
+    if (!assetManager) {
+        return;
+    }
+    ImGui::Begin("Asset Manager Debugger", &data.showAssetManagerDebugger);
+    if (ImGui::TreeNodeEx("Registry", ImGuiTreeNodeFlags_DefaultOpen)) {
+        for (auto& entry: assetManager->registry()) {
+            displayEntry(entry);
+        }
+        ImGui::TreePop();
+    }
+    ImGui::End();
 }
 
 UI_TEST("Content Browser", "Open Scene") {

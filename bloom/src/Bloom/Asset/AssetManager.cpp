@@ -964,9 +964,11 @@ static bool compileEngineLibrary(std::filesystem::path destDir) {
     }
     CompilerInvocation inv(TargetType::StaticLibrary, "Bloom");
     inv.setInputs(sourceFiles);
+    std::stringstream err;
+    inv.setErrorStream(err);
     auto target = inv.run();
     if (!target) {
-        Logger::Error("Failed to compiled engine script library");
+        Logger::Error("Failed to compiled engine script library:\n", err.str());
         return false;
     }
     target->writeToDisk(destDir);
@@ -977,6 +979,7 @@ void AssetManager::compileScripts() {
     dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
     using namespace scatha;
     std::optional<scatha::Target> target;
+    std::stringstream err;
     try {
         auto engineLibDir = projectRootDir() / ".int";
         if (!compileEngineLibrary(engineLibDir)) {
@@ -984,7 +987,9 @@ void AssetManager::compileScripts() {
         }
         CompilerInvocation inv(TargetType::BinaryOnly, "main");
         inv.setLibSearchPaths({ engineLibDir });
-        inv.setOptLevel(1);
+        // FIXME: I temporarily disabled optimizations because of bugs in the
+        // optimizer
+        inv.setOptLevel(0);
         inv.setLinkerOptions({ .searchHost = true });
         auto sources = impl->registry | filter([](auto& entry) {
             return entry.handle.type() == AssetType::ScriptSource;
@@ -992,13 +997,14 @@ void AssetManager::compileScripts() {
             return SourceFile::load(impl->makeAbsolute(entry.diskLocation));
         });
         inv.setInputs(sources | ranges::to<std::vector>);
+        inv.setErrorStream(err);
         target = inv.run();
     }
     catch (std::exception const& e) {
-        Logger::Error(e.what());
+        Logger::Error("Script compiler error: ", e.what(), "\n", err.str());
     }
     if (!target) {
-        Logger::Error("Failed to compile scripts");
+        Logger::Error("Failed to compile scripts: ", err.str());
         return;
     }
     Logger::Info("Successfully compiled scripts");

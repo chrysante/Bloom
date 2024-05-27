@@ -477,6 +477,8 @@ enum class TextAlign { Left, Right, Center };
 
 } // namespace
 
+static constexpr auto DirectoryPopupName = "DirectoryPopup";
+
 /// Cleared when mouse is released
 struct ActiveViewData {
     bool haveSelectedItem = false;
@@ -497,6 +499,7 @@ struct ViewData: ActiveViewData, FrameData {
     void updateEarly();
     void updateLate();
 
+    ScannedDirectory* popupDirectory = nullptr;
     DirectoryEntry* renamingEntry;
     bool startRenaming = false;
     bool didNavigate = false;
@@ -552,6 +555,7 @@ struct DirectoryView::Impl: Emitter {
                       std::filesystem::path const& item);
     void beginDragSelection(ScannedDirectory& directory);
     void updateDragSelection(ScannedDirectory& directory);
+    void displayDirectoryPopup();
     void displayDeleteValidationPopup();
 
     void activateEntry(DirectoryEntry& entry);
@@ -579,7 +583,7 @@ struct DirectoryView::Impl: Emitter {
 
     void moveSelection(int offset, SelectionMode mode);
 
-    void createFolder();
+    void createFolder(ScannedDirectory& dir);
 
     void displayDebugger();
 
@@ -626,8 +630,9 @@ void Impl::assignCommands(CommandPalette& commandPalette) {
                                              [this] { return canGoForward(); });
     commands[Rescan] =
         commandPalette.add("Rescan", {}, [this] { directoryLine.rescan(); });
-    commands[CreateFolder] =
-        commandPalette.add("Create Folder", {}, [this] { createFolder(); });
+    commands[CreateFolder] = commandPalette.add("Create Folder", {}, [this] {
+        createFolder(directoryLine.current());
+    });
     commandPalette.add("Open", { .key = Key::O, .modFlags = ModFlags::Control },
                        [this] { activateSelectedEntries(); }, [this] {
         return !directoryLine.current().selection().empty();
@@ -648,7 +653,7 @@ void Impl::assignCommands(CommandPalette& commandPalette) {
                        { .key = Key::Backspace, .modFlags = ModFlags::Control },
                        [this] {
         deleteSelectedEntries(directoryLine.current());
-    });
+    }, [this] { return !viewData.renamingEntry; });
     commandPalette.add("Show Debugger",
                        { .key = Key::D,
                          .modFlags = ModFlags::Control | ModFlags::Shift },
@@ -756,15 +761,17 @@ void Impl::displayBackground(ScannedDirectory& directory) {
         (float2)ImGui::GetCursorPos() + (float2)ImGui::GetContentRegionAvail();
     ImGui::SetNextItemAllowOverlap();
     bool active = ImGui::InvisibleButton("###background-button", size);
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        ImGui::OpenPopup(DirectoryPopupName);
+        viewData.popupDirectory = &directory;
+    }
+    displayDirectoryPopup();
     if (active && !viewData.hoveredEntry &&
         getSelectionMode() == SelectionMode::Replace)
     {
         directory.clearSelection();
     }
     itemDragTarget(*directory.entry(), true);
-#if 0
-    backgroundContextMenu(directory);
-#endif
     if (ImGui::IsItemActive() && !viewData.isSelectionDragging &&
         !viewData.hoveredEntry)
     {
@@ -847,11 +854,16 @@ void Impl::displayColumn(ScannedDirectory& dir) {
     {
         ImGui::FocusWindow(ImGui::GetCurrentWindowRead());
     }
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() +
-                         ImGui::GetStyle().WindowPadding.y);
+    ImGui::Dummy({ 0, ImGui::GetStyle().WindowPadding.y });
+    auto windowRect = [&] {
+        auto r = ImGui::GetCurrentWindowRead()->ClipRect;
+        return Rect{ (float2)r.Min, (float2)r.Max };
+    }();
     for (auto [index, entry]: dir.entries() | enumerate) {
         displayColumnViewItem(dir, entry, index);
-        if (viewData.didNavigate && isCurrent && dir.navEntry() == entry) {
+        if (isCurrent && viewData.didNavigate && dir.navEntry() == entry &&
+            !vml::encloses(windowRect, viewData.entryBBs[entry]))
+        {
             ImGui::SetScrollHereY();
         }
     }
@@ -1009,11 +1021,7 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
     bool entrySelected = directory.selection().contains(entry);
     auto& g = *GImGui;
     auto& style = g.Style;
-    if (viewData.selectionRectDirectory &&
-        directory.entry() == viewData.selectionRectDirectory->entry())
-    {
-        viewData.entryBBs[entry] = itemBB;
-    }
+    viewData.entryBBs[entry] = itemBB;
     /// Button behaviour
     ItemButtonState buttonState = [&] {
         ImRect BB = ImRect(itemBB.lower_bound(), itemBB.upper_bound());
@@ -1405,6 +1413,9 @@ void Impl::beginDragSelection(ScannedDirectory& directory) {
     viewData.selectionRectBegin = (float2)ImGui::GetMousePos();
     viewData.selectionRectDirectory = &directory;
     directory.beginSelectionCandidates(getSelectionMode());
+    dispatch(DispatchToken::NextFrame, [this, &directory] {
+        makeDirectoryCurrent(directory.entry()->path());
+    });
 }
 
 void Impl::updateDragSelection(ScannedDirectory& dir) {
@@ -1412,7 +1423,6 @@ void Impl::updateDragSelection(ScannedDirectory& dir) {
         return;
     }
     auto& g = *GImGui;
-    auto& window = *g.CurrentWindow;
     float2 pos1 = viewData.selectionRectBegin;
     float2 pos2 = ImGui::GetMousePos();
     Rect rect(pos1, pos2);
@@ -1427,14 +1437,30 @@ void Impl::updateDragSelection(ScannedDirectory& dir) {
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
         dir.applySelectionCandidates();
     }
-    ImRect windowRect = window.Rect();
-    float2 min = vml::max(rect.lower_bound(), (float2)windowRect.Min);
-    float2 max = vml::min(rect.upper_bound(), (float2)windowRect.Max);
-    float4 rectColor = ImGui::GetStyleColorVec4(ImGuiCol_Header);
-    rectColor.a *= 0.5f;
-    auto* DL = window.DrawList;
-    DL->AddRectFilled(min, max, ImGui::ColorConvertFloat4ToU32(rectColor));
-    DL->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_Border));
+    if (layout != Layout::Columns) {
+        auto& window = *g.CurrentWindow;
+        ImRect windowRect = window.Rect();
+        float2 min = vml::max(rect.lower_bound(), (float2)windowRect.Min);
+        float2 max = vml::min(rect.upper_bound(), (float2)windowRect.Max);
+        float4 rectColor = ImGui::GetStyleColorVec4(ImGuiCol_Header);
+        rectColor.a *= 0.5f;
+        auto* DL = window.DrawList;
+        DL->AddRectFilled(min, max, ImGui::ColorConvertFloat4ToU32(rectColor));
+        DL->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_Border));
+    }
+}
+
+void Impl::displayDirectoryPopup() {
+    if (!ImGui::BeginPopup(DirectoryPopupName)) {
+        viewData.popupDirectory = nullptr;
+        return;
+    }
+    BL_ASSERT(viewData.popupDirectory);
+    auto& dir = *viewData.popupDirectory;
+    if (ImGui::MenuItem("New Folder")) {
+        createFolder(dir);
+    }
+    ImGui::EndPopup();
 }
 
 void Impl::displayDeleteValidationPopup() {
@@ -1475,9 +1501,7 @@ void Impl::displayDeleteValidationPopup() {
         done = true;
     }
     ImGui::SameLine();
-    if (ImGui::IsWindowAppearing()) {
-        ImGui::SetKeyboardFocusHere();
-    }
+    ImGui::SetItemDefaultFocus();
     if (ImGui::Button("Cancel")) {
         done = true;
     }
@@ -1626,8 +1650,7 @@ void Impl::moveSelection(int offset, SelectionMode mode) {
     amendNavEntry(dir, indexValid, modIndex, navIndex, offset);
 }
 
-void Impl::createFolder() {
-    auto& dir = directoryLine.current();
+void Impl::createFolder(ScannedDirectory& dir) {
     auto baseName = "New Folder";
     std::string name = baseName;
     int counter = 2;
@@ -1678,6 +1701,7 @@ void Impl::displayDebugger() {
     debugItem("selectionRectDirectory", viewData.selectionRectDirectory);
     debugItem("RenameBuffer", RenameBuffer.data());
     debugItem("renamingEntry", viewData.renamingEntry);
+    debugItem("popupDirectory", viewData.popupDirectory);
     ImGui::SeparatorText("Directory Line");
     for (auto& dir: directoryLine) {
         auto font = FontDesc::UIDefault();

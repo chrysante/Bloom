@@ -221,7 +221,7 @@ public:
             }
         }
         if (numItems > 0) {
-            return DeleteConfirmResponse::ConfirmNumItems(entries.size());
+            return DeleteConfirmResponse::ConfirmNumItems(numItems);
         }
         return DeleteConfirmResponse::MayDelete;
     }

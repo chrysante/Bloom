@@ -104,6 +104,7 @@ struct Viewport: View, BasicSceneInspector {
     YAML::Node serialize() const override;
     void deserialize(YAML::Node) override;
     Toolbar makeToolbar();
+    void displaySceneSettings(Scene& scene);
     void displayViewportSettings();
     void displayRendererSettings();
 
@@ -121,12 +122,13 @@ struct Viewport: View, BasicSceneInspector {
     DebugDrawOptions drawOptions;
     ViewportCameraController cameraController;
     MouseState mouseState;
-    EditorSceneRenderer* renderer = nullptr;
+    std::unique_ptr<EditorSceneRenderer> renderer;
     ViewData viewData;
     TextureHandle colorPickerTmpTex;
     RendererSettings rendererSettings;
     bool showRenderGraphDebugger = false;
     bool gameView = false;
+    bool renderGraphDirty = true;
 };
 
 } // namespace
@@ -146,10 +148,20 @@ Viewport::Viewport(): BasicSceneInspector(this) {
             [this] { gizmo.setOperation(GizmoOperation::Scale); });
 }
 
+static AssetHandle getHandle(RenderGraph const* rg) {
+    return rg ? rg->handle() : AssetHandle();
+}
+
 void Viewport::init() {
     setPadding({ 0, 0 });
     setToolbar(makeToolbar());
     editor().reactToSceneCommands(commandPaletteWrite());
+    listen([this](DidRecompileRenderGraph msg) {
+        auto* existing = renderer ? renderer->sceneRenderGraph() : nullptr;
+        if (getHandle(existing) == getHandle(msg.renderGraph)) {
+            renderGraphDirty = true;
+        }
+    });
     if (auto* defaultScene = std::getenv("DEFAULT_SCENE")) {
         AssetHandle handle = assetManager().findByName(defaultScene);
         if (handle) {
@@ -159,18 +171,6 @@ void Viewport::init() {
             Logger::Warn("Failed to find default scene: ", defaultScene);
         }
     }
-}
-
-static EditorSceneRenderer& getSceneRenderer(RenderGraph* renderGraph,
-                                             CommandQueue& commandQueue) {
-    static RenderGraph const* current = nullptr;
-    static std::unique_ptr<EditorSceneRenderer> instance;
-    if (current != renderGraph) {
-        current = renderGraph;
-        instance = std::make_unique<EditorSceneRenderer>(renderGraph->clone(),
-                                                         commandQueue);
-    }
-    return *instance;
 }
 
 void Viewport::display() {
@@ -239,37 +239,39 @@ void Viewport::drawScenes() {
         .shadowMapSize = rendererSettings.shadowMapResolution,
         .drawWireframe = drawOptions.mode == DebugDrawOptions::Mode::Wireframe
     };
-    auto* renderGraph = RenderGraphManager::get();
-    if (!renderGraph) {
-        [[maybe_unused]] static int _ = [this] {
-            dispatch(DispatchToken::Now, CompileRenderGraph{});
-            return 0;
-        }();
-        displayEmptyWithError("No Render Graph Found");
-        return;
+    auto& sceneSystem = editor().coreSystems().sceneSystem();
+    std::unique_lock sceneLock = sceneSystem.lock();
+    if (renderGraphDirty || !renderer) {
+        auto* renderGraph = sceneSystem.scenes().front()->renderGraph();
+        if (!renderGraph) {
+            displayEmptyWithError("Scene has no render graph");
+            return;
+        }
+        renderer =
+            std::make_unique<EditorSceneRenderer>(renderGraph->clone(),
+                                                  editor().commandQueue());
+        renderGraphDirty = false;
     }
-    renderer = &getSceneRenderer(renderGraph, editor().commandQueue());
     cameraController.applyProjection(viewportSize);
     renderer->begin(frameParams, cameraController.camera(),
                     rendererSettings.bloomSettings,
                     rendererSettings.postProcessSettings);
-    auto& sceneSystem = editor().coreSystems().sceneSystem();
-    std::unique_lock lock = sceneSystem.lock();
     sceneSystem.applyTransformHierarchy();
     for (auto* scene: sceneSystem.scenes()) {
         renderer->submit(*scene, selection());
     }
-    lock.unlock();
+    sceneLock.unlock();
     auto commandBuffer = editor().commandQueue().createCommandBuffer();
     renderer->draw(*commandBuffer);
+    auto* renderGraph = renderer->renderGraph();
     if (renderGraph->sources().empty()) {
-        displayEmptyWithError("Render Graph Has No Outputs");
+        displayEmptyWithError("Render graph has no outputs");
         return;
     }
     auto finalColor = gameView ? renderer->sceneColor() :
                                  renderer->sceneColorWithOverlays();
     if (!finalColor) {
-        displayEmptyWithError("Render Graph Output Is Null");
+        displayEmptyWithError("Render graph output is null");
         return;
     }
     float2 size = ImGui::GetContentRegionAvail();
@@ -277,6 +279,7 @@ void Viewport::drawScenes() {
         finalColor.size().xy *
         ((float2)ImGui::GetMousePos() - (float2)ImGui::GetCursorScreenPos()) /
         size;
+    markObjectRenderHazard(finalColor);
     ImGui::Image(finalColor.nativeHandle(), size);
     if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows) &&
         ImGui::IsKeyDown(ImGuiKey_ModAlt))
@@ -461,7 +464,8 @@ void Viewport::openScene(AssetHandle handle) {
         Logger::Error("Cannot open scene. Asset is not a scene");
         return;
     }
-    AM.makeAvailable(handle, AssetRepresentation::CPU);
+    using enum AssetRepresentation;
+    AM.makeAvailable(handle, CPU | GPU);
     auto& sceneSystem = editor().coreSystems().sceneSystem();
     sceneSystem.unloadAll();
     sceneSystem.loadScene(as<Scene>(asset));
@@ -558,6 +562,21 @@ Toolbar Viewport::makeToolbar() {
     return toolbar;
 }
 
+void Viewport::displaySceneSettings(Scene& scene) {
+    using namespace propertiesView;
+    beginProperty("Render Graph");
+    auto rg = scene.renderGraph() ? scene.renderGraph()->shared_from_this() :
+                                    Reference<RenderGraph>();
+    fullWidth();
+    if (assetButton("###RenderGraph", rg,
+                    { .style = AssetButtonStyle::Compact,
+                      .repr = AssetRepresentation::GPU }))
+    {
+        scene.setRenderGraph(rg);
+        renderGraphDirty = true;
+    }
+}
+
 void Viewport::displayViewportSettings() {
     using namespace propertiesView;
     beginProperty("Game View");
@@ -649,7 +668,13 @@ void Viewport::displayRendererSettings() {
 void Viewport::dropdownMenu() {
     using namespace propertiesView;
     ImGui::SetWindowSize({ ImGui::GetWindowSize().x,
-                           std::min(ImGui::GetWindowSize().y, 250.0f) });
+                           std::min(ImGui::GetWindowSize().y, 250.0f) },
+                         ImGuiCond_Once);
+    auto& sceneSystem = editor().coreSystems().sceneSystem();
+    if (sceneSystem.scenes().size() == 1 && beginSection("Scene Properties")) {
+        displaySceneSettings(*sceneSystem.scenes().front());
+        endSection();
+    }
     if (beginSection("Viewport Settings")) {
         displayViewportSettings();
         endSection();

@@ -34,10 +34,12 @@ public:
                                         vml::float2 position) const;
 
     bloom::RenderGraph* renderGraph() { return mRenderGraph.get(); }
+    bloom::RenderGraph* sceneRenderGraph() { return mSceneRenderGraph; }
 
 private:
     std::unique_ptr<bloom::Renderer> mRenderer;
     std::unique_ptr<bloom::RenderGraph> mRenderGraph;
+    bloom::RenderGraph* mSceneRenderGraph = nullptr;
     bloom::GeometryResource* selectedGeometry = nullptr;
     bloom::Geometry2DResource* overlayScene = nullptr;
     bloom::TextureResource* idMap = nullptr;

@@ -32,6 +32,91 @@ namespace {
 
 enum CompilationStatus { None, Success, Error };
 
+class RenderGraphNodeController: public NodeController {
+public:
+    /// Creates this node in \p renderGraph
+    virtual void create(bloom::RenderGraph& renderGraph) = 0;
+
+    /// \Returns the source at index \p index
+    /// \Param index is the index in the node editor UI
+    /// \Pre \p index must be valid and `create(RenderGraph)` must have been
+    /// called before
+    virtual bloom::PassSource* getSource(size_t index) const = 0;
+
+    /// \Returns the sink at index \p index
+    /// \Param index is the index in the node editor UI
+    /// \Pre \p index must be valid and `create(RenderGraph)` must have been
+    /// called before
+    virtual bloom::PassSink* getSink(size_t index) const = 0;
+
+    /// Counterpart to the non-static `NodeController::serialize`
+    static std::unique_ptr<RenderGraphNodeController> deserialize(
+        YAML::Node node);
+};
+
+static RenderGraphNodeController* getController(Node const& node) {
+    return dynamic_cast<RenderGraphNodeController*>(node.controller());
+}
+
+struct RGModel: bloom::RenderGraphModel {
+    bool hasCPURepr() const override { return !editorGraph.empty(); }
+
+    YAML::Node serialize() const override { return editorGraph.serialize(); }
+
+    void deserialize(YAML::Node const& root) override {
+        editorGraph.deserialize(root, RenderGraphNodeController::deserialize);
+    }
+
+    void construct(RenderGraph& rg) const override {
+        rg.clear();
+        BL_ASSERT(&rg.model() == this);
+        for (auto* node: editorGraph.nodes()) {
+            auto* controller = getController(*node);
+            if (!controller) {
+                Logger::Error("Ignoring node (no controller attached): ",
+                              node->name());
+                continue;
+            }
+            controller->create(rg);
+        }
+        for (auto* node: editorGraph.nodes()) {
+            auto* sourceController = getController(*node);
+            if (!sourceController) {
+                continue;
+            }
+            for (auto* output: node->outputs()) {
+                auto* source =
+                    sourceController->getSource(output->indexInParent());
+                for (auto* target: output->targets()) {
+                    auto* sinkController = getController(target->parent());
+                    if (!sinkController) {
+                        continue;
+                    }
+                    auto* sink =
+                        sinkController->getSink(target->indexInParent());
+                    Logger::Trace("Linking ", source->qualifiedName(), " to ",
+                                  sink->qualifiedName());
+                    rg.addLink(source, sink);
+                }
+            }
+        }
+    }
+
+    NodeEditorGraph editorGraph;
+};
+
+static RGModel& getModel(bloom::RenderGraphModel& model) {
+    return dynamic_cast<RGModel&>(model);
+}
+
+} // namespace
+
+std::unique_ptr<RenderGraphModel> bloom::makeRenderGraphModel() {
+    return std::make_unique<RGModel>();
+}
+
+namespace {
+
 struct RenderGraphEditor: View {
     struct Delegate: NodeEditorDelegate {
         Delegate(RenderGraphEditor* view): view(view) {}
@@ -73,13 +158,20 @@ struct RenderGraphEditor: View {
 
     void deserialize(YAML::Node node) override;
 
+    void receiveData(std::any data) override {
+        if (auto* rg = std::any_cast<Reference<RenderGraph>>(&data)) {
+            renderGraph = *rg;
+            model = &getModel(renderGraph->model());
+            nodeEditor.setModel(&model->editorGraph);
+        }
+    }
+
     void compile();
-    void doCompile();
 
     Node* createNodePopupMenu();
 
-    RenderGraph* renderGraph;
-    NodeEditorGraph model;
+    Reference<RenderGraph> renderGraph = nullptr;
+    RGModel* model = nullptr;
     NodeEditor nodeEditor;
     CompilationStatus compilationStatus = CompilationStatus::None;
 };
@@ -89,28 +181,6 @@ POPPY_REGISTER_VIEW(RenderGraphEditor, "Render Graph Editor");
 static constexpr float4 InputNodeColor = { 0.4, 0.7, 0.2, 1.0 };
 static constexpr float4 PassNodeColor = { 0.27, 0.58, 0.92, 1.0 };
 static constexpr float4 OutputNodeColor = { 1.0, 0.0, 0.2, 1.0 };
-
-class RenderGraphNodeController: public NodeController {
-public:
-    /// Creates this node in \p renderGraph
-    virtual void create(bloom::RenderGraph& renderGraph) = 0;
-
-    /// \Returns the source at index \p index
-    /// \Param index is the index in the node editor UI
-    /// \Pre \p index must be valid and `create(RenderGraph)` must have been
-    /// called before
-    virtual bloom::PassSource* getSource(size_t index) const = 0;
-
-    /// \Returns the sink at index \p index
-    /// \Param index is the index in the node editor UI
-    /// \Pre \p index must be valid and `create(RenderGraph)` must have been
-    /// called before
-    virtual bloom::PassSink* getSink(size_t index) const = 0;
-
-    /// Counterpart to the non-static `NodeController::serialize`
-    static std::unique_ptr<RenderGraphNodeController> deserialize(
-        YAML::Node node);
-};
 
 std::unique_ptr<nodeEditor::NodeController> RenderGraphEditor::Delegate::
     deserializeNodeController(YAML::Node const& node) {
@@ -313,52 +383,6 @@ std::unique_ptr<RenderGraphNodeController> RenderGraphNodeController::
     return nullptr;
 }
 
-static RenderGraphNodeController* getController(Node const& node) {
-    return dynamic_cast<RenderGraphNodeController*>(node.controller());
-}
-
-static std::string uniqueName(std::string_view name) {
-    static int counter = 0;
-    return utl::strcat(name, ++counter);
-}
-
-static std::unique_ptr<RenderGraph> constructRenderGraph(
-    HardwareDevice& device, NodeEditorGraph const& model) {
-    auto rg = std::make_unique<RenderGraph>(uniqueName("RenderGraph"), device);
-    for (auto* node: model.nodes()) {
-        auto* controller = getController(*node);
-        if (!controller) {
-            Logger::Error("Ignoring node (no controller attached): ",
-                          node->name());
-            continue;
-        }
-        controller->create(*rg);
-    }
-    for (auto* node: model.nodes()) {
-        auto* sourceController = getController(*node);
-        if (!sourceController) {
-            continue;
-        }
-        for (auto* output: node->outputs()) {
-            auto* source = sourceController->getSource(output->indexInParent());
-            for (auto* target: output->targets()) {
-                auto* sinkController = getController(target->parent());
-                if (!sinkController) {
-                    continue;
-                }
-                auto* sink = sinkController->getSink(target->indexInParent());
-                Logger::Trace("Linking ", source->qualifiedName(), " to ",
-                              sink->qualifiedName());
-                rg->addLink(source, sink);
-            }
-        }
-    }
-    if (!rg->compile()) {
-        return nullptr;
-    }
-    return rg;
-}
-
 static char const* compStatusMessage(CompilationStatus status) {
     using enum CompilationStatus;
     switch (status) {
@@ -373,10 +397,11 @@ static char const* compStatusMessage(CompilationStatus status) {
 
 RenderGraphEditor::RenderGraphEditor(): nodeEditor(commandPaletteWrite()) {
     nodeEditor.setDelegate(std::make_unique<Delegate>(this));
-    nodeEditor.setModel(&model);
     auto& cmd = commandPaletteWrite();
-    auto* compileCmd = cmd.add("Compile", { Key::B, ModFlags::Control },
-                               [this] { compile(); });
+    auto* compileCmd =
+        cmd.add("Compile", { Key::B, ModFlags::Control }, [this] {
+        dispatch(DispatchToken::NextFrame, [this] { compile(); });
+    }, [this] { return renderGraph != nullptr; });
     // clang-format off
     setToolbar({
         ToolbarIconButton(compileCmd, "ok"),
@@ -387,10 +412,7 @@ RenderGraphEditor::RenderGraphEditor(): nodeEditor(commandPaletteWrite()) {
     }); // clang-format on
 }
 
-void RenderGraphEditor::init() {
-    setPadding({ 0, 0 });
-    listen([this](CompileRenderGraph) { compile(); });
-}
+void RenderGraphEditor::init() { setPadding({ 0, 0 }); }
 
 void RenderGraphEditor::onInput(InputEvent& event) {
     nodeEditor.onInput(event);
@@ -401,10 +423,6 @@ void RenderGraphEditor::display() { nodeEditor.display(); }
 YAML::Node RenderGraphEditor::serialize() const {
     YAML::Node root;
     root["NodeEditor"] = nodeEditor.serialize();
-    /// We use these functions to serialize our graph for now. This is not
-    /// really correct, these functions should only serialize view related data,
-    /// we will change this in the future
-    root["Model"] = model.serialize();
     return root;
 }
 
@@ -413,35 +431,35 @@ void RenderGraphEditor::deserialize(YAML::Node root) {
         return;
     }
     nodeEditor.deserialize(root["NodeEditor"]);
-    model.deserialize(root["Model"], RenderGraphNodeController::deserialize);
 }
 
 void RenderGraphEditor::compile() {
-    dispatch(DispatchToken::NextFrame, [this] { doCompile(); });
-}
-
-void RenderGraphEditor::doCompile() {
-    auto rg = constructRenderGraph(editor().device(), model);
-    if (rg) {
+    BL_ASSERT(renderGraph);
+    model->construct(*renderGraph);
+    if (renderGraph->compile()) {
         compilationStatus = CompilationStatus::Success;
+        dispatch(DispatchToken::Now,
+                 DidRecompileRenderGraph{ renderGraph.get() });
     }
     else {
         compilationStatus = CompilationStatus::Error;
     }
-    RenderGraphManager::set(std::move(rg));
 }
 
 Node* RenderGraphEditor::createNodePopupMenu() {
     Node* result = nullptr;
     if (ImGui::MenuItem("Input")) {
-        result = model.addNode(GlobalInputNodeController::MakeDesc({}));
+        result =
+            model->editorGraph.addNode(GlobalInputNodeController::MakeDesc({}));
     }
     if (ImGui::MenuItem("Output")) {
-        result = model.addNode(GlobalOutputNodeController::MakeDesc({}));
+        result = model->editorGraph.addNode(
+            GlobalOutputNodeController::MakeDesc({}));
     }
     for (auto& entry: PassRegistry::entries()) {
         if (ImGui::MenuItem(entry.name.c_str())) {
-            result = model.addNode(PassNodeController::MakeDesc({}, entry));
+            result = model->editorGraph.addNode(
+                PassNodeController::MakeDesc({}, entry));
         }
     }
     return result;

@@ -10,8 +10,13 @@
 using namespace bloom;
 using namespace ranges::views;
 
-RenderGraph::RenderGraph(std::string name, HardwareDevice& device):
-    Pass(std::move(name), &device) {}
+std::unique_ptr<RenderGraphModel> bloom::makeRenderGraphModel() {
+    BL_UNREACHABLE();
+}
+
+RenderGraph::RenderGraph(AssetHandle handle, std::string name,
+                         HardwareDevice& device):
+    Asset(handle, name), Pass(name, &device), _model(makeRenderGraphModel()) {}
 
 Pass* RenderGraph::addPass(std::unique_ptr<Pass> pass) {
     BL_EXPECT(!isCompiled());
@@ -158,7 +163,6 @@ static bool isSinkPass(Pass const* pass) {
 }
 
 bool RenderGraph::compile() {
-    /// We assert this for now until we fiugre out what to do in this case
     BL_ASSERT(!isCompiled());
     auto allPasses = passes | transform(ToAddress<>) | ToSmallVector<>;
     if (!validate(allPasses)) {
@@ -278,7 +282,8 @@ Pass* get(utl::hashmap<Pass const*, Pass*> const& map, Pass const* pass) {
 }
 
 std::unique_ptr<Pass> RenderGraph::doClone() const {
-    auto clone = std::make_unique<RenderGraph>(name(), device());
+    auto clone =
+        std::make_unique<RenderGraph>(handle(), Asset::name(), device());
     for (auto* sink: sinks()) {
         clone->declareSink(sink->interface());
     }
@@ -331,10 +336,11 @@ std::unique_ptr<Pass> RenderGraph::doClone() const {
     return clone;
 }
 
-static std::unique_ptr<RenderGraph> gRenderGraph;
-
-RenderGraph* RenderGraphManager::get() { return gRenderGraph.get(); }
-
-void RenderGraphManager::set(std::unique_ptr<RenderGraph> rg) {
-    gRenderGraph = std::move(rg);
+void RenderGraph::clear() {
+    _sinks.clear();
+    _sources.clear();
+    resPool.reset();
+    passes.clear();
+    executionOrder.clear();
+    lastFrameParams = {};
 }

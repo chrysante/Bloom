@@ -19,6 +19,7 @@
 #include "Bloom/GPU/ShaderCompiler.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/StaticMesh.h"
 #include "Bloom/Graphics/Texture.h"
 #include "Bloom/Runtime/ScriptSystem.h"
@@ -32,7 +33,7 @@ namespace {
 static std::filesystem::path registryFilePath() { return ".registry"; }
 
 /// List of possible asset file extensions
-enum class FileExtension { Bmesh, Bmat, Bmatinst, Btex, Bscene, Scatha };
+enum class FileExtension { Bmesh, Bmat, Bmatinst, Btex, Bscene, Scatha, Brg };
 
 /// \Returns the file extension \p ext as a string with a preceding dot
 /// character
@@ -50,6 +51,8 @@ static std::string toString(FileExtension ext) {
         return ".bscene";
     case FileExtension::Scatha:
         return ".sc";
+    case FileExtension::Brg:
+        return ".brg";
     }
 }
 
@@ -78,6 +81,9 @@ static std::optional<FileExtension> toExtension(std::string_view ext) {
     }
     if (ext == ".sc") {
         return FileExtension::Scatha;
+    }
+    if (ext == ".brg") {
+        return FileExtension::Brg;
     }
     return std::nullopt;
 }
@@ -109,6 +115,8 @@ static FileExtension toExtension(AssetType type) {
         return FileExtension::Bscene;
     case AssetType::ScriptSource:
         return FileExtension::Scatha;
+    case AssetType::RenderGraph:
+        return FileExtension::Brg;
     case AssetType::Invalid:
         BL_UNREACHABLE();
     }
@@ -129,6 +137,8 @@ static AssetType toAssetType(FileExtension ext) {
         return AssetType::Scene;
     case FileExtension::Scatha:
         return AssetType::ScriptSource;
+    case FileExtension::Brg:
+        return AssetType::RenderGraph;
     }
 }
 
@@ -245,6 +255,8 @@ struct AssetManager::Impl {
                        AssetRepresentation repr, bool force);
     bool makeAvailImpl(ScriptSource&, RegistryEntry const& entry,
                        AssetRepresentation repr, bool force);
+    bool makeAvailImpl(RenderGraph&, RegistryEntry const& entry,
+                       AssetRepresentation repr, bool force);
 
     Reference<StaticMeshData> readStaticMeshFromDisk(
         std::filesystem::path const& source);
@@ -255,6 +267,8 @@ struct AssetManager::Impl {
     void loadTextureFromDisk(Texture2D& texture,
                              std::filesystem::path const& source);
     void loadSceneFromDisk(Scene& scene, std::filesystem::path const& source);
+    void loadRenderGraphFromDisk(RenderGraph& rg,
+                                 std::filesystem::path const& source);
 
     void uploadStaticMeshToGPU(StaticMesh& mesh, RegistryEntry const& entry);
     void uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry);
@@ -274,6 +288,8 @@ struct AssetManager::Impl {
     void flushToDiskImpl(Scene const&, std::filesystem::path const& dest,
                          bool force);
     void flushToDiskImpl(ScriptSource const&, std::filesystem::path const& dest,
+                         bool force);
+    void flushToDiskImpl(RenderGraph const&, std::filesystem::path const& dest,
                          bool force);
 
     /// Deduces the asset type from the file extension \p ext of the source
@@ -880,6 +896,28 @@ bool Impl::makeAvailImpl(ScriptSource&, RegistryEntry const&,
     return false;
 }
 
+bool Impl::makeAvailImpl(RenderGraph& rg, RegistryEntry const& entry,
+                         AssetRepresentation repr, bool force) {
+    if (test(repr & AssetRepresentation::GPU) && !rg.model().hasCPURepr()) {
+        /// We need the CPU representation to compile the render graph
+        repr |= AssetRepresentation::CPU;
+    }
+    // clang-format off
+    visitRepr(repr, utl::overload{
+        [&](Tag<AssetRepresentation::CPU>) {
+            loadRenderGraphFromDisk(rg, entry.diskLocation);
+        },
+        [&](Tag<AssetRepresentation::GPU>) {
+            if (!rg.getExecutionOrder().empty() && !force) {
+                return;
+            }
+            rg.model().construct(rg);
+            rg.compile();
+        },
+    }); // clang-format on
+    return true;
+}
+
 bool AssetManager::isValid(AssetHandle handle) const {
     return registry().find(handle) != nullptr;
 }
@@ -981,10 +1019,14 @@ std::vector<AssetHandle> AssetManager::getAssetsOfType(AssetType type) const {
 
 Reference<Asset> Impl::allocateAsset(AssetHandle handle,
                                      std::string name) const {
-    return dispatchAssetType(handle.type(),
-                             [&]<typename A>(utl::tag<A>) -> Reference<Asset> {
+    return dispatchAssetType(
+        handle.type(),
+        utl::overload{ [&]<typename A>(utl::tag<A>) -> Reference<Asset> {
         return allocateRef<A>(handle, std::move(name));
-    });
+    }, [&](utl::tag<RenderGraph>) -> Reference<Asset> {
+        return allocateRef<RenderGraph>(handle, std::move(name),
+                                        assetManager->device());
+    } });
 }
 
 RegistryEntry* Impl::findByDiskLocation(std::filesystem::path path) {
@@ -1127,6 +1169,14 @@ void Impl::loadSceneFromDisk(Scene& scene,
     auto file = openFile(makeAbsolute(source), std::ios::in | std::ios::binary);
     YAML::Node root = YAML::Load(file);
     scene.deserialize(root, *assetManager);
+}
+
+void Impl::loadRenderGraphFromDisk(RenderGraph& rg,
+                                   std::filesystem::path const& source) {
+    assert(toExtension(source) == FileExtension::Brg);
+    auto file = openFile(makeAbsolute(source), std::ios::in | std::ios::binary);
+    YAML::Node root = YAML::Load(file);
+    rg.model().deserialize(root);
 }
 
 /// MARK: - Memory -> GPU
@@ -1331,6 +1381,16 @@ void Impl::flushToDiskImpl(ScriptSource const&,
         return;
     }
     (void)openOrCreateFile(dest, std::ios::out);
+}
+
+void Impl::flushToDiskImpl(RenderGraph const& rg,
+                           std::filesystem::path const& dest, bool) {
+    YAML::Emitter out;
+    out << rg.model().serialize();
+    std::ios::sync_with_stdio(false);
+    auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
+                                           std::ios::binary);
+    file << out.c_str();
 }
 
 std::optional<AssetType> Impl::deduceImportedAssetType(

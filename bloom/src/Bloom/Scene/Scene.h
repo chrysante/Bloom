@@ -174,11 +174,20 @@ public:
     /// \pre \p entity must have a transform component
     vml::float4x4 calculateTransformRelativeToWorld(EntityID entity) const;
 
+    ///
+    RenderGraph* renderGraph() const { return _renderGraph.get(); }
+
+    ///
+    void setRenderGraph(Reference<RenderGraph> rg) {
+        _renderGraph = std::move(rg);
+    }
+
 private:
     /// Detatches \p entity without adjusting its transform
     void detachFromHierarchyImpl(EntityID entity);
 
     entt::registry _registry;
+    Reference<RenderGraph> _renderGraph;
 };
 
 } // namespace bloom

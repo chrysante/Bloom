@@ -8,6 +8,7 @@
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Yaml.h"
+#include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Runtime/ScriptSystem.h"
 #include "Bloom/Scene/Components/Hierarchy.h"
 #include "Bloom/Scene/Components/Tag.h"
@@ -138,21 +139,22 @@ static void deserializeEntity(YAML::Node const& node, Scene& scene,
 
 YAML::Node Scene::serialize() const {
     YAML::Node root;
+    auto entities = root["Entities"];
     each([&](EntityID entity) {
-        root.push_back(serializeEntity(*this, entity));
+        entities.push_back(serializeEntity(*this, entity));
     });
+    root["RenderGraph"] = renderGraph() ? renderGraph()->handle() :
+                                          AssetHandle();
     return root;
 }
 
-void Scene::deserialize(YAML::Node const& root, AssetManager& assetManager) {
-    if (!root.IsSequence()) {
-        Logger::Info("Failed to deserialize Scene: Scene is empty.");
-        return;
-    }
+void Scene::deserialize(YAML::Node const& root, AssetManager& AM) {
     clear();
-    for (YAML::Node const& node: root) {
-        deserializeEntity(node, *this, assetManager);
+    for (YAML::Node const& node: root["Entities"]) {
+        deserializeEntity(node, *this, AM);
     }
+    auto rgHandle = root["RenderGraph"].as<AssetHandle>(AssetHandle{});
+    _renderGraph = as<RenderGraph>(AM.get(rgHandle, AssetRepresentation::GPU));
 }
 
 [[maybe_unused]] static void sanitizeHierachy(Scene* scene) {

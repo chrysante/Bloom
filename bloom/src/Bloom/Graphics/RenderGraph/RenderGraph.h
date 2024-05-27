@@ -9,17 +9,35 @@
 #include <utl/hashtable.hpp>
 #include <utl/vector.hpp>
 #include <vml/vml.hpp>
+#include <yaml-cpp/yaml.h>
 
+#include "Bloom/Asset/Asset.h"
+#include "Bloom/Core/Reference.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/ResourcePool.h"
 
 namespace bloom {
 
-///
-class RenderGraph: public Pass {
+class RenderGraphModel {
 public:
-    explicit RenderGraph(std::string name, HardwareDevice& device);
+    virtual ~RenderGraphModel() = default;
+    virtual bool hasCPURepr() const = 0;
+    virtual YAML::Node serialize() const = 0;
+    virtual void deserialize(YAML::Node const&) = 0;
+    virtual void construct(RenderGraph& rg) const = 0;
+};
+
+__attribute__((weak)) std::unique_ptr<RenderGraphModel> makeRenderGraphModel();
+
+///
+class RenderGraph:
+    public Asset,
+    public Pass,
+    public EnableRefFromThis<RenderGraph> {
+public:
+    explicit RenderGraph(AssetHandle handle, std::string name,
+                         HardwareDevice& device);
 
     /// Adds \p pass to this render graph.
     /// \Returns a pointer to the added pass.
@@ -95,6 +113,15 @@ public:
     /// explicit resource allocation.
     std::unique_ptr<RenderGraph> clone() const;
 
+    ///
+    RenderGraphModel& model() { return *_model; }
+
+    /// \overload
+    RenderGraphModel const& model() const { return *_model; }
+
+    ///
+    void clear();
+
 private:
     void doExecute(FrameParameters const& params,
                    CommandBuffer& buffer) override;
@@ -111,15 +138,7 @@ private:
     std::vector<std::unique_ptr<Pass>> passes;
     std::vector<Pass*> executionOrder;
     FrameParameters lastFrameParams;
-};
-
-/// Temporary render graph manager until we figure out where to store them
-struct RenderGraphManager {
-    /// \Returns the global render graph instance
-    static RenderGraph* get();
-
-    /// Sets the global render graph
-    static void set(std::unique_ptr<RenderGraph> rg);
+    std::unique_ptr<RenderGraphModel> _model;
 };
 
 } // namespace bloom

@@ -3,14 +3,23 @@
 
 #include <any>
 
-namespace poppy {
+namespace bloom {
 
-/// Instructs the render graph editor to compile the render graph
-struct CompileRenderGraph {};
+class RenderGraph;
+
+}
+
+namespace poppy {
 
 ///
 struct ExtendRenderLifetime {
     std::any object;
+};
+
+/// Sent by the render graph editor to notify renderers using the graph to
+/// update
+struct DidRecompileRenderGraph {
+    bloom::RenderGraph const* renderGraph = nullptr;
 };
 
 } // namespace poppy

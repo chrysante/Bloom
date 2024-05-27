@@ -78,23 +78,23 @@ END_DECL()
     // clang-format on
 
     template <typename R>
-    static R* getResource(RenderGraph* renderGraph, size_t index) {
-    auto* source = renderGraph->inputSource(index);
+    static R* getResource(RenderGraph& renderGraph, size_t index) {
+    auto* source = renderGraph.inputSource(index);
     BL_ASSERT(source);
     return cast<R*>(source->resource());
 }
 
 Renderer::Renderer(RenderGraph* renderGraph, CommandQueue& commandQueue):
     mRenderGraph(renderGraph) {
-    geometry = getResource<GeometryResource>(renderGraph, 0);
-    lights = getResource<LightsResource>(renderGraph, 1);
-    cameraBuffer = getResource<BufferResource>(renderGraph, 2);
-    lightSpaceTransformBuffer = getResource<BufferResource>(renderGraph, 3);
-    bloomParams = getResource<BufferResource>(renderGraph, 4);
-    postProcessParams = getResource<BufferResource>(renderGraph, 5);
-    specularTexture = getResource<TextureResource>(renderGraph, 6);
-    brdfTexture = getResource<TextureResource>(renderGraph, 7);
-
+    BL_ASSERT(renderGraph);
+    geometry = getResource<GeometryResource>(*renderGraph, 0);
+    lights = getResource<LightsResource>(*renderGraph, 1);
+    cameraBuffer = getResource<BufferResource>(*renderGraph, 2);
+    lightSpaceTransformBuffer = getResource<BufferResource>(*renderGraph, 3);
+    bloomParams = getResource<BufferResource>(*renderGraph, 4);
+    postProcessParams = getResource<BufferResource>(*renderGraph, 5);
+    specularTexture = getResource<TextureResource>(*renderGraph, 6);
+    brdfTexture = getResource<TextureResource>(*renderGraph, 7);
     /// Generate BRDF map
     auto& device = renderGraph->device();
     BRDF = device.createTexture({

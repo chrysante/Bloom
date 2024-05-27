@@ -15,6 +15,7 @@
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/Core/Utils.h"
+#include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/Texture.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Poppy/Editor/Editor.h"
@@ -45,6 +46,8 @@ std::string poppy::selectAssetIcon(AssetType type) {
         return "cubes";
     case AssetType::ScriptSource:
         return "file-code";
+    case AssetType::RenderGraph:
+        return "camera";
     default:
         return "doc";
     }
@@ -420,6 +423,10 @@ void poppy::openAsset(bloom::AssetHandle handle) {
         Application::DispatchMessage(DispatchToken::Now, msg);
         auto command = utl::strcat("open ", diskLocation);
         std::system(command.data());
+        break;
+    }
+    case AssetType::RenderGraph: {
+        openAssetInView<RenderGraph>("Render Graph Editor", handle);
         break;
     }
     default:

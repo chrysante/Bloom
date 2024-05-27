@@ -18,7 +18,8 @@ template <typename T>
 using WeakReference = std::weak_ptr<T>;
 
 template <typename Derived, typename Base>
-    requires std::derived_from<Derived, Base>
+    requires std::derived_from<Derived, Base> ||
+             std::derived_from<Base, Derived>
 Reference<Derived> as(Reference<Base> const& base) {
     if constexpr (std::is_polymorphic_v<Base>) {
         return std::dynamic_pointer_cast<Derived>(base);

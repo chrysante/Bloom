@@ -94,6 +94,9 @@ public:
     ///
     Camera const& getCamera() const { return camera; }
 
+    ///
+    RenderGraph* renderGraph() const { return mRenderGraph; }
+
 private:
     RenderGraph* mRenderGraph = nullptr;
     GeometryResource* geometry = nullptr;

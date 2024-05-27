@@ -48,8 +48,10 @@ EditorSceneRenderer::EditorSceneRenderer(
     std::unique_ptr<RenderGraph> sceneRenderGraphOwner,
     CommandQueue& commandQueue) {
     auto* sceneRenderGraph = sceneRenderGraphOwner.get();
-    mRenderGraph = std::make_unique<RenderGraph>("Editor Render Graph",
+    mRenderGraph = std::make_unique<RenderGraph>(AssetHandle(),
+                                                 "Editor Render Graph",
                                                  sceneRenderGraph->device());
+    mSceneRenderGraph = sceneRenderGraph;
     wrapRenderGraph(*mRenderGraph, std::move(sceneRenderGraphOwner));
     auto* selPass = mRenderGraph->addPass(makeSelectionPass());
     auto* overlaysPass = mRenderGraph->addPass(makeOverlayPass());

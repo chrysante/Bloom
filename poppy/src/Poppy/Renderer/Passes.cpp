@@ -301,7 +301,7 @@ std::unique_ptr<Pass> poppy::makeOverlayPass() {
 
 static void copyTexture(TextureHandle source, TextureHandle dest,
                         BlitEncoder& encoder) {
-    if (source != dest &&
+    if (source && dest && source != dest &&
         source.description().pixelFormat == dest.description().pixelFormat)
     {
         encoder.copyTexture(source, dest);

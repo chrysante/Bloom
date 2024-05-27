@@ -1079,11 +1079,6 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
             !buttonState.selected && !buttonState.activated;
         return buttonState;
     }();
-    if (buttonState.activated) {
-        if (!entry->isDirectory()) {
-            entry->open();
-        }
-    }
     if (ImGui::IsItemHovered()) {
         viewData.hoveredEntry = entry;
     }
@@ -1459,7 +1454,7 @@ void Impl::displayDirectoryPopup() {
     BL_ASSERT(viewData.popupDirectory);
     auto& dir = *viewData.popupDirectory;
     if (ImGui::MenuItem("New Folder")) {
-        createFolder(dir);
+        dispatch(DispatchToken::NextFrame, [this, &dir] { createFolder(dir); });
     }
     ImGui::EndPopup();
 }
@@ -1660,17 +1655,15 @@ void Impl::createFolder(ScannedDirectory& dir) {
         name = utl::strcat(baseName, counter++);
     }
     dir.entry()->createFolder(name);
-    dispatch(DispatchToken::NextFrame, [this, &dir, name] {
-        directoryLine.rescan();
-        auto* entry = dir.find(dir.entry()->path() / name);
-        if (!entry) {
-            Logger::Error(
-                "Failed to start renaming. Newly created folder does not exist");
-            return;
-        }
-        startRenaming(entry);
-        dir.amendSelection(entry, SelectionMode::Replace);
-    });
+    directoryLine.rescan();
+    auto* entry = dir.find(dir.entry()->path() / name);
+    if (!entry) {
+        Logger::Error(
+            "Failed to start renaming. Newly created folder does not exist");
+        return;
+    }
+    startRenaming(entry);
+    dir.amendSelection(entry, SelectionMode::Replace);
 }
 
 static void debugItemImpl(std::string_view name, auto const&... args) {

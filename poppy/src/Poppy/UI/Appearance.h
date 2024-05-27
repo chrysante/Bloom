@@ -58,6 +58,7 @@ struct StyleColors {
     vml::float4 tabUnfocused;
     vml::float4 tabUnfocusedActive;
     vml::float4 dockingPreview;
+    vml::float4 dragDropTarget;
 };
 
 /// Intermediate data structure that is derived from system colors or hard coded

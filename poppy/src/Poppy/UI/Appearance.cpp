@@ -62,6 +62,7 @@ static void applyStyle(poppy::StyleDescription const& style) {
     colors[ImGuiCol_TabUnfocusedActive] = style.colors.tabUnfocusedActive;
     colors[ImGuiCol_DockingPreview] = style.colors.dockingPreview;
     colors[ImGuiCol_DockingEmptyBg] = style.colors.windowBG;
+    colors[ImGuiCol_DragDropTarget] = style.colors.dragDropTarget;
     imguiStyle.WindowBorderSize = style.vars.windowBorder ? 1.0 : 0.0;
     imguiStyle.ChildBorderSize = style.vars.childWindowBorder ? 1.0 : 0.0;
     imguiStyle.PopupBorderSize = style.vars.popupBorder ? 1.0 : 0.0;
@@ -83,33 +84,33 @@ static void applyStyle(poppy::StyleDescription const& style) {
 }
 
 static StyleDescription makeStyle(SystemAppearance s) {
-    StyleColors colors{
-        .text = s.labelColor,
-        .textDisabled = s.secondaryLabelColor,
-        .windowBG = s.controlBackgroundColor,
-        .childWindowBG = s.controlBackgroundColor,
-        .popupBG = s.controlBackgroundColor,
-        .menubarBG = s.controlBackgroundColor,
-        .controlFrame = s.controlColor,
-        .controlFrameHovered = s.controlColor,
-        .controlFrameDown = s.selectedControlColor,
-        .highlightControlFrame = s.controlAccentColor,
-        .highlightControlFrameHovered = s.controlAccentColor,
-        .highlightControlFrameDown = s.selectedControlColor,
-        .checkMark = s.controlAccentColor,
-        .windowTitleBar = s.windowBackgroundColor,
-        .activeWindowTitleBar = s.windowBackgroundColor,
-        .border = s.separatorColor,
-        .scrollbar = s.type == AppearanceType::Light ? double4(0, 0, 0, 0.247) :
-                                                       s.controlColor,
-        .separator = s.separatorColor,
-        .tab = { 0, 0, 0, 0 },
-        .tabHovered = s.selectedControlColor,
-        .tabActive = s.selectedControlColor,
-        .tabUnfocused = {},
-        .tabUnfocusedActive = {},
-        .dockingPreview = s.selectedControlColor,
-    };
+    StyleColors colors{ .text = s.labelColor,
+                        .textDisabled = s.secondaryLabelColor,
+                        .windowBG = s.controlBackgroundColor,
+                        .childWindowBG = s.controlBackgroundColor,
+                        .popupBG = s.controlBackgroundColor,
+                        .menubarBG = s.controlBackgroundColor,
+                        .controlFrame = s.controlColor,
+                        .controlFrameHovered = s.controlColor,
+                        .controlFrameDown = s.selectedControlColor,
+                        .highlightControlFrame = s.controlAccentColor,
+                        .highlightControlFrameHovered = s.controlAccentColor,
+                        .highlightControlFrameDown = s.selectedControlColor,
+                        .checkMark = s.controlAccentColor,
+                        .windowTitleBar = s.windowBackgroundColor,
+                        .activeWindowTitleBar = s.windowBackgroundColor,
+                        .border = s.separatorColor,
+                        .scrollbar = s.type == AppearanceType::Light ?
+                                         double4(0, 0, 0, 0.247) :
+                                         s.controlColor,
+                        .separator = s.separatorColor,
+                        .tab = { 0, 0, 0, 0 },
+                        .tabHovered = s.selectedControlColor,
+                        .tabActive = s.selectedControlColor,
+                        .tabUnfocused = {},
+                        .tabUnfocusedActive = {},
+                        .dockingPreview = s.selectedControlColor,
+                        .dragDropTarget = s.controlAccentColor };
     StyleVars vars{
         .windowBorder = false,
         .childWindowBorder = false,

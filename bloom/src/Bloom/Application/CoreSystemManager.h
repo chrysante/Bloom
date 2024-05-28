@@ -14,6 +14,7 @@ class Application;
 class AssetManager;
 class SceneSystem;
 class ScriptSystem;
+class PhysicsSystem;
 class CoreRuntime;
 class CoreSystem;
 
@@ -65,6 +66,12 @@ public:
     /// \overload
     ScriptSystem const& scriptSystem() const { return *mScriptSystem; }
 
+    ///
+    PhysicsSystem& physicsSystem() { return *mPhysicsSystem; }
+
+    /// \overload
+    PhysicsSystem const& physicsSystem() const { return *mPhysicsSystem; }
+
 private:
     template <typename SystemType>
     std::unique_ptr<SystemType> makeCoreSystem(auto&&...);
@@ -76,6 +83,7 @@ private:
     std::unique_ptr<CoreRuntime> mRuntime;
     std::shared_ptr<SceneSystem> mSceneSystem;
     std::shared_ptr<ScriptSystem> mScriptSystem;
+    std::shared_ptr<PhysicsSystem> mPhysicsSystem;
 };
 
 } // namespace bloom

@@ -16,7 +16,7 @@
 namespace bloom {
 
 struct UpdateOptions {
-    std::size_t stepsPerSecond = 50;
+    std::size_t stepsPerSecond = 60;
 };
 
 enum class RuntimeState { Inactive = 0, Paused = 1, Running = 2 };

@@ -38,13 +38,9 @@ void CoreRuntime::removeDelegate(RuntimeDelegate const*) {
 
 void CoreRuntime::run() {
     std::unique_lock lock(mMutex);
-    if (state() == RuntimeState::Running) {
+    if (state() != RuntimeState::Inactive) {
         return;
     }
-    if (state() == RuntimeState::Paused) {
-        return;
-    }
-    assert(state() == RuntimeState::Inactive);
     setState(RuntimeState::Running);
     lock.unlock();
     mUpdateThread = std::thread([this] { updateThread(); });
@@ -86,7 +82,7 @@ static std::chrono::nanoseconds getTargetFrameTime() {
             return std::chrono::nanoseconds{ value };
         }
     }
-    return std::chrono::milliseconds{ 20 };
+    return std::chrono::milliseconds{ 16 };
 }
 
 void CoreRuntime::updateThread() {

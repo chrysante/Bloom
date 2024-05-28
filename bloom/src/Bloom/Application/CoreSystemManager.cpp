@@ -4,6 +4,7 @@
 #include "Bloom/Asset/AssetManager.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/Runtime/CoreRuntime.h"
+#include "Bloom/Runtime/PhysicsSystem.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Runtime/ScriptSystem.h"
 
@@ -20,6 +21,7 @@ void CoreSystemManager::init() {
     mRuntime = makeCoreSystem<CoreRuntime>();
     mSceneSystem = makeCoreSystem<SceneSystem>();
     mScriptSystem = makeCoreSystem<ScriptSystem>();
+    mPhysicsSystem = makeCoreSystem<PhysicsSystem>();
     mRuntime->addDelegate(mSceneSystem);
 }
 

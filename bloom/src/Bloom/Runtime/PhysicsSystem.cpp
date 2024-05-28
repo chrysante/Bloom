@@ -20,6 +20,7 @@
 #include <magic_enum.hpp>
 
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Scene/Scene.h"
 
 using namespace bloom;
 
@@ -194,6 +195,8 @@ struct MyBodyActivationListener: public JPH::BodyActivationListener {
 
 struct PhysicsSystem::Impl {
     void init();
+    void onSceneInit(Scene& scene);
+    void update(Scene& scene, Timestep time);
 
     BPLayerInterfaceImpl broad_phase_layer_interface;
     ObjectVsBroadPhaseLayerFilterImpl object_vs_broadphase_layer_filter;
@@ -208,6 +211,10 @@ PhysicsSystem::PhysicsSystem(): impl(std::make_unique<PhysicsSystem::Impl>()) {}
 PhysicsSystem::~PhysicsSystem() = default;
 
 void PhysicsSystem::init() { impl->init(); }
+void PhysicsSystem::onSceneInit(Scene& scene) { impl->onSceneInit(scene); }
+void PhysicsSystem::update(Scene& scene, Timestep time) {
+    impl->update(scene, time);
+}
 
 void PhysicsSystem::Impl::init() {
     JPH::RegisterDefaultAllocator();
@@ -259,3 +266,7 @@ void PhysicsSystem::Impl::init() {
     body_interface.SetLinearVelocity(sphere_id, JPH::Vec3(0.0f, -5.0f, 0.0f));
     system.OptimizeBroadPhase();
 }
+
+void PhysicsSystem::Impl::onSceneInit(Scene& scene) {}
+
+void PhysicsSystem::Impl::update(Scene& scene, Timestep time) {}

@@ -4,6 +4,7 @@
 #include <utl/stack.hpp>
 
 #include "Bloom/Application/Application.h"
+#include "Bloom/Runtime/PhysicsSystem.h"
 #include "Bloom/Runtime/ScriptSystem.h"
 #include "Bloom/Scene/Scene.h"
 #include "Bloom/Scene/SceneEvents.h"
@@ -87,7 +88,9 @@ void SceneSystem::start() {
     }) | ranges::to<utl::hashmap<utl::uuid, Reference<Scene>>>;
     setPointers(mSimScenes);
     auto& scriptSystem = application().coreSystems().scriptSystem();
+    auto& physicsSystem = application().coreSystems().physicsSystem();
     for (auto* scene: scenes()) {
+        physicsSystem.onSceneInit(*scene);
         scriptSystem.onSceneInit(*scene);
     }
 }
@@ -105,7 +108,11 @@ void SceneSystem::resume() {}
 void SceneSystem::step(Timestep timestep) {
     auto L = lock();
     auto& scriptSystem = application().coreSystems().scriptSystem();
+    auto& physicsSystem = application().coreSystems().physicsSystem();
+    // We will change this system to only work on a single scene, but later
+    BL_ASSERT(scenes().size() == 1);
     for (auto* scene: scenes()) {
+        physicsSystem.update(*scene, timestep);
         scriptSystem.onSceneUpdate(*scene, timestep);
     }
 }

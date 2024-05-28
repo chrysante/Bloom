@@ -9,6 +9,7 @@
 
 #include "Bloom/Graphics/Lights.h"
 #include "Bloom/Scene/Components/Lights.h"
+#include "Bloom/Scene/Components/PhysicsComponents.h"
 #include "Bloom/Scene/Entity.h"
 #include "Poppy/Core/Debug.h"
 
@@ -36,7 +37,11 @@ enum struct LightType {
 
 std::string toString(LightType type);
 
-decltype(auto) dispatchLightComponent(LightType type, auto&& f) {
+enum struct ColliderType { Sphere = 0, Box = 1 };
+
+std::string toString(ColliderType type);
+
+decltype(auto) dispatchComponentType(LightType type, auto&& f) {
     using namespace bloom;
     switch (type) {
     case LightType::PointLight:
@@ -47,8 +52,16 @@ decltype(auto) dispatchLightComponent(LightType type, auto&& f) {
         return f(utl::tag<DirectionalLightComponent>{});
     case LightType::SkyLight:
         return f(utl::tag<SkyLightComponent>{});
-    default:
-        BL_UNREACHABLE();
+    }
+}
+
+decltype(auto) dispatchComponentType(ColliderType type, auto&& f) {
+    using namespace bloom;
+    switch (type) {
+    case ColliderType::Sphere:
+        return f(utl::tag<SphereColliderComponent>{});
+    case ColliderType::Box:
+        return f(utl::tag<BoxColliderComponent>{});
     }
 }
 
@@ -65,11 +78,18 @@ public:
 
     bool isSimulating() const;
 
-    bool hasLightComponent(bloom::EntityHandle) const;
+    bool hasLightComponent(bloom::EntityHandle entity) const;
 
-    std::optional<LightType> getLightType(bloom::EntityHandle) const;
+    std::optional<LightType> getLightType(bloom::EntityHandle entity) const;
 
-    void removeLightComponent(LightType, bloom::EntityHandle);
+    void removeComponentType(LightType type, bloom::EntityHandle entity);
+
+    bool hasColliderComponent(bloom::EntityHandle entity) const;
+
+    std::optional<ColliderType> getColliderType(
+        bloom::EntityHandle entity) const;
+
+    void removeComponentType(ColliderType type, bloom::EntityHandle entity);
 
 private:
     View* view = nullptr;

@@ -1,5 +1,5 @@
-#ifndef EntityID_h
-#define EntityID_h
+#ifndef BLOOM_SCENE_ENTITYID_H
+#define BLOOM_SCENE_ENTITYID_H
 
 #include <iosfwd>
 #include <type_traits>
@@ -67,4 +67,4 @@ struct YAML::convert<bloom::EntityID> {
     }
 };
 
-#endif /* EntityID_h */
+#endif // BLOOM_SCENE_ENTITYID_H

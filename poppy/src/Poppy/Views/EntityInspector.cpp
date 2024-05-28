@@ -42,32 +42,35 @@ public:
 private:
     void display() override;
 
-    void inspectTag(bloom::EntityHandle);
+    void inspectTag(EntityHandle);
     template <typename... Components>
-    void addComponentButton(char const* name, bloom::EntityHandle entity,
+    void addComponentButton(char const* name, EntityHandle entity,
                             bool forceDisable = false);
 
-    void inspectTransform(bloom::EntityHandle);
+    void inspectTransform(EntityHandle);
 
-    void inspectMesh(bloom::EntityHandle);
-    void receiveMeshDragDrop(bloom::EntityHandle);
-    void receiveMaterialDragDrop(bloom::EntityHandle);
+    void inspectMesh(EntityHandle);
+    void receiveMeshDragDrop(EntityHandle);
+    void receiveMaterialDragDrop(EntityHandle);
 
-    void inspectLight(bloom::EntityHandle);
-    void inspectLightType(LightType&, bloom::EntityHandle);
+    void inspectLight(EntityHandle);
 
     void inspectLightCommon(auto& light, LightType type);
-    void inspectPointLight(bloom::PointLight&);
-    void inspectSpotLight(bloom::SpotLight&);
-    void inspectDirectionalLight(bloom::DirectionalLight&);
-    void inspectSkyLight(bloom::SkyLight&);
+    void inspectLightComponent(PointLight&);
+    void inspectLightComponent(SpotLight&);
+    void inspectLightComponent(DirectionalLight&);
+    void inspectLightComponent(SkyLight&);
 
-    void inspectScript(bloom::EntityHandle);
+    void inspectPhysics(EntityHandle entity);
+    void inspectColliderComponent(SphereColliderComponent&);
+    void inspectColliderComponent(BoxColliderComponent&);
+
+    void inspectScript(EntityHandle);
 
     // Helpers
     bool beginComponentSection(std::string_view name);
     template <typename>
-    bool beginComponentSection(std::string_view name, bloom::EntityHandle);
+    bool beginComponentSection(std::string_view name, EntityHandle);
     bool beginSubSection(std::string_view name);
 
     bool beginGenericSection(std::string_view name, FontDesc const&,
@@ -111,13 +114,17 @@ void EntityInspector::display() {
         inspectLight(entity);
         ImGui::Separator();
     }
+    if (entity.has<PhysicsComponent>()) {
+        inspectPhysics(entity);
+        ImGui::Separator();
+    }
     if (entity.has<ScriptComponent>()) {
         inspectScript(entity);
         ImGui::Separator();
     }
 }
 
-void EntityInspector::inspectTag(bloom::EntityHandle entity) {
+void EntityInspector::inspectTag(EntityHandle entity) {
     auto& tag = entity.get<TagComponent>();
     std::string_view name = tag.name;
     float2 framePadding = GImGui->Style.FramePadding;
@@ -176,6 +183,7 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
             if (comboOpen) {
                 withFont(FontDesc::UIDefault(), [&] {
                     bool hasLight = hasLightComponent(entity);
+                    bool hasCollider = hasColliderComponent(entity);
                     addComponentButton<MeshRendererComponent>("Mesh Renderer",
                                                               entity);
                     addComponentButton<PointLightComponent>("Point Light",
@@ -186,6 +194,11 @@ void EntityInspector::inspectTag(bloom::EntityHandle entity) {
                         "Directional Light", entity, hasLight);
                     addComponentButton<SkyLightComponent>("Sky Light", entity,
                                                           hasLight);
+                    addComponentButton<PhysicsComponent,
+                                       SphereColliderComponent>(
+                        "Sphere Collider", entity, hasCollider);
+                    addComponentButton<PhysicsComponent, BoxColliderComponent>(
+                        "Box Collider", entity, hasCollider);
                     addComponentButton<ScriptComponent,
                                        ScriptPreservedData>("Script", entity);
                 });
@@ -208,7 +221,7 @@ void EntityInspector::addComponentButton(char const* name, EntityHandle entity,
     }
 }
 
-void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
+void EntityInspector::inspectTransform(EntityHandle entity) {
     using namespace propertiesView;
     auto& transform = entity.get<Transform>();
     if (beginComponentSection("Transform")) {
@@ -277,7 +290,7 @@ void EntityInspector::inspectTransform(bloom::EntityHandle entity) {
     }
 }
 
-void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
+void EntityInspector::inspectMesh(EntityHandle entity) {
     using namespace propertiesView;
     if (!beginComponentSection<MeshRendererComponent>("Mesh Renderer", entity))
     {
@@ -297,62 +310,22 @@ void EntityInspector::inspectMesh(bloom::EntityHandle entity) {
     endSection();
 }
 
-void EntityInspector::inspectLight(bloom::EntityHandle entity) {
-    using namespace bloom;
-    auto type = getLightType(entity).value();
-    auto deleter = [&] {
-        switch (type) {
-        case LightType::PointLight:
-            entity.remove<PointLightComponent>();
-            break;
-        case LightType::SpotLight:
-            entity.remove<SpotLightComponent>();
-            break;
-        case LightType::DirectionalLight:
-            entity.remove<DirectionalLightComponent>();
-            break;
-        default:
-            BL_UNREACHABLE();
+template <typename E>
+static std::optional<E> myEnumCombo(char const* label, E value) {
+    auto myToString = [](E e) {
+        if constexpr (requires { toString(e); }) {
+            return std::string(toString(e));
+        }
+        else {
+            return std::string(magic_enum::enum_name(e));
         }
     };
-    auto font = FontDesc::UIDefault().setWeight(FontWeight::Semibold);
-    if (!beginGenericSection("Light Component", font, deleter)) {
-        return;
-    }
-    disabledIf(isSimulating(), [&] {
-        inspectLightType(type, entity);
-        switch (type) {
-        case LightType::PointLight:
-            inspectPointLight(entity.get<PointLightComponent>());
-            break;
-        case LightType::SpotLight:
-            inspectSpotLight(entity.get<SpotLightComponent>());
-            break;
-        case LightType::DirectionalLight:
-            inspectDirectionalLight(entity.get<DirectionalLightComponent>());
-            break;
-        case LightType::SkyLight:
-            inspectSkyLight(entity.get<SkyLightComponent>());
-            break;
-        default:
-            break;
-        }
-    });
-    endSection();
-}
-
-void EntityInspector::inspectLightType(LightType& type,
-                                       bloom::EntityHandle entity) {
-    using namespace propertiesView;
-    beginProperty("Type");
-    auto newType = type;
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    if (ImGui::BeginCombo("##Light Type", toString(newType).data())) {
-        for (size_t j = 0; j < EnumCount<LightType>; ++j) {
-            LightType t = (LightType)j;
-            bool selected = newType == t;
-            if (ImGui::Selectable(toString(t).data(), selected)) {
-                newType = t;
+    std::optional<E> newValue;
+    if (ImGui::BeginCombo(label, myToString(value).data())) {
+        for (auto current: magic_enum::enum_values<E>()) {
+            bool selected = value == current;
+            if (ImGui::Selectable(myToString(current).data(), selected)) {
+                newValue = current;
             }
             if (selected) {
                 ImGui::SetItemDefaultFocus();
@@ -360,17 +333,52 @@ void EntityInspector::inspectLightType(LightType& type,
         }
         ImGui::EndCombo();
     }
-    if (newType != type) {
-        auto color = dispatchLightComponent(type, [&]<typename C>(utl::tag<C>) {
-            return entity.get<C>().color;
-        });
-        dispatchLightComponent(newType, [&]<typename C>(utl::tag<C>) {
-            auto& c = entity.add(C{ C::Light::Default() });
-            c.color = color;
-        });
-        removeLightComponent(type, entity);
+    return newValue;
+}
+
+template <typename E>
+static std::optional<E> inspectTypeGeneric(char const* ID, E type,
+                                           auto exchange) {
+    auto newType = myEnumCombo(ID, type);
+    if (newType) {
+        std::invoke(exchange, *newType);
     }
-    type = newType;
+    return newType;
+}
+
+void EntityInspector::inspectLight(EntityHandle entity) {
+    auto type = getLightType(entity).value();
+    auto deleter = [&] {
+        dispatchComponentType(type, [&]<typename L>(utl::tag<L>) {
+            entity.remove<L>();
+        });
+    };
+    auto font = FontDesc::UIDefault().setWeight(FontWeight::Semibold);
+    if (!beginGenericSection("Light Component", font, deleter)) {
+        return;
+    }
+    disabledIf(isSimulating(), [&] {
+        using namespace propertiesView;
+        beginProperty("Type");
+        fullWidth();
+        auto newType =
+            inspectTypeGeneric("###Type", type, [&](LightType newType) {
+            auto color =
+                dispatchComponentType(type, [&]<typename C>(utl::tag<C>) {
+                return entity.get<C>().color;
+            });
+            dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
+                auto& c = entity.add(C{ C::Light::Default() });
+                c.color = color;
+            });
+            removeComponentType(type, entity);
+        });
+        type = newType.value_or(type);
+        dispatchComponentType(type, [&]<typename L>(utl::tag<L>) {
+            inspectLightComponent(entity.get<L>());
+        });
+    });
+    endSection();
 }
 
 void EntityInspector::inspectLightCommon(auto& light, LightType type) {
@@ -390,7 +398,7 @@ void EntityInspector::inspectLightCommon(auto& light, LightType type) {
     ImGui::DragFloat("intensity", &light.intensity, speed, 0, FLT_MAX, "%f");
 }
 
-void EntityInspector::inspectPointLight(bloom::PointLight& light) {
+void EntityInspector::inspectLightComponent(PointLight& light) {
     using namespace propertiesView;
     inspectLightCommon(light, LightType::PointLight);
     beginProperty("Radius");
@@ -402,7 +410,7 @@ void EntityInspector::inspectPointLight(bloom::PointLight& light) {
                      /* speed: */ 0.01, /* min: */ 0.01, /* max: */ FLT_MAX);
 }
 
-void EntityInspector::inspectSpotLight(bloom::SpotLight& light) {
+void EntityInspector::inspectLightComponent(SpotLight& light) {
     using namespace propertiesView;
     inspectLightCommon(light, LightType::SpotLight);
     beginProperty("Radius");
@@ -422,7 +430,7 @@ void EntityInspector::inspectSpotLight(bloom::SpotLight& light) {
     light.outerCutoff = angle + falloff;
 }
 
-void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
+void EntityInspector::inspectLightComponent(DirectionalLight& light) {
     using namespace propertiesView;
     inspectLightCommon(light, LightType::DirectionalLight);
     beginProperty("Source Size");
@@ -459,7 +467,7 @@ void EntityInspector::inspectDirectionalLight(bloom::DirectionalLight& light) {
                        &light.shadowDistanceFadeoutFraction, 0, 1);
 }
 
-void EntityInspector::inspectSkyLight(bloom::SkyLight& light) {
+void EntityInspector::inspectLightComponent(SkyLight& light) {
     inspectLightCommon(light, LightType::SkyLight);
     using namespace propertiesView;
     beginProperty("IBL Texture");
@@ -468,7 +476,59 @@ void EntityInspector::inspectSkyLight(bloom::SkyLight& light) {
     assetButton("###IBLTexture", light.cubemap, { .repr = GPU | CPU });
 }
 
-void EntityInspector::inspectScript(bloom::EntityHandle entity) {
+void EntityInspector::inspectPhysics(EntityHandle entity) {
+    using namespace propertiesView;
+    auto colliderType = getColliderType(entity).value();
+    auto deleter = [&] {
+        entity.remove<PhysicsComponent>();
+        dispatchComponentType(colliderType, [&]<typename L>(utl::tag<L>) {
+            entity.remove<L>();
+        });
+    };
+    auto font = FontDesc::UIDefault().setWeight(FontWeight::Semibold);
+    if (!beginGenericSection("Physics", font, deleter)) {
+        return;
+    }
+    disabledIf(isSimulating(), [&] {
+        auto& physics = entity.get<PhysicsComponent>();
+        beginProperty("Physics");
+        fullWidth();
+        if (auto newValue = myEnumCombo("###Physics", physics.kind)) {
+            physics.kind = *newValue;
+        }
+        beginProperty("Collider");
+        fullWidth();
+        auto newType = inspectTypeGeneric("###Collider", colliderType,
+                                          [&](ColliderType newType) {
+            dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
+                entity.add(C{});
+            });
+            removeComponentType(colliderType, entity);
+        });
+        colliderType = newType.value_or(colliderType);
+        dispatchComponentType(colliderType, [&]<typename C>(utl::tag<C>) {
+            inspectColliderComponent(entity.get<C>());
+        });
+    });
+    endSection();
+}
+
+void EntityInspector::inspectColliderComponent(
+    SphereColliderComponent& collider) {
+    using namespace propertiesView;
+    beginProperty("Radius");
+    fullWidth();
+    ImGui::DragFloat("###Radius", &collider.radius);
+}
+
+void EntityInspector::inspectColliderComponent(BoxColliderComponent& collider) {
+    using namespace propertiesView;
+    beginProperty("Half Extend");
+    fullWidth();
+    dragFloat3Labelled("###HalfExtend", collider.halfExtend.data());
+}
+
+void EntityInspector::inspectScript(EntityHandle entity) {
     using namespace propertiesView;
     if (!entity.has<ScriptPreservedData>()) {
         ImGui::Text("Error: No preserved data");
@@ -544,7 +604,7 @@ bool EntityInspector::beginComponentSection(std::string_view name) {
 }
 template <typename T>
 bool EntityInspector::beginComponentSection(std::string_view name,
-                                            bloom::EntityHandle entity) {
+                                            EntityHandle entity) {
     if constexpr (std::is_same_v<T, void>) {
         return beginGenericSection(name,
                                    FontDesc::UIDefault().setWeight(

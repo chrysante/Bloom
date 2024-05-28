@@ -6,6 +6,7 @@
 #include "Bloom/Scene/Components/Hierarchy.h"
 #include "Bloom/Scene/Components/Lights.h"
 #include "Bloom/Scene/Components/MeshRenderer.h"
+#include "Bloom/Scene/Components/PhysicsComponents.h"
 #include "Bloom/Scene/Components/Script.h"
 #include "Bloom/Scene/Components/Tag.h"
 #include "Bloom/Scene/Components/Transform.h"
@@ -18,7 +19,8 @@ using ComponentList =
                HierarchyComponent, ScriptComponent, ScriptPreservedData,
                MeshRendererComponent, PointLightComponent, SpotLightComponent,
                DirectionalLightComponent, SkyLightComponent,
-               VisibilityComponent>;
+               VisibilityComponent, PhysicsComponent, SphereColliderComponent,
+               BoxColliderComponent>;
 
 template <typename... T>
 struct Except: std::tuple<T...> {};

@@ -15,6 +15,10 @@ std::string poppy::toString(LightType type) {
                        "Sky Light" }[(size_t)type];
 }
 
+std::string poppy::toString(ColliderType type) {
+    return std::array{ "Sphere Collider", "Box Collider" }[(size_t)type];
+}
+
 std::span<Scene* const> BasicSceneInspector::scenes() const {
     return view->editor().coreSystems().sceneSystem().scenes();
 }
@@ -23,11 +27,11 @@ EntitySelectionManager& BasicSceneInspector::selection() const {
     return view->editor().selection();
 }
 
-bloom::AssetManager& BasicSceneInspector::assetManager() const {
+AssetManager& BasicSceneInspector::assetManager() const {
     return view->editor().coreSystems().assetManager();
 }
 
-bool BasicSceneInspector::hasLightComponent(bloom::EntityHandle entity) const {
+bool BasicSceneInspector::hasLightComponent(EntityHandle entity) const {
     return getLightType(entity).has_value();
 }
 
@@ -36,7 +40,7 @@ bool BasicSceneInspector::isSimulating() const {
 }
 
 std::optional<LightType> BasicSceneInspector::getLightType(
-    bloom::EntityHandle entity) const {
+    EntityHandle entity) const {
     if (entity.has<PointLightComponent>()) {
         return LightType::PointLight;
     }
@@ -52,9 +56,29 @@ std::optional<LightType> BasicSceneInspector::getLightType(
     return std::nullopt;
 }
 
-void BasicSceneInspector::removeLightComponent(LightType type,
-                                               bloom::EntityHandle entity) {
-    dispatchLightComponent(type, [&]<typename T>(utl::tag<T>) {
-        entity.remove<T>();
-    });
+void BasicSceneInspector::removeComponentType(LightType type,
+                                              EntityHandle entity) {
+    dispatchComponentType(type,
+                          [&]<typename T>(utl::tag<T>) { entity.remove<T>(); });
+}
+
+bool BasicSceneInspector::hasColliderComponent(EntityHandle entity) const {
+    return getColliderType(entity).has_value();
+}
+
+std::optional<ColliderType> BasicSceneInspector::getColliderType(
+    EntityHandle entity) const {
+    if (entity.has<SphereColliderComponent>()) {
+        return ColliderType::Sphere;
+    }
+    if (entity.has<BoxColliderComponent>()) {
+        return ColliderType::Box;
+    }
+    return std::nullopt;
+}
+
+void BasicSceneInspector::removeComponentType(ColliderType type,
+                                              EntityHandle entity) {
+    dispatchComponentType(type,
+                          [&]<typename T>(utl::tag<T>) { entity.remove<T>(); });
 }

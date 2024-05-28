@@ -150,6 +150,36 @@ static void addSphereVis(Renderer2DScene& overlay, float3 position,
     overlay.addCircle(position, { 0, 0, 1 }, radius, color, width, 64);
 }
 
+static void addBoxVis(Renderer2DScene& overlay, float4x4 const& transform,
+                      float3 halfExtend, float4 color, float width) {
+    float3 p = halfExtend;
+    std::array<float3, 8> c = {
+        (transform * float4(p.x, p.y, p.z, 1)).xyz,
+        (transform * float4(-p.x, p.y, p.z, 1)).xyz,
+        (transform * float4(p.x, -p.y, p.z, 1)).xyz,
+        (transform * float4(-p.x, -p.y, p.z, 1)).xyz,
+        (transform * float4(p.x, p.y, -p.z, 1)).xyz,
+        (transform * float4(-p.x, p.y, -p.z, 1)).xyz,
+        (transform * float4(p.x, -p.y, -p.z, 1)).xyz,
+        (transform * float4(-p.x, -p.y, -p.z, 1)).xyz,
+    };
+    // Top
+    overlay.addLine(c[0], c[1], color, width);
+    overlay.addLine(c[0], c[2], color, width);
+    overlay.addLine(c[3], c[1], color, width);
+    overlay.addLine(c[3], c[2], color, width);
+    // Bottom
+    overlay.addLine(c[4], c[5], color, width);
+    overlay.addLine(c[4], c[6], color, width);
+    overlay.addLine(c[7], c[5], color, width);
+    overlay.addLine(c[7], c[6], color, width);
+    // Sides
+    overlay.addLine(c[0], c[4], color, width);
+    overlay.addLine(c[1], c[5], color, width);
+    overlay.addLine(c[2], c[6], color, width);
+    overlay.addLine(c[3], c[7], color, width);
+}
+
 static float pointLightInfluence(PointLightRenderData l,
                                  float minAttenuation = 2.0 / 256) {
     float tmp = (l.intensity / minAttenuation - l.radius - 1) / l.falloff;
@@ -170,6 +200,29 @@ static void submitPointlightOverlay(ConstEntityHandle entity,
     addSphereVis(overlayScene, pos, light->radius, color, 6);
 }
 
+static void submitSphereColliderVis(ConstEntityHandle entity,
+                                    Renderer2DScene& overlayScene) {
+    auto* collider = entity.tryGet<SphereColliderComponent>();
+    auto* transform = entity.tryGet<TransformMatrixComponent>();
+    if (!collider || !transform) {
+        return;
+    }
+    float3 pos = transform->matrix.column(3).xyz;
+    float4 color(0, 1, 0, 1);
+    addSphereVis(overlayScene, pos, collider->radius, color, 6);
+}
+
+static void submitBoxColliderVis(ConstEntityHandle entity,
+                                 Renderer2DScene& overlayScene) {
+    auto* collider = entity.tryGet<BoxColliderComponent>();
+    auto* transform = entity.tryGet<TransformMatrixComponent>();
+    if (!collider || !transform) {
+        return;
+    }
+    float4 color(0, 1, 0, 1);
+    addBoxVis(overlayScene, transform->matrix, collider->halfExtend, color, 6);
+}
+
 void EditorSceneRenderer::submit(
     bloom::Scene const& scene, EntitySelectionManager const& selectionManager) {
     if (!mRenderer) {
@@ -182,6 +235,8 @@ void EditorSceneRenderer::submit(
     if (overlayScene) {
         for (auto& entity: selectionManager) {
             submitPointlightOverlay(entity, overlayScene->scene);
+            submitSphereColliderVis(entity, overlayScene->scene);
+            submitBoxColliderVis(entity, overlayScene->scene);
         }
     }
 }

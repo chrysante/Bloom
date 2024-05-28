@@ -231,7 +231,7 @@ void EntityInspector::inspectTransform(EntityHandle entity) {
             auto& style = ImGui::GetStyle();
             beginProperty("Position");
             float2 lockButtonSize =
-                ImGui::CalcTextSize("").y + style.FramePadding.y * 2;
+                ImGui::GetFontSize() + style.FramePadding.y * 2;
             float width = ImGui::GetContentRegionAvail().x - lockButtonSize.x -
                           style.ItemSpacing.x;
             ImGui::SetNextItemWidth(width);
@@ -239,15 +239,17 @@ void EntityInspector::inspectTransform(EntityHandle entity) {
             beginProperty("Orientation");
             float3 euler = vml::to_euler(transform.orientation) * 180;
             ImGui::SetNextItemWidth(width);
-            if (dragFloat3Labelled("###orientation", euler.data(), 1, 0, 0,
-                                   "%.3f°"))
+            if (dragFloat3Labelled("###orientation", euler.data(),
+                                   { .format = "%.3f°" }))
             {
                 transform.orientation = vml::to_quaternion(euler / 180);
             }
             beginProperty("Scale");
             ImGui::SetNextItemWidth(width);
             float3 newScale = transform.scale;
-            if (dragFloat3Labelled("###scale", newScale.data(), 0.02)) {
+            if (dragFloat3Labelled("###scale", newScale.data(),
+                                   { .speed = 0.02 }))
+            {
                 if (transformScaleLinked) {
                     float3 scaleOffset = newScale / transform.scale;
                     float offset =
@@ -261,32 +263,7 @@ void EntityInspector::inspectTransform(EntityHandle entity) {
                 }
             }
             ImGui::SameLine();
-            auto [iconFont, unicode] =
-                FontManager::get({ IconSize::_16 },
-                                 transformScaleLinked ? "link" : "unlink");
-            ImGui::PushFont(iconFont);
-            bool tsLinked = transformScaleLinked;
-            if (tsLinked) {
-                ImGui::PushStyleColor(ImGuiCol_Button,
-                                      Appearance::get()
-                                          .style()
-                                          .colors.highlightControlFrame);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-                                      Appearance::get()
-                                          .style()
-                                          .colors.highlightControlFrameHovered);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive,
-                                      Appearance::get()
-                                          .style()
-                                          .colors.highlightControlFrameDown);
-            }
-            if (ImGui::Button(unicode.data(), lockButtonSize)) {
-                transformScaleLinked ^= true;
-            }
-            if (tsLinked) {
-                ImGui::PopStyleColor(3);
-            }
-            ImGui::PopFont();
+            linkButton(transformScaleLinked, lockButtonSize);
         });
         endSection();
     }
@@ -535,7 +512,9 @@ void EntityInspector::inspectColliderComponent(BoxColliderComponent& collider) {
     using namespace propertiesView;
     beginProperty("Half Extend");
     fullWidth();
-    dragFloat3Labelled("###HalfExtend", collider.halfExtend.data());
+    dragFloat3Labelled("###HalfExtend", collider.halfExtend.data(),
+                       { .linkButton = true,
+                         .labelStyle = DragFloat3Options::Slim });
 }
 
 void EntityInspector::inspectScript(EntityHandle entity) {

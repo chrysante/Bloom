@@ -574,7 +574,9 @@ void Viewport::displaySceneSettings(Scene& scene) {
     auto physicsParams = scene.physicsParameters();
     beginProperty("Gravity");
     fullWidth();
-    if (dragFloat3Labelled("###Gravity", physicsParams.gravity.data())) {
+    if (dragFloat3Labelled("###Gravity", physicsParams.gravity.data(),
+                           { .labelStyle = DragFloat3Options::Slim }))
+    {
         scene.setPhysicsParameters(physicsParams);
     }
     beginProperty("Render Graph");

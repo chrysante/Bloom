@@ -7,12 +7,14 @@
 #include <range/v3/algorithm.hpp>
 #include <range/v3/numeric.hpp>
 #include <range/v3/view.hpp>
+#include <utl/functional.hpp>
 #include <utl/strcat.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Application/Application.h"
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Messages.h"
+#include "Poppy/UI/Appearance.h"
 
 using namespace poppy;
 using namespace bloom;
@@ -53,9 +55,43 @@ std::array<float, 3> computeItemWidths(int fullWidth, float labelSize) {
     };
 }
 
-bool poppy::dragFloat3Labelled(char const* label, float v[3], float v_speed,
-                               float v_min, float v_max, char const* format,
-                               ImGuiSliderFlags flags) {
+static float defaultItemHeight() {
+    return ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2;
+}
+
+bool poppy::linkButton(bool& linked, float2 size, IconSize iconSize) {
+    if (size.x <= 0) {
+        size.x = defaultItemHeight();
+    }
+    if (size.y <= 0) {
+        size.y = defaultItemHeight();
+    }
+    auto [iconFont, unicode] =
+        FontManager::get({ iconSize }, linked ? "link" : "unlink");
+    ImGui::PushFont(iconFont);
+    bool linkedBackup = linked;
+    if (linkedBackup) {
+        auto& colors = Appearance::get().style().colors;
+        ImGui::PushStyleColor(ImGuiCol_Button, colors.highlightControlFrame);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                              colors.highlightControlFrameHovered);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,
+                              colors.highlightControlFrameDown);
+    }
+    bool pressed = ImGui::Button(unicode.data(), size);
+    if (pressed) {
+        linked ^= true;
+    }
+    if (linkedBackup) {
+        ImGui::PopStyleColor(3);
+    }
+    ImGui::PopFont();
+    return pressed;
+}
+
+bool poppy::dragFloat3Labelled(char const* label, float v[3],
+                               DragFloat3Options options) {
+    float3 valueBackup([&](int i) { return v[i]; });
     int const components = 3;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems) {
@@ -63,25 +99,38 @@ bool poppy::dragFloat3Labelled(char const* label, float v[3], float v_speed,
     }
     ImGuiContext& g = *GImGui;
     auto& style = ImGui::GetStyle();
-    bool valueChanged = false;
+    bool3 valueChanged = false;
     float height = ImGui::GetFontSize() + 2 * style.FramePadding.y;
     ImGui::BeginGroup();
     ImGui::PushID(label);
+    bool* linked =
+        window->StateStorage.GetBoolRef(ImGui::GetID("IsLinked"), false);
+    float2 linkButtonSize = options.linkButton ? float2(defaultItemHeight()) :
+                                                 float2();
     constexpr std::array colors = { IM_COL32(255, 17, 17, 255),
                                     IM_COL32(0, 204, 0, 255),
                                     IM_COL32(34, 127, 255, 255) };
     constexpr std::array labels = { "X", "Y", "Z" };
     constexpr std::array itemLabels = { "###X", "###Y", "###Z" };
+    float spacing = options.linkButton ? style.ItemSpacing.x : 0.0f;
     /// We display labels if each component is at least 90 pixels in width
-    float fullWidth = ImGui::CalcItemWidth();
-    bool haveLabelButtons = fullWidth / components >= 90;
-    float2 labelButtonSize = float2(haveLabelButtons ? height : 0.0f);
+    float fullWidth = ImGui::CalcItemWidth() - spacing - linkButtonSize.x;
+    bool haveButtonLabels = [&] {
+        using enum DragFloat3Options::LabelStyle;
+        if (options.labelStyle == Auto) {
+            return fullWidth / components >= 90;
+        }
+        return options.labelStyle == Wide;
+    }();
+    float2 labelButtonSize = haveButtonLabels ? float2(height, height) :
+                                                float2(3.0f, height);
     std::array itemWidths = computeItemWidths(fullWidth, labelButtonSize.x);
     float2 beginCursor = window->DC.CursorPos;
     auto* DL = ImGui::GetWindowDrawList();
     float rounding = style.FrameRounding;
     float2 min = beginCursor;
     float2 max = beginCursor + float2(fullWidth, height);
+    float2 linkButtonPos = min + float2(fullWidth + spacing, 0);
     DL->AddRect(min + float2(1, 1), max + float2(1, 1),
                 ImGui::GetColorU32(ImGuiCol_BorderShadow), rounding, 0, 1);
     ImGui::PushStyleColor(ImGuiCol_BorderShadow, 0);
@@ -92,41 +141,55 @@ bool poppy::dragFloat3Labelled(char const* label, float v[3], float v_speed,
         xCursor += itemWidths[i] + labelButtonSize.x;
         ImGui::SetCursorScreenPos(cursorPos);
         ImGui::SetNextItemWidth(itemWidths[i]);
-        ImDrawFlags drawFlags = i == 0 ? (haveLabelButtons ?
-                                              ImDrawFlags_RoundCornersNone :
-                                              ImDrawFlags_RoundCornersLeft) :
-                                i == 1 ? ImDrawFlags_RoundCornersNone :
-                                         ImDrawFlags_RoundCornersRight;
-        valueChanged |= ImGui::DragFloat(itemLabels[i], &v[i], v_speed, v_min,
-                                         v_max, format, flags, drawFlags);
+        ImDrawFlags drawFlags = i == 2 ? ImDrawFlags_RoundCornersRight :
+                                         ImDrawFlags_RoundCornersNone;
+        valueChanged[i] |= ImGui::DragFloat(itemLabels[i], &v[i], options.speed,
+                                            options.min, options.max,
+                                            options.format, options.flags,
+                                            drawFlags);
     }
     ImGui::PopStyleColor(2);
-    if (haveLabelButtons) {
-        for (int i = 0; i < components; i++) {
-            ImDrawFlags drawFlags = i == 0 ? ImDrawFlags_RoundCornersLeft :
-                                             ImDrawFlags_RoundCornersNone;
-            float2 cursorPos = beginCursor + float2(i * fullWidth / 3, 0);
-            float2 pMin = cursorPos - float2(1, 0);
-            float2 pMax = cursorPos + labelButtonSize + float2(1, 0);
-            DL->AddRectFilled(pMin, pMax, colors[i], rounding, drawFlags);
+    for (int i = 0; i < components; i++) {
+        ImDrawFlags drawFlags = i == 0 ? ImDrawFlags_RoundCornersLeft :
+                                         ImDrawFlags_RoundCornersNone;
+        float2 cursorPos = beginCursor + float2(i * fullWidth / 3, 0);
+        float2 pMin = cursorPos - float2(1, 0);
+        float2 pMax = cursorPos + labelButtonSize + float2(1, 0);
+        DL->AddRectFilled(pMin, pMax, colors[i], rounding, drawFlags);
+        if (haveButtonLabels) {
             char const* label = labels[i];
             withFont(FontDesc::UIDefault().setWeight(FontWeight::Black), [&] {
                 auto textSize = ImGui::CalcTextSize(label);
                 float2 pos = cursorPos + (labelButtonSize - textSize) / 2;
-                DL->AddText(pos, 0xFFffFFff, labels[i]);
+                DL->AddText(pos, IM_COL32_WHITE, labels[i]);
             });
         }
     }
     DL->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_Border), rounding, 0,
                 style.FrameBorderSize);
-    ImGui::PopID(); /// Label
+    if (options.linkButton) {
+        ImGui::SetCursorScreenPos(linkButtonPos);
+        linkButton(*linked, linkButtonSize);
+    }
+    ImGui::PopID();
+    /// Label
     char const* labelEnd = ImGui::FindRenderedTextEnd(label);
     if (label != labelEnd) {
         ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
         ImGui::TextEx(label, labelEnd);
     }
     ImGui::EndGroup();
-    return valueChanged;
+    bool anyChanged = valueChanged.fold(utl::logical_or);
+    if (*linked && anyChanged) {
+        for (size_t i = 0; i < 3; ++i) {
+            if (valueChanged[i] && valueBackup[i] != 0.0) {
+                auto ratio = v[i] / valueBackup[i];
+                v[(i + 1) % 3] *= ratio;
+                v[(i + 2) % 3] *= ratio;
+            }
+        }
+    }
+    return anyChanged;
 }
 
 std::array<char, 64> poppy::generateUniqueID(std::string_view name, int id,

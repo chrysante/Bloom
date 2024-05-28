@@ -53,7 +53,7 @@ CPMAddPackage(
   DOWNLOAD_ONLY YES
 )
 if(Jolt_ADDED)
-  add_subdirectory(${Jolt_SOURCE_DIR}/Build)
+  add_subdirectory(${Jolt_SOURCE_DIR}/Build SYSTEM)
 endif()
 
 if(BLOOM_BUILD_TESTS)

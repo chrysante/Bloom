@@ -131,6 +131,8 @@ set(bloom_sources
   src/Bloom/Runtime/ScriptBindings.h
   src/Bloom/Runtime/ScriptSystem.cpp
   src/Bloom/Runtime/ScriptSystem.h
+  src/Bloom/Runtime/PhysicsSystem.cpp
+  src/Bloom/Runtime/PhysicsSystem.h
 
   src/Bloom/Scene/Components/AllComponents.h
   src/Bloom/Scene/Components/ComponentBase.h
@@ -143,6 +145,7 @@ set(bloom_sources
   src/Bloom/Scene/Components/Tag.h
   src/Bloom/Scene/Components/Transform.h
   src/Bloom/Scene/Components/Visibility.h
+  src/Bloom/Scene/Components/PhysicsComponents.h
 
   src/Bloom/Scene/Entity.cpp
   src/Bloom/Scene/Entity.h

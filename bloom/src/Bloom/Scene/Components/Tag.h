@@ -3,11 +3,12 @@
 
 #include <string>
 
+#include "Bloom/Core/Base.h"
 #include "Bloom/Scene/Components/ComponentBase.h"
 
 namespace bloom {
 
-struct TagComponent {
+struct BLOOM_API TagComponent {
     BLOOM_REGISTER_COMPONENT("Tag")
 
     std::string name;

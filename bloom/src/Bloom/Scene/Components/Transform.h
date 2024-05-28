@@ -3,11 +3,12 @@
 
 #include <vml/vml.hpp>
 
+#include "Bloom/Core/Base.h"
 #include "Bloom/Scene/Components/ComponentBase.h"
 
 namespace bloom {
 
-struct Transform {
+struct BLOOM_API Transform {
     BLOOM_REGISTER_COMPONENT("Transform")
 
     vml::float3 position = 0;
@@ -24,7 +25,7 @@ struct Transform {
     }
 };
 
-struct TransformMatrixComponent {
+struct BLOOM_API TransformMatrixComponent {
     BLOOM_REGISTER_COMPONENT("Transform Matrix")
     vml::float4x4 matrix;
 };

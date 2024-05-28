@@ -11,7 +11,7 @@ namespace bloom {
 
 /// A script component is a heap allocated Scatha object.
 /// Can be used to add arbrtrary runtime defined behaviour to an entity
-struct ScriptComponent {
+struct BLOOM_API ScriptComponent {
     BLOOM_REGISTER_COMPONENT("Script")
 
     /// The class type of the object that will be instantiated for the entity
@@ -26,7 +26,7 @@ struct ScriptComponent {
 
 /// Data that can be serialized. Also used to preserve object data through
 /// recompilations
-struct ScriptPreservedData {
+struct BLOOM_API ScriptPreservedData {
     BLOOM_REGISTER_COMPONENT("Script Preserved Data")
 
     /// The name of the class type

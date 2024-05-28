@@ -341,7 +341,10 @@ void Viewport::displayGizmo() {
         return entity.get<Transform>().calculate();
     }) | ToSmallVector<>;
     auto parentTransforms = entities | transform([](EntityHandle entity) {
-        return entity.scene().calculateWorldTransformMatrix(entity.getParent());
+        if (auto parent = entity.getParent()) {
+            return parent.calculateWorldTransformMatrix();
+        }
+        return float4x4(1);
     }) | ToSmallVector<>;
     float4x4 avgWSTransform = [&] {
         if (!gizmo.isUsing()) {

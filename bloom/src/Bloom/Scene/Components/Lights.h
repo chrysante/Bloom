@@ -1,27 +1,28 @@
 #ifndef BLOOM_SCENE_COMPONENTS_LIGHTS_H
 #define BLOOM_SCENE_COMPONENTS_LIGHTS_H
 
+#include "Bloom/Core/Base.h"
 #include "Bloom/Graphics/Lights.h"
 #include "Bloom/Scene/Components/ComponentBase.h"
 
 namespace bloom {
 
-struct PointLightComponent: PointLight {
+struct BLOOM_API PointLightComponent: PointLight {
     BLOOM_REGISTER_COMPONENT("Point Light")
     using Light = PointLight;
 };
 
-struct SpotLightComponent: SpotLight {
+struct BLOOM_API SpotLightComponent: SpotLight {
     BLOOM_REGISTER_COMPONENT("Spot Light")
     using Light = SpotLight;
 };
 
-struct DirectionalLightComponent: DirectionalLight {
+struct BLOOM_API DirectionalLightComponent: DirectionalLight {
     BLOOM_REGISTER_COMPONENT("Directional Light")
     using Light = DirectionalLight;
 };
 
-struct SkyLightComponent: SkyLight {
+struct BLOOM_API SkyLightComponent: SkyLight {
     BLOOM_REGISTER_COMPONENT("Sky Light")
     using Light = SkyLight;
 };

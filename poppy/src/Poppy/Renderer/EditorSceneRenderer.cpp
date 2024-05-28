@@ -203,13 +203,14 @@ static void submitPointlightOverlay(ConstEntityHandle entity,
 static void submitSphereColliderVis(ConstEntityHandle entity,
                                     Renderer2DScene& overlayScene) {
     auto* collider = entity.tryGet<SphereColliderComponent>();
-    auto* transform = entity.tryGet<TransformMatrixComponent>();
-    if (!collider || !transform) {
+    if (!collider) {
         return;
     }
-    float3 pos = transform->matrix.column(3).xyz;
+    auto transform = entity.calculateWorldTransform();
+    float3 pos = transform.position;
+    float radius = transform.scale.fold(ranges::max) * collider->radius;
     float4 color(0, 1, 0, 1);
-    addSphereVis(overlayScene, pos, collider->radius, color, 6);
+    addSphereVis(overlayScene, pos, radius, color, 6);
 }
 
 static void submitBoxColliderVis(ConstEntityHandle entity,

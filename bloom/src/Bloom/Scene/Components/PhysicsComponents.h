@@ -5,6 +5,7 @@
 
 #include <vml/vml.hpp>
 
+#include "Bloom/Core/Base.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/Scene/Components/ComponentBase.h"
 
@@ -13,7 +14,7 @@ namespace bloom {
 enum class PhysicsComponentType { Static, Movable };
 
 /// Tag component that makes the entity part of the static physics layer
-struct PhysicsStaticComponent {
+struct BLOOM_API PhysicsStaticComponent {
     BLOOM_REGISTER_COMPONENT("PhysicsStaticComponent")
 
     /// Will be set by the physics system when simulation starts
@@ -21,7 +22,7 @@ struct PhysicsStaticComponent {
 };
 
 /// Tag component that makes the entity part of the dynamic physics layer
-struct PhysicsMovableComponent {
+struct BLOOM_API PhysicsMovableComponent {
     BLOOM_REGISTER_COMPONENT("PhysicsMovableComponent")
 
     /// Will be set by the physics system when simulation starts
@@ -32,13 +33,13 @@ struct PhysicsMovableComponent {
 /// simulated
 
 /// Sphere centered at the origin of the entities transform
-struct SphereColliderComponent {
+struct BLOOM_API SphereColliderComponent {
     BLOOM_REGISTER_COMPONENT("SphereCollider")
     float radius = 100;
 };
 
 /// Box centered at the origin of the entities transform
-struct BoxColliderComponent {
+struct BLOOM_API BoxColliderComponent {
     BLOOM_REGISTER_COMPONENT("BoxCollider")
     vml::packed_float3 halfExtend = { 50, 50, 50 };
 };

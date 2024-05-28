@@ -12,6 +12,7 @@
 #include "Bloom/Scene/Components/ComponentBase.h"
 #include "Bloom/Scene/Components/Hierarchy.h"
 #include "Bloom/Scene/Components/Tag.h"
+#include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Components/Visibility.h"
 #include "Bloom/Scene/EntityID.h"
 
@@ -187,6 +188,16 @@ public:
         return {};
     }
 
+    /// See Scene.h
+    vml::float4x4 calculateWorldTransformMatrix() const {
+        return scene().calculateWorldTransformMatrix(*this);
+    }
+
+    /// See Scene.h
+    Transform calculateWorldTransform() const {
+        return scene().calculateWorldTransform(*this);
+    }
+
     /// \Returns the parent entity if this entity has a hierarchy component
     EntityHandleEx getParent() const {
         return getHierarchyImpl(&HierarchyComponent::parent);
@@ -220,6 +231,9 @@ public:
     {
         scene().detachFromHierarchy(ID());
     }
+
+    /// \Returns a description of all components in the entity
+    std::string debugDescription() const;
 
 private:
     EntityHandleEx getHierarchyImpl(auto f) const {

@@ -318,14 +318,7 @@ void Scene::detachFromHierarchy(EntityID c) {
     if (!child || !child->parent) {
         return;
     }
-    auto& t = getComponent<Transform>(c);
-    float4x4 parentWorldTransform =
-        calculateWorldTransformMatrix(child->parent);
-    float4x4 childWorldTransform = parentWorldTransform * t.calculate();
-    t = Transform::fromMatrix(childWorldTransform);
-
-    // FIXME: This should be enough but it needs some debugging
-    //    getComponent<Transform>(c) = calculateWorldTransform(c);
+    getComponent<Transform>(c) = calculateWorldTransform(c);
     detachFromHierarchyImpl(c);
 }
 
@@ -379,20 +372,29 @@ bool Scene::isLeaf(EntityID entity) const {
     return result;
 }
 
-float4x4 Scene::calculateWorldTransformMatrix(EntityID entity) const {
-    float4x4 result = 1;
-    while (entity) {
-        BL_ASSERT(hasComponent<HierarchyComponent>(entity),
-                  "This API is supposed to be used with hierarchical entities");
-        result *= getComponent<Transform>(entity).calculate();
-        entity = getComponent<HierarchyComponent>(entity).parent;
+float4x4 Scene::calculateWorldTransformMatrix(EntityID ID) const {
+    auto entity = getHandle(ID);
+    float4x4 transform = entity.get<Transform>().calculate();
+    for (entity = entity.getParent(); entity; entity = entity.getParent()) {
+        transform = entity.get<Transform>().calculate() * transform;
     }
-    return result;
+    return transform;
 }
 
-Transform Scene::calculateWorldTransform(EntityID entity) const {
-    // FIXME: Inefficient and imprecise implementation
-    float4x4 M = calculateWorldTransformMatrix(entity);
-    auto [position, orientation, scale] = vml::decompose_transform(M);
-    return { position, orientation, scale };
+Transform Scene::calculateWorldTransform(EntityID ID) const {
+    auto entity = getHandle(ID);
+    auto transform = entity.get<Transform>();
+    for (entity = entity.getParent(); entity; entity = entity.getParent()) {
+        auto current = entity.get<Transform>();
+        // Apply scale
+        transform.position *= current.scale;
+        transform.scale *= current.scale;
+        // Apply rotation
+        transform.position =
+            vml::rotate(transform.position, current.orientation);
+        transform.orientation = current.orientation * transform.orientation;
+        // Apply translation
+        transform.position += current.position;
+    }
+    return transform;
 }

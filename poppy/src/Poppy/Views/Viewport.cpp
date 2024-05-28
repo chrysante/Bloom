@@ -341,8 +341,7 @@ void Viewport::displayGizmo() {
         return entity.get<Transform>().calculate();
     }) | ToSmallVector<>;
     auto parentTransforms = entities | transform([](EntityHandle entity) {
-        return entity.scene().calculateTransformRelativeToWorld(
-            entity.getParent());
+        return entity.scene().calculateWorldTransformMatrix(entity.getParent());
     }) | ToSmallVector<>;
     float4x4 avgWSTransform = [&] {
         if (!gizmo.isUsing()) {
@@ -569,6 +568,12 @@ Toolbar Viewport::makeToolbar() {
 
 void Viewport::displaySceneSettings(Scene& scene) {
     using namespace propertiesView;
+    auto physicsParams = scene.physicsParameters();
+    beginProperty("Gravity");
+    fullWidth();
+    if (dragFloat3Labelled("###Gravity", physicsParams.gravity.data())) {
+        scene.setPhysicsParameters(physicsParams);
+    }
     beginProperty("Render Graph");
     auto rg = scene.renderGraph() ? scene.renderGraph()->shared_from_this() :
                                     Reference<RenderGraph>();

@@ -115,8 +115,7 @@ static void drawSpotlightVizWS(EntityHandle entity, float radius, float angle,
     float rho2 = r2 * sin(theta);
     float sigma1 = r1 * cos(theta);
     float sigma2 = r2 * cos(theta);
-    float4x4 transform =
-        entity.scene().calculateTransformRelativeToWorld(entity);
+    float4x4 transform = entity.scene().calculateWorldTransformMatrix(entity);
     auto circlePoints2 = circlePoints1;
     for (auto& p: circlePoints1) {
         p.x = sigma1;

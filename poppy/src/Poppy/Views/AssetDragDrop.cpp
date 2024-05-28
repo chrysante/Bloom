@@ -47,7 +47,7 @@ std::string poppy::selectAssetIcon(AssetType type) {
     case AssetType::ScriptSource:
         return "file-code";
     case AssetType::RenderGraph:
-        return "camera";
+        return "share";
     default:
         return "doc";
     }

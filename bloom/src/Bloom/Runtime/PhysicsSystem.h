@@ -6,37 +6,21 @@
 #include "Bloom/Application/CoreSystem.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Time.h"
+#include "Bloom/Scene/Fwd.h"
 
 namespace bloom {
-
-class Scene;
-
-class BLOOM_API PhysicsBody {
-public:
-private:
-};
-
-class BLOOM_API PhysicsWorld {
-public:
-    PhysicsWorld();
-    ~PhysicsWorld();
-
-    void init();
-
-private:
-    struct Impl;
-
-    std::unique_ptr<Impl> impl;
-};
 
 class BLOOM_API PhysicsSystem: public CoreSystem {
 public:
     PhysicsSystem();
+
     ~PhysicsSystem();
 
     void init();
 
-    void onSceneInit(Scene& scene);
+    void onSceneInit(Scene& scene, PhysicsSimulationParameters parameters);
+
+    void onSceneStop();
 
     void update(Scene& scene, Timestep time);
 

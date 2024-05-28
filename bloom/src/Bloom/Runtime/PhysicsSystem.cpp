@@ -18,23 +18,13 @@
 #include <Jolt/RegisterTypes.h>
 // clang-format on
 #include <magic_enum.hpp>
+#include <range/v3/view.hpp>
 
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Scene/Scene.h"
 
 using namespace bloom;
-
-struct PhysicsWorld::Impl {
-    void init();
-};
-
-PhysicsWorld::PhysicsWorld(): impl(std::make_unique<PhysicsWorld::Impl>()) {}
-
-PhysicsWorld::~PhysicsWorld() = default;
-
-void PhysicsWorld::init() { impl->init(); }
-
-void PhysicsWorld::Impl::init() {}
+using namespace vml::short_types;
 
 static void traceCallback(char const* fmt, ...) {
     va_list list;
@@ -195,7 +185,8 @@ struct MyBodyActivationListener: public JPH::BodyActivationListener {
 
 struct PhysicsSystem::Impl {
     void init();
-    void onSceneInit(Scene& scene);
+    void onSceneInit(Scene& scene, PhysicsSimulationParameters parameters);
+    void onSceneStop();
     void update(Scene& scene, Timestep time);
 
     BPLayerInterfaceImpl broad_phase_layer_interface;
@@ -203,7 +194,9 @@ struct PhysicsSystem::Impl {
     ObjectLayerPairFilterImpl object_vs_object_layer_filter;
     MyBodyActivationListener body_activation_listener;
     MyContactListener contact_listener;
-    JPH::PhysicsSystem system;
+    std::unique_ptr<JPH::TempAllocatorImpl> temp_allocator;
+    std::unique_ptr<JPH::JobSystemThreadPool> job_system;
+    std::unique_ptr<JPH::PhysicsSystem> system;
 };
 
 PhysicsSystem::PhysicsSystem(): impl(std::make_unique<PhysicsSystem::Impl>()) {}
@@ -211,7 +204,11 @@ PhysicsSystem::PhysicsSystem(): impl(std::make_unique<PhysicsSystem::Impl>()) {}
 PhysicsSystem::~PhysicsSystem() = default;
 
 void PhysicsSystem::init() { impl->init(); }
-void PhysicsSystem::onSceneInit(Scene& scene) { impl->onSceneInit(scene); }
+void PhysicsSystem::onSceneInit(Scene& scene,
+                                PhysicsSimulationParameters parameters) {
+    impl->onSceneInit(scene, parameters);
+}
+void PhysicsSystem::onSceneStop() { impl->onSceneStop(); }
 void PhysicsSystem::update(Scene& scene, Timestep time) {
     impl->update(scene, time);
 }
@@ -219,54 +216,112 @@ void PhysicsSystem::update(Scene& scene, Timestep time) {
 void PhysicsSystem::Impl::init() {
     JPH::RegisterDefaultAllocator();
     JPH::Trace = traceCallback;
-    //    JPH::AssertFailed = assertionCallback;
     JPH::Factory::sInstance = new JPH::Factory();
     JPH::RegisterTypes();
-    JPH::TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
-    JPH::JobSystemThreadPool job_system(/*cMaxPhysicsJobs*/ 8,
-                                        /*cMaxPhysicsBarriers*/ 8,
-                                        std::thread::hardware_concurrency() -
-                                            1);
+    temp_allocator = std::make_unique<JPH::TempAllocatorImpl>(10 * 1024 * 1024);
+    job_system = std::make_unique<JPH::JobSystemThreadPool>(
+        JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers,
+        (int)(std::thread::hardware_concurrency() - 1));
+}
+
+static JPH::Vec3 toJPH(float3 v) { return JPH::RVec3(v.x, v.y, v.z); }
+
+static JPH::Quat toJPH(quaternion_float q) {
+    return JPH::Quat(q.imag.x, q.imag.y, q.imag.z, q.real);
+}
+
+static float3 toVML(JPH::Vec3 v) {
+    return float3(v.GetX(), v.GetY(), v.GetZ());
+}
+
+static quaternion_float toVML(JPH::Quat v) {
+    return quaternion_float(v.GetW(), v.GetX(), v.GetY(), v.GetZ());
+}
+
+static JPH::BodyID addObject(JPH::BodyInterface& interface,
+                             Transform const& transform,
+                             SphereColliderComponent collider, Layer layer,
+                             JPH::EMotionType motionType,
+                             JPH::EActivation activation) {
+    float radius = collider.radius * transform.scale.fold(ranges::max);
+    JPH::BodyCreationSettings settings(new JPH::SphereShape(radius),
+                                       toJPH(transform.position),
+                                       toJPH(transform.orientation), motionType,
+                                       (uint32_t)layer);
+    return interface.CreateAndAddBody(settings, activation);
+}
+
+static JPH::BodyID addObject(JPH::BodyInterface& interface,
+                             Transform const& transform,
+                             BoxColliderComponent collider, Layer layer,
+                             JPH::EMotionType motionType,
+                             JPH::EActivation activation) {
+    float3 halfExtend = collider.halfExtend * transform.scale;
+    JPH::BoxShapeSettings shapeSettings(toJPH(halfExtend));
+    JPH::ShapeSettings::ShapeResult shape = shapeSettings.Create();
+    // We don't expect an error here, but you can check floor_shape_result for
+    // HasError() / GetError()
+    JPH::BodyCreationSettings settings(shape.Get(), toJPH(transform.position),
+                                       toJPH(transform.orientation), motionType,
+                                       (uint32_t)layer);
+    // Note that if we run out of bodies this can return nullptr
+    return interface.CreateAndAddBody(settings, activation);
+}
+
+template <typename PhysicsComponent, typename... Colliders>
+static void addObjects(JPH::BodyInterface& interface, Scene& scene, Layer layer,
+                       JPH::EMotionType motionType,
+                       JPH::EActivation activation) {
+    auto impl = [&]<typename Collider> {
+        auto view = scene.view<PhysicsComponent, Collider const>();
+        view.each(
+            [&](EntityID ID, PhysicsComponent& phys, Collider const& collider) {
+            auto bodyID = addObject(interface,
+                                    scene.calculateWorldTransform(ID), collider,
+                                    layer, motionType, activation);
+            phys.bodyID = bodyID.GetIndexAndSequenceNumber();
+        });
+    };
+    (impl.template operator()<Colliders>(), ...);
+}
+
+void PhysicsSystem::Impl::onSceneInit(Scene& scene,
+                                      PhysicsSimulationParameters parameters) {
     uint const MaxBodies = 65536;
     uint const NumBodyMutexes = 0;
     uint const MaxBodyPairs = 65536;
     uint const MaxContactConstraints = 10240;
-    system.Init(MaxBodies, NumBodyMutexes, MaxBodyPairs, MaxContactConstraints,
-                broad_phase_layer_interface, object_vs_broadphase_layer_filter,
-                object_vs_object_layer_filter);
-
-    system.SetBodyActivationListener(&body_activation_listener);
-    system.SetContactListener(&contact_listener);
-    JPH::BodyInterface& body_interface = system.GetBodyInterface();
-
-    JPH::BoxShapeSettings floor_shape_settings(JPH::Vec3(100.0f, 1.0f, 100.0f));
-    JPH::ShapeSettings::ShapeResult floor_shape_result =
-        floor_shape_settings.Create();
-    JPH::ShapeRefC floor_shape =
-        floor_shape_result
-            .Get(); // We don't expect an error here, but you can check
-                    // floor_shape_result for HasError() / GetError()
-    JPH::BodyCreationSettings floor_settings(floor_shape,
-                                             JPH::RVec3(0.0, -1.0, 0.0),
-                                             JPH::Quat::sIdentity(),
-                                             JPH::EMotionType::Static,
-                                             (uint32_t)Layer::Static);
-    JPH::Body* floor = body_interface.CreateBody(
-        floor_settings); // Note that if we run out of bodies this can return
-                         // nullptr
-    body_interface.AddBody(floor->GetID(), JPH::EActivation::DontActivate);
-    JPH::BodyCreationSettings sphere_settings(new JPH::SphereShape(0.5f),
-                                              JPH::RVec3(0.0, 2.0, 0.0),
-                                              JPH::Quat::sIdentity(),
-                                              JPH::EMotionType::Dynamic,
-                                              (uint32_t)Layer::Movable);
-    JPH::BodyID sphere_id =
-        body_interface.CreateAndAddBody(sphere_settings,
-                                        JPH::EActivation::Activate);
-    body_interface.SetLinearVelocity(sphere_id, JPH::Vec3(0.0f, -5.0f, 0.0f));
-    system.OptimizeBroadPhase();
+    system = std::make_unique<JPH::PhysicsSystem>();
+    system->Init(MaxBodies, NumBodyMutexes, MaxBodyPairs, MaxContactConstraints,
+                 broad_phase_layer_interface, object_vs_broadphase_layer_filter,
+                 object_vs_object_layer_filter);
+    JPH::BodyInterface& interface = system->GetBodyInterface();
+    addObjects<PhysicsStaticComponent, SphereColliderComponent,
+               BoxColliderComponent>(interface, scene, Layer::Static,
+                                     JPH::EMotionType::Static,
+                                     JPH::EActivation::DontActivate);
+    addObjects<PhysicsMovableComponent, SphereColliderComponent,
+               BoxColliderComponent>(interface, scene, Layer::Movable,
+                                     JPH::EMotionType::Dynamic,
+                                     JPH::EActivation::Activate);
+    system->OptimizeBroadPhase();
+    system->SetGravity(toJPH(100 * parameters.gravity));
 }
 
-void PhysicsSystem::Impl::onSceneInit(Scene& scene) {}
+void PhysicsSystem::Impl::onSceneStop() { system.reset(); }
 
-void PhysicsSystem::Impl::update(Scene& scene, Timestep time) {}
+void PhysicsSystem::Impl::update(Scene& scene, Timestep time) {
+    int collisionSteps = 1;
+    system->Update(time.delta, collisionSteps, temp_allocator.get(),
+                   job_system.get());
+    auto& interface = system->GetBodyInterface();
+    auto view = scene.view<PhysicsMovableComponent const, Transform>();
+    view.each([&](PhysicsMovableComponent phys, Transform& transform) {
+        JPH::RVec3 position;
+        JPH::Quat rotation;
+        interface.GetPositionAndRotation(JPH::BodyID(phys.bodyID), position,
+                                         rotation);
+        transform.position = toVML(position);
+        transform.orientation = toVML(rotation);
+    });
+}

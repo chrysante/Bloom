@@ -12,6 +12,7 @@
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Scene/Components/AllComponents.h"
 #include "Bloom/Scene/Entity.h"
+#include "Bloom/Scene/Fwd.h"
 
 namespace bloom {
 
@@ -180,14 +181,29 @@ public:
     /// Computes the transform matrix of \p entity relative to the world by
     /// traversing the hierarchy and multiplying the transforms of all parents
     /// \pre \p entity must have a transform component
-    vml::float4x4 calculateTransformRelativeToWorld(EntityID entity) const;
+    vml::float4x4 calculateWorldTransformMatrix(EntityID entity) const;
 
-    ///
+    /// Computes the transform (position, orientation, scale) of \p entity
+    /// relative to the world by traversing the hierarchy and applying the
+    /// transforms of all parents \pre \p entity must have a transform component
+    Transform calculateWorldTransform(EntityID entity) const;
+
+    /// The render graph that will be used to draw the scene
     RenderGraph* renderGraph() const { return _renderGraph.get(); }
 
-    ///
+    /// Sets the render graph
     void setRenderGraph(Reference<RenderGraph> rg) {
         _renderGraph = std::move(rg);
+    }
+
+    /// The physics parameters that will be used for the physics simulation
+    PhysicsSimulationParameters const& physicsParameters() const {
+        return physicsParams;
+    }
+
+    /// Sets the physics parameters
+    void setPhysicsParameters(PhysicsSimulationParameters params) {
+        physicsParams = params;
     }
 
 private:
@@ -196,6 +212,7 @@ private:
 
     entt::registry _registry;
     Reference<RenderGraph> _renderGraph;
+    PhysicsSimulationParameters physicsParams{};
 };
 
 } // namespace bloom

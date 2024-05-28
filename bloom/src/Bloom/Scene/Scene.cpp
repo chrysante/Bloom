@@ -15,6 +15,7 @@
 #include "Bloom/Scene/Components/Transform.h"
 
 using namespace bloom;
+using namespace vml::short_types;
 
 EntityHandle Scene::createEmptyEntity() {
     return createEmptyEntity(EntityHandle{});
@@ -65,6 +66,7 @@ void Scene::deleteEntity(EntityID ID) {
 Reference<Scene> Scene::clone() {
     utl::hashmap<EntityID, EntityID> idMap;
     auto result = allocateRef<Scene>(handle(), name());
+    result->physicsParams = this->physicsParams;
     each([&](EntityID fromID) {
         EntityHandle fromHandle = this->getHandle(fromID);
         EntityID toID = result->createEmptyEntity(fromID);
@@ -267,8 +269,8 @@ void Scene::parent(EntityID c, EntityID p) {
         parent.lastChild = c;
     }
     auto& t = getComponent<Transform>(c);
-    vml::float4x4 parentWorldTransform = calculateTransformRelativeToWorld(p);
-    vml::float4x4 childLocalTransform =
+    float4x4 parentWorldTransform = calculateWorldTransformMatrix(p);
+    float4x4 childLocalTransform =
         vml::inverse(parentWorldTransform) * t.calculate();
     t = Transform::fromMatrix(childLocalTransform);
 #if BLOOM_DEBUGLEVEL
@@ -278,6 +280,9 @@ void Scene::parent(EntityID c, EntityID p) {
 
 void Scene::detachFromHierarchyImpl(EntityID c) {
     auto& child = getComponent<HierarchyComponent>(c);
+    if (!hasComponent<HierarchyComponent>(child.parent)) {
+        return;
+    }
     auto& parent = getComponent<HierarchyComponent>(child.parent);
     auto& leftSibling = getComponent<HierarchyComponent>(child.prevSibling);
     auto& rightSibling = getComponent<HierarchyComponent>(child.nextSibling);
@@ -314,10 +319,13 @@ void Scene::detachFromHierarchy(EntityID c) {
         return;
     }
     auto& t = getComponent<Transform>(c);
-    vml::float4x4 parentWorldTransform =
-        calculateTransformRelativeToWorld(child->parent);
-    vml::float4x4 childWorldTransform = parentWorldTransform * t.calculate();
+    float4x4 parentWorldTransform =
+        calculateWorldTransformMatrix(child->parent);
+    float4x4 childWorldTransform = parentWorldTransform * t.calculate();
     t = Transform::fromMatrix(childWorldTransform);
+
+    // FIXME: This should be enough but it needs some debugging
+    //    getComponent<Transform>(c) = calculateWorldTransform(c);
     detachFromHierarchyImpl(c);
 }
 
@@ -371,8 +379,8 @@ bool Scene::isLeaf(EntityID entity) const {
     return result;
 }
 
-vml::float4x4 Scene::calculateTransformRelativeToWorld(EntityID entity) const {
-    vml::float4x4 result = 1;
+float4x4 Scene::calculateWorldTransformMatrix(EntityID entity) const {
+    float4x4 result = 1;
     while (entity) {
         BL_ASSERT(hasComponent<HierarchyComponent>(entity),
                   "This API is supposed to be used with hierarchical entities");
@@ -380,4 +388,11 @@ vml::float4x4 Scene::calculateTransformRelativeToWorld(EntityID entity) const {
         entity = getComponent<HierarchyComponent>(entity).parent;
     }
     return result;
+}
+
+Transform Scene::calculateWorldTransform(EntityID entity) const {
+    // FIXME: Inefficient and imprecise implementation
+    float4x4 M = calculateWorldTransformMatrix(entity);
+    auto [position, orientation, scale] = vml::decompose_transform(M);
+    return { position, orientation, scale };
 }

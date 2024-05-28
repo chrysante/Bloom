@@ -89,13 +89,16 @@ void SceneSystem::start() {
     setPointers(mSimScenes);
     auto& scriptSystem = application().coreSystems().scriptSystem();
     auto& physicsSystem = application().coreSystems().physicsSystem();
+    BL_ASSERT(scenes().size() == 1);
     for (auto* scene: scenes()) {
-        physicsSystem.onSceneInit(*scene);
+        physicsSystem.onSceneInit(*scene, scene->physicsParameters());
         scriptSystem.onSceneInit(*scene);
     }
 }
 
 void SceneSystem::stop() {
+    auto& physicsSystem = application().coreSystems().physicsSystem();
+    physicsSystem.onSceneStop();
     auto L = lock();
     mSimScenes.clear();
     setPointers(mScenes);

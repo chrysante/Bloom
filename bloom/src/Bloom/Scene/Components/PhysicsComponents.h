@@ -1,6 +1,8 @@
 #ifndef BLOOM_SCENE_COMPONENTS_PHYSICSCOMPONENTS_H
 #define BLOOM_SCENE_COMPONENTS_PHYSICSCOMPONENTS_H
 
+#include <cstdint>
+
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/Yaml.h"
@@ -10,23 +12,32 @@ namespace bloom {
 
 enum class PhysicsComponentType { Static, Movable };
 
+/// Tag component that makes the entity part of the static physics layer
 struct PhysicsStaticComponent {
     BLOOM_REGISTER_COMPONENT("PhysicsStaticComponent")
+
+    /// Will be set by the physics system when simulation starts
+    uint32_t bodyID;
 };
 
-static_assert(std::is_empty_v<PhysicsStaticComponent>);
-
+/// Tag component that makes the entity part of the dynamic physics layer
 struct PhysicsMovableComponent {
     BLOOM_REGISTER_COMPONENT("PhysicsMovableComponent")
+
+    /// Will be set by the physics system when simulation starts
+    uint32_t bodyID;
 };
 
-static_assert(std::is_empty_v<PhysicsMovableComponent>);
+/// Different colliders. Entities need a collider in order to have physics
+/// simulated
 
+/// Sphere centered at the origin of the entities transform
 struct SphereColliderComponent {
     BLOOM_REGISTER_COMPONENT("SphereCollider")
     float radius = 100;
 };
 
+/// Box centered at the origin of the entities transform
 struct BoxColliderComponent {
     BLOOM_REGISTER_COMPONENT("BoxCollider")
     vml::packed_float3 halfExtend = { 50, 50, 50 };
@@ -34,6 +45,8 @@ struct BoxColliderComponent {
 
 } // namespace bloom
 
+/// We are not serializing the body IDs because they are only valid during
+/// simulation and get assigned when the simulation starts
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::PhysicsMovableComponent);
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::PhysicsStaticComponent);
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::SphereColliderComponent, radius);

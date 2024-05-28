@@ -123,7 +123,7 @@ struct YAML::convert<E> {
 
 /// MARK: Serialize Fields
 #define _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                 \
-    static Node encode(Type const& t) {                                        \
+    static Node encode([[maybe_unused]] Type const& t) {                       \
         Node _node;
 
 #define _BLOOM_TEXT_SERIALIZE_FIELD(FieldName) _node[#FieldName] = t.FieldName
@@ -134,7 +134,8 @@ struct YAML::convert<E> {
 
 /// MARK: Deserialize Fields
 #define _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                               \
-    static bool decode(Node const& _node, Type& t) {                           \
+    static bool decode([[maybe_unused]] Node const& _node,                     \
+                       [[maybe_unused]] Type& t) {                             \
         try {
 
 #define _BLOOM_TEXT_DESERIALIZE_FIELD(FieldName)                               \

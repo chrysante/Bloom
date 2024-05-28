@@ -157,8 +157,12 @@ struct YAML::convert<E> {
     }
 
 /// MARK: Arities
-#define _BLOOM_REGISTER_TEXT_SERIALIZER(Type, ...)                             \
-    UTL_VFUNC(_BLOOM_REGISTER_TEXT_SERIALIZER_, Type, __VA_ARGS__)
+#define _BLOOM_REGISTER_TEXT_SERIALIZER(...)                                   \
+    UTL_VFUNC(_BLOOM_REGISTER_TEXT_SERIALIZER_, __VA_ARGS__)
+
+#define _BLOOM_REGISTER_TEXT_SERIALIZER_1(Type)                                \
+    _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
+    _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
 #define _BLOOM_REGISTER_TEXT_SERIALIZER_2(Type, _0)                            \
     _BLOOM_TEXT_SERIALIZE_FUNC_BEGIN(Type)                                     \
@@ -586,8 +590,12 @@ struct YAML::convert<E> {
     _BLOOM_TEXT_SERIALIZE_FIELD(_23);                                          \
     _BLOOM_TEXT_SERIALIZE_FUNC_END()
 
-#define _BLOOM_REGISTER_TEXT_DESERIALIZER(Type, ...)                           \
-    UTL_VFUNC(_BLOOM_REGISTER_TEXT_DESERIALIZER_, Type, __VA_ARGS__)
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER(...)                                 \
+    UTL_VFUNC(_BLOOM_REGISTER_TEXT_DESERIALIZER_, __VA_ARGS__)
+
+#define _BLOOM_REGISTER_TEXT_DESERIALIZER_1(Type)                              \
+    _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
+    _BLOOM_TEXT_DESERIALIZE_FUNC_END()
 
 #define _BLOOM_REGISTER_TEXT_DESERIALIZER_2(Type, _0)                          \
     _BLOOM_TEXT_DESERIALIZE_FUNC_BEGIN(Type)                                   \
@@ -1023,8 +1031,8 @@ struct YAML::convert<E> {
 
 #define BLOOM_MAKE_TEXT_SERIALIZER(Type, ...)                                  \
     _BLOOM_REGISTER_TEXT_SERIALIZER_BEGIN(Type)                                \
-    _BLOOM_REGISTER_TEXT_SERIALIZER(Type, __VA_ARGS__)                         \
-    _BLOOM_REGISTER_TEXT_DESERIALIZER(Type, __VA_ARGS__)                       \
+    _BLOOM_REGISTER_TEXT_SERIALIZER(Type __VA_OPT__(, ) __VA_ARGS__)           \
+    _BLOOM_REGISTER_TEXT_DESERIALIZER(Type __VA_OPT__(, ) __VA_ARGS__)         \
     _BLOOM_REGISTER_TEXT_SERIALIZER_END()
 
 #endif // BLOOM_NO_SERIALIZATION

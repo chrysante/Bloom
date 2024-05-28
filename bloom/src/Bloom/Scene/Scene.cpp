@@ -37,9 +37,14 @@ EntityHandle Scene::createEntity(std::string_view name) {
 EntityHandle Scene::cloneEntity(EntityID from) {
     EntityHandle const result = createEmptyEntity();
     forEachComponent([&]<typename C>(utl::tag<C>) {
-        if (hasComponent<C>(from)) {
-            C const& c = getComponent<C>(from);
-            result.add(c);
+        if (!hasComponent<C>(from)) {
+            return;
+        }
+        if constexpr (DataComponent<C>) {
+            result.add(getComponent<C>(from));
+        }
+        else {
+            result.add<C>();
         }
     });
     getComponent<HierarchyComponent>(result) = {};
@@ -66,8 +71,14 @@ Reference<Scene> Scene::clone() {
         BL_EXPECT(fromID == toID);
         EntityHandle toHandle = result->getHandle(toID);
         forEachComponent([&]<typename C>(utl::tag<C>) {
-            if (fromHandle.has<C>()) {
+            if (!fromHandle.has<C>()) {
+                return;
+            }
+            if constexpr (DataComponent<C>) {
                 toHandle.add(fromHandle.get<C>());
+            }
+            else {
+                toHandle.add<C>();
             }
         });
     });
@@ -76,11 +87,19 @@ Reference<Scene> Scene::clone() {
 
 size_t Scene::hashID() const { return std::hash<utl::uuid>{}(handle().ID()); }
 
-template <typename T>
+template <DataComponent T>
 static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
                                utl::tag<T>) {
     if (entity.has<T>()) {
         node[T::staticName()] = entity.get<T>();
+    }
+}
+
+template <typename T>
+static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
+                               utl::tag<T>) {
+    if (entity.has<T>()) {
+        node[T::staticName()] = "";
     }
 }
 
@@ -92,12 +111,21 @@ static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
     }
 }
 
-template <typename T>
+template <DataComponent T>
 static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
                                  AssetManager&, utl::tag<T>) {
     YAML::Node componentNode = node[T::staticName()];
     if (componentNode.IsDefined()) {
         entity.add(componentNode.as<T>());
+    }
+}
+
+template <typename T>
+static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
+                                 AssetManager&, utl::tag<T>) {
+    YAML::Node componentNode = node[T::staticName()];
+    if (componentNode.IsDefined()) {
+        entity.add<T>();
     }
 }
 

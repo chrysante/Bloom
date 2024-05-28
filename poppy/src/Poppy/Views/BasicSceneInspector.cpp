@@ -62,6 +62,23 @@ void BasicSceneInspector::removeComponentType(LightType type,
                           [&]<typename T>(utl::tag<T>) { entity.remove<T>(); });
 }
 
+std::optional<PhysicsComponentType> BasicSceneInspector::getPhysicsType(
+    EntityHandle entity) const {
+    if (entity.has<PhysicsStaticComponent>()) {
+        return PhysicsComponentType::Static;
+    }
+    if (entity.has<PhysicsMovableComponent>()) {
+        return PhysicsComponentType::Movable;
+    }
+    return std::nullopt;
+}
+
+void BasicSceneInspector::removeComponentType(PhysicsComponentType type,
+                                              EntityHandle entity) {
+    dispatchComponentType(type,
+                          [&]<typename T>(utl::tag<T>) { entity.remove<T>(); });
+}
+
 bool BasicSceneInspector::hasColliderComponent(EntityHandle entity) const {
     return getColliderType(entity).has_value();
 }

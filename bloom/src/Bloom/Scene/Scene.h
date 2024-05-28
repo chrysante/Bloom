@@ -55,14 +55,14 @@ public:
 
     /// \Returns a reference to the component \p T of entity \p entity
     /// \pre \p entity must have a component of type \p T
-    template <ComponentType T>
+    template <DataComponent T>
     T& getComponent(EntityID entity) {
         return const_cast<T&>(
             static_cast<Scene const*>(this)->getComponent<T>(entity));
     }
 
     /// \overload
-    template <ComponentType T>
+    template <DataComponent T>
     T const& getComponent(EntityID entity) const {
         BL_EXPECT(hasComponent<T>(entity), "ComponentType not present");
         return _registry.get<T>(entity.value());
@@ -70,14 +70,14 @@ public:
 
     /// \Returns a pointer to the component \p T of entity \p entity if it
     /// exists or null otherwise
-    template <ComponentType T>
+    template <DataComponent T>
     T* tryGetComponent(EntityID entity) {
         return const_cast<T*>(
             static_cast<Scene const*>(this)->tryGetComponent<T>(entity));
     }
 
     /// \overload
-    template <ComponentType T>
+    template <DataComponent T>
     T const* tryGetComponent(EntityID entity) const {
         if (hasComponent<T>(entity)) {
             return &getComponent<T>(entity);
@@ -87,7 +87,7 @@ public:
 
     /// Adds the component \p component to \p entity
     /// \pre \p entity must not have a component of type \p T
-    template <ComponentType T>
+    template <DataComponent T>
     std::remove_cvref_t<T>& addComponent(EntityID entity, T&& component) {
         BL_EXPECT(!hasComponent<std::decay_t<T>>(entity),
                   "ComponentType already present");
@@ -95,8 +95,16 @@ public:
                                                   std::forward<T>(component));
     }
 
+    template <ComponentType T, typename... Args>
+    decltype(auto) addComponent(EntityID entity, Args&&... args) {
+        BL_EXPECT(!hasComponent<std::decay_t<T>>(entity),
+                  "ComponentType already present");
+        return _registry.emplace<std::decay_t<T>>(entity.value(),
+                                                  std::forward<Args>(args)...);
+    }
+
     ///
-    template <ComponentType... T>
+    template <DataComponent... T>
     void addComponents(EntityID entity, T&&... components) {
         (addComponent(entity, std::forward<T>(components)), ...);
     }

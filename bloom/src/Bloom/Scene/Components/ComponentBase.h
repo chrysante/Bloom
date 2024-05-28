@@ -18,6 +18,12 @@ concept ComponentType =
 template <typename T>
 struct IsComponent: std::bool_constant<ComponentType<T>> {};
 
+template <typename T>
+concept DataComponent = ComponentType<T> && !std::is_empty_v<T>;
+
+template <typename T>
+struct IsDataComponent: std::bool_constant<DataComponent<T>> {};
+
 } // namespace bloom
 
 #endif // BLOOM_SCENE_COMPONENTS_COMPONENTBASE_H

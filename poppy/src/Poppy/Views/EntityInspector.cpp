@@ -114,7 +114,7 @@ void EntityInspector::display() {
         inspectLight(entity);
         ImGui::Separator();
     }
-    if (entity.has<PhysicsComponent>()) {
+    if (entity.hasAny<PhysicsStaticComponent, PhysicsMovableComponent>()) {
         inspectPhysics(entity);
         ImGui::Separator();
     }
@@ -194,11 +194,13 @@ void EntityInspector::inspectTag(EntityHandle entity) {
                         "Directional Light", entity, hasLight);
                     addComponentButton<SkyLightComponent>("Sky Light", entity,
                                                           hasLight);
-                    addComponentButton<PhysicsComponent,
+                    addComponentButton<PhysicsStaticComponent,
                                        SphereColliderComponent>(
                         "Sphere Collider", entity, hasCollider);
-                    addComponentButton<PhysicsComponent, BoxColliderComponent>(
-                        "Box Collider", entity, hasCollider);
+                    addComponentButton<PhysicsStaticComponent,
+                                       BoxColliderComponent>("Box Collider",
+                                                             entity,
+                                                             hasCollider);
                     addComponentButton<ScriptComponent,
                                        ScriptPreservedData>("Script", entity);
                 });
@@ -217,7 +219,7 @@ void EntityInspector::addComponentButton(char const* name, EntityHandle entity,
         flags |= ImGuiSelectableFlags_Disabled;
     }
     if (ImGui::Selectable(name, false, flags)) {
-        entity.tryAdd(Components{}...);
+        (entity.tryAdd<Components>(), ...);
     }
 }
 
@@ -324,7 +326,9 @@ static std::optional<E> myEnumCombo(char const* label, E value) {
     if (ImGui::BeginCombo(label, myToString(value).data())) {
         for (auto current: magic_enum::enum_values<E>()) {
             bool selected = value == current;
-            if (ImGui::Selectable(myToString(current).data(), selected)) {
+            if (ImGui::Selectable(myToString(current).data(), selected) &&
+                !selected)
+            {
                 newValue = current;
             }
             if (selected) {
@@ -478,9 +482,12 @@ void EntityInspector::inspectLightComponent(SkyLight& light) {
 
 void EntityInspector::inspectPhysics(EntityHandle entity) {
     using namespace propertiesView;
+    auto physicsType = getPhysicsType(entity).value();
     auto colliderType = getColliderType(entity).value();
     auto deleter = [&] {
-        entity.remove<PhysicsComponent>();
+        dispatchComponentType(physicsType, [&]<typename M>(utl::tag<M>) {
+            entity.remove<M>();
+        });
         dispatchComponentType(colliderType, [&]<typename L>(utl::tag<L>) {
             entity.remove<L>();
         });
@@ -490,22 +497,25 @@ void EntityInspector::inspectPhysics(EntityHandle entity) {
         return;
     }
     disabledIf(isSimulating(), [&] {
-        auto& physics = entity.get<PhysicsComponent>();
-        beginProperty("Physics");
+        beginProperty("Movability");
         fullWidth();
-        if (auto newValue = myEnumCombo("###Physics", physics.kind)) {
-            physics.kind = *newValue;
-        }
+        physicsType = inspectTypeGeneric("###Movability", physicsType,
+                                         [&](PhysicsComponentType newType) {
+            dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
+                entity.add<C>();
+            });
+            removeComponentType(physicsType, entity);
+        }).value_or(physicsType);
+        fullWidth();
         beginProperty("Collider");
         fullWidth();
-        auto newType = inspectTypeGeneric("###Collider", colliderType,
+        colliderType = inspectTypeGeneric("###Collider", colliderType,
                                           [&](ColliderType newType) {
             dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
                 entity.add(C{});
             });
             removeComponentType(colliderType, entity);
-        });
-        colliderType = newType.value_or(colliderType);
+        }).value_or(colliderType);
         dispatchComponentType(colliderType, [&]<typename C>(utl::tag<C>) {
             inspectColliderComponent(entity.get<C>());
         });

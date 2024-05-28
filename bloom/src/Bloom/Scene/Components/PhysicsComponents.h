@@ -8,11 +8,19 @@
 
 namespace bloom {
 
-struct PhysicsComponent {
-    BLOOM_REGISTER_COMPONENT("PhysicsComponent")
-    enum Kind { Static, Movable };
-    Kind kind = Kind::Static;
+enum class PhysicsComponentType { Static, Movable };
+
+struct PhysicsStaticComponent {
+    BLOOM_REGISTER_COMPONENT("PhysicsStaticComponent")
 };
+
+static_assert(std::is_empty_v<PhysicsStaticComponent>);
+
+struct PhysicsMovableComponent {
+    BLOOM_REGISTER_COMPONENT("PhysicsMovableComponent")
+};
+
+static_assert(std::is_empty_v<PhysicsMovableComponent>);
 
 struct SphereColliderComponent {
     BLOOM_REGISTER_COMPONENT("SphereCollider")
@@ -26,7 +34,8 @@ struct BoxColliderComponent {
 
 } // namespace bloom
 
-BLOOM_MAKE_TEXT_SERIALIZER(bloom::PhysicsComponent, kind);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::PhysicsMovableComponent);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::PhysicsStaticComponent);
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::SphereColliderComponent, radius);
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::BoxColliderComponent, halfExtend);
 

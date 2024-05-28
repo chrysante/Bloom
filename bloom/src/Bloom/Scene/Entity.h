@@ -70,7 +70,7 @@ public:
 
     /// \Returns the component \p T of this entity
     /// \pre Component must be present
-    template <ComponentType T>
+    template <DataComponent T>
     T& get() const
         requires(!IsConst)
     {
@@ -78,13 +78,13 @@ public:
     }
 
     /// \overload
-    template <ComponentType T>
+    template <DataComponent T>
     T const& get() const {
         return scene().template getComponent<T>(ID());
     }
 
     /// \Returns the component \p T of this entity if present or null
-    template <ComponentType T>
+    template <DataComponent T>
     T* tryGet() const
         requires(!IsConst)
     {
@@ -92,31 +92,50 @@ public:
     }
 
     /// \overload
-    template <ComponentType T>
+    template <DataComponent T>
     T const* tryGet() const {
         return scene().template tryGetComponent<T>(ID());
     }
 
     /// Adds the component \p component to this entity
     /// \pre The component must not be present
-    template <ComponentType T>
+    template <DataComponent T>
     std::remove_cvref_t<T>& add(T&& component) const
         requires(!IsConst)
     {
         return scene().addComponent(ID(), std::forward<T>(component));
     }
 
+    template <ComponentType T, typename... Args>
+    decltype(auto) add(Args&&... args) const
+        requires(!IsConst)
+    {
+        return scene().template addComponent<T>(ID(),
+                                                std::forward<Args>(args)...);
+    }
+
     /// Adds the components \p components to this entity
     /// \pre The components must not be present
-    template <ComponentType... T>
+    template <DataComponent... T>
     void add(T&&... components) const
         requires(!IsConst)
     {
         scene().addComponents(ID(), std::forward<T>(components)...);
     }
 
+    ///
+    template <ComponentType T, typename... Args>
+    void tryAdd(Args&&... args) const
+        requires(!IsConst)
+    {
+        auto& s = scene();
+        if (!s.template hasComponent<T>(ID())) {
+            s.template addComponent<T>(ID(), std::forward<Args>(args)...);
+        }
+    }
+
     /// Adds the components \p components to this entity if not already present
-    template <ComponentType... T>
+    template <DataComponent... T>
     void tryAdd(T&&... components) const
         requires(!IsConst)
     {

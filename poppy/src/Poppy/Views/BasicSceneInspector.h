@@ -65,6 +65,17 @@ decltype(auto) dispatchComponentType(ColliderType type, auto&& f) {
     }
 }
 
+decltype(auto) dispatchComponentType(bloom::PhysicsComponentType type,
+                                     auto&& f) {
+    using namespace bloom;
+    switch (type) {
+    case PhysicsComponentType::Static:
+        return f(utl::tag<PhysicsStaticComponent>{});
+    case PhysicsComponentType::Movable:
+        return f(utl::tag<PhysicsMovableComponent>{});
+    }
+}
+
 class BasicSceneInspector {
 protected:
     BasicSceneInspector(View* view): view(view) {}
@@ -83,6 +94,12 @@ public:
     std::optional<LightType> getLightType(bloom::EntityHandle entity) const;
 
     void removeComponentType(LightType type, bloom::EntityHandle entity);
+
+    std::optional<bloom::PhysicsComponentType> getPhysicsType(
+        bloom::EntityHandle entity) const;
+
+    void removeComponentType(bloom::PhysicsComponentType type,
+                             bloom::EntityHandle entity);
 
     bool hasColliderComponent(bloom::EntityHandle entity) const;
 

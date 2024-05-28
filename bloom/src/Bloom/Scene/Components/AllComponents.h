@@ -14,13 +14,12 @@
 
 namespace bloom {
 
-using ComponentList =
-    std::tuple<TagComponent, Transform, TransformMatrixComponent,
-               HierarchyComponent, ScriptComponent, ScriptPreservedData,
-               MeshRendererComponent, PointLightComponent, SpotLightComponent,
-               DirectionalLightComponent, SkyLightComponent,
-               VisibilityComponent, PhysicsComponent, SphereColliderComponent,
-               BoxColliderComponent>;
+using ComponentList = std::tuple<
+    TagComponent, Transform, TransformMatrixComponent, HierarchyComponent,
+    ScriptComponent, ScriptPreservedData, MeshRendererComponent,
+    PointLightComponent, SpotLightComponent, DirectionalLightComponent,
+    SkyLightComponent, VisibilityComponent, PhysicsStaticComponent,
+    PhysicsMovableComponent, SphereColliderComponent, BoxColliderComponent>;
 
 template <typename... T>
 struct Except: std::tuple<T...> {};

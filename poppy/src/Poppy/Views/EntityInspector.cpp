@@ -469,14 +469,34 @@ void EntityInspector::inspectLightComponent(SkyLight& light) {
     assetButton("###IBLTexture", light.cubemap, { .repr = GPU | CPU });
 }
 
-static void exchangeComponent(EntityHandle entity, ComponentKind old,
-                              ComponentKind New) {
-    entity.tryAdd(New);
-    entity.tryRemove(old);
-}
-
 #define IF_WELL_FORMED(...)                                                    \
     if constexpr (requires __VA_ARGS__) __VA_ARGS__
+
+static Transaction* makeComponentExchange(EntityHandle entity,
+                                          ComponentKind oldType,
+                                          ComponentKind newType) {
+    return visitComponentType(oldType, [&]<typename Old>(utl::tag<Old>) {
+        auto* ptr = entity.tryGet<Old>();
+        std::optional<Old> old = ptr ? std::optional(*ptr) : std::nullopt;
+        auto commit = [=](EntityHandle entity) {
+            if (old) {
+                entity.tryRemove<Old>();
+                entity.tryAdd(newType);
+                return true;
+            }
+            return false;
+        };
+        auto undo = [=](EntityHandle entity) {
+            if (old) {
+                entity.tryAdd(*old);
+                entity.tryRemove(newType);
+                return true;
+            }
+            return false;
+        };
+        return new CustomEntityTransaction(entity.strongHandle(), commit, undo);
+    });
+}
 
 void EntityInspector::inspectPhysics(EntityHandle entity) {
     using namespace propertiesView;
@@ -499,14 +519,7 @@ void EntityInspector::inspectPhysics(EntityHandle entity) {
                                  ComponentKind::PhysicsMovableComponent },
                                [&](ComponentKind newType) {
             auto* transaction =
-                new CustomEntityTransaction(entity.strongHandle(),
-                                            [=](EntityHandle entity) {
-                exchangeComponent(entity, physicsType, newType);
-                return true;
-            }, [=](EntityHandle entity) {
-                exchangeComponent(entity, newType, physicsType);
-                return true;
-            });
+                makeComponentExchange(entity, physicsType, newType);
             editor().transactionManager().commit(transaction);
         }).value_or(physicsType);
         fullWidth();
@@ -517,7 +530,9 @@ void EntityInspector::inspectPhysics(EntityHandle entity) {
                                { ComponentKind::BoxColliderComponent,
                                  ComponentKind::SphereColliderComponent },
                                [&](ComponentKind newType) {
-            exchangeComponent(entity, colliderType, newType);
+            auto* transaction =
+                makeComponentExchange(entity, colliderType, newType);
+            editor().transactionManager().commit(transaction);
         }).value_or(colliderType);
         visitComponentType(colliderType, [&]<typename C>(utl::tag<C>) {
             IF_WELL_FORMED(

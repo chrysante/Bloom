@@ -79,6 +79,16 @@ decltype(auto) visitComponentType(ComponentKind dynamicKind, auto&& fn) {
     }
 }
 
+/// \overload
+decltype(auto) visitComponentType(ComponentKind typeA, ComponentKind typeB,
+                                  auto&& fn) {
+    return visitComponentType(typeA, [&]<typename A>(utl::tag<A>) {
+        return visitComponentType(typeB, [&]<typename B>(utl::tag<B>) {
+            return std::invoke(fn, utl::tag<A>{}, utl::tag<B>{});
+        });
+    });
+}
+
 /// Type traits that has a static member variable `value` set to `true` if \p T
 /// is a component type
 template <typename T>

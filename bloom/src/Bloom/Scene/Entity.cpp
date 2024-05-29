@@ -26,8 +26,11 @@ template <typename ScenePtr, bool IsConst>
 std::string EntityHandleEx<ScenePtr, IsConst>::debugDescription() const {
     std::stringstream sstr;
     sstr << "Components: \n";
-    forEachComponent(
-        [&]<typename T>(utl::tag<T>) { sstr << utl::nameof<T> << ":\n"; });
+    forEachComponent([&]<typename T>(utl::tag<T>) {
+        if (has<T>()) {
+            sstr << utl::nameof<T> << ":\n";
+        }
+    });
     return sstr.str();
 }
 

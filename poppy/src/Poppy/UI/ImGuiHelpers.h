@@ -34,7 +34,9 @@ struct DragFloat3Options {
     float max = 0.0f;
     char const* format = "%.3f";
     ImGuiSliderFlags flags = 0;
-    bool linkButton = false;
+    bool showLinkButton = false;
+    /// Overrides the state of the link button
+    std::optional<bool> linkFields;
     LabelStyle labelStyle = Auto;
 };
 

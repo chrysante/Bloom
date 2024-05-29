@@ -248,19 +248,10 @@ void EntityInspector::inspectTransform(EntityHandle entity) {
             ImGui::SetNextItemWidth(width);
             float3 newScale = transform.scale;
             if (dragFloat3Labelled("###scale", newScale.data(),
-                                   { .speed = 0.02 }))
+                                   { .speed = 0.02,
+                                     .linkFields = transformScaleLinked }))
             {
-                if (transformScaleLinked) {
-                    float3 scaleOffset = newScale / transform.scale;
-                    float offset =
-                        *ranges::find_if(scaleOffset, [](float offset) {
-                        return offset != 1.0f;
-                    });
-                    transform.scale *= offset;
-                }
-                else {
-                    transform.scale = newScale;
-                }
+                transform.scale = newScale;
             }
             ImGui::SameLine();
             linkButton(transformScaleLinked, lockButtonSize);
@@ -513,7 +504,7 @@ void EntityInspector::inspectColliderComponent(BoxColliderComponent& collider) {
     beginProperty("Half Extend");
     fullWidth();
     dragFloat3Labelled("###HalfExtend", collider.halfExtend.data(),
-                       { .linkButton = true,
+                       { .showLinkButton = true,
                          .labelStyle = DragFloat3Options::Slim });
 }
 

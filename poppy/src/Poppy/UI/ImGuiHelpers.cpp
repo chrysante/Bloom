@@ -103,16 +103,20 @@ bool poppy::dragFloat3Labelled(char const* label, float v[3],
     float height = ImGui::GetFontSize() + 2 * style.FramePadding.y;
     ImGui::BeginGroup();
     ImGui::PushID(label);
-    bool* linked =
-        window->StateStorage.GetBoolRef(ImGui::GetID("IsLinked"), false);
-    float2 linkButtonSize = options.linkButton ? float2(defaultItemHeight()) :
-                                                 float2();
+    bool* linked = [&] {
+        if (options.linkFields) {
+            return &options.linkFields.value();
+        }
+        return window->StateStorage.GetBoolRef(ImGui::GetID("IsLinked"), false);
+    }();
+    float2 linkButtonSize =
+        options.showLinkButton ? float2(defaultItemHeight()) : float2();
     constexpr std::array colors = { IM_COL32(255, 17, 17, 255),
                                     IM_COL32(0, 204, 0, 255),
                                     IM_COL32(34, 127, 255, 255) };
     constexpr std::array labels = { "X", "Y", "Z" };
     constexpr std::array itemLabels = { "###X", "###Y", "###Z" };
-    float spacing = options.linkButton ? style.ItemSpacing.x : 0.0f;
+    float spacing = options.showLinkButton ? style.ItemSpacing.x : 0.0f;
     /// We display labels if each component is at least 90 pixels in width
     float fullWidth = ImGui::CalcItemWidth() - spacing - linkButtonSize.x;
     bool haveButtonLabels = [&] {
@@ -167,7 +171,7 @@ bool poppy::dragFloat3Labelled(char const* label, float v[3],
     }
     DL->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_Border), rounding, 0,
                 style.FrameBorderSize);
-    if (options.linkButton) {
+    if (options.showLinkButton) {
         ImGui::SetCursorScreenPos(linkButtonPos);
         linkButton(*linked, linkButtonSize);
     }

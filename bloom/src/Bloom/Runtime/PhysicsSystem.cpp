@@ -226,14 +226,24 @@ void PhysicsSystem::Impl::init() {
         (int)(std::thread::hardware_concurrency() - 1));
 }
 
+static float const ScaleRatio = 100;
+
 static JPH::Vec3 toJPH(float3 v) { return JPH::RVec3(v.x, v.y, v.z); }
+
+static JPH::Vec3 toJPHScaled(float3 v) {
+    return JPH::RVec3(v.x, v.y, v.z) / ScaleRatio;
+}
 
 static JPH::Quat toJPH(quaternion_float q) {
     return JPH::Quat(q.imag.x, q.imag.y, q.imag.z, q.real);
 }
 
-static float3 toVML(JPH::Vec3 v) {
+[[maybe_unused]] static float3 toVML(JPH::Vec3 v) {
     return float3(v.GetX(), v.GetY(), v.GetZ());
+}
+
+static float3 toVMLScaled(JPH::Vec3 v) {
+    return ScaleRatio * float3(v.GetX(), v.GetY(), v.GetZ());
 }
 
 static quaternion_float toVML(JPH::Quat v) {
@@ -246,11 +256,22 @@ static JPH::BodyID addObject(JPH::BodyInterface& interface,
                              JPH::EMotionType motionType,
                              JPH::EActivation activation) {
     float radius = collider.radius * transform.scale.fold(ranges::max);
-    JPH::BodyCreationSettings settings(new JPH::SphereShape(radius),
-                                       toJPH(transform.position),
+    JPH::BodyCreationSettings settings(new JPH::SphereShape(radius /
+                                                            ScaleRatio),
+                                       toJPHScaled(transform.position),
                                        toJPH(transform.orientation), motionType,
                                        (uint32_t)layer);
     return interface.CreateAndAddBody(settings, activation);
+}
+
+/// We adjust the half extend of box colliders to be always greater than the
+/// convex radius. Otherwise shape creation fails
+static JPH::Vec3 adjustExtendToConvexRadius(JPH::Vec3 halfExtend,
+                                            float radius) {
+    for (int i = 0; i < 3; ++i) {
+        halfExtend.SetComponent(i, std::max(halfExtend[i], radius + 0.01f));
+    }
+    return halfExtend;
 }
 
 static JPH::BodyID addObject(JPH::BodyInterface& interface,
@@ -258,12 +279,17 @@ static JPH::BodyID addObject(JPH::BodyInterface& interface,
                              BoxColliderComponent collider, Layer layer,
                              JPH::EMotionType motionType,
                              JPH::EActivation activation) {
-    float3 halfExtend = collider.halfExtend * transform.scale;
-    JPH::BoxShapeSettings shapeSettings(toJPH(halfExtend));
+    JPH::Vec3 halfExtend =
+        adjustExtendToConvexRadius(toJPHScaled(collider.halfExtend *
+                                               transform.scale),
+                                   JPH::cDefaultConvexRadius);
+    JPH::BoxShapeSettings shapeSettings(halfExtend, JPH::cDefaultConvexRadius);
     JPH::ShapeSettings::ShapeResult shape = shapeSettings.Create();
     // We don't expect an error here, but you can check floor_shape_result for
     // HasError() / GetError()
-    JPH::BodyCreationSettings settings(shape.Get(), toJPH(transform.position),
+    BL_ASSERT(!shape.HasError(), shape.GetError().c_str());
+    JPH::BodyCreationSettings settings(shape.Get(),
+                                       toJPHScaled(transform.position),
                                        toJPH(transform.orientation), motionType,
                                        (uint32_t)layer);
     // Note that if we run out of bodies this can return nullptr
@@ -307,7 +333,7 @@ void PhysicsSystem::Impl::onSceneInit(Scene& scene,
                                      JPH::EMotionType::Dynamic,
                                      JPH::EActivation::Activate);
     system->OptimizeBroadPhase();
-    system->SetGravity(toJPH(100 * parameters.gravity));
+    system->SetGravity(toJPH(parameters.gravity));
     isSimulating = true;
 }
 
@@ -326,7 +352,7 @@ void PhysicsSystem::Impl::update(Scene& scene, Timestep time) {
         JPH::Quat rotation;
         interface.GetPositionAndRotation(JPH::BodyID(phys.bodyID), position,
                                          rotation);
-        transform.position = toVML(position);
+        transform.position = toVMLScaled(position);
         transform.orientation = toVML(rotation);
     });
 }

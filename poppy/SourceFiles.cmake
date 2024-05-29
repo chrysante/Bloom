@@ -14,6 +14,10 @@ set(poppy_sources
   src/Poppy/Editor/EntitySelectionManager.cpp
   src/Poppy/Editor/EntitySelectionManager.h
   src/Poppy/Editor/Messages.h
+  src/Poppy/Editor/TransactionManager.cpp
+  src/Poppy/Editor/TransactionManager.h
+  src/Poppy/Editor/Transactions.cpp
+  src/Poppy/Editor/Transactions.h
 
   src/Poppy/Platform/MacOS/imgui_impl_metal.h
   src/Poppy/Platform/MacOS/imgui_impl_metal.mm

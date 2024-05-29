@@ -14,6 +14,7 @@
 namespace poppy {
 
 class EntitySelectionManager;
+class TransactionManager;
 class ImGuiContext;
 
 class Editor: public bloom::Application {
@@ -25,6 +26,9 @@ public:
     /// The entity selection manager. This is owned by the editor and shared
     /// between views
     EntitySelectionManager& selection();
+
+    /// The global transaction manager
+    TransactionManager& transactionManager();
 
     /// Opens the view with \p name on the next frame. \p completion will be run
     /// after opening the view

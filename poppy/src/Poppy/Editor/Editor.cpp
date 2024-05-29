@@ -15,6 +15,7 @@
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Core/Timestamp.h"
 #include "Poppy/Editor/EntitySelectionManager.h"
+#include "Poppy/Editor/TransactionManager.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/CommandPalette.h"
 #include "Poppy/UI/Dockspace.h"
@@ -46,6 +47,7 @@ struct Editor::Impl {
     CommandPalette cmd;
     DebugViews debugViews;
     EntitySelectionManager selection;
+    TransactionManager transactionManager;
     float autoConfigSaveTimer = 0;
     std::atomic<int> trickleEmptyEventCount = 0;
 
@@ -128,6 +130,8 @@ struct ToolbarBuildTimeStamp: ToolbarItem {
 
 } // namespace
 
+static void beep() { printf("\a\n"); }
+
 std::array<Command const*, 2> Editor::Impl::addSimCommands(
     CommandPalette& cmd) {
     // clang-format off
@@ -144,6 +148,18 @@ std::array<Command const*, 2> Editor::Impl::addSimCommands(
         { Key::Period, ModFlags::Control },
         [this] { editor->stopSimulation(); },
         [this] { return editor->isSimulating(); }
+    });
+    cmd.add("Undo", { .key = Key::Z, .modFlags = ModFlags::Control }, [this] {
+        if (!transactionManager.undo()) {
+            Logger::Warn("No transaction to undo");
+            beep();
+        }
+    });
+    cmd.add("Redo", { .key = Key::Z, .modFlags = ModFlags::Control | ModFlags::Shift }, [this] {
+        if (!transactionManager.redo()) {
+            Logger::Warn("No transaction to redo");
+            beep();
+        }
     });
     // clang-format on
     return { start, stop };
@@ -205,6 +221,10 @@ void Editor::reactToSceneCommands(CommandPalette& cmd) {
 Editor::~Editor() = default;
 
 EntitySelectionManager& Editor::selection() { return impl->selection; }
+
+TransactionManager& Editor::transactionManager() {
+    return impl->transactionManager;
+}
 
 void Editor::openView(std::string name, std::function<void(View&)> completion) {
     dispatch(DispatchToken::NextFrame, [=, this] {
@@ -406,7 +426,7 @@ void Editor::Impl::deleteSelectedEntities() {
     auto& sceneSystem = editor->coreSystems().sceneSystem();
     std::unique_lock lock = sceneSystem.lock();
     for (EntityHandle entity: selection.entities()) {
-        entity.scene().deleteEntity(entity);
+        entity.deleteEntity();
     }
     selection.clear();
 }

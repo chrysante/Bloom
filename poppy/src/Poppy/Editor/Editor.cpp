@@ -255,6 +255,9 @@ void Editor::initImGui() {
 }
 
 void Editor::shutdown() {
+    if (isSimulating()) {
+        stopSimulation();
+    }
     saveConfigToDisk();
     impl->imguiCtx.shutdown();
 }

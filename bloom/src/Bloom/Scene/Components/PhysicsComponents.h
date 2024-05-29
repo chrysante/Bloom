@@ -15,16 +15,12 @@ enum class PhysicsComponentType { Static, Movable };
 
 /// Tag component that makes the entity part of the static physics layer
 struct BLOOM_API PhysicsStaticComponent {
-    BLOOM_REGISTER_COMPONENT("PhysicsStaticComponent")
-
     /// Will be set by the physics system when simulation starts
     uint32_t bodyID;
 };
 
 /// Tag component that makes the entity part of the dynamic physics layer
 struct BLOOM_API PhysicsMovableComponent {
-    BLOOM_REGISTER_COMPONENT("PhysicsMovableComponent")
-
     /// Will be set by the physics system when simulation starts
     uint32_t bodyID;
 };
@@ -34,13 +30,11 @@ struct BLOOM_API PhysicsMovableComponent {
 
 /// Sphere centered at the origin of the entities transform
 struct BLOOM_API SphereColliderComponent {
-    BLOOM_REGISTER_COMPONENT("SphereCollider")
     float radius = 100;
 };
 
 /// Box centered at the origin of the entities transform
 struct BLOOM_API BoxColliderComponent {
-    BLOOM_REGISTER_COMPONENT("BoxCollider")
     vml::packed_float3 halfExtend = { 50, 50, 50 };
 };
 

@@ -19,6 +19,29 @@ std::string poppy::toString(ColliderType type) {
     return std::array{ "Sphere Collider", "Box Collider" }[(size_t)type];
 }
 
+template <ComponentType... T>
+static std::optional<ComponentKind> getAnyOfSubset(EntityHandle entity) {
+    std::optional<ComponentKind> result;
+    (void)((entity.has<T>() ? ((result = DynamicType<T>), true) : false) ||
+           ...);
+    return result;
+}
+
+std::optional<ComponentKind> poppy::getLightType2(EntityHandle entity) {
+    return getAnyOfSubset<PointLightComponent, SpotLightComponent,
+                          DirectionalLightComponent, SkyLightComponent>(entity);
+}
+
+std::optional<ComponentKind> poppy::getPhysicsType2(EntityHandle entity) {
+    return getAnyOfSubset<PhysicsStaticComponent, PhysicsMovableComponent>(
+        entity);
+}
+
+std::optional<ComponentKind> poppy::getColliderType2(EntityHandle entity) {
+    return getAnyOfSubset<SphereColliderComponent, BoxColliderComponent>(
+        entity);
+}
+
 std::span<Scene* const> BasicSceneInspector::scenes() const {
     return view->editor().coreSystems().sceneSystem().scenes();
 }

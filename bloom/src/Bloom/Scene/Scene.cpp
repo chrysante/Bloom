@@ -89,11 +89,16 @@ Reference<Scene> Scene::clone() {
 
 size_t Scene::hashID() const { return std::hash<utl::uuid>{}(handle().ID()); }
 
+template <ComponentType T>
+static auto getName() {
+    return componentName(DynamicType<T>);
+}
+
 template <DataComponent T>
 static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
                                utl::tag<T>) {
     if (entity.has<T>()) {
-        node[T::staticName()] = entity.get<T>();
+        node[getName<T>()] = entity.get<T>();
     }
 }
 
@@ -101,14 +106,14 @@ template <typename T>
 static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
                                utl::tag<T>) {
     if (entity.has<T>()) {
-        node[T::staticName()] = "";
+        node[getName<T>()] = "";
     }
 }
 
 static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
                                utl::tag<MeshRendererComponent>) {
     if (entity.has<MeshRendererComponent>()) {
-        node[MeshRendererComponent::staticName()] =
+        node[getName<MeshRendererComponent>()] =
             entity.get<MeshRendererComponent>().serialize();
     }
 }
@@ -116,7 +121,7 @@ static void serializeComponent(YAML::Node& node, ConstEntityHandle entity,
 template <DataComponent T>
 static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
                                  AssetManager&, utl::tag<T>) {
-    YAML::Node componentNode = node[T::staticName()];
+    YAML::Node componentNode = node[getName<T>()];
     if (componentNode.IsDefined()) {
         entity.add(componentNode.as<T>());
     }
@@ -125,7 +130,7 @@ static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
 template <typename T>
 static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
                                  AssetManager&, utl::tag<T>) {
-    YAML::Node componentNode = node[T::staticName()];
+    YAML::Node componentNode = node[getName<T>()];
     if (componentNode.IsDefined()) {
         entity.add<T>();
     }
@@ -134,7 +139,7 @@ static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
 static void deserializeComponent(YAML::Node const& node, EntityHandle entity,
                                  AssetManager& assetManager,
                                  utl::tag<MeshRendererComponent>) {
-    if (YAML::Node componentNode = node[MeshRendererComponent::staticName()];
+    if (YAML::Node componentNode = node[getName<MeshRendererComponent>()];
         componentNode.IsDefined())
     {
         entity.add(MeshRendererComponent{});

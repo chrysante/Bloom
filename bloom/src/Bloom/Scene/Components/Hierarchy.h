@@ -9,8 +9,6 @@
 namespace bloom {
 
 struct BLOOM_API HierarchyComponent {
-    BLOOM_REGISTER_COMPONENT("Hierarchy")
-
     EntityID parent, prevSibling, nextSibling, firstChild, lastChild;
 };
 

@@ -7,8 +7,6 @@
 namespace bloom {
 
 struct BLOOM_API VisibilityComponent {
-    BLOOM_REGISTER_COMPONENT("Visibility")
-
     bool value = true;
 };
 

@@ -1,6 +1,6 @@
 #include "Bloom/Scene/Entity.h"
 
-#include <ostream>
+#include <iostream>
 #include <sstream>
 
 #include <utl/typeinfo.hpp>
@@ -32,6 +32,11 @@ std::string EntityHandleEx<ScenePtr, IsConst>::debugDescription() const {
         }
     });
     return sstr.str();
+}
+
+template <typename ScenePtr, bool IsConst>
+void EntityHandleEx<ScenePtr, IsConst>::printDebugDescription() const {
+    std::cout << debugDescription() << std::endl;
 }
 
 template class bloom::EntityHandleEx<Scene*, false>;

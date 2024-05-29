@@ -41,6 +41,11 @@ enum struct ColliderType { Sphere = 0, Box = 1 };
 
 std::string toString(ColliderType type);
 
+std::optional<bloom::ComponentKind> getPhysicsType2(bloom::EntityHandle entity);
+std::optional<bloom::ComponentKind> getColliderType2(
+    bloom::EntityHandle entity);
+std::optional<bloom::ComponentKind> getLightType2(bloom::EntityHandle entity);
+
 decltype(auto) dispatchComponentType(LightType type, auto&& f) {
     using namespace bloom;
     switch (type) {

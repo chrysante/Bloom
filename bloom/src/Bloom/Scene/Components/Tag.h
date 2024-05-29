@@ -9,8 +9,6 @@
 namespace bloom {
 
 struct BLOOM_API TagComponent {
-    BLOOM_REGISTER_COMPONENT("Tag")
-
     std::string name;
 };
 

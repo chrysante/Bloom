@@ -9,8 +9,6 @@
 namespace bloom {
 
 struct BLOOM_API Transform {
-    BLOOM_REGISTER_COMPONENT("Transform")
-
     vml::float3 position = 0;
     vml::quaternion_float orientation = 1;
     vml::float3 scale = 1;
@@ -26,7 +24,6 @@ struct BLOOM_API Transform {
 };
 
 struct BLOOM_API TransformMatrixComponent {
-    BLOOM_REGISTER_COMPONENT("Transform Matrix")
     vml::float4x4 matrix;
 };
 

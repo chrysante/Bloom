@@ -187,12 +187,49 @@ public:
         }(), ...);
     }
 
-    /// Removes the component types \p T... from if present
+    /// \overload for dynamic component type
+    void add(ComponentKind type) const
+        requires(!IsConst)
+    {
+        visitComponentType(type, [&]<typename T>(utl::tag<T>) { add<T>(); });
+    }
+
+    /// \overload for dynamic component type
+    void tryAdd(ComponentKind type) const
+        requires(!IsConst)
+    {
+        visitComponentType(type, [&]<typename T>(utl::tag<T>) { tryAdd<T>(); });
+    }
+
+    /// Removes the component types \p T... from this entity
     template <ComponentType... T>
     void remove() const
         requires(!IsConst)
     {
         scene()->template removeComponents<T...>(ID());
+    }
+
+    /// Removes the component types \p T... from this entity if present
+    template <ComponentType... T>
+    void tryRemove() const
+        requires(!IsConst)
+    {
+        scene()->template tryRemoveComponents<T...>(ID());
+    }
+
+    /// \overload for dynamic component type
+    void remove(ComponentKind type) const
+        requires(!IsConst)
+    {
+        visitComponentType(type, [&]<typename T>(utl::tag<T>) { remove<T>(); });
+    }
+
+    /// \overload for dynamic component type
+    void tryRemove(ComponentKind type) const
+        requires(!IsConst)
+    {
+        visitComponentType(type,
+                           [&]<typename T>(utl::tag<T>) { tryRemove<T>(); });
     }
 
     /// \Returns `true` if this handle refers to a valid entity
@@ -287,6 +324,9 @@ public:
 
     /// \Returns a description of all components in the entity
     std::string debugDescription() const;
+
+    ///
+    void printDebugDescription() const;
 
 private:
     EntityHandleEx getHierarchyImpl(auto f) const {

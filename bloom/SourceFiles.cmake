@@ -135,7 +135,9 @@ set(bloom_sources
   src/Bloom/Runtime/PhysicsSystem.h
 
   src/Bloom/Scene/Components/AllComponents.h
+  src/Bloom/Scene/Components/ComponentBase.cpp
   src/Bloom/Scene/Components/ComponentBase.h
+  src/Bloom/Scene/Components/Components.def
   src/Bloom/Scene/Components/Hierarchy.h
   src/Bloom/Scene/Components/Lights.h
   src/Bloom/Scene/Components/MeshRenderer.cpp

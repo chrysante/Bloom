@@ -284,7 +284,7 @@ void EntityInspector::inspectMesh(EntityHandle entity) {
 }
 
 template <typename E>
-static std::optional<E> myEnumCombo(char const* label, E value) {
+static std::optional<E> myEnumCombo(char const* label, E value, auto&& values) {
     auto myToString = [](E e) {
         if constexpr (requires { toString(e); }) {
             return std::string(toString(e));
@@ -295,7 +295,7 @@ static std::optional<E> myEnumCombo(char const* label, E value) {
     };
     std::optional<E> newValue;
     if (ImGui::BeginCombo(label, myToString(value).data())) {
-        for (auto current: magic_enum::enum_values<E>()) {
+        for (auto current: values) {
             bool selected = value == current;
             if (ImGui::Selectable(myToString(current).data(), selected) &&
                 !selected)
@@ -312,13 +312,31 @@ static std::optional<E> myEnumCombo(char const* label, E value) {
 }
 
 template <typename E>
+static std::optional<E> myEnumCombo(char const* label, E value) {
+    return myEnumCombo(label, value, magic_enum::enum_values<E>());
+}
+
+template <typename E>
 static std::optional<E> inspectTypeGeneric(char const* ID, E type,
-                                           auto exchange) {
-    auto newType = myEnumCombo(ID, type);
+                                           auto&& values, auto exchange) {
+    auto newType = myEnumCombo(ID, type, values);
     if (newType) {
         std::invoke(exchange, *newType);
     }
     return newType;
+}
+
+template <typename E>
+static std::optional<E> inspectTypeGeneric(char const* ID, E type,
+                                           std::initializer_list<E> values,
+                                           auto exchange) {
+    return inspectTypeGeneric(ID, type, std::span(values), exchange);
+}
+
+template <typename E>
+static std::optional<E> inspectTypeGeneric(char const* ID, E type,
+                                           auto exchange) {
+    return inspectTypeGeneric(ID, type, magic_enum::enum_values<E>(), exchange);
 }
 
 void EntityInspector::inspectLight(EntityHandle entity) {
@@ -451,20 +469,22 @@ void EntityInspector::inspectLightComponent(SkyLight& light) {
     assetButton("###IBLTexture", light.cubemap, { .repr = GPU | CPU });
 }
 
-template <typename Old, typename New, typename... Args>
-static void exchangeComponent(Args&&... args) {}
+static void exchangeComponent(EntityHandle entity, ComponentKind old,
+                              ComponentKind New) {
+    entity.tryAdd(New);
+    entity.tryRemove(old);
+}
+
+#define IF_WELL_FORMED(...)                                                    \
+    if constexpr (requires __VA_ARGS__) __VA_ARGS__
 
 void EntityInspector::inspectPhysics(EntityHandle entity) {
     using namespace propertiesView;
-    auto physicsType = getPhysicsType(entity).value();
-    auto colliderType = getColliderType(entity).value();
+    auto physicsType = getPhysicsType2(entity).value();
+    auto colliderType = getColliderType2(entity).value();
     auto deleter = [&] {
-        dispatchComponentType(physicsType, [&]<typename M>(utl::tag<M>) {
-            entity.remove<M>();
-        });
-        dispatchComponentType(colliderType, [&]<typename L>(utl::tag<L>) {
-            entity.remove<L>();
-        });
+        entity.remove(physicsType);
+        entity.remove(colliderType);
     };
     auto font = FontDesc::UIDefault().setWeight(FontWeight::Semibold);
     if (!beginGenericSection("Physics", font, deleter)) {
@@ -473,22 +493,18 @@ void EntityInspector::inspectPhysics(EntityHandle entity) {
     disabledIf(isSimulating(), [&] {
         beginProperty("Movability");
         fullWidth();
-        physicsType = inspectTypeGeneric("###Movability", physicsType,
-                                         [&](PhysicsComponentType newType) {
+        physicsType =
+            inspectTypeGeneric("###Movability", physicsType,
+                               { ComponentKind::PhysicsStaticComponent,
+                                 ComponentKind::PhysicsMovableComponent },
+                               [&](ComponentKind newType) {
             auto* transaction =
                 new CustomEntityTransaction(entity.strongHandle(),
                                             [=](EntityHandle entity) {
-                dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
-                    entity.add<C>();
-                });
-                removeComponentType(physicsType, entity);
+                exchangeComponent(entity, physicsType, newType);
                 return true;
             }, [=](EntityHandle entity) {
-                dispatchComponentType(physicsType,
-                                      [&]<typename C>(utl::tag<C>) {
-                    entity.add<C>();
-                });
-                removeComponentType(newType, entity);
+                exchangeComponent(entity, newType, physicsType);
                 return true;
             });
             editor().transactionManager().commit(transaction);
@@ -496,15 +512,16 @@ void EntityInspector::inspectPhysics(EntityHandle entity) {
         fullWidth();
         beginProperty("Collider");
         fullWidth();
-        colliderType = inspectTypeGeneric("###Collider", colliderType,
-                                          [&](ColliderType newType) {
-            dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
-                entity.add(C{});
-            });
-            removeComponentType(colliderType, entity);
+        colliderType =
+            inspectTypeGeneric("###Collider", colliderType,
+                               { ComponentKind::BoxColliderComponent,
+                                 ComponentKind::SphereColliderComponent },
+                               [&](ComponentKind newType) {
+            exchangeComponent(entity, colliderType, newType);
         }).value_or(colliderType);
-        dispatchComponentType(colliderType, [&]<typename C>(utl::tag<C>) {
-            inspectColliderComponent(entity, entity.get<C>());
+        visitComponentType(colliderType, [&]<typename C>(utl::tag<C>) {
+            IF_WELL_FORMED(
+                { inspectColliderComponent(entity, entity.get<C>()); });
         });
     });
     endSection();

@@ -1,0 +1,24 @@
+// No include guard
+
+#ifndef BLOOM_COMPONENT_DEF
+#define BLOOM_COMPONENT_DEF(ClassName, PrettyName)
+#endif
+
+BLOOM_COMPONENT_DEF(HierarchyComponent, "Hierarchy")
+BLOOM_COMPONENT_DEF(PointLightComponent, "Point Light")
+BLOOM_COMPONENT_DEF(SpotLightComponent, "Spot Light")
+BLOOM_COMPONENT_DEF(DirectionalLightComponent, "Directional Light")
+BLOOM_COMPONENT_DEF(SkyLightComponent, "Sky Light")
+BLOOM_COMPONENT_DEF(MeshRendererComponent, "Mesh Renderer")
+BLOOM_COMPONENT_DEF(PhysicsStaticComponent, "PhysicsStaticComponent")
+BLOOM_COMPONENT_DEF(PhysicsMovableComponent, "PhysicsMovableComponent")
+BLOOM_COMPONENT_DEF(SphereColliderComponent, "SphereCollider")
+BLOOM_COMPONENT_DEF(BoxColliderComponent, "BoxCollider")
+BLOOM_COMPONENT_DEF(ScriptComponent, "Script")
+BLOOM_COMPONENT_DEF(ScriptPreservedData, "Script Preserved Data")
+BLOOM_COMPONENT_DEF(TagComponent, "Tag")
+BLOOM_COMPONENT_DEF(Transform, "Transform")
+BLOOM_COMPONENT_DEF(TransformMatrixComponent, "Transform Matrix")
+BLOOM_COMPONENT_DEF(VisibilityComponent, "Visibility")
+
+#undef BLOOM_COMPONENT_DEF

@@ -117,6 +117,13 @@ public:
         _registry.remove<T...>(entity.value());
     }
 
+    /// Removes components \p T... from \p entity if present
+    template <ComponentType... T>
+    void tryRemoveComponents(EntityID entity) {
+        ((hasComponent<T>(entity) ? removeComponents<T>(entity) : (void)0),
+         ...);
+    }
+
     /// Destroys all entities in this scene
     void clear() { _registry.clear(); }
 

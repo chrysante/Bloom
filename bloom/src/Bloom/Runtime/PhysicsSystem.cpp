@@ -185,10 +185,12 @@ struct MyBodyActivationListener: public JPH::BodyActivationListener {
 
 struct PhysicsSystem::Impl {
     void init();
-    void onSceneInit(Scene& scene, PhysicsSimulationParameters parameters);
+    void onSceneInit(Scene& scene, PhysicsBehaviourParameters parameters);
     void onSceneStop();
     void update(Scene& scene, Timestep time);
 
+    Settings settings{};
+    std::atomic<bool> isSimulating = false;
     BPLayerInterfaceImpl broad_phase_layer_interface;
     ObjectVsBroadPhaseLayerFilterImpl object_vs_broadphase_layer_filter;
     ObjectLayerPairFilterImpl object_vs_object_layer_filter;
@@ -205,7 +207,7 @@ PhysicsSystem::~PhysicsSystem() = default;
 
 void PhysicsSystem::init() { impl->init(); }
 void PhysicsSystem::onSceneInit(Scene& scene,
-                                PhysicsSimulationParameters parameters) {
+                                PhysicsBehaviourParameters parameters) {
     impl->onSceneInit(scene, parameters);
 }
 void PhysicsSystem::onSceneStop() { impl->onSceneStop(); }
@@ -286,7 +288,7 @@ static void addObjects(JPH::BodyInterface& interface, Scene& scene, Layer layer,
 }
 
 void PhysicsSystem::Impl::onSceneInit(Scene& scene,
-                                      PhysicsSimulationParameters parameters) {
+                                      PhysicsBehaviourParameters parameters) {
     uint const MaxBodies = 65536;
     uint const NumBodyMutexes = 0;
     uint const MaxBodyPairs = 65536;
@@ -306,14 +308,17 @@ void PhysicsSystem::Impl::onSceneInit(Scene& scene,
                                      JPH::EActivation::Activate);
     system->OptimizeBroadPhase();
     system->SetGravity(toJPH(100 * parameters.gravity));
+    isSimulating = true;
 }
 
-void PhysicsSystem::Impl::onSceneStop() { system.reset(); }
+void PhysicsSystem::Impl::onSceneStop() {
+    system.reset();
+    isSimulating = false;
+}
 
 void PhysicsSystem::Impl::update(Scene& scene, Timestep time) {
-    int collisionSteps = 1;
-    system->Update(time.delta, collisionSteps, temp_allocator.get(),
-                   job_system.get());
+    system->Update(time.delta, settings.collisionStepsPerFrame,
+                   temp_allocator.get(), job_system.get());
     auto& interface = system->GetBodyInterface();
     auto view = scene.view<PhysicsMovableComponent const, Transform>();
     view.each([&](PhysicsMovableComponent phys, Transform& transform) {
@@ -324,4 +329,15 @@ void PhysicsSystem::Impl::update(Scene& scene, Timestep time) {
         transform.position = toVML(position);
         transform.orientation = toVML(rotation);
     });
+}
+
+PhysicsSystem::Settings PhysicsSystem::settings() const {
+    return impl->settings;
+}
+
+void PhysicsSystem::setSettings(Settings settings) {
+    if (impl->isSimulating) {
+        return;
+    }
+    impl->settings = settings;
 }

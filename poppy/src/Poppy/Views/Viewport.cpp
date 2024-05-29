@@ -17,6 +17,7 @@
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
 #include "Bloom/Graphics/Texture.h"
+#include "Bloom/Runtime/PhysicsSystem.h"
 #include "Bloom/Runtime/SceneSystem.h"
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
@@ -107,6 +108,7 @@ struct Viewport: View, BasicSceneInspector {
     void displaySceneSettings(Scene& scene);
     void displayViewportSettings();
     void displayRendererSettings();
+    void displayPhysicsSettings();
 
     void dropdownMenu();
 
@@ -162,7 +164,7 @@ void Viewport::init() {
             renderGraphDirty = true;
         }
     });
-    listen([this](UnloadSceneEvent event) { renderGraphDirty = true; });
+    listen([this](UnloadSceneEvent) { renderGraphDirty = true; });
     if (auto* defaultScene = std::getenv("DEFAULT_SCENE")) {
         AssetHandle handle = assetManager().findByName(defaultScene);
         if (handle) {
@@ -621,6 +623,21 @@ void Viewport::displayViewportSettings() {
     ImGui::Checkbox("###ShowRGDebugger", &showRenderGraphDebugger);
 }
 
+void Viewport::displayPhysicsSettings() {
+    using namespace propertiesView;
+    auto& physicsSystem = editor().coreSystems().physicsSystem();
+    auto settings = physicsSystem.settings();
+    bool modified = false;
+    beginProperty("Collision Steps / Frame");
+    fullWidth();
+    modified |= ImGui::DragInt("###StepsPerFrame",
+                               &settings.collisionStepsPerFrame, 0.5, 1,
+                               INT_MAX);
+    if (modified) {
+        physicsSystem.setSettings(settings);
+    }
+}
+
 static std::string formatResolution(uint2 res) {
     return utl::strcat(res.x, "x", res.y);
 }
@@ -696,6 +713,10 @@ void Viewport::dropdownMenu() {
     }
     if (beginSection("Renderer Settings")) {
         displayRendererSettings();
+        endSection();
+    }
+    if (beginSection("Physics Settings")) {
+        displayPhysicsSettings();
         endSection();
     }
 }

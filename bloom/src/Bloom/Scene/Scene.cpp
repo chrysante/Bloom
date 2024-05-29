@@ -175,6 +175,7 @@ YAML::Node Scene::serialize() const {
     });
     root["RenderGraph"] = renderGraph() ? renderGraph()->handle() :
                                           AssetHandle();
+    root["PhysicsParameters"] = physicsParams;
     return root;
 }
 
@@ -185,6 +186,8 @@ void Scene::deserialize(YAML::Node const& root, AssetManager& AM) {
     }
     auto rgHandle = root["RenderGraph"].as<AssetHandle>(AssetHandle{});
     _renderGraph = as<RenderGraph>(AM.get(rgHandle, AssetRepresentation::GPU));
+    physicsParams = root["PhysicsParameters"].as<PhysicsBehaviourParameters>(
+        PhysicsBehaviourParameters{});
 }
 
 [[maybe_unused]] static void sanitizeHierachy(Scene* scene) {

@@ -197,12 +197,12 @@ public:
     }
 
     /// The physics parameters that will be used for the physics simulation
-    PhysicsSimulationParameters const& physicsParameters() const {
+    PhysicsBehaviourParameters const& physicsParameters() const {
         return physicsParams;
     }
 
     /// Sets the physics parameters
-    void setPhysicsParameters(PhysicsSimulationParameters params) {
+    void setPhysicsParameters(PhysicsBehaviourParameters params) {
         physicsParams = params;
     }
 
@@ -212,7 +212,7 @@ private:
 
     entt::registry _registry;
     Reference<RenderGraph> _renderGraph;
-    PhysicsSimulationParameters physicsParams{};
+    PhysicsBehaviourParameters physicsParams{};
 };
 
 } // namespace bloom

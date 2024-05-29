@@ -12,17 +12,25 @@ namespace bloom {
 
 class BLOOM_API PhysicsSystem: public CoreSystem {
 public:
+    struct Settings {
+        int collisionStepsPerFrame = 1;
+    };
+
     PhysicsSystem();
 
     ~PhysicsSystem();
 
     void init();
 
-    void onSceneInit(Scene& scene, PhysicsSimulationParameters parameters);
+    void onSceneInit(Scene& scene, PhysicsBehaviourParameters parameters);
 
     void onSceneStop();
 
     void update(Scene& scene, Timestep time);
+
+    Settings settings() const;
+
+    void setSettings(Settings settings);
 
 private:
     struct Impl;

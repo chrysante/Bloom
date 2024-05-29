@@ -19,6 +19,8 @@
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/EntitySelectionManager.h"
+#include "Poppy/Editor/TransactionManager.h"
+#include "Poppy/Editor/Transactions.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
@@ -62,8 +64,9 @@ private:
     void inspectLightComponent(SkyLight&);
 
     void inspectPhysics(EntityHandle entity);
-    void inspectColliderComponent(SphereColliderComponent&);
-    void inspectColliderComponent(BoxColliderComponent&);
+    void inspectColliderComponent(EntityHandle entity,
+                                  SphereColliderComponent&);
+    void inspectColliderComponent(EntityHandle entity, BoxColliderComponent&);
 
     void inspectScript(EntityHandle);
 
@@ -485,21 +488,37 @@ void EntityInspector::inspectPhysics(EntityHandle entity) {
             removeComponentType(colliderType, entity);
         }).value_or(colliderType);
         dispatchComponentType(colliderType, [&]<typename C>(utl::tag<C>) {
-            inspectColliderComponent(entity.get<C>());
+            inspectColliderComponent(entity, entity.get<C>());
         });
     });
     endSection();
 }
 
+template <DataComponent T>
+static void withTransaction(TransactionManager& transactionManager,
+                            EntityHandle entity, T& component, auto fn) {
+    static T backup;
+    if (!ImGui::IsAnyItemActive()) {
+        backup = component;
+    }
+    fn();
+    if (ImGui::IsItemDeactivated()) {
+        transactionManager.commit(
+            new EditEntityComponent(entity.strongHandle(), backup, component));
+    }
+}
+
 void EntityInspector::inspectColliderComponent(
-    SphereColliderComponent& collider) {
+    EntityHandle entity, SphereColliderComponent& collider) {
     using namespace propertiesView;
     beginProperty("Radius");
     fullWidth();
-    ImGui::DragFloat("###Radius", &collider.radius);
+    withTransaction(editor().transactionManager(), entity, collider,
+                    [&] { ImGui::DragFloat("###Radius", &collider.radius); });
 }
 
-void EntityInspector::inspectColliderComponent(BoxColliderComponent& collider) {
+void EntityInspector::inspectColliderComponent(EntityHandle,
+                                               BoxColliderComponent& collider) {
     using namespace propertiesView;
     beginProperty("Half Extend");
     fullWidth();

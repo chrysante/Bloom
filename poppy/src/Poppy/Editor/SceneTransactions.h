@@ -1,29 +1,23 @@
-#ifndef POPPY_EDITOR_TRANSACTIONS_H
-#define POPPY_EDITOR_TRANSACTIONS_H
+#ifndef POPPY_EDITOR_SCENETRANSACTIONS_H
+#define POPPY_EDITOR_SCENETRANSACTIONS_H
 
 #include <variant>
 
+#include <utl/function_view.hpp>
+
+#include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Reference.h"
 #include "Bloom/Core/Utils.h"
 #include "Bloom/Scene/Components/AllComponents.h"
 #include "Bloom/Scene/Entity.h"
 #include "Bloom/Scene/Fwd.h"
+#include "Poppy/Editor/Transaction.h"
 
 namespace poppy {
 
-///
-class Transaction {
-public:
-    virtual ~Transaction() = default;
+class TransactionManager;
 
-private:
-    friend class TransactionManager;
-
-    virtual bool commit() const = 0;
-
-    virtual bool undo() const = 0;
-};
-
+/// A transaction involving a single entity
 class EntityTransaction: public Transaction {
 public:
     struct WeakHandle {
@@ -49,21 +43,14 @@ private:
     WeakHandle _handle;
 };
 
-class EntityComponentTransaction: public EntityTransaction {
-public:
-    using EntityTransaction::EntityTransaction;
-};
-
-class EditEntityComponent: public EntityComponentTransaction {
+/// Modifies a component of an entity
+class EditEntityComponent: public EntityTransaction {
 public:
     using Variant =
         bloom::CopyTypeParameters<bloom::ComponentList, std::variant>;
 
-    template <bloom::DataComponent T>
-    explicit EditEntityComponent(WeakHandle handle, T oldValue, T newValue):
-        EntityComponentTransaction(std::move(handle)),
-        _oldValue(std::move(oldValue)),
-        _newValue(std::move(newValue)) {}
+    explicit EditEntityComponent(WeakHandle handle, Variant oldValue,
+                                 Variant newValue);
 
     bool commit() const;
 
@@ -74,6 +61,13 @@ private:
     Variant _newValue;
 };
 
+/// ImGui wrapper that will commit the modification in \p uiFunction to \p
+/// transactionManager
+void editComponent(TransactionManager& transactionManager,
+                   bloom::EntityHandle entity,
+                   EditEntityComponent::Variant const& component,
+                   utl::function_view<void()> uiFunction);
+
 } // namespace poppy
 
-#endif // POPPY_EDITOR_TRANSACTIONS_H
+#endif // POPPY_EDITOR_SCENETRANSACTIONS_H

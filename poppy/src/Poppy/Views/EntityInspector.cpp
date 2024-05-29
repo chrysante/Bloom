@@ -19,8 +19,8 @@
 #include "Poppy/Core/Debug.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/EntitySelectionManager.h"
+#include "Poppy/Editor/SceneTransactions.h"
 #include "Poppy/Editor/TransactionManager.h"
-#include "Poppy/Editor/Transactions.h"
 #include "Poppy/UI/Appearance.h"
 #include "Poppy/UI/Font.h"
 #include "Poppy/UI/ImGuiHelpers.h"
@@ -494,37 +494,25 @@ void EntityInspector::inspectPhysics(EntityHandle entity) {
     endSection();
 }
 
-template <DataComponent T>
-static void withTransaction(TransactionManager& transactionManager,
-                            EntityHandle entity, T& component, auto fn) {
-    static T backup;
-    if (!ImGui::IsAnyItemActive()) {
-        backup = component;
-    }
-    fn();
-    if (ImGui::IsItemDeactivated()) {
-        transactionManager.commit(
-            new EditEntityComponent(entity.strongHandle(), backup, component));
-    }
-}
-
 void EntityInspector::inspectColliderComponent(
     EntityHandle entity, SphereColliderComponent& collider) {
     using namespace propertiesView;
     beginProperty("Radius");
     fullWidth();
-    withTransaction(editor().transactionManager(), entity, collider,
-                    [&] { ImGui::DragFloat("###Radius", &collider.radius); });
+    editComponent(editor().transactionManager(), entity, collider,
+                  [&] { ImGui::DragFloat("###Radius", &collider.radius); });
 }
 
-void EntityInspector::inspectColliderComponent(EntityHandle,
+void EntityInspector::inspectColliderComponent(EntityHandle entity,
                                                BoxColliderComponent& collider) {
     using namespace propertiesView;
     beginProperty("Half Extend");
     fullWidth();
-    dragFloat3Labelled("###HalfExtend", collider.halfExtend.data(),
-                       { .showLinkButton = true,
-                         .labelStyle = DragFloat3Options::Slim });
+    editComponent(editor().transactionManager(), entity, collider, [&] {
+        dragFloat3Labelled("###HalfExtend", collider.halfExtend.data(),
+                           { .showLinkButton = true,
+                             .labelStyle = DragFloat3Options::Slim });
+    });
 }
 
 void EntityInspector::inspectScript(EntityHandle entity) {

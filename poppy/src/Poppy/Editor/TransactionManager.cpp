@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Bloom/Core/Debug.h"
-#include "Poppy/Editor/Transactions.h"
+#include "Poppy/Editor/Transaction.h"
 
 using namespace poppy;
 using namespace bloom;

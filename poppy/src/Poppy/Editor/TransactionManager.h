@@ -8,6 +8,7 @@ namespace poppy {
 
 class Transaction;
 
+/// Undo/redo system
 class TransactionManager {
 public:
     TransactionManager();

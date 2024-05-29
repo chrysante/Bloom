@@ -13,7 +13,7 @@ EntitySelectionManager::EntitySelectionManager(bloom::Receiver receiver):
     bloom::Receiver(std::move(receiver)) {
     listen([this](UnloadSceneEvent event) {
         auto toRemove = entities() | filter([&](EntityHandle e) {
-            return &e.scene() == event.scene;
+            return e.scene() == event.scene;
         }) | ToSmallVector<>;
         ranges::for_each(toRemove, [&](EntityHandle e) { erase(e); });
     });

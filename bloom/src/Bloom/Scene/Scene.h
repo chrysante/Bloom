@@ -10,6 +10,7 @@
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Reference.h"
 #include "Bloom/Scene/Components/AllComponents.h"
 #include "Bloom/Scene/Entity.h"
 #include "Bloom/Scene/Fwd.h"
@@ -17,7 +18,7 @@
 namespace bloom {
 
 /// Set of entities that can be rendered and interact with each other
-class BLOOM_API Scene: public Asset {
+class BLOOM_API Scene: public Asset, public EnableRefFromThis<Scene> {
 public:
     BL_DEFINE_ASSET_CTOR(Scene, Asset)
 
@@ -80,7 +81,7 @@ public:
     /// \overload
     template <DataComponent T>
     T const* tryGetComponent(EntityID entity) const {
-        if (hasComponent<T>(entity)) {
+        if (isValid(entity) && hasComponent<T>(entity)) {
             return &getComponent<T>(entity);
         }
         return nullptr;
@@ -148,6 +149,9 @@ public:
 
     /// \Returns `std::hash<>{}(handle().ID())`
     size_t hashID() const;
+
+    /// \Returns `true` if \p ID refers to a valid entity
+    bool isValid(EntityID ID) const { return _registry.valid(ID.value()); }
 
     /// \Returns a copy of \p scene
     Reference<Scene> clone();

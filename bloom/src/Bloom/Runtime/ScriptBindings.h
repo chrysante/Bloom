@@ -32,7 +32,7 @@ struct ScriptEntityHandle {
     Scene* scene;
 
     static ScriptEntityHandle make(EntityHandle e) {
-        return { e.ID().raw(), &e.scene() };
+        return { e.ID().raw(), e.scene() };
     }
 
     explicit operator EntityHandle() const {

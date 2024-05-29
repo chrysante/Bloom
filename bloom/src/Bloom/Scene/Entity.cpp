@@ -22,8 +22,8 @@ std::ostream& bloom::operator<<(std::ostream& str, ConstEntityHandle entity) {
     return str << entity.name() << "[" << entity.ID() << "]";
 }
 
-template <typename SceneT>
-std::string EntityHandleEx<SceneT>::debugDescription() const {
+template <typename ScenePtr, bool IsConst>
+std::string EntityHandleEx<ScenePtr, IsConst>::debugDescription() const {
     std::stringstream sstr;
     sstr << "Components: \n";
     forEachComponent(
@@ -31,6 +31,8 @@ std::string EntityHandleEx<SceneT>::debugDescription() const {
     return sstr.str();
 }
 
-template class bloom::EntityHandleEx<Scene>;
+template class bloom::EntityHandleEx<Scene*, false>;
 
-template class bloom::EntityHandleEx<Scene const>;
+template class bloom::EntityHandleEx<Scene const*, true>;
+
+template class bloom::EntityHandleEx<Reference<Scene>, false>;

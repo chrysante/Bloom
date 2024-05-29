@@ -5,9 +5,11 @@
 #include <utl/common.hpp>
 #include <utl/hash.hpp>
 #include <utl/utility.hpp>
+#include <utl/vector.hpp>
 
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/Reference.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/Scene/Components/ComponentBase.h"
 #include "Bloom/Scene/Components/Hierarchy.h"
@@ -19,42 +21,78 @@
 namespace bloom {
 
 class Scene;
+template <typename ScenePtr, bool IsConst>
+class BLOOM_API EntityHandleEx;
+
+/// Typedef for a handle of a mutable entity
+using EntityHandle = EntityHandleEx<Scene*, false>;
+
+/// Typedef for a handle of a readonly entity
+using ConstEntityHandle = EntityHandleEx<Scene const*, true>;
+
+/// Typedef for a handle of a mutable entity with a strong reference to the
+/// scene
+using StrongEntityHandle = EntityHandleEx<Reference<Scene>, false>;
 
 /// A wrapper around an entity ID that also stores a pointer to the enclosing
 /// scene and provides a more object oriented entity interface. The template
-/// parameter \p SceneT must be either `Scene` or `Scene const`.
-template <typename SceneT>
+/// parameter \p ScenePtr must be either `Scene [const]*` or `Reference<Scene
+/// [const]>`.
+template <typename ScenePtr, bool IsConst>
 class BLOOM_API EntityHandleEx: public EntityID {
-    template <typename>
+    template <typename, bool>
     friend class EntityHandleEx;
-
-    static constexpr bool IsConst = std::is_const_v<SceneT>;
 
     template <typename T>
     using CopyConst = std::conditional_t<IsConst, T const, T>;
+
+    static ScenePtr makePointer(auto* p) {
+        if constexpr (std::is_pointer_v<ScenePtr>) {
+            return p;
+        }
+        else {
+            return p->shared_from_this();
+        }
+    }
 
 public:
     /// Construct an empty handle
     EntityHandleEx() = default;
 
     ///
-    EntityHandleEx(EntityID ID, SceneT* scene): EntityID(ID), _scene(scene) {}
+    EntityHandleEx(EntityID ID, ScenePtr scene): EntityID(ID), _scene(scene) {}
 
     /// Implicit `EntityHandle -> ConstEntityHandle` conversion
-    EntityHandleEx(EntityHandleEx<std::remove_const_t<SceneT>> rhs)
-        requires(IsConst)
-        : EntityID(rhs), _scene(rhs._scene) {}
+    EntityHandleEx(EntityHandle rhs)
+        requires IsConst && std::is_pointer_v<ScenePtr>
+        : EntityID(rhs.ID()), _scene(rhs.scene()) {}
+
+    /// Implicit `StrongEntityHandle -> [Const]EntityHandle` conversion
+    template <bool ConstRhs>
+    EntityHandleEx(EntityHandleEx<Reference<Scene>, ConstRhs> rhs)
+        requires std::is_pointer_v<ScenePtr> && (IsConst || (!ConstRhs))
+        : EntityID(rhs.ID()), _scene(rhs.scene().get()) {}
 
     /// \Returns the associated scene
-    SceneT& scene() const { return *_scene; }
+    ScenePtr const& scene() const { return _scene; }
 
     /// \Returns the underlying entity ID
     EntityID ID() const { return *this; }
 
+    /// Creates a strong entity handle from this handle
+    StrongEntityHandle strongHandle() const
+        requires(!IsConst)
+    {
+        return StrongEntityHandle(ID(), scene()->shared_from_this());
+    }
+
+    /// \Returns `true` if this entity is still valid
+    bool isValid() const { return scene()->isValid(ID()); }
+
     /// \Returns `true` if this entity has a component of type \p T
     template <ComponentType T>
     bool has() const {
-        return scene().template hasComponent<T>(ID());
+        return scene()->template hasComponent<T>(ID());
     }
 
     /// \Return `true` if this entity has all of the given component types
@@ -75,13 +113,13 @@ public:
     T& get() const
         requires(!IsConst)
     {
-        return scene().template getComponent<T>(ID());
+        return scene()->template getComponent<T>(ID());
     }
 
     /// \overload
     template <DataComponent T>
     T const& get() const {
-        return scene().template getComponent<T>(ID());
+        return scene()->template getComponent<T>(ID());
     }
 
     /// \Returns the component \p T of this entity if present or null
@@ -89,13 +127,13 @@ public:
     T* tryGet() const
         requires(!IsConst)
     {
-        return scene().template tryGetComponent<T>(ID());
+        return scene()->template tryGetComponent<T>(ID());
     }
 
     /// \overload
     template <DataComponent T>
     T const* tryGet() const {
-        return scene().template tryGetComponent<T>(ID());
+        return scene()->template tryGetComponent<T>(ID());
     }
 
     /// Adds the component \p component to this entity
@@ -104,15 +142,15 @@ public:
     std::remove_cvref_t<T>& add(T&& component) const
         requires(!IsConst)
     {
-        return scene().addComponent(ID(), std::forward<T>(component));
+        return scene()->addComponent(ID(), std::forward<T>(component));
     }
 
     template <ComponentType T, typename... Args>
     decltype(auto) add(Args&&... args) const
         requires(!IsConst)
     {
-        return scene().template addComponent<T>(ID(),
-                                                std::forward<Args>(args)...);
+        return scene()->template addComponent<T>(ID(),
+                                                 std::forward<Args>(args)...);
     }
 
     /// Adds the components \p components to this entity
@@ -121,7 +159,7 @@ public:
     void add(T&&... components) const
         requires(!IsConst)
     {
-        scene().addComponents(ID(), std::forward<T>(components)...);
+        scene()->addComponents(ID(), std::forward<T>(components)...);
     }
 
     ///
@@ -130,8 +168,8 @@ public:
         requires(!IsConst)
     {
         auto& s = scene();
-        if (!s.template hasComponent<T>(ID())) {
-            s.template addComponent<T>(ID(), std::forward<Args>(args)...);
+        if (!s->template hasComponent<T>(ID())) {
+            s->template addComponent<T>(ID(), std::forward<Args>(args)...);
         }
     }
 
@@ -143,8 +181,8 @@ public:
         auto& s = scene();
         ([&] {
             using DT = std::decay_t<T>;
-            if (!s.template hasComponent<DT>(ID())) {
-                s.addComponents(ID(), std::forward<T>(components));
+            if (!s->template hasComponent<DT>(ID())) {
+                s->addComponents(ID(), std::forward<T>(components));
             }
         }(), ...);
     }
@@ -154,17 +192,24 @@ public:
     void remove() const
         requires(!IsConst)
     {
-        scene().template removeComponents<T...>(ID());
+        scene()->template removeComponents<T...>(ID());
     }
 
     /// \Returns `true` if this handle refers to a valid entity
     explicit operator bool() const { return bool(ID()); }
 
-    ///
+    /// Clones this entity and returns a handle to the new entity
     EntityHandleEx clone() const
         requires(!IsConst)
     {
-        return scene().cloneEntity(*this);
+        return EntityHandleEx(scene()->cloneEntity(ID()).ID(), scene());
+    }
+
+    /// Deletes this entity from the scene
+    void deleteEntity() const
+        requires(!IsConst)
+    {
+        scene()->deleteEntity(ID());
     }
 
     /// \Returns `true` if this entity has no visibility component or if the
@@ -180,6 +225,14 @@ public:
         return true;
     }
 
+    /// See Scene.h
+    bool isLeaf() const { return scene()->isLeaf(ID()); }
+
+    /// See Scene.h
+    utl::small_vector<EntityID> gatherChildren() const {
+        return scene()->gatherChildren(ID());
+    }
+
     /// \Returns the name of this entity
     std::string_view name() const {
         if (auto* t = tryGet<TagComponent>()) {
@@ -190,12 +243,12 @@ public:
 
     /// See Scene.h
     vml::float4x4 calculateWorldTransformMatrix() const {
-        return scene().calculateWorldTransformMatrix(*this);
+        return scene()->calculateWorldTransformMatrix(ID());
     }
 
     /// See Scene.h
     Transform calculateWorldTransform() const {
-        return scene().calculateWorldTransform(*this);
+        return scene()->calculateWorldTransform(ID());
     }
 
     /// \Returns the parent entity if this entity has a hierarchy component
@@ -225,11 +278,11 @@ public:
         return getHierarchyImpl(&HierarchyComponent::lastChild);
     }
 
-    ///
+    /// See Scene.h
     void detachFromHieararchy() const
         requires(!IsConst)
     {
-        scene().detachFromHierarchy(ID());
+        scene()->detachFromHierarchy(ID());
     }
 
     /// \Returns a description of all components in the entity
@@ -241,17 +294,12 @@ private:
         if (!hierarchy) {
             return {};
         }
-        return scene().getHandle(std::invoke(f, hierarchy));
+        auto ID = scene()->getHandle(std::invoke(f, hierarchy)).ID();
+        return EntityHandleEx(ID, scene());
     }
 
-    SceneT* _scene = nullptr;
+    ScenePtr _scene{};
 };
-
-/// Typedef for handle of mutable entity
-using EntityHandle = EntityHandleEx<Scene>;
-
-/// Typedef for handle of readonly entity
-using ConstEntityHandle = EntityHandleEx<Scene const>;
 
 BLOOM_API std::ostream& operator<<(std::ostream& ostream, EntityHandle entity);
 BLOOM_API std::ostream& operator<<(std::ostream& ostream,
@@ -259,10 +307,11 @@ BLOOM_API std::ostream& operator<<(std::ostream& ostream,
 
 } // namespace bloom
 
-template <typename SceneT>
-struct std::hash<bloom::EntityHandleEx<SceneT>> {
-    std::size_t operator()(bloom::EntityHandleEx<SceneT> const& entity) const {
-        return utl::hash_combine(entity.ID(), &entity.scene());
+template <typename ScenePtr, bool IsConst>
+struct std::hash<bloom::EntityHandleEx<ScenePtr, IsConst>> {
+    std::size_t operator()(
+        bloom::EntityHandleEx<ScenePtr, IsConst> const& entity) const {
+        return utl::hash_combine(entity.ID(), entity.scene());
     }
 };
 

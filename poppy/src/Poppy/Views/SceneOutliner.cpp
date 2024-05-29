@@ -258,7 +258,7 @@ void SceneOutliner::displayEntity(EntityHandle entity) {
                    .id = entity.raw(),
                    .selected = selection().contains(entity),
                    .expanded = expanded(entity),
-                   .isLeaf = entity.scene().isLeaf(entity),
+                   .isLeaf = entity.isLeaf(),
                    .haveEyeButton = vis != nullptr,
                    .eyeButtonCrossed = vis && !vis->value,
                    .entityVisible = entity.isVisible(),
@@ -268,8 +268,8 @@ void SceneOutliner::displayEntity(EntityHandle entity) {
         selection().amend(entity, getSelectionMode());
     }
     if (isExpanded) {
-        for (auto c: entity.scene().gatherChildren(entity)) {
-            displayEntity(entity.scene().getHandle(c));
+        for (auto c: entity.gatherChildren()) {
+            displayEntity(entity.scene()->getHandle(c));
         }
         ImGui::TreePop();
     }
@@ -289,7 +289,7 @@ void SceneOutliner::entityContextMenu(EntityHandle entity, ImGuiID popupID) {
     }
     if (ImGui::MenuItem("Delete Entity")) {
         dispatch(DispatchToken::NextFrame, [this, entity] {
-            entity.scene().deleteEntity(entity);
+            entity.deleteEntity();
             selection().erase(entity);
         });
     }
@@ -323,19 +323,19 @@ void SceneOutliner::dragDropTarget(EntityHandle parent) {
     std::memcpy(&child, payload->Data, sizeof child);
     dispatch(DispatchToken::NextFrame,
              [this, child, parent, window = ImGui::GetCurrentWindow()] {
-        if (&child.scene() != &parent.scene()) {
+        if (child.scene() != parent.scene()) {
             return;
         }
         /// We need to make sure that we don't attach an entity to it's own
         /// descendend
-        auto& scene = child.scene();
-        if (!child || scene.descendsFrom(parent, child)) {
+        auto* scene = child.scene();
+        if (!child || scene->descendsFrom(parent, child)) {
             Logger::Warn("Hierarchy Error");
             return;
         }
         child.detachFromHieararchy();
         if (parent) {
-            scene.parent(child, parent);
+            scene->parent(child, parent);
             setExpanded(parent, true);
         }
     });

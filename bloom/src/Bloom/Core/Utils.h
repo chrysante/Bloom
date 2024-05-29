@@ -175,6 +175,20 @@ inline constexpr ToAddressFn<T> ToAddress{};
 
 /// # Range Utils
 
+/// # Metaprogramming
+
+template <typename OldContainer, template <class...> class NewContainer>
+struct CopyTypeParametersImpl;
+
+template <typename... Args, template <class...> class OldContainer,
+          template <class...> class NewContainer>
+struct CopyTypeParametersImpl<OldContainer<Args...>, NewContainer>:
+    std::type_identity<NewContainer<Args...>> {};
+
+template <typename OldContainer, template <class...> class NewContainer>
+using CopyTypeParameters =
+    CopyTypeParametersImpl<OldContainer, NewContainer>::type;
+
 } // namespace bloom
 
 #endif // BLOOM_CORE_UTILS_H

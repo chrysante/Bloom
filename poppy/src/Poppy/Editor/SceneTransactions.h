@@ -1,6 +1,7 @@
 #ifndef POPPY_EDITOR_SCENETRANSACTIONS_H
 #define POPPY_EDITOR_SCENETRANSACTIONS_H
 
+#include <functional>
 #include <variant>
 
 #include <utl/function_view.hpp>
@@ -43,6 +44,23 @@ private:
     WeakHandle _handle;
 };
 
+class CustomEntityTransaction: public EntityTransaction {
+public:
+    explicit CustomEntityTransaction(
+        WeakHandle handle, std::function<bool(bloom::EntityHandle)> commit,
+        std::function<bool(bloom::EntityHandle)> undo):
+        EntityTransaction(std::move(handle)),
+        _commit(std::move(commit)),
+        _undo(std::move(undo)) {}
+
+private:
+    bool commit() const override;
+    bool undo() const override;
+
+    std::function<bool(bloom::EntityHandle)> _commit;
+    std::function<bool(bloom::EntityHandle)> _undo;
+};
+
 /// Modifies a component of an entity
 class EditEntityComponent: public EntityTransaction {
 public:
@@ -52,14 +70,21 @@ public:
     explicit EditEntityComponent(WeakHandle handle, Variant oldValue,
                                  Variant newValue);
 
-    bool commit() const;
-
-    bool undo() const;
-
 private:
+    bool commit() const override;
+    bool undo() const override;
+
     Variant _oldValue;
     Variant _newValue;
 };
+
+/// ImGui wrapper that will commit the modification in \p uiFunction to \p
+/// transactionManager
+void editEntity(TransactionManager& transactionManager,
+                bloom::EntityHandle entity,
+                utl::function_view<void()> uiFunction,
+                std::function<bool(bloom::EntityHandle)> commit,
+                std::function<bool(bloom::EntityHandle)> undo);
 
 /// ImGui wrapper that will commit the modification in \p uiFunction to \p
 /// transactionManager

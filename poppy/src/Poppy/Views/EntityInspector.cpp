@@ -451,6 +451,9 @@ void EntityInspector::inspectLightComponent(SkyLight& light) {
     assetButton("###IBLTexture", light.cubemap, { .repr = GPU | CPU });
 }
 
+template <typename Old, typename New, typename... Args>
+static void exchangeComponent(Args&&... args) {}
+
 void EntityInspector::inspectPhysics(EntityHandle entity) {
     using namespace propertiesView;
     auto physicsType = getPhysicsType(entity).value();
@@ -472,10 +475,23 @@ void EntityInspector::inspectPhysics(EntityHandle entity) {
         fullWidth();
         physicsType = inspectTypeGeneric("###Movability", physicsType,
                                          [&](PhysicsComponentType newType) {
-            dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
-                entity.add<C>();
+            auto* transaction =
+                new CustomEntityTransaction(entity.strongHandle(),
+                                            [=](EntityHandle entity) {
+                dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
+                    entity.add<C>();
+                });
+                removeComponentType(physicsType, entity);
+                return true;
+            }, [=](EntityHandle entity) {
+                dispatchComponentType(physicsType,
+                                      [&]<typename C>(utl::tag<C>) {
+                    entity.add<C>();
+                });
+                removeComponentType(newType, entity);
+                return true;
             });
-            removeComponentType(physicsType, entity);
+            editor().transactionManager().commit(transaction);
         }).value_or(physicsType);
         fullWidth();
         beginProperty("Collider");

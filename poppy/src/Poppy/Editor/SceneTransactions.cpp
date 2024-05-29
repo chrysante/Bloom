@@ -8,6 +8,24 @@
 using namespace poppy;
 using namespace bloom;
 
+using WeakHandle = EntityTransaction::WeakHandle;
+
+static bool apply(WeakHandle const& handle, auto fn) {
+    if (auto entity = handle.lock()) {
+        return std::invoke(fn, entity);
+    }
+    return false;
+}
+
+bool CustomEntityTransaction::commit() const {
+    return apply(handle(),
+                 [&](EntityHandle entity) { return _commit(entity); });
+}
+
+bool CustomEntityTransaction::undo() const {
+    return apply(handle(), [&](EntityHandle entity) { return _undo(entity); });
+}
+
 static bool applyComponent(EntityHandle entity,
                            EditEntityComponent::Variant const& v) {
     return std::visit([&]<typename T>(T const& value) {
@@ -31,17 +49,28 @@ EditEntityComponent::EditEntityComponent(WeakHandle handle, Variant oldValue,
 }
 
 bool EditEntityComponent::commit() const {
-    if (auto entity = handle().lock()) {
+    return apply(handle(), [&](EntityHandle entity) {
         return applyComponent(entity, _newValue);
-    }
-    return false;
+    });
 }
 
 bool EditEntityComponent::undo() const {
-    if (auto entity = handle().lock()) {
+    return apply(handle(), [&](EntityHandle entity) {
         return applyComponent(entity, _oldValue);
+    });
+}
+
+void poppy::editEntity(TransactionManager& transactionManager,
+                       EntityHandle entity,
+                       utl::function_view<void()> uiFunction,
+                       std::function<bool(EntityHandle)> commit,
+                       std::function<bool(EntityHandle)> undo) {
+    uiFunction();
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        transactionManager.commit(
+            new CustomEntityTransaction(entity.strongHandle(),
+                                        std::move(commit), std::move(undo)));
     }
-    return false;
 }
 
 void poppy::editComponent(TransactionManager& transactionManager,

@@ -119,9 +119,10 @@ public:
 
     /// Removes components \p T... from \p entity if present
     template <ComponentType... T>
-    void tryRemoveComponents(EntityID entity) {
-        ((hasComponent<T>(entity) ? removeComponents<T>(entity) : (void)0),
-         ...);
+    bool tryRemoveComponents(EntityID entity) {
+        return ((hasComponent<T>(entity) ? (removeComponents<T>(entity), true) :
+                                           false) &
+                ...);
     }
 
     /// Destroys all entities in this scene

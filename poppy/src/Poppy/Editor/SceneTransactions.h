@@ -78,6 +78,14 @@ private:
     Variant _newValue;
 };
 
+struct CancelToken {
+    void cancel() { _cancelled = true; }
+    bool cancelled() const { return _cancelled; }
+
+private:
+    bool _cancelled = false;
+};
+
 /// ImGui wrapper that will commit the modification in \p uiFunction to \p
 /// transactionManager
 void editEntity(TransactionManager& transactionManager,
@@ -91,7 +99,7 @@ void editEntity(TransactionManager& transactionManager,
 void editComponent(TransactionManager& transactionManager,
                    bloom::EntityHandle entity,
                    EditEntityComponent::Variant const& component,
-                   utl::function_view<void()> uiFunction);
+                   utl::function_view<void(CancelToken&)> uiFunction);
 
 } // namespace poppy
 

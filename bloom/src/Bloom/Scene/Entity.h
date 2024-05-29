@@ -164,27 +164,31 @@ public:
 
     ///
     template <ComponentType T, typename... Args>
-    void tryAdd(Args&&... args) const
+    bool tryAdd(Args&&... args) const
         requires(!IsConst)
     {
         auto& s = scene();
         if (!s->template hasComponent<T>(ID())) {
             s->template addComponent<T>(ID(), std::forward<Args>(args)...);
+            return true;
         }
+        return false;
     }
 
     /// Adds the components \p components to this entity if not already present
     template <DataComponent... T>
-    void tryAdd(T&&... components) const
+    bool tryAdd(T&&... components) const
         requires(!IsConst)
     {
         auto& s = scene();
-        ([&] {
+        return ([&] {
             using DT = std::decay_t<T>;
             if (!s->template hasComponent<DT>(ID())) {
                 s->addComponents(ID(), std::forward<T>(components));
+                return true;
             }
-        }(), ...);
+            return false;
+        }() & ...);
     }
 
     /// \overload for dynamic component type
@@ -195,10 +199,12 @@ public:
     }
 
     /// \overload for dynamic component type
-    void tryAdd(ComponentKind type) const
+    bool tryAdd(ComponentKind type) const
         requires(!IsConst)
     {
-        visitComponentType(type, [&]<typename T>(utl::tag<T>) { tryAdd<T>(); });
+        return visitComponentType(type, [&]<typename T>(utl::tag<T>) {
+            return tryAdd<T>();
+        });
     }
 
     /// Removes the component types \p T... from this entity
@@ -211,10 +217,10 @@ public:
 
     /// Removes the component types \p T... from this entity if present
     template <ComponentType... T>
-    void tryRemove() const
+    bool tryRemove() const
         requires(!IsConst)
     {
-        scene()->template tryRemoveComponents<T...>(ID());
+        return scene()->template tryRemoveComponents<T...>(ID());
     }
 
     /// \overload for dynamic component type
@@ -225,11 +231,12 @@ public:
     }
 
     /// \overload for dynamic component type
-    void tryRemove(ComponentKind type) const
+    bool tryRemove(ComponentKind type) const
         requires(!IsConst)
     {
-        visitComponentType(type,
-                           [&]<typename T>(utl::tag<T>) { tryRemove<T>(); });
+        return visitComponentType(type, [&]<typename T>(utl::tag<T>) {
+            return tryRemove<T>();
+        });
     }
 
     /// \Returns `true` if this handle refers to a valid entity

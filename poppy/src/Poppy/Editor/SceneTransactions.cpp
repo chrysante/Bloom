@@ -76,14 +76,23 @@ void poppy::editEntity(TransactionManager& transactionManager,
 void poppy::editComponent(TransactionManager& transactionManager,
                           EntityHandle entity,
                           EditEntityComponent::Variant const& component,
-                          utl::function_view<void()> uiFunction) {
-    static EditEntityComponent::Variant backup;
+                          utl::function_view<void(CancelToken&)> uiFunction) {
+    static std::optional<EditEntityComponent::Variant> backup;
     if (!ImGui::IsAnyItemActive()) {
         backup = component;
     }
-    uiFunction();
-    if (ImGui::IsItemDeactivatedAfterEdit()) {
+    CancelToken cancelToken;
+    uiFunction(cancelToken);
+    if (backup && cancelToken.cancelled()) {
+        visitComponentType(ComponentKind(component.index()),
+                           [&]<typename T>(utl::tag<T>) {
+            entity.get<T>() = std::get<T>(*backup);
+        });
+        backup = std::nullopt;
+    }
+    if (backup && ImGui::IsItemDeactivatedAfterEdit()) {
         transactionManager.commit(
-            new EditEntityComponent(entity.strongHandle(), backup, component));
+            new EditEntityComponent(entity.strongHandle(), *backup, component));
+        backup = std::nullopt;
     }
 }

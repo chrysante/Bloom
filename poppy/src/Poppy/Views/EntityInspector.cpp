@@ -80,7 +80,15 @@ private:
     void endSection();
     void endSubSection();
 
+    void editComponent(DataComponent auto const& component,
+                       utl::function_view<void(CancelToken&)> uiFunction) {
+        poppy::editComponent(editor().transactionManager(), entity, component,
+                             uiFunction);
+    }
+
     EntityHandle entity;
+    bool editingName = false;
+    bool startEditingName = false;
     int editingNameState = 0;
     bool transformScaleLinked = false;
 };
@@ -138,7 +146,7 @@ void EntityInspector::inspectTag() {
     auto& tag = entity.get<TagComponent>();
     std::string_view name = tag.name;
     float2 framePadding = GImGui->Style.FramePadding;
-    ImGui::BeginChild("##inspect-tag-child",
+    ImGui::BeginChild("##inspect-tag",
                       { 0, GImGui->FontSize + 2 * framePadding.y });
     float2 spacing = GImGui->Style.ItemSpacing;
     ImGui::PushFont(FontManager::get(FontWeight::Bold));
@@ -147,37 +155,45 @@ void EntityInspector::inspectTag() {
                            float2(4, 2) * framePadding;
     float2 nameTextSize = { windowSize.x - addButtonSize.x - spacing.x,
                             windowSize.y };
-    if (editingNameState && !isSimulating()) {
-        char buffer[256]{};
-        std::strncpy(buffer, name.data(), 255);
+    if (editingName) {
+        std::array<char, 1024> buffer;
+        std::strncpy(buffer.data(), name.data(), buffer.size());
         ImGui::SetNextItemWidth(nameTextSize.x);
-        if (editingNameState > 1) {
+        if (startEditingName) {
             ImGui::SetKeyboardFocusHere();
+            startEditingName = false;
         }
-        if (ImGui::InputText("##name-input", buffer, 256)) {
-            tag.name = buffer;
+        editComponent(tag, [&](CancelToken& token) {
+            if (ImGui::InputText("##name-input", buffer.data(), buffer.size()))
+            {
+                tag.name = buffer.data();
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                token.cancel();
+            }
+        });
+        if (!ImGui::IsWindowFocused() || ImGui::IsItemDeactivated()) {
+            editingName = false;
         }
-        editingNameState = ImGui::IsWindowFocused();
     }
     else {
         ImGui::SetCursorPos(framePadding);
         ImGui::SetNextItemWidth(nameTextSize.x);
-        ImGui::Text("%s", name.data());
+        ImGui::TextEx(name.data());
         ImGui::SetCursorPos({});
-        editingNameState =
-            ImGui::InvisibleButton("activate-name-input", nameTextSize,
-                                   ImGuiButtonFlags_PressedOnDoubleClick) *
-            2;
+        if (ImGui::InvisibleButton("###EditName", nameTextSize,
+                                   ImGuiButtonFlags_PressedOnDoubleClick))
+        {
+            editingName = true;
+            startEditingName = true;
+        }
     }
     /// "Add Component" button
     ImGui::SetCursorPos({ nameTextSize.x + spacing.x, 0 });
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, Appearance::get()
-                                                .style()
-                                                .colors.highlightControlFrame);
+    auto& colors = Appearance::get().style().colors;
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, colors.highlightControlFrame);
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,
-                          Appearance::get()
-                              .style()
-                              .colors.highlightControlFrameHovered);
+                          colors.highlightControlFrameHovered);
     ImGui::PushStyleColor(ImGuiCol_Text, 0xFFffFFff);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                         float2(2, 1) * framePadding);
@@ -186,8 +202,8 @@ void EntityInspector::inspectTag() {
                                        ImGuiComboFlags_NoArrowButton);
     ImGui::PopStyleColor(3);
     ImGui::PopStyleVar();
-    ImGui::PopFont();
     if (comboOpen) {
+        ImGui::PushFont(nullptr);
         bool hasLight = hasLightComponent(entity);
         bool hasCollider = hasColliderComponent(entity);
         addComponentButton<MeshRendererComponent>("Mesh Renderer");
@@ -200,12 +216,12 @@ void EntityInspector::inspectTag() {
                            SphereColliderComponent>("Sphere Collider",
                                                     hasCollider);
         addComponentButton<PhysicsStaticComponent,
-                           BoxColliderComponent>("Box Collider",
-
-                                                 hasCollider);
+                           BoxColliderComponent>("Box Collider", hasCollider);
         addComponentButton<ScriptComponent, ScriptPreservedData>("Script");
+        ImGui::PopFont();
         ImGui::EndCombo();
     }
+    ImGui::PopFont();
     ImGui::EndChild();
 }
 
@@ -216,7 +232,15 @@ void EntityInspector::addComponentButton(char const* name, bool forceDisable) {
         flags |= ImGuiSelectableFlags_Disabled;
     }
     if (ImGui::Selectable(name, false, flags)) {
-        (entity.tryAdd<Components>(), ...);
+        auto commit = [](EntityHandle entity) {
+            return (entity.tryAdd<Components>(), ...);
+        };
+        auto undo = [](EntityHandle entity) {
+            return (entity.tryRemove<Components>(), ...);
+        };
+        auto* transaction =
+            new CustomEntityTransaction(entity.strongHandle(), commit, undo);
+        editor().transactionManager().commit(transaction);
     }
 }
 
@@ -232,24 +256,26 @@ void EntityInspector::inspectTransform() {
     float width = ImGui::GetContentRegionAvail().x - lockButtonSize.x -
                   style.ItemSpacing.x;
     ImGui::SetNextItemWidth(width);
-    dragFloat3Labelled("###position", transform.position.data());
+    editComponent(transform, [&](CancelToken&) {
+        dragFloat3Labelled("###position", transform.position.data());
+    });
     beginProperty("Orientation");
-    float3 euler = vml::to_euler(transform.orientation) * 180;
     ImGui::SetNextItemWidth(width);
-    if (dragFloat3Labelled("###orientation", euler.data(),
-                           { .format = "%.3f°" }))
-    {
-        transform.orientation = vml::to_quaternion(euler / 180);
-    }
+    editComponent(transform, [&](CancelToken&) {
+        float3 euler = vml::to_euler(transform.orientation) * 180;
+        if (dragFloat3Labelled("###orientation", euler.data(),
+                               { .format = "%.3f°" }))
+        {
+            transform.orientation = vml::to_quaternion(euler / 180);
+        }
+    });
     beginProperty("Scale");
     ImGui::SetNextItemWidth(width);
-    float3 newScale = transform.scale;
-    if (dragFloat3Labelled("###scale", newScale.data(),
+    editComponent(transform, [&](CancelToken&) {
+        dragFloat3Labelled("###scale", transform.scale.data(),
                            { .speed = 0.02,
-                             .linkFields = transformScaleLinked }))
-    {
-        transform.scale = newScale;
-    }
+                             .linkFields = transformScaleLinked });
+    });
     ImGui::SameLine();
     linkButton(transformScaleLinked, lockButtonSize);
     endSection();
@@ -527,15 +553,16 @@ void EntityInspector::inspectColliderComponent(
     using namespace propertiesView;
     beginProperty("Radius");
     fullWidth();
-    editComponent(editor().transactionManager(), entity, collider,
-                  [&] { ImGui::DragFloat("###Radius", &collider.radius); });
+    editComponent(collider, [&](CancelToken&) {
+        ImGui::DragFloat("###Radius", &collider.radius);
+    });
 }
 
 void EntityInspector::inspectColliderComponent(BoxColliderComponent& collider) {
     using namespace propertiesView;
     beginProperty("Half Extend");
     fullWidth();
-    editComponent(editor().transactionManager(), entity, collider, [&] {
+    editComponent(collider, [&](CancelToken&) {
         dragFloat3Labelled("###HalfExtend", collider.halfExtend.data(),
                            { .showLinkButton = true,
                              .labelStyle = DragFloat3Options::Slim });

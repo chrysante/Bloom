@@ -44,18 +44,17 @@ public:
 private:
     void display() override;
 
-    void inspectTag(EntityHandle);
+    void inspectTag();
     template <typename... Components>
-    void addComponentButton(char const* name, EntityHandle entity,
-                            bool forceDisable = false);
+    void addComponentButton(char const* name, bool forceDisable = false);
 
-    void inspectTransform(EntityHandle);
+    void inspectTransform();
 
-    void inspectMesh(EntityHandle);
-    void receiveMeshDragDrop(EntityHandle);
-    void receiveMaterialDragDrop(EntityHandle);
+    void inspectMesh();
+    void receiveMeshDragDrop();
+    void receiveMaterialDragDrop();
 
-    void inspectLight(EntityHandle);
+    void inspectLight();
 
     void inspectLightCommon(auto& light, LightType type);
     void inspectLightComponent(PointLight&);
@@ -63,17 +62,16 @@ private:
     void inspectLightComponent(DirectionalLight&);
     void inspectLightComponent(SkyLight&);
 
-    void inspectPhysics(EntityHandle entity);
-    void inspectColliderComponent(EntityHandle entity,
-                                  SphereColliderComponent&);
-    void inspectColliderComponent(EntityHandle entity, BoxColliderComponent&);
+    void inspectPhysics();
+    void inspectColliderComponent(SphereColliderComponent&);
+    void inspectColliderComponent(BoxColliderComponent&);
 
-    void inspectScript(EntityHandle);
+    void inspectScript();
 
     // Helpers
     bool beginComponentSection(std::string_view name);
     template <typename>
-    bool beginComponentSection(std::string_view name, EntityHandle);
+    bool beginComponentSection(std::string_view name);
     bool beginSubSection(std::string_view name);
 
     bool beginGenericSection(std::string_view name, FontDesc const&,
@@ -82,6 +80,7 @@ private:
     void endSection();
     void endSubSection();
 
+    EntityHandle entity;
     int editingNameState = 0;
     bool transformScaleLinked = false;
 };
@@ -91,132 +90,127 @@ private:
 POPPY_REGISTER_VIEW(EntityInspector, "Entity Inspector");
 
 void EntityInspector::display() {
+    if (editor().isSimulating()) {
+        displayEmptyWithReason("Simulation Running");
+        return;
+    }
     if (scenes().empty()) {
         displayEmptyWithReason("No Active Scene");
         return;
     }
-    auto entity = selection().empty() ? EntityHandle{} :
-                                        selection().entities().front();
-    if (!entity) {
+    if (selection().empty()) {
         displayEmptyWithReason("No Entity Selected");
         return;
     }
+    if (selection().size() > 1) {
+        displayEmptyWithReason(
+            utl::strcat(selection().size(), " Entities Selected"));
+        return;
+    }
+    entity = selection().entities().front();
     if (entity.has<TagComponent>()) {
-        inspectTag(entity);
+        inspectTag();
         ImGui::Separator();
     }
     if (entity.has<Transform>()) {
-        inspectTransform(entity);
+        inspectTransform();
         ImGui::Separator();
     }
     if (entity.has<MeshRendererComponent>()) {
-        inspectMesh(entity);
+        inspectMesh();
         ImGui::Separator();
     }
     if (hasLightComponent(entity)) {
-        inspectLight(entity);
+        inspectLight();
         ImGui::Separator();
     }
     if (entity.hasAny<PhysicsStaticComponent, PhysicsMovableComponent>()) {
-        inspectPhysics(entity);
+        inspectPhysics();
         ImGui::Separator();
     }
     if (entity.has<ScriptComponent>()) {
-        inspectScript(entity);
+        inspectScript();
         ImGui::Separator();
     }
 }
 
-void EntityInspector::inspectTag(EntityHandle entity) {
+void EntityInspector::inspectTag() {
     auto& tag = entity.get<TagComponent>();
     std::string_view name = tag.name;
     float2 framePadding = GImGui->Style.FramePadding;
     ImGui::BeginChild("##inspect-tag-child",
                       { 0, GImGui->FontSize + 2 * framePadding.y });
-
     float2 spacing = GImGui->Style.ItemSpacing;
-    withFont(FontWeight::Bold, FontStyle::Roman, [&] {
-        float2 windowSize = ImGui::GetWindowSize();
-        float2 addButtonSize = float2(ImGui::CalcTextSize("Add Component")) +
-                               float2(4, 2) * framePadding;
-        float2 nameTextSize = { windowSize.x - addButtonSize.x - spacing.x,
-                                windowSize.y };
-        if (editingNameState && !isSimulating()) {
-            char buffer[256]{};
-            std::strncpy(buffer, name.data(), 255);
-            ImGui::SetNextItemWidth(nameTextSize.x);
-            if (editingNameState > 1) {
-                ImGui::SetKeyboardFocusHere();
-            }
-            if (ImGui::InputText("##name-input", buffer, 256)) {
-                tag.name = buffer;
-            }
-            editingNameState = ImGui::IsWindowFocused();
+    ImGui::PushFont(FontManager::get(FontWeight::Bold));
+    float2 windowSize = ImGui::GetWindowSize();
+    float2 addButtonSize = float2(ImGui::CalcTextSize("Add Component")) +
+                           float2(4, 2) * framePadding;
+    float2 nameTextSize = { windowSize.x - addButtonSize.x - spacing.x,
+                            windowSize.y };
+    if (editingNameState && !isSimulating()) {
+        char buffer[256]{};
+        std::strncpy(buffer, name.data(), 255);
+        ImGui::SetNextItemWidth(nameTextSize.x);
+        if (editingNameState > 1) {
+            ImGui::SetKeyboardFocusHere();
         }
-        else {
-            ImGui::SetCursorPos(framePadding);
-            ImGui::SetNextItemWidth(nameTextSize.x);
-            ImGui::Text("%s", name.data());
-            ImGui::SetCursorPos({});
-            editingNameState =
-                ImGui::InvisibleButton("activate-name-input", nameTextSize,
-                                       ImGuiButtonFlags_PressedOnDoubleClick) *
-                2;
+        if (ImGui::InputText("##name-input", buffer, 256)) {
+            tag.name = buffer;
         }
-        /// "Add Component" button
-        disabledIf(isSimulating(), [&] {
-            ImGui::SetCursorPos({ nameTextSize.x + spacing.x, 0 });
-            ImGui::PushStyleColor(ImGuiCol_FrameBg,
-                                  Appearance::get()
-                                      .style()
-                                      .colors.highlightControlFrame);
-            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,
-                                  Appearance::get()
-                                      .style()
-                                      .colors.highlightControlFrameHovered);
-            ImGui::PushStyleColor(ImGuiCol_Text, 0xFFffFFff);
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
-                                float2(2, 1) * framePadding);
-            ImGui::SetNextItemWidth(addButtonSize.x);
-            bool comboOpen = ImGui::BeginCombo("##-add-component",
-                                               "Add Component",
-                                               ImGuiComboFlags_NoArrowButton);
-            ImGui::PopStyleColor(3);
-            ImGui::PopStyleVar();
-            if (comboOpen) {
-                withFont(FontDesc::UIDefault(), [&] {
-                    bool hasLight = hasLightComponent(entity);
-                    bool hasCollider = hasColliderComponent(entity);
-                    addComponentButton<MeshRendererComponent>("Mesh Renderer",
-                                                              entity);
-                    addComponentButton<PointLightComponent>("Point Light",
-                                                            entity, hasLight);
-                    addComponentButton<SpotLightComponent>("Spot Light", entity,
-                                                           hasLight);
-                    addComponentButton<DirectionalLightComponent>(
-                        "Directional Light", entity, hasLight);
-                    addComponentButton<SkyLightComponent>("Sky Light", entity,
-                                                          hasLight);
-                    addComponentButton<PhysicsStaticComponent,
-                                       SphereColliderComponent>(
-                        "Sphere Collider", entity, hasCollider);
-                    addComponentButton<PhysicsStaticComponent,
-                                       BoxColliderComponent>("Box Collider",
-                                                             entity,
-                                                             hasCollider);
-                    addComponentButton<ScriptComponent,
-                                       ScriptPreservedData>("Script", entity);
-                });
-                ImGui::EndCombo();
-            }
-        });
-    });
+        editingNameState = ImGui::IsWindowFocused();
+    }
+    else {
+        ImGui::SetCursorPos(framePadding);
+        ImGui::SetNextItemWidth(nameTextSize.x);
+        ImGui::Text("%s", name.data());
+        ImGui::SetCursorPos({});
+        editingNameState =
+            ImGui::InvisibleButton("activate-name-input", nameTextSize,
+                                   ImGuiButtonFlags_PressedOnDoubleClick) *
+            2;
+    }
+    /// "Add Component" button
+    ImGui::SetCursorPos({ nameTextSize.x + spacing.x, 0 });
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, Appearance::get()
+                                                .style()
+                                                .colors.highlightControlFrame);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,
+                          Appearance::get()
+                              .style()
+                              .colors.highlightControlFrameHovered);
+    ImGui::PushStyleColor(ImGuiCol_Text, 0xFFffFFff);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+                        float2(2, 1) * framePadding);
+    ImGui::SetNextItemWidth(addButtonSize.x);
+    bool comboOpen = ImGui::BeginCombo("##-add-component", "Add Component",
+                                       ImGuiComboFlags_NoArrowButton);
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar();
+    ImGui::PopFont();
+    if (comboOpen) {
+        bool hasLight = hasLightComponent(entity);
+        bool hasCollider = hasColliderComponent(entity);
+        addComponentButton<MeshRendererComponent>("Mesh Renderer");
+        addComponentButton<PointLightComponent>("Point Light", hasLight);
+        addComponentButton<SpotLightComponent>("Spot Light", hasLight);
+        addComponentButton<DirectionalLightComponent>("Directional Light",
+                                                      hasLight);
+        addComponentButton<SkyLightComponent>("Sky Light", hasLight);
+        addComponentButton<PhysicsStaticComponent,
+                           SphereColliderComponent>("Sphere Collider",
+                                                    hasCollider);
+        addComponentButton<PhysicsStaticComponent,
+                           BoxColliderComponent>("Box Collider",
+
+                                                 hasCollider);
+        addComponentButton<ScriptComponent, ScriptPreservedData>("Script");
+        ImGui::EndCombo();
+    }
     ImGui::EndChild();
 }
 
 template <typename... Components>
-void EntityInspector::addComponentButton(char const* name, EntityHandle entity,
-                                         bool forceDisable) {
+void EntityInspector::addComponentButton(char const* name, bool forceDisable) {
     int flags = 0;
     if (entity.hasAll<Components...>() || forceDisable) {
         flags |= ImGuiSelectableFlags_Disabled;
@@ -226,60 +220,55 @@ void EntityInspector::addComponentButton(char const* name, EntityHandle entity,
     }
 }
 
-void EntityInspector::inspectTransform(EntityHandle entity) {
+void EntityInspector::inspectTransform() {
     using namespace propertiesView;
     auto& transform = entity.get<Transform>();
-    if (beginComponentSection("Transform")) {
-        disabledIf(isSimulating(), [&] {
-            auto& style = ImGui::GetStyle();
-            beginProperty("Position");
-            float2 lockButtonSize =
-                ImGui::GetFontSize() + style.FramePadding.y * 2;
-            float width = ImGui::GetContentRegionAvail().x - lockButtonSize.x -
-                          style.ItemSpacing.x;
-            ImGui::SetNextItemWidth(width);
-            dragFloat3Labelled("###position", transform.position.data());
-            beginProperty("Orientation");
-            float3 euler = vml::to_euler(transform.orientation) * 180;
-            ImGui::SetNextItemWidth(width);
-            if (dragFloat3Labelled("###orientation", euler.data(),
-                                   { .format = "%.3f°" }))
-            {
-                transform.orientation = vml::to_quaternion(euler / 180);
-            }
-            beginProperty("Scale");
-            ImGui::SetNextItemWidth(width);
-            float3 newScale = transform.scale;
-            if (dragFloat3Labelled("###scale", newScale.data(),
-                                   { .speed = 0.02,
-                                     .linkFields = transformScaleLinked }))
-            {
-                transform.scale = newScale;
-            }
-            ImGui::SameLine();
-            linkButton(transformScaleLinked, lockButtonSize);
-        });
-        endSection();
+    if (!beginComponentSection("Transform")) {
+        return;
     }
+    auto& style = ImGui::GetStyle();
+    beginProperty("Position");
+    float2 lockButtonSize = ImGui::GetFontSize() + style.FramePadding.y * 2;
+    float width = ImGui::GetContentRegionAvail().x - lockButtonSize.x -
+                  style.ItemSpacing.x;
+    ImGui::SetNextItemWidth(width);
+    dragFloat3Labelled("###position", transform.position.data());
+    beginProperty("Orientation");
+    float3 euler = vml::to_euler(transform.orientation) * 180;
+    ImGui::SetNextItemWidth(width);
+    if (dragFloat3Labelled("###orientation", euler.data(),
+                           { .format = "%.3f°" }))
+    {
+        transform.orientation = vml::to_quaternion(euler / 180);
+    }
+    beginProperty("Scale");
+    ImGui::SetNextItemWidth(width);
+    float3 newScale = transform.scale;
+    if (dragFloat3Labelled("###scale", newScale.data(),
+                           { .speed = 0.02,
+                             .linkFields = transformScaleLinked }))
+    {
+        transform.scale = newScale;
+    }
+    ImGui::SameLine();
+    linkButton(transformScaleLinked, lockButtonSize);
+    endSection();
 }
 
-void EntityInspector::inspectMesh(EntityHandle entity) {
+void EntityInspector::inspectMesh() {
     using namespace propertiesView;
-    if (!beginComponentSection<MeshRendererComponent>("Mesh Renderer", entity))
-    {
+    if (!beginComponentSection<MeshRendererComponent>("Mesh Renderer")) {
         return;
     }
     auto& meshRenderer = entity.get<MeshRendererComponent>();
-    disabledIf(isSimulating(), [&] {
-        using enum AssetRepresentation;
-        beginProperty("Mesh");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        assetButton("###Mesh", meshRenderer.mesh, { .repr = GPU });
-        beginProperty("Material");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        assetButton("###MaterialInstance", meshRenderer.materialInstance,
-                    { .repr = GPU });
-    });
+    using enum AssetRepresentation;
+    beginProperty("Mesh");
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    assetButton("###Mesh", meshRenderer.mesh, { .repr = GPU });
+    beginProperty("Material");
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    assetButton("###MaterialInstance", meshRenderer.materialInstance,
+                { .repr = GPU });
     endSection();
 }
 
@@ -339,7 +328,7 @@ static std::optional<E> inspectTypeGeneric(char const* ID, E type,
     return inspectTypeGeneric(ID, type, magic_enum::enum_values<E>(), exchange);
 }
 
-void EntityInspector::inspectLight(EntityHandle entity) {
+void EntityInspector::inspectLight() {
     auto type = getLightType(entity).value();
     auto deleter = [&] {
         dispatchComponentType(type, [&]<typename L>(utl::tag<L>) {
@@ -350,26 +339,22 @@ void EntityInspector::inspectLight(EntityHandle entity) {
     if (!beginGenericSection("Light Component", font, deleter)) {
         return;
     }
-    disabledIf(isSimulating(), [&] {
-        using namespace propertiesView;
-        beginProperty("Type");
-        fullWidth();
-        auto newType =
-            inspectTypeGeneric("###Type", type, [&](LightType newType) {
-            auto color =
-                dispatchComponentType(type, [&]<typename C>(utl::tag<C>) {
-                return entity.get<C>().color;
-            });
-            dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
-                auto& c = entity.add(C{ C::Light::Default() });
-                c.color = color;
-            });
-            removeComponentType(type, entity);
+    using namespace propertiesView;
+    beginProperty("Type");
+    fullWidth();
+    auto newType = inspectTypeGeneric("###Type", type, [&](LightType newType) {
+        auto color = dispatchComponentType(type, [&]<typename C>(utl::tag<C>) {
+            return entity.get<C>().color;
         });
-        type = newType.value_or(type);
-        dispatchComponentType(type, [&]<typename L>(utl::tag<L>) {
-            inspectLightComponent(entity.get<L>());
+        dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
+            auto& c = entity.add(C{ C::Light::Default() });
+            c.color = color;
         });
+        removeComponentType(type, entity);
+    });
+    type = newType.value_or(type);
+    dispatchComponentType(type, [&]<typename L>(utl::tag<L>) {
+        inspectLightComponent(entity.get<L>());
     });
     endSection();
 }
@@ -498,7 +483,7 @@ static Transaction* makeComponentExchange(EntityHandle entity,
     });
 }
 
-void EntityInspector::inspectPhysics(EntityHandle entity) {
+void EntityInspector::inspectPhysics() {
     using namespace propertiesView;
     auto physicsType = getPhysicsType2(entity).value();
     auto colliderType = getColliderType2(entity).value();
@@ -510,40 +495,35 @@ void EntityInspector::inspectPhysics(EntityHandle entity) {
     if (!beginGenericSection("Physics", font, deleter)) {
         return;
     }
-    disabledIf(isSimulating(), [&] {
-        beginProperty("Movability");
-        fullWidth();
-        physicsType =
-            inspectTypeGeneric("###Movability", physicsType,
-                               { ComponentKind::PhysicsStaticComponent,
-                                 ComponentKind::PhysicsMovableComponent },
-                               [&](ComponentKind newType) {
-            auto* transaction =
-                makeComponentExchange(entity, physicsType, newType);
-            editor().transactionManager().commit(transaction);
-        }).value_or(physicsType);
-        fullWidth();
-        beginProperty("Collider");
-        fullWidth();
-        colliderType =
-            inspectTypeGeneric("###Collider", colliderType,
-                               { ComponentKind::BoxColliderComponent,
-                                 ComponentKind::SphereColliderComponent },
-                               [&](ComponentKind newType) {
-            auto* transaction =
-                makeComponentExchange(entity, colliderType, newType);
-            editor().transactionManager().commit(transaction);
-        }).value_or(colliderType);
-        visitComponentType(colliderType, [&]<typename C>(utl::tag<C>) {
-            IF_WELL_FORMED(
-                { inspectColliderComponent(entity, entity.get<C>()); });
-        });
+    beginProperty("Movability");
+    fullWidth();
+    physicsType = inspectTypeGeneric("###Movability", physicsType,
+                                     { ComponentKind::PhysicsStaticComponent,
+                                       ComponentKind::PhysicsMovableComponent },
+                                     [&](ComponentKind newType) {
+        auto* transaction = makeComponentExchange(entity, physicsType, newType);
+        editor().transactionManager().commit(transaction);
+    }).value_or(physicsType);
+    fullWidth();
+    beginProperty("Collider");
+    fullWidth();
+    colliderType =
+        inspectTypeGeneric("###Collider", colliderType,
+                           { ComponentKind::BoxColliderComponent,
+                             ComponentKind::SphereColliderComponent },
+                           [&](ComponentKind newType) {
+        auto* transaction =
+            makeComponentExchange(entity, colliderType, newType);
+        editor().transactionManager().commit(transaction);
+    }).value_or(colliderType);
+    visitComponentType(colliderType, [&]<typename C>(utl::tag<C>) {
+        IF_WELL_FORMED({ inspectColliderComponent(entity, entity.get<C>()); });
     });
     endSection();
 }
 
 void EntityInspector::inspectColliderComponent(
-    EntityHandle entity, SphereColliderComponent& collider) {
+    SphereColliderComponent& collider) {
     using namespace propertiesView;
     beginProperty("Radius");
     fullWidth();
@@ -551,8 +531,7 @@ void EntityInspector::inspectColliderComponent(
                   [&] { ImGui::DragFloat("###Radius", &collider.radius); });
 }
 
-void EntityInspector::inspectColliderComponent(EntityHandle entity,
-                                               BoxColliderComponent& collider) {
+void EntityInspector::inspectColliderComponent(BoxColliderComponent& collider) {
     using namespace propertiesView;
     beginProperty("Half Extend");
     fullWidth();
@@ -563,7 +542,7 @@ void EntityInspector::inspectColliderComponent(EntityHandle entity,
     });
 }
 
-void EntityInspector::inspectScript(EntityHandle entity) {
+void EntityInspector::inspectScript() {
     using namespace propertiesView;
     if (!entity.has<ScriptPreservedData>()) {
         ImGui::Text("Error: No preserved data");
@@ -577,28 +556,27 @@ void EntityInspector::inspectScript(EntityHandle entity) {
         ImGui::Text("Error: No symbol table");
         return;
     }
-    if (!beginComponentSection<ScriptComponent>("Script Component", entity)) {
+    if (!beginComponentSection<ScriptComponent>("Script Component")) {
         return;
     }
-    disabledIf(isSimulating(), [&] {
-        beginProperty("Class");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        char const* name = component.type ? component.type->name().data() : "";
-        if (ImGui::BeginCombo("##-script", name)) {
-            auto structTypes = sym->globalScope().entities() |
-                               scatha::Filter<scatha::sema::StructType>;
-            for (auto* type: structTypes) {
-                bool selected = type == component.type;
-                if (ImGui::Selectable(type->name().data(), selected)) {
-                    assignType(component, type);
-                    preservedData.classname = std::string(type->name());
-                }
-                if (selected) {
-                    ImGui::SetItemDefaultFocus();
-                }
+    beginProperty("Class");
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    char const* name = component.type ? component.type->name().data() : "";
+    if (ImGui::BeginCombo("##-script", name)) {
+        auto structTypes = sym->globalScope().entities() |
+                           scatha::Filter<scatha::sema::StructType>;
+        for (auto* type: structTypes) {
+            bool selected = type == component.type;
+            if (ImGui::Selectable(type->name().data(), selected)) {
+                assignType(component, type);
+                preservedData.classname = std::string(type->name());
             }
-            ImGui::EndCombo();
+            if (selected) {
+                ImGui::SetItemDefaultFocus();
+            }
         }
+        ImGui::EndCombo();
+    }
 #if 0
         if (!script.objectAddress == 0 || !beginSubSection("Attributes")) {
             return;
@@ -629,17 +607,15 @@ void EntityInspector::inspectScript(EntityHandle entity) {
         }
         endSubSection();
 #endif
-    });
     endSection();
 }
 
 /// MARK: - Helpers
 bool EntityInspector::beginComponentSection(std::string_view name) {
-    return beginComponentSection<void>(name, EntityHandle{});
+    return beginComponentSection<void>(name);
 }
 template <typename T>
-bool EntityInspector::beginComponentSection(std::string_view name,
-                                            EntityHandle entity) {
+bool EntityInspector::beginComponentSection(std::string_view name) {
     if constexpr (std::is_same_v<T, void>) {
         return beginGenericSection(name,
                                    FontDesc::UIDefault().setWeight(
@@ -668,47 +644,33 @@ bool EntityInspector::beginGenericSection(std::string_view name,
     using namespace propertiesView;
     float2 const cursorPos = ImGui::GetCursorPos();
     header(name, font);
-    bool const open = [&] {
-        if (!deleter) {
-            return true;
-        }
-        // 'Delete' Button
-        return withFont(FontWeight::Semibold, FontStyle::Roman, [&] {
-            return disabledIf(isSimulating(), [&] {
-                bool result = true;
-                float2 const textSize = ImGui::CalcTextSize("Delete");
-                float2 const buttonPos = {
-                    cursorPos.x + ImGui::GetContentRegionAvail().x - textSize.x,
-                    cursorPos.y
-                };
-                ImGui::SetCursorPos(buttonPos);
-                char deleteButtonLabel[64] = "-delete-button";
-                std::strncpy(&deleteButtonLabel[14], name.data(), 49);
-                if (ImGui::InvisibleButton(deleteButtonLabel, textSize)) {
-                    deleter();
-                    result = false;
-                }
-                float4 const color =
-                    GImGui->Style.Colors[ImGuiCol_TextDisabled];
-                float4 const hightlightColor =
-                    (float4(GImGui->Style.Colors[ImGuiCol_Text]) + color) / 2;
-                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::IsItemHovered() ?
-                                                         hightlightColor :
-                                                         color);
-                ImGui::SetCursorPos(buttonPos);
-                ImGui::Text("Delete");
-                ImGui::PopStyleColor();
-                return result;
-            });
-        });
-    }();
-    if (open) {
-        beginSection();
-        return true;
+    if (!deleter) {
+        return beginSection();
     }
-    else {
-        return false;
+    // 'Delete' Button
+    ImGui::PushFont(FontManager::get(FontWeight::Semibold));
+    bool open = true;
+    float2 textSize = ImGui::CalcTextSize("Delete");
+    float2 buttonPos = {
+        cursorPos.x + ImGui::GetContentRegionAvail().x - textSize.x, cursorPos.y
+    };
+    ImGui::SetCursorPos(buttonPos);
+    char deleteButtonLabel[64] = "delete";
+    std::strncpy(&deleteButtonLabel[14], name.data(), 49);
+    if (ImGui::InvisibleButton(deleteButtonLabel, textSize)) {
+        deleter();
+        open = false;
     }
+    float4 color = GImGui->Style.Colors[ImGuiCol_TextDisabled];
+    float4 hightlightColor =
+        (float4(GImGui->Style.Colors[ImGuiCol_Text]) + color) / 2;
+    ImGui::PushStyleColor(ImGuiCol_Text,
+                          ImGui::IsItemHovered() ? hightlightColor : color);
+    ImGui::SetCursorPos(buttonPos);
+    ImGui::Text("Delete");
+    ImGui::PopStyleColor();
+    ImGui::PopFont();
+    return open && beginSection();
 }
 
 void EntityInspector::endSection() { propertiesView::endSection(); }

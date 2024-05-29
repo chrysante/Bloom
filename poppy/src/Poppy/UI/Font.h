@@ -8,6 +8,7 @@
 #include <imgui.h>
 #include <utl/hash.hpp>
 #include <utl/hashmap.hpp>
+#include <utl/overload.hpp>
 
 #include "Bloom/Application/MessageSystem.h"
 
@@ -53,6 +54,11 @@ enum class FontWeight {
 };
 
 enum class FontStyle { Roman, Italic, Monospaced, LAST = Monospaced };
+
+template <typename T>
+concept FontParameterType = std::is_same_v<T, FontSize> ||
+                            std::is_same_v<T, FontWeight> ||
+                            std::is_same_v<T, FontStyle>;
 
 /// Font attribute descriptor. Used to identify fonts when interacting with the
 /// font manager
@@ -141,6 +147,9 @@ public:
     static ImFont* get(FontDesc const& font);
 
     ///
+    static ImFont* get(FontParameterType auto... params);
+
+    ///
     static IconData get(IconFontDesc const& font, std::string iconName);
 
     ///  \Returns the ImGui font atlas
@@ -173,6 +182,17 @@ private:
     bool haveSignaledReload = false;
     bool isReloading = false;
 };
+
+inline ImFont* FontManager::get(FontParameterType auto... params) {
+    auto desc = FontDesc::UIDefault();
+    utl::overload apply = {
+        [&](FontSize size) { desc.setSize(size); },
+        [&](FontWeight weight) { desc.setWeight(weight); },
+        [&](FontStyle style) { desc.setStyle(style); },
+    };
+    (apply(params), ...);
+    return get(desc);
+}
 
 struct ReloadedFontAtlasCommand {
     FontManager* fontManager;

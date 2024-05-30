@@ -472,6 +472,21 @@ static NSEvent* handleEvent(NSEvent* event) {
             [event.window zoom:nil];
         }
         break;
+    case NSEventTypeFlagsChanged: {
+        // Just notify our app that something happened
+        NSEvent* event = [NSEvent
+            otherEventWithType:NSEventTypeApplicationDefined
+                      location:NSMakePoint(0, 0)
+                 modifierFlags:0
+                     timestamp:0
+                  windowNumber:0
+                       context:nil
+                       subtype:0
+                         data1:0
+                         data2:0];
+        [NSApp postEvent:event atStart:YES];
+        break;
+    }
     default:
         break;
     }

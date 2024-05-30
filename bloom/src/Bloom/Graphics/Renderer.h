@@ -25,30 +25,6 @@ class Scene;
 class HardwareDevice;
 class Camera;
 
-struct EntityHandleEncoding {
-    EntityHandleEncoding() { std::memset(this, 0xff, sizeof *this); }
-
-    EntityHandleEncoding(size_t sceneIdx, uint32_t rawID) {
-        BL_ASSERT(rawID < (1 << 24));
-        entityID = rawID;
-        sceneIndex = utl::narrow_cast<uint8_t>(sceneIdx);
-    }
-
-    explicit EntityHandleEncoding(uint32_t raw) {
-        std::memcpy(this, &raw, sizeof *this);
-    }
-
-    bool valid() const {
-        EntityHandleEncoding ref;
-        return std::memcmp(this, &ref, sizeof ref) != 0;
-    }
-
-    uint32_t raw() const { return std::bit_cast<uint32_t>(*this); }
-
-    uint32_t entityID   : 24;
-    uint32_t sceneIndex : 8;
-};
-
 struct BloomSettings {
     bool physicallyCorrect;
     float intensity;

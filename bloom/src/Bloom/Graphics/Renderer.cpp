@@ -173,8 +173,7 @@ static void submitGeometry(size_t sceneIndex, Scene const& scene,
             return;
         }
         geometry.add(meshRenderer.mesh->getRenderer(),
-                     meshRenderer.materialInstance, transform.matrix,
-                     EntityHandleEncoding(sceneIndex, ID.raw()).raw());
+                     meshRenderer.materialInstance, transform.matrix, ID.raw());
     });
 }
 

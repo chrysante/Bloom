@@ -265,7 +265,7 @@ bloom::TextureView EditorSceneRenderer::sceneColorWithOverlays() const {
 bloom::EntityHandle EditorSceneRenderer::readEntityIDMap(
     CommandQueue& commandQueue, std::span<Scene* const> scenes,
     float2 position) const {
-    if (!idMap) {
+    if (!idMap || scenes.empty()) {
         return {};
     }
     auto idTex = idMap->handle();
@@ -275,13 +275,13 @@ bloom::EntityHandle EditorSceneRenderer::readEntityIDMap(
     encoder->end();
     commandBuffer->commit();
     commandBuffer->waitForCompletion();
-    EntityHandleEncoding encodedID;
+    EntityID ID;
     vml::AABB<uint32_t, 3> region = { uint3(position, 0),
                                       uint3(position, 0) + uint3(1) };
-    copyTextureToMemory(RenderAPI::Metal, idTex, &encodedID, 4, region, 0);
-    if (!encodedID.valid() || encodedID.sceneIndex >= scenes.size()) {
+    copyTextureToMemory(RenderAPI::Metal, idTex, &ID, 4, region, 0);
+    auto* scene = scenes[0];
+    if (!scene->isValid(ID)) {
         return {};
     }
-    auto* scene = scenes[encodedID.sceneIndex];
-    return scene->getHandle(EntityID(encodedID.entityID));
+    return scene->getHandle(ID);
 }

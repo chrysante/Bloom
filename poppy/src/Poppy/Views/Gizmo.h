@@ -45,10 +45,12 @@ public:
     /// \Returns `true` if the gizmo is hovered
     bool isHovered() const { return _hovered; }
 
-    /// \Returns `true` if the gizmo is in use
+    /// \Returns `true` if the gizmo is in use, i.e., edits have been made and
+    /// the operation is not finished
     bool isUsing() const { return _using; }
 
     /// Displays the gizmo
+    /// \Returns `true` if any edits where made this frame
     bool display(bloom::Camera const& camera, vml::float4x4& wsTransform);
 
     /// Resets the gizmo to unused state

@@ -80,7 +80,7 @@ struct ActiveViewData {
     void reset() { *this = {}; }
 
     utl::small_vector<EditEntityComponent::WeakVariant> transformBackup;
-    utl::small_vector<EntityHandle> entityCopyBackup;
+    utl::small_vector<EntityHandle> originalEntitiesBackup;
 };
 
 struct ViewData: ActiveViewData {
@@ -433,13 +433,8 @@ void Viewport::displayGizmo() {
         return viewData.gizmoWSTransform;
     }();
     float4x4 oldTransform = avgWSTransform;
-    if (gizmo.display(cameraController.camera(), avgWSTransform)) {
-        if (ImGui::IsKeyDown(ImGuiKey_ModShift) &&
-            viewData.entityCopyBackup.empty())
-        {
-            viewData.entityCopyBackup = entities;
-            entities = copyEntities(entities);
-        }
+    bool modified = gizmo.display(cameraController.camera(), avgWSTransform);
+    if (modified) {
         float4x4 transformDelta = getDelta(oldTransform, avgWSTransform);
         for (auto [entity, local, parent]:
              zip(entities, localTransforms, parentTransforms))
@@ -450,8 +445,43 @@ void Viewport::displayGizmo() {
         }
         viewData.gizmoWSTransform = avgWSTransform;
     }
+    if (gizmo.isUsing()) {
+        /// Make a copy of the selected entities if shift is held
+        if (ImGui::IsKeyDown(ImGuiKey_ModShift) &&
+            viewData.originalEntitiesBackup.empty())
+        {
+            viewData.originalEntitiesBackup = entities;
+            entities = copyEntities(entities);
+            /// Restore original transform for copied entities
+            for (auto [index, entity]:
+                 viewData.originalEntitiesBackup | enumerate)
+            {
+                entity.get<Transform>() =
+                    std::get<Transform>(viewData.transformBackup[index]);
+            }
+        }
+        /// Undo the copy of the selected entities if shift is released
+        if (ImGui::IsKeyReleased(ImGuiKey_ModShift) &&
+            !viewData.originalEntitiesBackup.empty())
+        {
+            utl::hashmap<EntityHandle, EntityHandle> copyToOriginal;
+            for (auto [copy, original]:
+                 zip(entities, viewData.originalEntitiesBackup))
+            {
+                original.get<Transform>() = copy.get<Transform>();
+                copy.deleteEntity();
+                copyToOriginal[copy] = original;
+            }
+            selection().transform([&](EntityHandle copy) {
+                BL_ASSERT(copyToOriginal.contains(copy));
+                return copyToOriginal[copy];
+            });
+            entities = viewData.originalEntitiesBackup;
+            viewData.originalEntitiesBackup.clear();
+        }
+    }
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-        if (viewData.entityCopyBackup.empty()) {
+        if (viewData.originalEntitiesBackup.empty()) {
             auto* TA = new EditEntityComponent{
                 entities | ranges::to<utl::small_vector<WeakHandle>>,
                 viewData.transformBackup, getWeakTransforms(entities)
@@ -468,9 +498,9 @@ void Viewport::displayGizmo() {
                 copy.get<Transform>() = newTransforms[index];
             };
             auto* TA = new CopyEntitiesTransaction(
-                viewData.entityCopyBackup |
+                viewData.originalEntitiesBackup |
                     ranges::to<utl::small_vector<WeakHandle>>,
-                editor().selection(), std::move(postProcess));
+                selection(), std::move(postProcess));
             editor().transactionManager().commit(TA);
         }
     }

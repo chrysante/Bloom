@@ -41,6 +41,7 @@ using namespace ranges::views;
 using namespace vml::short_types;
 
 static void displayRenderGraphDebugger(RenderGraph const& rg, bool* open);
+static void displaySceneDebugger(Scene const& scene, bool* open);
 
 namespace {
 
@@ -137,6 +138,7 @@ struct Viewport: View, BasicSceneInspector {
     TextureHandle colorPickerTmpTex;
     RendererSettings rendererSettings;
     bool showRenderGraphDebugger = false;
+    bool showSceneDebugger = false;
     bool gameView = false;
     bool renderGraphDirty = true;
 };
@@ -230,6 +232,9 @@ void Viewport::display() {
     if (showRenderGraphDebugger && renderer && renderer->renderGraph()) {
         displayRenderGraphDebugger(*renderer->renderGraph(),
                                    &showRenderGraphDebugger);
+    }
+    if (showSceneDebugger && !scenes().empty()) {
+        displaySceneDebugger(*scenes().front(), &showSceneDebugger);
     }
 }
 
@@ -352,61 +357,6 @@ static auto getWeakTransforms(std::span<EntityHandle const> entities) {
     }) | ToSmallVector<>;
 }
 
-namespace {
-
-/// FIXME: Copying an entity twice, undoing both copies and redoing them causes
-/// a crash.
-/// That is because new entity IDs are generated for every clone operation, but
-/// the second clone operation stores the volatile IDs which are invalidated
-/// when we undo the first operation.
-
-struct CopyEntitiesTransaction: EntityTransaction {
-    explicit CopyEntitiesTransaction(
-        utl::small_vector<WeakHandle> handles,
-        EntitySelectionManager& selectionManager,
-        std::function<void(EntityHandle, size_t index)> postProcess):
-        EntityTransaction(std::move(handles)),
-        selectionManager(selectionManager),
-        postProcess(std::move(postProcess)) {}
-
-    bool commit() const override {
-        auto originals = handles() | transform(&WeakHandle::lock) |
-                         ToSmallVector<>;
-        auto localCopies = originals |
-                           transform([](auto const& e) { return e.clone(); }) |
-                           ToSmallVector<>;
-        selectionManager.clear();
-        for (auto [index, copy]: localCopies | enumerate) {
-            if (copy) {
-                selectionManager.add(copy);
-                postProcess(copy, index);
-            }
-        }
-        copies = localCopies | ranges::to<utl::small_vector<WeakHandle>>;
-        return true;
-    }
-
-    bool undo() const override {
-        auto localCopies = copies | transform(&WeakHandle::lock) |
-                           ToSmallVector<>;
-        ranges::for_each(localCopies,
-                         [](auto const& e) { return e.deleteEntity(); });
-        copies.clear();
-        auto originals = handles() | transform(&WeakHandle::lock) |
-                         ToSmallVector<>;
-        selectionManager.set(originals | filter([](auto const& e) {
-            return bool(e);
-        }) | transform([](auto const& e) -> EntityHandle { return e; }));
-        return true;
-    }
-
-    EntitySelectionManager& selectionManager;
-    std::function<void(EntityHandle, size_t index)> postProcess;
-    mutable utl::small_vector<WeakHandle> copies;
-};
-
-} // namespace
-
 void Viewport::displayGizmo() {
     using WeakHandle = EntityTransaction::WeakHandle;
     auto entities = selection().entities() | filter([](EntityHandle entity) {
@@ -504,10 +454,12 @@ void Viewport::displayGizmo() {
                                                size_t index) {
                 copy.get<Transform>() = newTransforms[index];
             };
-            auto* TA = new CopyEntitiesTransaction(
-                viewData.originalEntitiesBackup |
-                    ranges::to<utl::small_vector<WeakHandle>>,
-                selection(), std::move(postProcess));
+            auto* scene = viewData.originalEntitiesBackup.front().scene();
+            auto* TA =
+                new CopyEntitiesTransaction(scene->weak_from_this(),
+                                            viewData.originalEntitiesBackup,
+                                            selection(),
+                                            std::move(postProcess));
             editor().transactionManager().commit(TA);
         }
     }
@@ -763,6 +715,8 @@ void Viewport::displayViewportSettings() {
     }
     beginProperty("Show Render Graph Debugger");
     ImGui::Checkbox("###ShowRGDebugger", &showRenderGraphDebugger);
+    beginProperty("Show Scene Debugger");
+    ImGui::Checkbox("###ShowSceneDebugger", &showSceneDebugger);
 }
 
 void Viewport::displayPhysicsSettings() {
@@ -974,6 +928,35 @@ static void displayRenderGraphDebugger(RenderGraph const& rg, bool* open) {
             ImGui::TextDisabled("Resource pool not allocated");
         }
     }
+    ImGui::End();
+}
+
+static void displaySceneDebugger(Scene const& scene, bool* open) {
+    ImGui::Begin("Scene Debugger", open);
+    utl::hashset<utl::uuid> persistentIDs;
+    utl::hashset<EntityID> notUnique;
+    scene.each([&](EntityID ID) {
+        if (!persistentIDs.insert(scene.getHandle(ID).persistentID()).second) {
+            notUnique.insert(ID);
+        }
+    });
+    scene.each([&, index = 0](EntityID ID) mutable {
+        auto entity = scene.getHandle(ID);
+        ImGui::PushID(index++);
+        if (ImGui::CollapsingHeader(std::string(entity.name()).c_str(),
+                                    ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            bool unique = !notUnique.contains(ID);
+            if (!unique) {
+                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+            }
+            ImGui::Text("ID: %s", entity.persistentID().to_string().c_str());
+            if (!unique) {
+                ImGui::PopStyleColor();
+            }
+        }
+        ImGui::PopID();
+    });
     ImGui::End();
 }
 

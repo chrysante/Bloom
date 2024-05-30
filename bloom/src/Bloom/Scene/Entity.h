@@ -243,10 +243,11 @@ public:
     explicit operator bool() const { return scene() && ID(); }
 
     /// Clones this entity and returns a handle to the new entity
-    EntityHandleEx clone() const
+    EntityHandleEx clone(utl::uuid persistentID = utl::uuid::generate()) const
         requires(!IsConst)
     {
-        return EntityHandleEx(scene()->cloneEntity(ID()).ID(), scene());
+        return EntityHandleEx(scene()->cloneEntity(ID(), persistentID).ID(),
+                              scene());
     }
 
     /// Deletes this entity from the scene

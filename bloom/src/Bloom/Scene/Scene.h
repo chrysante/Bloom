@@ -40,9 +40,9 @@ public:
     /// persistentID
     EntityID getVolatileID(utl::uuid persistentID) const {
         auto itr = persistentIDMap.find(persistentID);
-        itr != persistentIDMap.end() ? itr->second : EntityID{};
+        return itr != persistentIDMap.end() ? itr->second : EntityID{};
     }
-    
+
     /// \Returns a handle for entity \p entity
     EntityHandle getHandle(EntityID entity) {
         return EntityHandle(entity, this);

@@ -19,6 +19,27 @@
 namespace poppy {
 
 class TransactionManager;
+class EntitySelectionManager;
+
+class CopyEntitiesTransaction: public Transaction {
+public:
+    explicit CopyEntitiesTransaction(
+        bloom::WeakReference<bloom::Scene> scene,
+        std::span<bloom::EntityHandle const> entities,
+        EntitySelectionManager& selectionManager,
+        std::function<void(bloom::EntityHandle, size_t index)> postProcess);
+
+    bool commit() const override;
+
+    bool undo() const override;
+
+private:
+    bloom::WeakReference<bloom::Scene> weakScene;
+    utl::small_vector<utl::uuid> originalIDs;
+    utl::small_vector<utl::uuid> cloneIDs;
+    EntitySelectionManager& selectionManager;
+    std::function<void(bloom::EntityHandle, size_t index)> postProcess;
+};
 
 /// A transaction involving a set of entities
 class EntityTransaction: public Transaction {

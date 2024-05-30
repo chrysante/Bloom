@@ -6,6 +6,7 @@
 
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Scene/Scene.h"
+#include "Poppy/Editor/EntitySelectionManager.h"
 #include "Poppy/Editor/TransactionManager.h"
 
 using namespace poppy;
@@ -13,6 +14,57 @@ using namespace bloom;
 using namespace ranges::views;
 
 using WeakHandle = EntityTransaction::WeakHandle;
+
+static utl::small_vector<EntityHandle> getHandles(
+    Scene& scene, std::span<utl::uuid const> IDs) {
+    return IDs | transform([&](utl::uuid ID) { return scene.getHandle(ID); }) |
+           ToSmallVector<>;
+}
+
+CopyEntitiesTransaction::CopyEntitiesTransaction(
+    WeakReference<Scene> scene, std::span<bloom::EntityHandle const> entities,
+    EntitySelectionManager& selectionManager,
+    std::function<void(EntityHandle, size_t index)> postProcess):
+    weakScene(scene),
+    selectionManager(selectionManager),
+    postProcess(std::move(postProcess)) {
+    originalIDs = entities | transform(&EntityHandle::persistentID) |
+                  ToSmallVector<>;
+    cloneIDs = generate(utl::uuid::generate) | take(originalIDs.size()) |
+               ToSmallVector<>;
+}
+
+bool CopyEntitiesTransaction::commit() const {
+    auto scene = weakScene.lock();
+    if (!scene) {
+        return false;
+    }
+    auto originals = getHandles(*scene, originalIDs);
+    auto clones = originals | transform([&, index = 0u](auto const& e) mutable {
+        return e.clone(cloneIDs[index++]);
+    }) | ToSmallVector<>;
+    selectionManager.clear();
+    for (auto [index, clone]: clones | enumerate) {
+        if (clone) {
+            selectionManager.add(clone);
+            postProcess(clone, index);
+        }
+    }
+    return true;
+}
+
+bool CopyEntitiesTransaction::undo() const {
+    auto scene = weakScene.lock();
+    if (!scene) {
+        return false;
+    }
+    auto clones = getHandles(*scene, cloneIDs);
+    ranges::for_each(clones, [](auto const& e) { return e.deleteEntity(); });
+    auto originals = getHandles(*scene, originalIDs);
+    selectionManager.set(originals |
+                         filter([](auto const& e) { return bool(e); }));
+    return true;
+}
 
 static bool apply(std::span<WeakHandle const> handles, auto&& components,
                   auto fn) {

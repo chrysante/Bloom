@@ -23,6 +23,7 @@
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/Messages.h"
 #include "Poppy/Editor/SceneTransactions.h"
+#include "Poppy/Editor/TransactionManager.h"
 #include "Poppy/Renderer/EditorSceneRenderer.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/Toolbar.h"
@@ -78,7 +79,8 @@ struct MouseState {
 struct ActiveViewData {
     void reset() { *this = {}; }
 
-    bool didCopyEntities = false;
+    utl::small_vector<EditEntityComponent::WeakVariant> transformBackup;
+    utl::small_vector<EntityHandle> entityCopyBackup;
 };
 
 struct ViewData: ActiveViewData {
@@ -337,7 +339,69 @@ static float4x4 makeAverage(auto&& transforms) {
     return vml::make_transform(t.position, t.orientation, t.scale);
 }
 
+static auto getWeakTransforms(std::span<EntityHandle const> entities) {
+    return entities | transform([](EntityHandle e) {
+        return EditEntityComponent::WeakVariant(e.get<Transform>());
+    }) | ToSmallVector<>;
+}
+
+namespace {
+
+/// FIXME: Copying an entity twice, undoing both copies and redoing them causes
+/// a crash.
+/// That is because new entity IDs are generated for every clone operation, but
+/// the second clone operation stores the volatile IDs which are invalidated
+/// when we undo the first operation.
+
+struct CopyEntitiesTransaction: EntityTransaction {
+    explicit CopyEntitiesTransaction(
+        utl::small_vector<WeakHandle> handles,
+        EntitySelectionManager& selectionManager,
+        std::function<void(EntityHandle, size_t index)> postProcess):
+        EntityTransaction(std::move(handles)),
+        selectionManager(selectionManager),
+        postProcess(std::move(postProcess)) {}
+
+    bool commit() const override {
+        auto originals = handles() | transform(&WeakHandle::lock) |
+                         ToSmallVector<>;
+        auto localCopies = originals |
+                           transform([](auto const& e) { return e.clone(); }) |
+                           ToSmallVector<>;
+        selectionManager.clear();
+        for (auto [index, copy]: localCopies | enumerate) {
+            if (copy) {
+                selectionManager.add(copy);
+                postProcess(copy, index);
+            }
+        }
+        copies = localCopies | ranges::to<utl::small_vector<WeakHandle>>;
+        return true;
+    }
+
+    bool undo() const override {
+        auto localCopies = copies | transform(&WeakHandle::lock) |
+                           ToSmallVector<>;
+        ranges::for_each(localCopies,
+                         [](auto const& e) { return e.deleteEntity(); });
+        copies.clear();
+        auto originals = handles() | transform(&WeakHandle::lock) |
+                         ToSmallVector<>;
+        selectionManager.set(originals | filter([](auto const& e) {
+            return bool(e);
+        }) | transform([](auto const& e) -> EntityHandle { return e; }));
+        return true;
+    }
+
+    EntitySelectionManager& selectionManager;
+    std::function<void(EntityHandle, size_t index)> postProcess;
+    mutable utl::small_vector<WeakHandle> copies;
+};
+
+} // namespace
+
 void Viewport::displayGizmo() {
+    using WeakHandle = EntityTransaction::WeakHandle;
     auto entities = selection().entities() | filter([](EntityHandle entity) {
         return entity.has<Transform>();
     }) | ToSmallVector<>;
@@ -345,51 +409,71 @@ void Viewport::displayGizmo() {
         gizmo.reset();
         return;
     }
-    auto transformPtrs = entities | transform([](EntityHandle entity) {
-        return EditEntityComponent::ConstPtrVariant(&entity.get<Transform>());
+    if (!ImGui::IsAnyItemActive()) {
+        viewData.transformBackup = getWeakTransforms(entities);
+    }
+    auto localTransforms = entities | transform([](EntityHandle entity) {
+        return entity.get<Transform>().calculate();
     }) | ToSmallVector<>;
-    editComponents(editor().transactionManager(), entities, transformPtrs,
-                   [&](TAToken&) {
-        auto localTransforms = entities | transform([](EntityHandle entity) {
-            return entity.get<Transform>().calculate();
-        }) | ToSmallVector<>;
-        auto parentTransforms = entities | transform([](EntityHandle entity) {
-            if (auto parent = entity.getParent()) {
-                return parent.calculateWorldTransformMatrix();
-            }
-            return float4x4(1);
-        }) | ToSmallVector<>;
-        float4x4 avgWSTransform = [&] {
-            if (!gizmo.isUsing()) {
-                auto transforms = zip(localTransforms, parentTransforms) |
-                                  transform([](auto const& p) {
-                    auto& [local, parent] = p;
-                    return parent * local;
-                });
-                viewData.gizmoWSTransform = makeAverage(transforms);
-            }
-            return viewData.gizmoWSTransform;
-        }();
-        float4x4 oldTransform = avgWSTransform;
-        if (gizmo.display(cameraController.camera(), avgWSTransform)) {
-            if (ImGui::IsKeyDown(ImGuiKey_ModShift) &&
-                !viewData.didCopyEntities)
-            {
-                entities = copyEntities(entities);
-                viewData.didCopyEntities = true;
-            }
-            float4x4 transformDelta = getDelta(oldTransform, avgWSTransform);
-            for (auto [entity, local, parent]:
-                 zip(entities, localTransforms, parentTransforms))
-            {
-                float4x4 newWSTransform = transformDelta * parent * local;
-                auto newLocalTransform = vml::inverse(parent) * newWSTransform;
-                entity.get<Transform>() =
-                    Transform::fromMatrix(newLocalTransform);
-            }
-            viewData.gizmoWSTransform = avgWSTransform;
+    auto parentTransforms = entities | transform([](EntityHandle entity) {
+        if (auto parent = entity.getParent()) {
+            return parent.calculateWorldTransformMatrix();
         }
-    });
+        return float4x4(1);
+    }) | ToSmallVector<>;
+    float4x4 avgWSTransform = [&] {
+        if (!gizmo.isUsing()) {
+            auto transforms = zip(localTransforms, parentTransforms) |
+                              transform([](auto const& p) {
+                auto& [local, parent] = p;
+                return parent * local;
+            });
+            viewData.gizmoWSTransform = makeAverage(transforms);
+        }
+        return viewData.gizmoWSTransform;
+    }();
+    float4x4 oldTransform = avgWSTransform;
+    if (gizmo.display(cameraController.camera(), avgWSTransform)) {
+        if (ImGui::IsKeyDown(ImGuiKey_ModShift) &&
+            viewData.entityCopyBackup.empty())
+        {
+            viewData.entityCopyBackup = entities;
+            entities = copyEntities(entities);
+        }
+        float4x4 transformDelta = getDelta(oldTransform, avgWSTransform);
+        for (auto [entity, local, parent]:
+             zip(entities, localTransforms, parentTransforms))
+        {
+            float4x4 newWSTransform = transformDelta * parent * local;
+            auto newLocalTransform = vml::inverse(parent) * newWSTransform;
+            entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
+        }
+        viewData.gizmoWSTransform = avgWSTransform;
+    }
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        if (viewData.entityCopyBackup.empty()) {
+            auto* TA = new EditEntityComponent{
+                entities | ranges::to<utl::small_vector<WeakHandle>>,
+                viewData.transformBackup, getWeakTransforms(entities)
+            };
+            editor().transactionManager().commit(TA);
+        }
+        else {
+            auto newTransforms = entities | transform([](EntityHandle e) {
+                return e.get<Transform>();
+            }) | ToSmallVector<>;
+            ranges::for_each(entities, &EntityHandle::deleteEntity);
+            auto postProcess = [newTransforms](EntityHandle copy,
+                                               size_t index) {
+                copy.get<Transform>() = newTransforms[index];
+            };
+            auto* TA = new CopyEntitiesTransaction(
+                viewData.entityCopyBackup |
+                    ranges::to<utl::small_vector<WeakHandle>>,
+                editor().selection(), std::move(postProcess));
+            editor().transactionManager().commit(TA);
+        }
+    }
 }
 
 void Viewport::handleEntitySelection() {

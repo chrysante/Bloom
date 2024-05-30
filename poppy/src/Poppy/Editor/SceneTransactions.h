@@ -27,6 +27,8 @@ public:
         WeakHandle(bloom::StrongEntityHandle const& handle):
             scene(handle.scene()), ID(handle.ID()) {}
 
+        WeakHandle(bloom::EntityHandle handle);
+
         bloom::StrongEntityHandle lock() const {
             auto s = scene.lock();
             auto validID = s ? ID : bloom::EntityID{};
@@ -57,9 +59,21 @@ private:
 class CustomEntityTransaction: public EntityTransaction {
 public:
     explicit CustomEntityTransaction(
-        WeakHandle handle, std::function<bool(bloom::EntityHandle)> commit,
-        std::function<bool(bloom::EntityHandle)> undo):
+        WeakHandle handle, std::invocable<bloom::EntityHandle> auto commit,
+        std::invocable<bloom::EntityHandle> auto undo):
         EntityTransaction({ std::move(handle) }),
+        _commit([commit = std::move(commit)](auto entities) {
+            return commit(entities.front());
+        }),
+        _undo([undo = std::move(undo)](auto entities) {
+            return undo(entities.front());
+        }) {}
+
+    explicit CustomEntityTransaction(
+        utl::small_vector<WeakHandle> handles,
+        std::function<bool(std::span<bloom::EntityHandle const>)> commit,
+        std::function<bool(std::span<bloom::EntityHandle const>)> undo):
+        EntityTransaction(std::move(handles)),
         _commit(std::move(commit)),
         _undo(std::move(undo)) {}
 
@@ -67,8 +81,8 @@ private:
     bool commit() const override;
     bool undo() const override;
 
-    std::function<bool(bloom::EntityHandle)> _commit;
-    std::function<bool(bloom::EntityHandle)> _undo;
+    std::function<bool(std::span<bloom::EntityHandle const>)> _commit;
+    std::function<bool(std::span<bloom::EntityHandle const>)> _undo;
 };
 
 /// Modifies components of a set of entities

@@ -240,7 +240,7 @@ public:
     }
 
     /// \Returns `true` if this handle refers to a valid entity
-    explicit operator bool() const { return bool(ID()); }
+    explicit operator bool() const { return scene() && ID(); }
 
     /// Clones this entity and returns a handle to the new entity
     EntityHandleEx clone() const

@@ -28,14 +28,21 @@ static bool apply(std::span<WeakHandle const> handles, auto&& components,
     return success;
 }
 
+WeakHandle::WeakHandle(bloom::EntityHandle handle):
+    scene(handle.scene()->weak_from_this()), ID(handle.ID()) {}
+
 bool CustomEntityTransaction::commit() const {
-    return apply(handles(), single(0),
-                 [&](EntityHandle entity, auto) { return _commit(entity); });
+    auto strongHandles = handles() | transform(&WeakHandle::lock) |
+                         ToSmallVector<>;
+    auto entities = strongHandles | ranges::to<utl::small_vector<EntityHandle>>;
+    return _commit(entities);
 }
 
 bool CustomEntityTransaction::undo() const {
-    return apply(handles(), single(0),
-                 [&](EntityHandle entity, auto) { return _undo(entity); });
+    auto strongHandles = handles() | transform(&WeakHandle::lock) |
+                         ToSmallVector<>;
+    auto entities = strongHandles | ranges::to<utl::small_vector<EntityHandle>>;
+    return _undo(entities);
 }
 
 static bool applyComponent(EntityHandle entity,

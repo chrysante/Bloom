@@ -22,6 +22,7 @@
 #include "Bloom/Shader/SharedTypes.h"
 #include "Poppy/Editor/Editor.h"
 #include "Poppy/Editor/Messages.h"
+#include "Poppy/Editor/SceneTransactions.h"
 #include "Poppy/Renderer/EditorSceneRenderer.h"
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/Toolbar.h"
@@ -76,6 +77,8 @@ struct MouseState {
 
 struct ActiveViewData {
     void reset() { *this = {}; }
+
+    bool didCopyEntities = false;
 };
 
 struct ViewData: ActiveViewData {
@@ -91,7 +94,8 @@ struct Viewport: View, BasicSceneInspector {
     void drawScenes();
     void displayColorPicker(CommandBuffer& commandBuffer,
                             TextureView finalColor, float2 mouseCoord);
-    void copyEntities(std::span<EntityHandle const> entities);
+    utl::small_vector<EntityHandle> copyEntities(
+        std::span<EntityHandle const> entities);
     void displayGizmo();
     void handleEntitySelection();
 
@@ -296,7 +300,8 @@ void Viewport::drawScenes() {
     commandBuffer->commit();
 }
 
-void Viewport::copyEntities(std::span<EntityHandle const> entities) {
+utl::small_vector<EntityHandle> Viewport::copyEntities(
+    std::span<EntityHandle const> entities) {
     utl::hashmap<EntityHandle, EntityHandle> cloneMap;
     for (EntityHandle entity: entities) {
         cloneMap.insert({ entity, entity.clone() });
@@ -305,6 +310,7 @@ void Viewport::copyEntities(std::span<EntityHandle const> entities) {
         auto itr = cloneMap.find(entity);
         return itr != cloneMap.end() ? itr->second : entity;
     });
+    return selection().elements() | ToSmallVector<>;
 }
 
 static float4x4 getDelta(float4x4 const& oldTransform,
@@ -339,43 +345,51 @@ void Viewport::displayGizmo() {
         gizmo.reset();
         return;
     }
-    auto localTransforms = entities | transform([](EntityHandle entity) {
-        return entity.get<Transform>().calculate();
+    auto transformPtrs = entities | transform([](EntityHandle entity) {
+        return EditEntityComponent::ConstPtrVariant(&entity.get<Transform>());
     }) | ToSmallVector<>;
-    auto parentTransforms = entities | transform([](EntityHandle entity) {
-        if (auto parent = entity.getParent()) {
-            return parent.calculateWorldTransformMatrix();
+    editComponents(editor().transactionManager(), entities, transformPtrs,
+                   [&](TAToken&) {
+        auto localTransforms = entities | transform([](EntityHandle entity) {
+            return entity.get<Transform>().calculate();
+        }) | ToSmallVector<>;
+        auto parentTransforms = entities | transform([](EntityHandle entity) {
+            if (auto parent = entity.getParent()) {
+                return parent.calculateWorldTransformMatrix();
+            }
+            return float4x4(1);
+        }) | ToSmallVector<>;
+        float4x4 avgWSTransform = [&] {
+            if (!gizmo.isUsing()) {
+                auto transforms = zip(localTransforms, parentTransforms) |
+                                  transform([](auto const& p) {
+                    auto& [local, parent] = p;
+                    return parent * local;
+                });
+                viewData.gizmoWSTransform = makeAverage(transforms);
+            }
+            return viewData.gizmoWSTransform;
+        }();
+        float4x4 oldTransform = avgWSTransform;
+        if (gizmo.display(cameraController.camera(), avgWSTransform)) {
+            if (ImGui::IsKeyDown(ImGuiKey_ModShift) &&
+                !viewData.didCopyEntities)
+            {
+                entities = copyEntities(entities);
+                viewData.didCopyEntities = true;
+            }
+            float4x4 transformDelta = getDelta(oldTransform, avgWSTransform);
+            for (auto [entity, local, parent]:
+                 zip(entities, localTransforms, parentTransforms))
+            {
+                float4x4 newWSTransform = transformDelta * parent * local;
+                auto newLocalTransform = vml::inverse(parent) * newWSTransform;
+                entity.get<Transform>() =
+                    Transform::fromMatrix(newLocalTransform);
+            }
+            viewData.gizmoWSTransform = avgWSTransform;
         }
-        return float4x4(1);
-    }) | ToSmallVector<>;
-    float4x4 avgWSTransform = [&] {
-        if (!gizmo.isUsing()) {
-            auto transforms = zip(localTransforms, parentTransforms) |
-                              transform([](auto const& p) {
-                auto& [local, parent] = p;
-                return parent * local;
-            });
-            viewData.gizmoWSTransform = makeAverage(transforms);
-        }
-        return viewData.gizmoWSTransform;
-    }();
-    float4x4 oldTransform = avgWSTransform;
-    bool isUsing = gizmo.isUsing();
-    if (!gizmo.display(cameraController.camera(), avgWSTransform)) {
-        return;
-    }
-    if (ImGui::IsKeyDown(ImGuiKey_ModShift) && !isUsing) {
-        copyEntities(entities);
-    }
-    float4x4 transformDelta = getDelta(oldTransform, avgWSTransform);
-    for (auto [entity, local, parent]:
-         zip(entities, localTransforms, parentTransforms))
-    {
-        float4x4 newWSTransform = transformDelta * parent * local;
-        auto newLocalTransform = vml::inverse(parent) * newWSTransform;
-        entity.get<Transform>() = Transform::fromMatrix(newLocalTransform);
-    }
-    viewData.gizmoWSTransform = avgWSTransform;
+    });
 }
 
 void Viewport::handleEntitySelection() {

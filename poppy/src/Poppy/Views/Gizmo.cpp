@@ -5,6 +5,7 @@
 
 #include <ImGuizmo/ImGuizmo.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <vml/vml.hpp>
 
 #include "Bloom/Scene/Components/Transform.h"
@@ -55,11 +56,9 @@ static ImGuizmo::MODE translateSpace(GizmoSpace space) {
     return (ImGuizmo::MODE)(1 - (int)space);
 }
 
-static std::optional<float4x4> manipulateGizmo(ImGuizmo::Context* context,
-                                               float4x4 view, float4x4 proj,
-                                               GizmoOperation operation,
-                                               GizmoSpace space,
-                                               float4x4 transform) {
+static std::optional<float4x4> manipulateGizmo(
+    int ID, ImGuizmo::Context* context, float4x4 view, float4x4 proj,
+    GizmoOperation operation, GizmoSpace space, float4x4 transform) {
     ImGuizmo::SetContext(context);
     ImGuizmo::BeginFrame();
     ImGuizmo::SetOrthographic(false);
@@ -70,6 +69,7 @@ static std::optional<float4x4> manipulateGizmo(ImGuizmo::Context* context,
     view = vml::transpose(view);
     proj = vml::transpose(proj);
     transform = vml::transpose(transform);
+    ImGuizmo::SetID(ID);
     if (ImGuizmo::Manipulate(view.data(), proj.data(),
                              translateOperation(operation),
                              translateSpace(space), transform.data()))
@@ -82,9 +82,10 @@ static std::optional<float4x4> manipulateGizmo(ImGuizmo::Context* context,
 bool Gizmo::display(Camera const& camera, vml::float4x4& wsTransform) {
     auto view = camera.view();
     auto proj = camera.projection();
+    auto ID = ImGui::GetID("Gizmo");
     auto newEntityWSTransform =
-        manipulateGizmo(static_cast<ImGuizmo::Context*>(context.get()), view,
-                        proj, operation(), space(), wsTransform);
+        manipulateGizmo(ID, static_cast<ImGuizmo::Context*>(context.get()),
+                        view, proj, operation(), space(), wsTransform);
     _hovered = ImGuizmo::IsOver();
     bool usedLastFrame = _using;
     _using = newEntityWSTransform.has_value() ||

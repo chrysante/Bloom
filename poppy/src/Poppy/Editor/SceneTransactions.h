@@ -67,23 +67,41 @@ public:
     using Variant =
         bloom::CopyTypeParameters<bloom::ComponentList, std::variant>;
 
-    explicit EditEntityComponent(WeakHandle handle, Variant oldValue,
-                                 Variant newValue);
+    using WeakVariant =
+        bloom::CopyTypeParameters<bloom::ComponentList, std::variant,
+                                  bloom::ToWeakComponent>;
+
+    using ConstPtrVariant = bloom::CopyTypeParameters<
+        bloom::ComponentList, std::variant,
+        bloom::Compose<std::add_pointer, std::add_const>::impl>;
+
+    explicit EditEntityComponent(WeakHandle handle, WeakVariant oldValue,
+                                 WeakVariant newValue);
 
 private:
     bool commit() const override;
     bool undo() const override;
 
-    Variant _oldValue;
-    Variant _newValue;
+    WeakVariant _oldValue;
+    WeakVariant _newValue;
 };
 
-struct CancelToken {
-    void cancel() { _cancelled = true; }
-    bool cancelled() const { return _cancelled; }
+struct TAToken {
+    enum State { None, Committed, Cancelled };
+
+    /// Resets the state to that before the edit started
+    void cancel() { _state = Cancelled; }
+
+    /// Explicitly commits the current edit. If the edit is done by a widget
+    /// after whose use `ImGui::IsItemDeactivatedAfterEdit()` returns `true`,
+    /// this does not need to be called
+    void commit() { _state = Committed; }
+
+    ///
+    State state() const { return _state; }
 
 private:
-    bool _cancelled = false;
+    State _state = None;
 };
 
 /// ImGui wrapper that will commit the modification in \p uiFunction to \p
@@ -98,8 +116,8 @@ void editEntity(TransactionManager& transactionManager,
 /// transactionManager
 void editComponent(TransactionManager& transactionManager,
                    bloom::EntityHandle entity,
-                   EditEntityComponent::Variant const& component,
-                   utl::function_view<void(CancelToken&)> uiFunction);
+                   EditEntityComponent::ConstPtrVariant component,
+                   utl::function_view<void(TAToken&)> uiFunction);
 
 } // namespace poppy
 

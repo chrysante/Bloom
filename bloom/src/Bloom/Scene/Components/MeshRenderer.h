@@ -11,6 +11,18 @@ namespace bloom {
 class AssetManager;
 
 struct BLOOM_API MeshRendererComponent {
+    struct WeakType {
+        using StrongType = MeshRendererComponent;
+
+        AssetHandle materialInstance;
+        AssetHandle mesh;
+    };
+
+    MeshRendererComponent() = default;
+    MeshRendererComponent(WeakType const& weak);
+
+    operator WeakType() const;
+
     Reference<MaterialInstance> materialInstance;
     Reference<StaticMesh> mesh;
 

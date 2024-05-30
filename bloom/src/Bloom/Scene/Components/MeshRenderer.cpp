@@ -4,6 +4,20 @@
 #include "Bloom/Asset/Serialization.h"
 
 using namespace bloom;
+using enum AssetRepresentation;
+
+MeshRendererComponent::MeshRendererComponent(WeakType const& weak):
+    materialInstance(
+        getAsset<MaterialInstance>(weak.materialInstance, GPU | CPU)),
+    mesh(getAsset<StaticMesh>(weak.mesh, GPU | CPU)) {}
+
+static AssetHandle getHandle(Asset const* asset) {
+    return asset ? asset->handle() : AssetHandle();
+}
+
+MeshRendererComponent::operator WeakType() const {
+    return { getHandle(materialInstance.get()), getHandle(mesh.get()) };
+}
 
 YAML::Node MeshRendererComponent::serialize() const {
     YAML::Node node;

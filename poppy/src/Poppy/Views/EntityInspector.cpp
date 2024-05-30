@@ -56,11 +56,11 @@ private:
 
     void inspectLight();
 
-    void inspectLightCommon(auto& light, LightType type);
-    void inspectLightComponent(PointLight&);
-    void inspectLightComponent(SpotLight&);
-    void inspectLightComponent(DirectionalLight&);
-    void inspectLightComponent(SkyLight&);
+    void inspectLightCommon(ComponentType auto& light, LightType type);
+    void inspectLightComponent(PointLightComponent&);
+    void inspectLightComponent(SpotLightComponent&);
+    void inspectLightComponent(DirectionalLightComponent&);
+    void inspectLightComponent(SkyLightComponent&);
 
     void inspectPhysics();
     void inspectColliderComponent(SphereColliderComponent&);
@@ -81,8 +81,8 @@ private:
     void endSubSection();
 
     void editComponent(DataComponent auto const& component,
-                       utl::function_view<void(CancelToken&)> uiFunction) {
-        poppy::editComponent(editor().transactionManager(), entity, component,
+                       utl::function_view<void(TAToken&)> uiFunction) {
+        poppy::editComponent(editor().transactionManager(), entity, &component,
                              uiFunction);
     }
 
@@ -163,7 +163,7 @@ void EntityInspector::inspectTag() {
             ImGui::SetKeyboardFocusHere();
             startEditingName = false;
         }
-        editComponent(tag, [&](CancelToken& token) {
+        editComponent(tag, [&](TAToken& token) {
             if (ImGui::InputText("##name-input", buffer.data(), buffer.size()))
             {
                 tag.name = buffer.data();
@@ -256,12 +256,12 @@ void EntityInspector::inspectTransform() {
     float width = ImGui::GetContentRegionAvail().x - lockButtonSize.x -
                   style.ItemSpacing.x;
     ImGui::SetNextItemWidth(width);
-    editComponent(transform, [&](CancelToken&) {
+    editComponent(transform, [&](TAToken&) {
         dragFloat3Labelled("###position", transform.position.data());
     });
     beginProperty("Orientation");
     ImGui::SetNextItemWidth(width);
-    editComponent(transform, [&](CancelToken&) {
+    editComponent(transform, [&](TAToken&) {
         float3 euler = vml::to_euler(transform.orientation) * 180;
         if (dragFloat3Labelled("###orientation", euler.data(),
                                { .format = "%.3f°" }))
@@ -271,7 +271,7 @@ void EntityInspector::inspectTransform() {
     });
     beginProperty("Scale");
     ImGui::SetNextItemWidth(width);
-    editComponent(transform, [&](CancelToken&) {
+    editComponent(transform, [&](TAToken&) {
         dragFloat3Labelled("###scale", transform.scale.data(),
                            { .speed = 0.02,
                              .linkFields = transformScaleLinked });
@@ -290,11 +290,20 @@ void EntityInspector::inspectMesh() {
     using enum AssetRepresentation;
     beginProperty("Mesh");
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    assetButton("###Mesh", meshRenderer.mesh, { .repr = GPU });
+    editComponent(meshRenderer, [&](TAToken& token) {
+        if (assetButton("###Mesh", meshRenderer.mesh, { .repr = GPU })) {
+            token.commit();
+        }
+    });
     beginProperty("Material");
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    assetButton("###MaterialInstance", meshRenderer.materialInstance,
-                { .repr = GPU });
+    editComponent(meshRenderer, [&](TAToken& token) {
+        if (assetButton("###MaterialInstance", meshRenderer.materialInstance,
+                        { .repr = GPU }))
+        {
+            token.commit();
+        }
+    });
     endSection();
 }
 
@@ -354,132 +363,6 @@ static std::optional<E> inspectTypeGeneric(char const* ID, E type,
     return inspectTypeGeneric(ID, type, magic_enum::enum_values<E>(), exchange);
 }
 
-void EntityInspector::inspectLight() {
-    auto type = getLightType(entity).value();
-    auto deleter = [&] {
-        dispatchComponentType(type, [&]<typename L>(utl::tag<L>) {
-            entity.remove<L>();
-        });
-    };
-    auto font = FontDesc::UIDefault().setWeight(FontWeight::Semibold);
-    if (!beginGenericSection("Light Component", font, deleter)) {
-        return;
-    }
-    using namespace propertiesView;
-    beginProperty("Type");
-    fullWidth();
-    auto newType = inspectTypeGeneric("###Type", type, [&](LightType newType) {
-        auto color = dispatchComponentType(type, [&]<typename C>(utl::tag<C>) {
-            return entity.get<C>().color;
-        });
-        dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
-            auto& c = entity.add(C{ C::Light::Default() });
-            c.color = color;
-        });
-        removeComponentType(type, entity);
-    });
-    type = newType.value_or(type);
-    dispatchComponentType(type, [&]<typename L>(utl::tag<L>) {
-        inspectLightComponent(entity.get<L>());
-    });
-    endSection();
-}
-
-void EntityInspector::inspectLightCommon(auto& light, LightType type) {
-    using namespace propertiesView;
-    beginProperty("Color");
-    ImGui::ColorEdit3("##light-color", light.color.data(),
-                      ImGuiColorEditFlags_NoInputs |
-                          ImGuiColorEditFlags_NoLabel |
-                          ImGuiColorEditFlags_Float |
-                          ImGuiColorEditFlags_NoAlpha |
-                          ImGuiColorEditFlags_PickerHueWheel);
-    beginProperty("Intensity");
-    float speed = type == LightType::DirectionalLight ? 0.01 :
-                  type == LightType::SkyLight         ? 0.0001 :
-                                                        100;
-    fullWidth();
-    ImGui::DragFloat("intensity", &light.intensity, speed, 0, FLT_MAX, "%f");
-}
-
-void EntityInspector::inspectLightComponent(PointLight& light) {
-    using namespace propertiesView;
-    inspectLightCommon(light, LightType::PointLight);
-    beginProperty("Radius");
-    fullWidth();
-    ImGui::SliderFloat("radius", &light.radius, 0, 100);
-    beginProperty("Falloff");
-    fullWidth();
-    ImGui::DragFloat("falloff", &light.falloff,
-                     /* speed: */ 0.01, /* min: */ 0.01, /* max: */ FLT_MAX);
-}
-
-void EntityInspector::inspectLightComponent(SpotLight& light) {
-    using namespace propertiesView;
-    inspectLightCommon(light, LightType::SpotLight);
-    beginProperty("Radius");
-    fullWidth();
-    ImGui::SliderFloat("radius", &light.radius, 0, 100);
-    float inner = light.innerCutoff;
-    float outer = light.outerCutoff;
-    float angle = (inner + outer) / 2;
-    float falloff = (outer - inner) / 2;
-    beginProperty("Angle");
-    fullWidth();
-    ImGui::SliderFloat("angle", &angle, 0, 1);
-    beginProperty("Falloff");
-    fullWidth();
-    ImGui::SliderFloat("falloff", &falloff, 0, 0.2);
-    light.innerCutoff = angle - falloff;
-    light.outerCutoff = angle + falloff;
-}
-
-void EntityInspector::inspectLightComponent(DirectionalLight& light) {
-    using namespace propertiesView;
-    inspectLightCommon(light, LightType::DirectionalLight);
-    beginProperty("Source Size");
-    fullWidth();
-    ImGui::DragFloat("source-size", &light.sourceSize, 0.01, 0, FLT_MAX);
-    beginProperty("Casts Shadow");
-    ImGui::Checkbox("##-casts-shadow", &light.castsShadows);
-    if (!light.castsShadows) {
-        return;
-    }
-    beginProperty("Shadow Distance");
-    fullWidth();
-    ImGui::DragFloat("shadow-distance", &light.shadowDistance, 1, 0, FLT_MAX);
-    beginProperty("Shadow Z Distance");
-    fullWidth();
-    ImGui::DragFloat("shadow-distance-z", &light.shadowDistanceZ, 1, 0,
-                     FLT_MAX);
-    beginProperty("Number Of Cascades");
-    int nc = light.numCascades;
-    fullWidth();
-    ImGui::SliderInt("num-cascades", &nc, 1, 10);
-    light.numCascades = nc;
-    beginProperty("Distribution Exponent");
-    fullWidth();
-    ImGui::SliderFloat("cascade-distribution-exponent",
-                       &light.cascadeDistributionExponent, 1, 4);
-    beginProperty("Transition");
-    fullWidth();
-    ImGui::SliderFloat("cascade-transition-fraction",
-                       &light.cascadeTransitionFraction, 0, 1);
-    beginProperty("Fadeout");
-    fullWidth();
-    ImGui::SliderFloat("shadow-distance-fadeout-fraction",
-                       &light.shadowDistanceFadeoutFraction, 0, 1);
-}
-
-void EntityInspector::inspectLightComponent(SkyLight& light) {
-    inspectLightCommon(light, LightType::SkyLight);
-    using namespace propertiesView;
-    beginProperty("IBL Texture");
-    fullWidth();
-    using enum AssetRepresentation;
-    assetButton("###IBLTexture", light.cubemap, { .repr = GPU | CPU });
-}
-
 #define IF_WELL_FORMED(...)                                                    \
     if constexpr (requires __VA_ARGS__) __VA_ARGS__
 
@@ -509,6 +392,170 @@ static Transaction* makeComponentExchange(EntityHandle entity,
     });
 }
 
+void EntityInspector::inspectLight() {
+    using namespace propertiesView;
+    auto type = getLightType2(entity).value();
+    auto deleter = [&] { entity.remove(type); };
+    auto font = FontDesc::UIDefault().setWeight(FontWeight::Semibold);
+    if (!beginGenericSection("Light Component", font, deleter)) {
+        return;
+    }
+    beginProperty("Type");
+    fullWidth();
+    type = inspectTypeGeneric("###Type", type, [&](ComponentKind newType) {
+        auto color = visitComponentType(type, [&]<typename C>(utl::tag<C>) {
+            if constexpr (requires { entity.get<C>().color; }) {
+                return entity.get<C>().color;
+            }
+            else {
+                return packed_float3{};
+            }
+        });
+        makeComponentExchange(entity, type, newType);
+#if 0
+        dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
+            auto& c = entity.add(C{ C::Light::Default() });
+            c.color = color;
+        });
+        removeComponentType(type, entity);
+#endif
+    }).value_or(type);
+    visitComponentType(type, [&]<typename L>(utl::tag<L>) {
+        IF_WELL_FORMED({ inspectLightComponent(entity.get<L>()); });
+    });
+    endSection();
+}
+
+void EntityInspector::inspectLightCommon(ComponentType auto& light,
+                                         LightType type) {
+    using namespace propertiesView;
+    beginProperty("Color");
+    editComponent(light, [&](TAToken&) {
+        auto flags = ImGuiColorEditFlags_NoInputs |
+                     ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_Float |
+                     ImGuiColorEditFlags_NoAlpha |
+                     ImGuiColorEditFlags_PickerHueWheel;
+        ImGui::ColorEdit3("###Color", light.color.data(), flags);
+    });
+    beginProperty("Intensity");
+    float speed = type == LightType::DirectionalLight ? 0.01 :
+                  type == LightType::SkyLight         ? 0.0001 :
+                                                        100;
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::DragFloat("###Intensity", &light.intensity, speed, 0, FLT_MAX,
+                         "%f");
+    });
+}
+
+void EntityInspector::inspectLightComponent(PointLightComponent& light) {
+    using namespace propertiesView;
+    inspectLightCommon(light, LightType::PointLight);
+    beginProperty("Radius");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::SliderFloat("###Radius", &light.radius, 0, 100);
+    });
+    beginProperty("Falloff");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::DragFloat("###Falloff", &light.falloff,
+                         /* speed: */ 0.01, /* min: */ 0.01,
+                         /* max: */ FLT_MAX);
+    });
+}
+
+void EntityInspector::inspectLightComponent(SpotLightComponent& light) {
+    using namespace propertiesView;
+    inspectLightCommon(light, LightType::SpotLight);
+    beginProperty("Radius");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::SliderFloat("###Radius", &light.radius, 0, 100);
+    });
+    float inner = light.innerCutoff;
+    float outer = light.outerCutoff;
+    float angle = (inner + outer) / 2;
+    float falloff = (outer - inner) / 2;
+    beginProperty("Angle");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::SliderFloat("###Angle", &angle, 0, 1);
+    });
+    beginProperty("Falloff");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::SliderFloat("###Falloff", &falloff, 0, 0.2);
+    });
+    light.innerCutoff = angle - falloff;
+    light.outerCutoff = angle + falloff;
+}
+
+void EntityInspector::inspectLightComponent(DirectionalLightComponent& light) {
+    using namespace propertiesView;
+    inspectLightCommon(light, LightType::DirectionalLight);
+    beginProperty("Source Size");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::DragFloat("###SourceSize", &light.sourceSize, 0.01, 0, FLT_MAX);
+    });
+    beginProperty("Casts Shadow");
+    editComponent(light, [&](TAToken&) {
+        ImGui::Checkbox("###CastsShadow", &light.castsShadows);
+    });
+    if (!light.castsShadows) {
+        return;
+    }
+    beginProperty("Shadow Distance");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::DragFloat("###ShadowDistance", &light.shadowDistance, 1, 0,
+                         FLT_MAX);
+    });
+    beginProperty("Shadow Z Distance");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::DragFloat("###ShadowDistanceZ", &light.shadowDistanceZ, 1, 0,
+                         FLT_MAX);
+    });
+    beginProperty("Number Of Cascades");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        int nc = light.numCascades;
+        ImGui::SliderInt("###NumCascades", &nc, 1, 10);
+        light.numCascades = nc;
+    });
+    beginProperty("Distribution Exponent");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::SliderFloat("###CascadeDistributionExponent",
+                           &light.cascadeDistributionExponent, 1, 4);
+    });
+    beginProperty("Transition");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::SliderFloat("###CascadeTransitionFraction",
+                           &light.cascadeTransitionFraction, 0, 1);
+    });
+    beginProperty("Fadeout");
+    fullWidth();
+    editComponent(light, [&](TAToken&) {
+        ImGui::SliderFloat("###ShadowDistanceFadeoutFraction",
+                           &light.shadowDistanceFadeoutFraction, 0, 1);
+    });
+}
+
+void EntityInspector::inspectLightComponent(SkyLightComponent& light) {
+    inspectLightCommon(light, LightType::SkyLight);
+    using namespace propertiesView;
+    beginProperty("IBL Texture");
+    fullWidth();
+    using enum AssetRepresentation;
+    editComponent(light, [&](TAToken&) {
+        assetButton("###IBLTexture", light.cubemap, { .repr = GPU | CPU });
+    });
+}
+
 void EntityInspector::inspectPhysics() {
     using namespace propertiesView;
     auto physicsType = getPhysicsType2(entity).value();
@@ -530,7 +577,6 @@ void EntityInspector::inspectPhysics() {
         auto* transaction = makeComponentExchange(entity, physicsType, newType);
         editor().transactionManager().commit(transaction);
     }).value_or(physicsType);
-    fullWidth();
     beginProperty("Collider");
     fullWidth();
     colliderType =
@@ -553,7 +599,7 @@ void EntityInspector::inspectColliderComponent(
     using namespace propertiesView;
     beginProperty("Radius");
     fullWidth();
-    editComponent(collider, [&](CancelToken&) {
+    editComponent(collider, [&](TAToken&) {
         ImGui::DragFloat("###Radius", &collider.radius);
     });
 }
@@ -562,7 +608,7 @@ void EntityInspector::inspectColliderComponent(BoxColliderComponent& collider) {
     using namespace propertiesView;
     beginProperty("Half Extend");
     fullWidth();
-    editComponent(collider, [&](CancelToken&) {
+    editComponent(collider, [&](TAToken&) {
         dragFloat3Labelled("###HalfExtend", collider.halfExtend.data(),
                            { .showLinkButton = true,
                              .labelStyle = DragFloat3Options::Slim });

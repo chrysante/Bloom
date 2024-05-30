@@ -111,6 +111,21 @@ concept DataComponent = ComponentType<T> && !std::is_empty_v<T>;
 template <typename T>
 struct IsDataComponent: std::bool_constant<DataComponent<T>> {};
 
+/// Metafunction that transforms components into their weak counterparts
+template <typename T>
+struct ToWeakComponent: std::type_identity<T> {};
+template <typename T>
+    requires requires { typename T::WeakType; }
+struct ToWeakComponent<T>: std::type_identity<typename T::WeakType> {};
+
+/// Metafunction that transforms weak components into their strong (default)
+/// counterparts
+template <typename T>
+struct ToStrongComponent: std::type_identity<T> {};
+template <typename T>
+    requires requires { typename T::StrongType; }
+struct ToStrongComponent<T>: std::type_identity<typename T::StrongType> {};
+
 } // namespace bloom
 
 #endif // BLOOM_SCENE_COMPONENTS_COMPONENTBASE_H

@@ -177,17 +177,38 @@ inline constexpr ToAddressFn<T> ToAddress{};
 
 /// # Metaprogramming
 
-template <typename OldContainer, template <class...> class NewContainer>
+template <typename OldContainer, template <class...> class NewContainer,
+          template <class> class Transform>
 struct CopyTypeParametersImpl;
 
 template <typename... Args, template <class...> class OldContainer,
-          template <class...> class NewContainer>
-struct CopyTypeParametersImpl<OldContainer<Args...>, NewContainer>:
-    std::type_identity<NewContainer<Args...>> {};
+          template <class...> class NewContainer,
+          template <class> class Transform>
+struct CopyTypeParametersImpl<OldContainer<Args...>, NewContainer, Transform>:
+    std::type_identity<NewContainer<typename Transform<Args>::type...>> {};
 
-template <typename OldContainer, template <class...> class NewContainer>
+/// Applies the template typename parameter list of \p OldContainer to \p
+/// NewContainer after applying \p Transform to each argument
+template <typename OldContainer, template <class...> class NewContainer,
+          template <class> class Transform = std::type_identity>
 using CopyTypeParameters =
-    CopyTypeParametersImpl<OldContainer, NewContainer>::type;
+    CopyTypeParametersImpl<OldContainer, NewContainer, Transform>::type;
+
+template <typename T, template <class> class... F>
+struct ComposeImpl: std::type_identity<T> {};
+
+template <typename T, template <class> class First,
+          template <class> class... Rest>
+struct ComposeImpl<T, First, Rest...>:
+    First<typename ComposeImpl<T, Rest...>::type> {};
+
+/// Provides the member type template `impl` which denotes the template
+/// `F_N<F_N-1<...F_1<T>>>`
+template <template <class> class... F>
+struct Compose {
+    template <typename T>
+    using impl = ComposeImpl<T, F...>;
+};
 
 } // namespace bloom
 

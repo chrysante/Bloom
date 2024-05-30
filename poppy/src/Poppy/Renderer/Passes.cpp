@@ -323,8 +323,8 @@ static void addGrid(Renderer2DScene& scene) {
             return std::pair{ tmp, tmp };
         }();
         float width = j % 2 == 0 ? lineWidth : lineWidthAlt;
-        scene.addLine({ i, -1000, 0 }, { i, 1000, 0 }, xCol, width);
-        scene.addLine({ -1000, i, 0 }, { 1000, i, 0 }, yCol, width);
+        scene.addLine({ i, -1000, 0 }, { i, 1000, 0 }, yCol, width);
+        scene.addLine({ -1000, i, 0 }, { 1000, i, 0 }, xCol, width);
     }
 }
 

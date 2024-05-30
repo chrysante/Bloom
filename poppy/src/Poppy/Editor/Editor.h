@@ -90,6 +90,9 @@ private:
 /// Hack to make ImGui happy, described in the source file
 void postEmptySystemEvent();
 
+///
+void playBeepSound();
+
 } // namespace poppy
 
 #endif // POPPY_EDITOR_EDITOR_H

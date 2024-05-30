@@ -307,7 +307,7 @@ void Viewport::drawScenes() {
     markObjectRenderHazard(finalColor);
     ImGui::Image(finalColor.nativeHandle(), size);
     if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows) &&
-        ImGui::IsKeyDown(ImGuiKey_ModAlt))
+        ImGui::IsKeyDown(ImGuiMod_Alt))
     {
         displayColorPicker(*commandBuffer, finalColor, mouseCoord);
     }
@@ -404,7 +404,7 @@ void Viewport::displayGizmo() {
     }
     if (gizmo.isUsing()) {
         /// Make a copy of the selected entities if shift is held
-        if (ImGui::IsKeyDown(ImGuiKey_ModShift) &&
+        if (ImGui::IsKeyDown(ImGuiMod_Shift) &&
             viewData.originalEntitiesBackup.empty())
         {
             viewData.originalEntitiesBackup = entities;
@@ -418,7 +418,7 @@ void Viewport::displayGizmo() {
             }
         }
         /// Undo the copy of the selected entities if shift is released
-        if (ImGui::IsKeyReleased(ImGuiKey_ModShift) &&
+        if (ImGui::IsKeyReleased(ImGuiMod_Shift) &&
             !viewData.originalEntitiesBackup.empty())
         {
             utl::hashmap<EntityHandle, EntityHandle> copyToOriginal;

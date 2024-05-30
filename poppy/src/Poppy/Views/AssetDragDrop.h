@@ -66,6 +66,7 @@ template <std::derived_from<bloom::Asset> AssetType>
 bool receiveAsset(
     bloom::Reference<AssetType>& existing, std::any const& incoming,
     bloom::AssetRepresentation repr = bloom::AssetRepresentation::None) {
+    (void)repr; // TODO: Use "make asset available" here
     auto* inAsset = std::any_cast<bloom::Reference<AssetType>>(&incoming);
     if (!inAsset || inAsset->get() == existing.get()) {
         return false;

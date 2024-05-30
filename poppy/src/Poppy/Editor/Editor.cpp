@@ -130,8 +130,6 @@ struct ToolbarBuildTimeStamp: ToolbarItem {
 
 } // namespace
 
-static void beep() { printf("\a\n"); }
-
 std::array<Command const*, 2> Editor::Impl::addSimCommands(
     CommandPalette& cmd) {
     // clang-format off
@@ -152,13 +150,13 @@ std::array<Command const*, 2> Editor::Impl::addSimCommands(
     cmd.add("Undo", { .key = Key::Z, .modFlags = ModFlags::Control }, [this] {
         if (!transactionManager.undo()) {
             Logger::Warn("No transaction to undo");
-            beep();
+            playBeepSound();
         }
     });
     cmd.add("Redo", { .key = Key::Z, .modFlags = ModFlags::Control | ModFlags::Shift }, [this] {
         if (!transactionManager.redo()) {
             Logger::Warn("No transaction to redo");
-            beep();
+            playBeepSound();
         }
     });
     // clang-format on

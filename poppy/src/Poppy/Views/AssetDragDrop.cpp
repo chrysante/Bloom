@@ -259,8 +259,8 @@ static bool thumbnailButtonImpl(Asset const* asset, AssetType type,
     }
 }
 
-static void TNButtonDisplayLabelAndOpenAsset(Asset* asset, bool active,
-                                             bool hovered, float2 buttonPos,
+static void TNButtonDisplayLabelAndOpenAsset(Asset* asset, bool hovered,
+                                             float2 buttonPos,
                                              float2 buttonSize) {
     auto& g = *GImGui;
     auto& style = g.Style;
@@ -338,8 +338,7 @@ static ButtonResult displayButtonThumbnail(Asset* asset, AssetType type,
     bool active = ImGui::IsItemActive() ||
                   ImGui::IsPopupOpen(popupIDs.assetList, ImGuiPopupFlags_None);
     if (hovered || active) {
-        TNButtonDisplayLabelAndOpenAsset(asset, active, hovered, pos,
-                                         buttonSize);
+        TNButtonDisplayLabelAndOpenAsset(asset, hovered, pos, buttonSize);
     }
     return result;
 }

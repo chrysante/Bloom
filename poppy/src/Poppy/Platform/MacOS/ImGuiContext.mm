@@ -127,3 +127,5 @@ void poppy::postEmptySystemEvent() {
                                            data2:0];
     [NSApp postEvent:event atStart:YES];
 }
+
+void poppy::playBeepSound() { NSBeep(); }

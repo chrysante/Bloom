@@ -119,7 +119,7 @@ static void displayTexture(TextureView texture, float2 availSize,
     ImGui::ItemAdd(BB, ID);
     ImGui::ItemSize(BB.GetSize());
     ImGui::ItemHoverable(BB, ID, ImGuiItemFlags_NoNav);
-    if (ImGui::IsKeyDown(ImGuiKey_ModAlt) && ImGui::IsItemHovered()) {
+    if (ImGui::IsKeyDown(ImGuiMod_Alt) && ImGui::IsItemHovered()) {
         float2 coord = (float2(ImGui::GetMousePos()) - displayPos) /
                        displaySize * texture.size().xy;
         displayTextureColorTooltip(texture, coord);

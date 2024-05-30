@@ -291,6 +291,7 @@ void Toolbar::displayBlock(Block const& block) {
 
 void Toolbar::cook() {
     activeItems = allItems | transform(ToAddress<>) | filter([](auto* item) {
+        (void)item;
         return /* !item->isHidden() */ true;
     }) | ranges::to<std::vector>;
     blocks.clear();

@@ -311,7 +311,7 @@ public:
 
 private:
     virtual void display(ToolbarStyle const&) {}
-    virtual float calcWidth(float height) const { return _customWidth; }
+    virtual float calcWidth(float) const { return _customWidth; }
 
     std::function<void(vml::float2 size)> _content;
     float _customWidth = 0;

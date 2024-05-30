@@ -89,7 +89,6 @@ private:
     Camera camera;
     BloomSettings bloomSettings;
     PostProcessSettings postProcessSettings;
-    size_t sceneIndex = 0;
 };
 
 } // namespace bloom

@@ -502,7 +502,7 @@ bool ImGui_ImplOSX_Init(poppy::Editor& editor)
     [view addSubview:bd->KeyEventResponder];
     ImGui_ImplOSX_AddTrackingArea(view);
 
-    io.SetPlatformImeDataFn = [](ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
+    io.SetPlatformImeDataFn = [](ImGuiViewport*, ImGuiPlatformImeData* data) -> void
     {
         ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
         if (data->WantVisible)
@@ -560,7 +560,8 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
     }
     else
     {
-        NSCursor* desired = bd->MouseCursors[imgui_cursor] ?: bd->MouseCursors[ImGuiMouseCursor_Arrow];
+        auto* defaultCursor = bd->MouseCursors[imgui_cursor];
+        NSCursor* desired = defaultCursor ? defaultCursor : bd->MouseCursors[ImGuiMouseCursor_Arrow];
         // -[NSCursor set] generates measureable overhead if called unconditionally.
         if (desired != NSCursor.currentCursor)
         {
@@ -670,27 +671,7 @@ void ImGui_ImplOSX_NewFrame(poppy::Editor& editor)
     ImGui_ImplOSX_UpdateImePosWithView(view);
 }
 
-// Must only be called for a mouse event, otherwise an exception occurs
-// (Note that NSEventTypeScrollWheel is considered "other input". Oddly enough an exception does not occur with it, but the value will sometimes be wrong!)
-static ImGuiMouseSource GetMouseSource(NSEvent* event)
-{
-    switch (event.subtype)
-    {
-        case NSEventSubtypeTabletPoint:
-            return ImGuiMouseSource_Pen;
-        // macOS considers input from relative touch devices (like the trackpad or Apple Magic Mouse) to be touch input.
-        // This doesn't really make sense for Dear ImGui, which expects absolute touch devices only.
-        // There does not seem to be a simple way to disambiguate things here so we consider NSEventSubtypeTouch events to always come from mice.
-        // See https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/HandlingTouchEvents/HandlingTouchEvents.html#//apple_ref/doc/uid/10000060i-CH13-SW24
-        //case NSEventSubtypeTouch:
-        //    return ImGuiMouseSource_TouchScreen;
-        case NSEventSubtypeMouseEvent:
-        default:
-            return ImGuiMouseSource_Mouse;
-    }
-}
-
-static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
+static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView*)
 {
     ImGuiIO& io = ImGui::GetIO();
     /// We don't need this because we submit input events manually to ImGui and

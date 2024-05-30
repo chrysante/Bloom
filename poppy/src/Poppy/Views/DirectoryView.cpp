@@ -1023,15 +1023,14 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
     auto& style = g.Style;
     viewData.entryBBs[entry] = itemBB;
     /// Button behaviour
-    ItemButtonState buttonState = [&] {
+    [&] {
         ImRect BB = ImRect(itemBB.lower_bound(), itemBB.upper_bound());
         auto displayName = entry->displayName();
         ImGuiID ID = window->GetID(displayName.data(),
                                    displayName.data() + displayName.size());
-        ItemButtonState buttonState{};
         ImGui::ItemSize(itemBB.size(), style.FramePadding.y);
         if (!ImGui::ItemAdd(BB, ID)) {
-            return buttonState;
+            return;
         }
         auto buttonFlags = ImGuiButtonFlags_PressedOnDoubleClick |
                            ImGuiButtonFlags_PressedOnDragDropHold |
@@ -1039,14 +1038,15 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
                            ImGuiButtonFlags_PressedOnRelease |
                            ImGuiButtonFlags_MouseButtonLeft |
                            ImGuiButtonFlags_MouseButtonRight;
-        bool buttonActive = ImGui::ButtonBehavior(BB, ID, &buttonState.hovered,
-                                                  &buttonState.held,
-                                                  buttonFlags);
+        bool hovered = false;
+        bool held = false;
+        bool buttonActive =
+            ImGui::ButtonBehavior(BB, ID, &hovered, &held, buttonFlags);
         if (!entry->isDirectory() && g.DragDropActive) {
-            buttonState.hovered = false;
+            hovered = false;
         }
         if (!buttonActive) {
-            return buttonState;
+            return;
         }
         bool wantSelectEntry = false;
         SelectionMode selectionMode = getSelectionMode();
@@ -1064,20 +1064,19 @@ void Impl::displayEntry(ScannedDirectory& directory, DirectoryEntry* entry,
                 selectionMode = SelectionMode::Add;
             }
         }
+        bool selected = false;
         if (wantSelectEntry) {
-            buttonState.selected =
-                directory.amendSelection(entry, selectionMode);
+            selected = directory.amendSelection(entry, selectionMode);
             viewData.haveSelectedItem = true;
         }
-        buttonState.activated =
-            ImGui::GetMouseClickedCount(ImGuiMouseButton_Left) == 2;
-        if (buttonState.activated) {
+        bool activated = ImGui::GetMouseClickedCount(ImGuiMouseButton_Left) ==
+                         2;
+        if (activated) {
             activateEntry(*entry);
         }
-        buttonState.activatedByDragDrop =
-            !g.IO.MouseReleased[ImGuiMouseButton_Left] &&
-            !buttonState.selected && !buttonState.activated;
-        return buttonState;
+        bool activatedByDragDrop = !g.IO.MouseReleased[ImGuiMouseButton_Left] &&
+                                   !selected && !activated;
+        (void)activatedByDragDrop; // TODO: Use this variable
     }();
     if (ImGui::IsItemHovered()) {
         viewData.hoveredEntry = entry;

@@ -5,10 +5,10 @@
 using namespace poppy;
 
 SelectionMode poppy::getSelectionMode() {
-    if (ImGui::IsKeyDown(ImGuiKey_ModSuper)) {
+    if (ImGui::IsKeyDown(ImGuiMod_Super)) {
         return SelectionMode::Toggle;
     }
-    if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
+    if (ImGui::IsKeyDown(ImGuiMod_Shift)) {
         return SelectionMode::Add;
     }
     return SelectionMode::Replace;

@@ -38,8 +38,8 @@ struct IBLGenTool: View {
 
     std::pair<Reference<Texture2D>, TextureHandle> getTexture(AssetHandle asset,
                                                               int side);
-    void imgDragDropButton(Reference<Texture2D>& tex, TextureHandle& view,
-                           int side);
+    void imgDragDropButton(char const* ID, Reference<Texture2D>& tex,
+                           TextureHandle& view, int side);
     void extendLifetime(TextureHandle tex) {
         dispatch(DispatchToken::Now, ExtendRenderLifetime{ std::move(tex) });
     }
@@ -88,9 +88,9 @@ std::pair<Reference<Texture2D>, TextureHandle> IBLGenTool::getTexture(
     return { tex, makeView(tex.get(), side) };
 }
 
-void IBLGenTool::imgDragDropButton(Reference<Texture2D>& tex,
+void IBLGenTool::imgDragDropButton(char const* ID, Reference<Texture2D>& tex,
                                    TextureHandle& view, int side) {
-    ImGui::ImageButton(view.nativeHandle(), { 400, 400 });
+    ImGui::ImageButton(ID, view.nativeHandle(), { 400, 400 });
     if (auto asset = acceptAssetDragDrop(AssetType::Texture2D)) {
         extendLifetime(view);
         std::tie(tex, view) = getTexture(*asset, side);
@@ -143,7 +143,7 @@ void IBLGenTool::display() {
         extendLifetime(sourceView);
         sourceView = makeView(source.get(), sourceside, sourceMipLevel);
     }
-    imgDragDropButton(source, sourceView, sourceside);
+    imgDragDropButton("###Source", source, sourceView, sourceside);
     ImGui::SeparatorText("Dest");
     ImGui::Checkbox("Apply Windowing", &applyWindowing);
     if (ImGui::Button("Generate Irradiance Coefficients")) {
@@ -163,7 +163,7 @@ void IBLGenTool::display() {
         extendLifetime(destView);
         destView = makeView(dest.get(), destside, destMipLevel);
     }
-    imgDragDropButton(dest, destView, destside);
+    imgDragDropButton("###Dest", dest, destView, destside);
     ImGui::Checkbox("Show SH Coefficients", &showSHCoeffs);
     if (showSHCoeffs && dest) {
         for (auto value: dest->irradianceSHCoefficients) {

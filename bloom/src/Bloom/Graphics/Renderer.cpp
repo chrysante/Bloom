@@ -122,7 +122,6 @@ void Renderer::begin(FrameParameters const& frameParams, Camera const& camera,
         lights->clear();
     }
     lightSpaceTransforms.clear();
-    sceneIndex = 0;
 }
 
 template <typename LightComponent>
@@ -156,8 +155,7 @@ static void submitLights(LightsResource& lights, Scene const& scene,
     submitLights<Light>(lights, scene, [](auto&...) {}, specularMap);
 }
 
-static void submitGeometry(size_t sceneIndex, Scene const& scene,
-                           GeometryResource& geometry) {
+static void submitGeometry(Scene const& scene, GeometryResource& geometry) {
     auto view = scene.view<TransformMatrixComponent const,
                            MeshRendererComponent const>();
     view.each([&](EntityID ID, TransformMatrixComponent const& transform,
@@ -192,7 +190,7 @@ static float4x4 makeDirectionalLightSpaceTransform(Camera const& camera,
 
 void Renderer::submit(Scene const& scene) {
     if (geometry) {
-        submitGeometry(sceneIndex++, scene, *geometry);
+        submitGeometry(scene, *geometry);
     }
     if (lights) {
         submitLights<PointLightComponent>(*lights, scene,

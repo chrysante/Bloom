@@ -26,7 +26,7 @@ void ViewportCameraController::update(Timestep time, Input const& input) {
     data.angleUD = std::clamp(data.angleUD + input.mouseOffset().y / 180.f,
                               0.01f, constants<float>::pi - 0.01f);
     float offset = data.speed * time.delta;
-    if (ImGui::IsKeyDown(ImGuiKey_ModShift)) {
+    if (ImGui::IsKeyDown(ImGuiMod_Shift)) {
         offset *= 3;
     }
     if (input.keyDown(Key::A)) {

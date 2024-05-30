@@ -21,6 +21,8 @@ using namespace bloom;
 using namespace matc;
 using namespace ranges::views;
 
+[[noreturn]] static void unreacheable() { __builtin_unreachable(); }
+
 static MaterialDataType translate(TextureType const* type) {
     switch (type->subtype()) {
     case TextureSubType::Texture2D:
@@ -216,7 +218,7 @@ static std::pair<uint32_t, uint32_t> getSizeAndAlign(MaterialDataType type) {
     case Float4:
         return { 16, 16 };
     default:
-        assert(false);
+        unreacheable();
     }
 }
 

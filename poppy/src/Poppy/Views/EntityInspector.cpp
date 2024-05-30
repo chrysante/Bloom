@@ -691,14 +691,12 @@ template <typename T>
 bool EntityInspector::beginComponentSection(std::string_view name) {
     if constexpr (std::is_same_v<T, void>) {
         return beginGenericSection(name,
-                                   FontDesc::UIDefault().setWeight(
-                                       FontWeight::Semibold),
+                                   FontDesc::UIDefault(FontWeight::Semibold),
                                    nullptr);
     }
     else {
         return beginGenericSection(name,
-                                   FontDesc::UIDefault().setWeight(
-                                       FontWeight::Semibold),
+                                   FontDesc::UIDefault(FontWeight::Semibold),
                                    [&] { entity.remove<T>(); });
     }
 }

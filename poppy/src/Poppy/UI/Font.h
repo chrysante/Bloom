@@ -70,6 +70,11 @@ struct FontDesc {
     /// \Returns the font descriptor used for most UI elements
     static FontDesc UIDefault();
 
+    /// \overload
+    static FontDesc UIDefault(FontParameterType auto... args) {
+        return UIDefault().apply(args...);
+    }
+
     ///
     static FontDesc MonoDefault();
 
@@ -86,6 +91,16 @@ struct FontDesc {
 
     FontDesc& setStyle(FontStyle style) {
         this->style = style;
+        return *this;
+    }
+
+    FontDesc& apply(FontParameterType auto... args) {
+        utl::overload apply = {
+            [&](FontSize size) { setSize(size); },
+            [&](FontWeight weight) { setWeight(weight); },
+            [&](FontStyle style) { setStyle(style); },
+        };
+        (apply(args), ...);
         return *this;
     }
 
@@ -146,8 +161,10 @@ public:
     /// returned by the next call to `get` as soon as the font is available
     static ImFont* get(FontDesc const& font);
 
-    ///
-    static ImFont* get(FontParameterType auto... params);
+    /// Convenience overload
+    static ImFont* get(FontParameterType auto... params) {
+        return get(FontDesc::UIDefault(params...));
+    }
 
     ///
     static IconData get(IconFontDesc const& font, std::string iconName);
@@ -182,17 +199,6 @@ private:
     bool haveSignaledReload = false;
     bool isReloading = false;
 };
-
-inline ImFont* FontManager::get(FontParameterType auto... params) {
-    auto desc = FontDesc::UIDefault();
-    utl::overload apply = {
-        [&](FontSize size) { desc.setSize(size); },
-        [&](FontWeight weight) { desc.setWeight(weight); },
-        [&](FontStyle style) { desc.setStyle(style); },
-    };
-    (apply(params), ...);
-    return get(desc);
-}
 
 struct ReloadedFontAtlasCommand {
     FontManager* fontManager;

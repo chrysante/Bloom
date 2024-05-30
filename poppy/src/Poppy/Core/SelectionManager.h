@@ -235,6 +235,23 @@ private:
     std::optional<SelectionMode> _candidateMode;
 };
 
+class TransactionManager;
+
+template <typename T, typename OptT, typename Hash, typename KeyEq>
+void editSelection(std::same_as<TransactionManager> auto& TAM,
+                   BasicSelectionManager<T, OptT, Hash, KeyEq>& selection,
+                   std::invocable auto fn) {
+    auto commit = [fn] {
+        std::invoke(fn);
+        return true;
+    };
+    auto undo = [backup = selection, &selection] {
+        selection = backup;
+        return true;
+    };
+    TAM.commit(std::move(commit), std::move(undo));
+}
+
 } // namespace poppy
 
 #endif // POPPY_CORE_SELECTIONMANAGER_H

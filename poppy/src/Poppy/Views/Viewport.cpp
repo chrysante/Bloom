@@ -94,12 +94,14 @@ struct Viewport: View, BasicSceneInspector {
     void display() override;
 
     void drawScenes();
+    void displayOverlays();
     void displayColorPicker(CommandBuffer& commandBuffer,
                             TextureView finalColor, float2 mouseCoord);
     utl::small_vector<EntityHandle> copyEntities(
         std::span<EntityHandle const> entities);
     void displayGizmo();
-    void handleEntitySelection();
+    EntityHandle readEntityIDMap();
+    void handleEntitySelection(EntityHandle clickedEntity);
 
     void displayToolbar() override {}
     void displayToolbarWithBackground();
@@ -182,26 +184,31 @@ void Viewport::init() {
     }
 }
 
+void Viewport::displayOverlays() {
+    auto WStoSS = [&](float3 WS) { return worldSpaceToScreenSpace(WS); };
+    EntityHandle clickedEntity =
+        displayLightOverlays(scenes(), selection(), WStoSS);
+    displayGizmo();
+    if (gizmo.isUsing() || gizmo.isHovered()) {
+        return;
+    }
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+        ImGui::IsWindowHovered())
+    {
+        if (!clickedEntity) {
+            clickedEntity = readEntityIDMap();
+        }
+        handleEntitySelection(clickedEntity);
+    }
+}
+
 void Viewport::display() {
     ImGui::BeginChild("Child");
     if (!scenes().empty()) {
         readInput();
         drawScenes();
         if (!gameView) {
-            auto WStoSS = [&](float3 WS) {
-                return worldSpaceToScreenSpace(WS);
-            };
-            auto clickedEntity =
-                displayLightOverlays(scenes(), selection(), WStoSS);
-            displayGizmo();
-            if (!gizmo.isUsing() && !gizmo.isHovered()) {
-                if (clickedEntity) {
-                    selection().amend(clickedEntity, getSelectionMode());
-                }
-                else {
-                    handleEntitySelection();
-                }
-            }
+            displayOverlays();
         }
     }
     else {
@@ -506,22 +513,29 @@ void Viewport::displayGizmo() {
     }
 }
 
-void Viewport::handleEntitySelection() {
-    if (!renderer || !ImGui::IsWindowHovered() ||
-        !ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-    {
-        return;
+EntityHandle Viewport::readEntityIDMap() {
+    if (!renderer) {
+        return {};
     }
     float2 mousePos = window().contentScaleFactor() *
                       screenSpaceToViewSpace(ImGui::GetMousePos());
-    EntityHandle entity =
-        renderer->readEntityIDMap(editor().commandQueue(), scenes(), mousePos);
+    return renderer->readEntityIDMap(editor().commandQueue(), scenes(),
+                                     mousePos);
+}
+
+void Viewport::handleEntitySelection(EntityHandle clickedEntity) {
+    BL_ASSERT(ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+              ImGui::IsWindowHovered());
     auto mode = getSelectionMode();
-    if (entity) {
-        selection().amend(entity, mode);
+    if (!clickedEntity) {
+        editSelection(editor().transactionManager(), selection(),
+                      [&selection = selection()] { selection.clear(); });
     }
-    else if (mode == SelectionMode::Replace) {
-        selection().clear();
+    else {
+        editSelection(editor().transactionManager(), selection(),
+                      [=, &selection = selection()] {
+            selection.amend(clickedEntity, mode);
+        });
     }
 }
 

@@ -1,29 +1,41 @@
 #include "Poppy/Editor/SceneTransactions.h"
 
 #include <imgui.h>
+#include <range/v3/algorithm.hpp>
+#include <range/v3/view.hpp>
 
+#include "Bloom/Core/Ranges.h"
 #include "Bloom/Scene/Scene.h"
 #include "Poppy/Editor/TransactionManager.h"
 
 using namespace poppy;
 using namespace bloom;
+using namespace ranges::views;
 
 using WeakHandle = EntityTransaction::WeakHandle;
 
-static bool apply(WeakHandle const& handle, auto fn) {
-    if (auto entity = handle.lock()) {
-        return std::invoke(fn, entity);
+static bool apply(std::span<WeakHandle const> handles, auto&& components,
+                  auto fn) {
+    bool success = true;
+    for (auto [handle, component]: zip(handles, components)) {
+        if (auto entity = handle.lock()) {
+            success &= std::invoke(fn, entity, component);
+        }
+        else {
+            success = false;
+        }
     }
-    return false;
+    return success;
 }
 
 bool CustomEntityTransaction::commit() const {
-    return apply(handle(),
-                 [&](EntityHandle entity) { return _commit(entity); });
+    return apply(handles(), single(0),
+                 [&](EntityHandle entity, auto) { return _commit(entity); });
 }
 
 bool CustomEntityTransaction::undo() const {
-    return apply(handle(), [&](EntityHandle entity) { return _undo(entity); });
+    return apply(handles(), single(0),
+                 [&](EntityHandle entity, auto) { return _undo(entity); });
 }
 
 static bool applyComponent(EntityHandle entity,
@@ -40,25 +52,31 @@ static bool applyComponent(EntityHandle entity,
     }, v);
 }
 
-EditEntityComponent::EditEntityComponent(WeakHandle handle,
-                                         WeakVariant oldValue,
-                                         WeakVariant newValue):
-    EntityTransaction(std::move(handle)),
-    _oldValue(std::move(oldValue)),
-    _newValue(std::move(newValue)) {
-    BL_ASSERT(_oldValue.index() == _newValue.index(),
+EditEntityComponent::EditEntityComponent(
+    utl::small_vector<WeakHandle> handles,
+    utl::small_vector<WeakVariant> oldValues,
+    utl::small_vector<WeakVariant> newValues):
+    EntityTransaction(std::move(handles)),
+    _oldValues(std::move(oldValues)),
+    _newValues(std::move(newValues)) {
+    BL_ASSERT(ranges::all_of(zip(_oldValues, _newValues),
+                             [](auto p) {
+        return p.first.index() == p.second.index();
+    }),
               "Components must be of same type");
 }
 
 bool EditEntityComponent::commit() const {
-    return apply(handle(), [&](EntityHandle entity) {
-        return applyComponent(entity, _newValue);
+    return apply(handles(), _newValues,
+                 [&](EntityHandle entity, auto const& newValue) {
+        return applyComponent(entity, newValue);
     });
 }
 
 bool EditEntityComponent::undo() const {
-    return apply(handle(), [&](EntityHandle entity) {
-        return applyComponent(entity, _oldValue);
+    return apply(handles(), _oldValues,
+                 [&](EntityHandle entity, auto const& oldValue) {
+        return applyComponent(entity, oldValue);
     });
 }
 
@@ -82,34 +100,42 @@ static EditEntityComponent::WeakVariant dereference(
     }, p);
 }
 
-void poppy::editComponent(TransactionManager& transactionManager,
-                          EntityHandle entity,
-                          EditEntityComponent::ConstPtrVariant component,
-                          utl::function_view<void(TAToken&)> uiFunction) {
-    static std::optional<EditEntityComponent::WeakVariant> backup;
+void poppy::editComponents(
+    TransactionManager& transactionManager,
+    std::span<EntityHandle const> entities,
+    std::span<EditEntityComponent::ConstPtrVariant const> components,
+    utl::function_view<void(TAToken&)> uiFunction) {
+    static utl::small_vector<EditEntityComponent::WeakVariant> backups;
     if (!ImGui::IsAnyItemActive()) {
-        backup = dereference(component);
+        backups = components | transform(dereference) | ToSmallVector<>;
     }
     TAToken token;
     uiFunction(token);
-    if (!backup) {
+    if (backups.empty()) {
         return;
     }
     if (token.state() == TAToken::Cancelled) {
-        visitComponentType(ComponentKind(component.index()),
-                           [&]<typename T>(utl::tag<T>) {
-            entity.get<T>() =
-                std::get<typename ToWeakComponent<T>::type>(*backup);
-        });
+        for (auto [entity, component, backup]:
+             zip(entities, components, backups))
+        {
+            visitComponentType(ComponentKind(component.index()),
+                               [entity = &entity,
+                                backup = &backup]<typename T>(utl::tag<T>) {
+                using Weak = typename ToWeakComponent<T>::type;
+                entity->get<T>() = std::get<Weak>(*backup);
+            });
+        }
     }
     else if (token.state() == TAToken::Committed ||
              ImGui::IsItemDeactivatedAfterEdit())
     {
-        transactionManager.commit(
-            new EditEntityComponent(entity.strongHandle(), *backup,
-                                    dereference(component)));
+        auto* TA = new EditEntityComponent{
+            entities | transform(&EntityHandle::strongHandle), backups,
+            components | transform(dereference) | ToSmallVector<>
+        };
+        transactionManager.commit(TA);
     }
     if (!ImGui::IsAnyItemActive()) {
-        backup = std::nullopt;
+        backups.clear();
     }
 }

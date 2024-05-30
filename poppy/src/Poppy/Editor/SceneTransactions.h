@@ -2,9 +2,11 @@
 #define POPPY_EDITOR_SCENETRANSACTIONS_H
 
 #include <functional>
+#include <span>
 #include <variant>
 
 #include <utl/function_view.hpp>
+#include <utl/vector.hpp>
 
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/Reference.h"
@@ -18,7 +20,7 @@ namespace poppy {
 
 class TransactionManager;
 
-/// A transaction involving a single entity
+/// A transaction involving a set of entities
 class EntityTransaction: public Transaction {
 public:
     struct WeakHandle {
@@ -35,13 +37,21 @@ public:
         bloom::EntityID ID;
     };
 
-    WeakHandle const& handle() const { return _handle; }
+    WeakHandle const& singleHandle() const {
+        BL_ASSERT(_handles.size() == 1);
+        return _handles.front();
+    }
+
+    std::span<WeakHandle const> handles() const { return _handles; }
+
+    WeakHandle const& handleAt(size_t index) const { return _handles[index]; }
 
 protected:
-    explicit EntityTransaction(WeakHandle handle): _handle(std::move(handle)) {}
+    explicit EntityTransaction(utl::small_vector<WeakHandle> handles):
+        _handles(std::move(handles)) {}
 
 private:
-    WeakHandle _handle;
+    utl::small_vector<WeakHandle> _handles;
 };
 
 class CustomEntityTransaction: public EntityTransaction {
@@ -49,7 +59,7 @@ public:
     explicit CustomEntityTransaction(
         WeakHandle handle, std::function<bool(bloom::EntityHandle)> commit,
         std::function<bool(bloom::EntityHandle)> undo):
-        EntityTransaction(std::move(handle)),
+        EntityTransaction({ std::move(handle) }),
         _commit(std::move(commit)),
         _undo(std::move(undo)) {}
 
@@ -61,7 +71,7 @@ private:
     std::function<bool(bloom::EntityHandle)> _undo;
 };
 
-/// Modifies a component of an entity
+/// Modifies components of a set of entities
 class EditEntityComponent: public EntityTransaction {
 public:
     using Variant =
@@ -75,15 +85,16 @@ public:
         bloom::ComponentList, std::variant,
         bloom::Compose<std::add_pointer, std::add_const>::impl>;
 
-    explicit EditEntityComponent(WeakHandle handle, WeakVariant oldValue,
-                                 WeakVariant newValue);
+    explicit EditEntityComponent(utl::small_vector<WeakHandle> handles,
+                                 utl::small_vector<WeakVariant> oldValues,
+                                 utl::small_vector<WeakVariant> newValues);
 
 private:
     bool commit() const override;
     bool undo() const override;
 
-    WeakVariant _oldValue;
-    WeakVariant _newValue;
+    utl::small_vector<WeakVariant> _oldValues;
+    utl::small_vector<WeakVariant> _newValues;
 };
 
 struct TAToken {
@@ -114,10 +125,11 @@ void editEntity(TransactionManager& transactionManager,
 
 /// ImGui wrapper that will commit the modification in \p uiFunction to \p
 /// transactionManager
-void editComponent(TransactionManager& transactionManager,
-                   bloom::EntityHandle entity,
-                   EditEntityComponent::ConstPtrVariant component,
-                   utl::function_view<void(TAToken&)> uiFunction);
+void editComponents(
+    TransactionManager& transactionManager,
+    std::span<bloom::EntityHandle const> entities,
+    std::span<EditEntityComponent::ConstPtrVariant const> components,
+    utl::function_view<void(TAToken&)> uiFunction);
 
 } // namespace poppy
 

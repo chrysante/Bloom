@@ -82,8 +82,10 @@ private:
 
     void editComponent(DataComponent auto const& component,
                        utl::function_view<void(TAToken&)> uiFunction) {
-        poppy::editComponent(editor().transactionManager(), entity, &component,
-                             uiFunction);
+        poppy::editComponents(editor().transactionManager(), { { entity } },
+                              std::array<EditEntityComponent::ConstPtrVariant,
+                                         1>{ &component },
+                              uiFunction);
     }
 
     EntityHandle entity;

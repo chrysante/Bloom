@@ -25,18 +25,20 @@ EntityHandle Scene::createEmptyEntity(EntityID hint) {
     return EntityHandle(_registry.create(hint.value()), this);
 }
 
-EntityHandle Scene::createEntity(std::string_view name) {
+EntityHandle Scene::createEntity(std::string name, utl::uuid persistentID) {
     EntityHandle entity(_registry.create(), this);
     entity.add(Transform{});
     entity.add(TransformMatrixComponent{});
-    entity.add(TagComponent{ std::string(name) });
+    entity.add(TagComponent{ std::move(name) });
+    entity.add(PersistentIDComponent{ persistentID });
     entity.add(HierarchyComponent{});
     entity.add(VisibilityComponent{});
+    persistentIDMap.insert({ persistentID, entity.ID() });
     return { entity, this };
 }
 
-EntityHandle Scene::cloneEntity(EntityID from) {
-    EntityHandle const result = createEmptyEntity();
+EntityHandle Scene::cloneEntity(EntityID from, utl::uuid persistentID) {
+    EntityHandle result = createEmptyEntity();
     forEachComponent([&]<typename C>(utl::tag<C>) {
         if (!hasComponent<C>(from)) {
             return;
@@ -48,11 +50,13 @@ EntityHandle Scene::cloneEntity(EntityID from) {
             result.add<C>();
         }
     });
+    getComponent<PersistentIDComponent>(result).value = persistentID;
     getComponent<HierarchyComponent>(result) = {};
-    auto const fromHierarchy = getComponent<HierarchyComponent>(from);
+    auto fromHierarchy = getComponent<HierarchyComponent>(from);
     if (fromHierarchy.parent) {
         parent(result, fromHierarchy.parent);
     }
+    persistentIDMap.insert({ persistentID, result.ID() });
     return result;
 }
 
@@ -60,6 +64,7 @@ void Scene::deleteEntity(EntityID ID) {
     if (hasComponent<HierarchyComponent>(ID)) {
         detachFromHierarchyImpl(ID);
     }
+    persistentIDMap.erase(getHandle(ID).persistentID());
     _registry.destroy(ID.value());
 }
 
@@ -84,6 +89,8 @@ Reference<Scene> Scene::clone() {
             }
         });
     });
+    // This is fine because we assert fromID == toID before
+    result->persistentIDMap = persistentIDMap;
     return result;
 }
 
@@ -159,8 +166,8 @@ static YAML::Node serializeEntity(Scene const& scene, EntityID id) {
     return node;
 }
 
-static void deserializeEntity(YAML::Node const& node, Scene& scene,
-                              AssetManager& assetManager) {
+static EntityHandle deserializeEntity(YAML::Node const& node, Scene& scene,
+                                      AssetManager& assetManager) {
     EntityID reference(node["EntityID"].as<EntityID::RawType>());
     EntityID id = scene.createEmptyEntity(reference);
     auto entity = scene.getHandle(id);
@@ -170,6 +177,14 @@ static void deserializeEntity(YAML::Node const& node, Scene& scene,
                      [&]<typename T>(utl::tag<T>) {
         deserializeComponent(node, entity, assetManager, utl::tag<T>{});
     });
+    /// Version transition code
+    if (!entity.has<PersistentIDComponent>()) {
+        auto persistentID = utl::uuid::generate();
+        Logger::Info("Creating persistent ID ", persistentID, " for entity ",
+                     entity.name());
+        entity.add(PersistentIDComponent{ persistentID });
+    }
+    return scene.getHandle(id);
 }
 
 YAML::Node Scene::serialize() const {
@@ -187,7 +202,8 @@ YAML::Node Scene::serialize() const {
 void Scene::deserialize(YAML::Node const& root, AssetManager& AM) {
     clear();
     for (YAML::Node const& node: root["Entities"]) {
-        deserializeEntity(node, *this, AM);
+        auto entity = deserializeEntity(node, *this, AM);
+        persistentIDMap.insert({ entity.persistentID(), entity });
     }
     auto rgHandle = root["RenderGraph"].as<AssetHandle>(AssetHandle{});
     _renderGraph = as<RenderGraph>(AM.get(rgHandle, AssetRepresentation::GPU));

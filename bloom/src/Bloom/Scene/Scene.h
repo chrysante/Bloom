@@ -24,18 +24,33 @@ public:
 
     /// Creates a new entity with a tag component initialized with \p name
     /// \Returns the handle of the newly created entity
-    EntityHandle createEntity(std::string_view name);
+    EntityHandle createEntity(std::string name,
+                              utl::uuid persistentID = utl::uuid::generate());
 
     /// Creates a new entity without any components
     /// \Returns the handle of the newly created entity
+    /// \Warning This function is for internal use only
     EntityHandle createEmptyEntity();
 
     /// \overload
+    /// \Warning This function is for internal use only
     EntityHandle createEmptyEntity(EntityID hint);
 
+    /// \Returns the volatile entity ID of the entity with persistent ID \p
+    /// persistentID
+    EntityID getVolatileID(utl::uuid persistentID) const {
+        auto itr = persistentIDMap.find(persistentID);
+        itr != persistentIDMap.end() ? itr->second : EntityID{};
+    }
+    
     /// \Returns a handle for entity \p entity
     EntityHandle getHandle(EntityID entity) {
         return EntityHandle(entity, this);
+    }
+
+    /// \overload
+    EntityHandle getHandle(utl::uuid persistentID) {
+        return getHandle(getVolatileID(persistentID));
     }
 
     /// \overload
@@ -43,8 +58,14 @@ public:
         return ConstEntityHandle(entity, this);
     }
 
+    /// \overload
+    ConstEntityHandle getHandle(utl::uuid persistentID) const {
+        return getHandle(getVolatileID(persistentID));
+    }
+
     /// \Returns a copy of the entity \p entity
-    EntityHandle cloneEntity(EntityID entity);
+    EntityHandle cloneEntity(EntityID entity,
+                             utl::uuid persistentID = utl::uuid::generate());
 
     /// Destroys the entity \p entity
     void deleteEntity(EntityID entity);
@@ -222,6 +243,7 @@ private:
     /// Detatches \p entity without adjusting its transform
     void detachFromHierarchyImpl(EntityID entity);
 
+    utl::hashmap<utl::uuid, EntityID> persistentIDMap;
     entt::registry _registry;
     Reference<RenderGraph> _renderGraph;
     PhysicsBehaviourParameters physicsParams{};

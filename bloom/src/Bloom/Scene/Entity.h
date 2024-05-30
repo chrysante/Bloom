@@ -285,6 +285,11 @@ public:
         return {};
     }
 
+    /// \Returns the persistent ID of this entity
+    utl::uuid persistentID() const {
+        return get<PersistentIDComponent>().value;
+    }
+
     /// See Scene.h
     vml::float4x4 calculateWorldTransformMatrix() const {
         return scene()->calculateWorldTransformMatrix(ID());

@@ -250,7 +250,12 @@ void SceneOutliner::displayEntity(EntityHandle entity) {
         dragDropSource(entity);
         dragDropTarget(entity);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
-            ImGui::SetTooltip("ID: %d", entity.raw());
+            if (ImGui::BeginTooltip()) {
+                ImGui::Text("Volatile ID: %d", entity.raw());
+                ImGui::Text("Persistent ID: %s",
+                            entity.persistentID().to_string().c_str());
+                ImGui::EndTooltip();
+            }
         }
     };
     auto [isExpanded, isClicked, isToggledOpen, isEyeButtonPressed] =

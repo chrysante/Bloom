@@ -89,25 +89,35 @@ static sema::Function const* selectConstructor(sema::StructType const* type) {
     return nullptr;
 }
 
-static uint64_t allocateObject(svm::VirtualMachine& VM,
-                               sema::StructType const* type,
-                               EntityHandle handle) {
-    auto addr = VM.allocateMemory(type->size(), type->align());
-    auto bitAddr = std::bit_cast<uint64_t>(addr);
-    auto ctors = type->findFunctions("new");
-    if (ctors.empty() && type->hasTrivialLifetime()) {
-        std::memset(VM.derefPointer(addr, type->size()), 0, type->size());
-        return bitAddr;
-    }
+/// Allocates and constructs an object of type \p type in the virtual address
+/// space of \p VM
+static svm::VirtualPointer allocateObject(svm::VirtualMachine& VM,
+                                          sema::StructType const* type,
+                                          EntityHandle handle) {
     auto* ctor = selectConstructor(type);
     if (!ctor) {
         Logger::Warn("Failed to find suitable constructor for object of type: ",
                      type->name());
-        return 0;
+        return {};
+    }
+    auto addr = VM.allocateMemory(type->size(), type->align());
+    auto ctors = type->findFunctions("new");
+    if (ctors.empty() && type->hasTrivialLifetime()) {
+        std::memset(VM.derefPointer(addr, type->size()), 0, type->size());
+        return addr;
     }
     VM.execute(ctor->binaryAddress().value(),
-               toWordArray(bitAddr, ScriptEntityHandle::make(handle)));
-    return bitAddr;
+               toWordArray(addr, ScriptEntityHandle::make(handle)));
+    return addr;
+}
+
+/// Destroys and deallocates the object at address \p addr
+/// When the virtual machine is destroyed, all memory is freed even without
+/// explicitly deallocating each object
+static void deallocateObject(svm::VirtualMachine& VM,
+                             sema::StructType const* type,
+                             svm::VirtualPointer addr) {
+    VM.deallocateMemory(addr, type->size(), type->align());
 }
 
 void ScriptSystem::onScriptCompile(Scene& scene) {
@@ -155,8 +165,9 @@ void ScriptSystem::onSceneInit(Scene& scene) {
             return;
         }
         runGuarded([&] {
-            component.objectAddress = allocateObject(impl->VM, component.type,
-                                                     EntityHandle(ID, &scene));
+            auto addr = allocateObject(impl->VM, component.type,
+                                       EntityHandle(ID, &scene));
+            component.objectAddress = std::bit_cast<uint64_t>(addr);
         });
     });
 }

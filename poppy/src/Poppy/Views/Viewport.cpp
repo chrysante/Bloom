@@ -121,6 +121,7 @@ struct Viewport: View, BasicSceneInspector {
     void displayPhysicsSettings();
 
     void dropdownMenu();
+    void debuggerMenu();
 
     void receiveData(std::any data) override;
 
@@ -615,9 +616,11 @@ void Viewport::deserialize(YAML::Node node) {
 Toolbar Viewport::makeToolbar() {
     // clang-format off
     Toolbar toolbar{
-        ToolbarDropdownMenu()
+        ToolbarDropdownMenu("cog")
             .content([this] { dropdownMenu(); })
             .minWidth(400),
+        ToolbarDropdownMenu("bug")
+            .content([this] { debuggerMenu(); }),
         ToolbarTextItem()
             .text([this] {
                 return scene() ? scene()->name().c_str() : "";
@@ -727,17 +730,13 @@ void Viewport::displayViewportSettings() {
     {
         cameraController.setNearClipPlane(clip);
     }
-    beginProperty("Speed");
+    beginProperty("Camera Speed");
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     if (float speed = cameraController.speed();
-        ImGui::DragFloat("###speed", &speed))
+        ImGui::DragFloat("###Camera Speed", &speed))
     {
         cameraController.setSpeed(speed);
     }
-    beginProperty("Show Render Graph Debugger");
-    ImGui::Checkbox("###ShowRGDebugger", &showRenderGraphDebugger);
-    beginProperty("Show Scene Debugger");
-    ImGui::Checkbox("###ShowSceneDebugger", &showSceneDebugger);
 }
 
 void Viewport::displayPhysicsSettings() {
@@ -835,6 +834,11 @@ void Viewport::dropdownMenu() {
         displayPhysicsSettings();
         endSection();
     }
+}
+
+void Viewport::debuggerMenu() {
+    ImGui::MenuItem("Show Render Graph Debugger", "", &showRenderGraphDebugger);
+    ImGui::MenuItem("Show Scene Debugger", "", &showSceneDebugger);
 }
 
 void Viewport::receiveData(std::any data) {

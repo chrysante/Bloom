@@ -173,6 +173,10 @@ class ToolbarDropdownMenu: public ToolbarItemMixin<ToolbarDropdownMenu> {
 public:
     ToolbarDropdownMenu();
 
+    ToolbarDropdownMenu(char const* iconName): ToolbarDropdownMenu() {
+        icon(iconName);
+    }
+
     /// Specifies the content callback
     ToolbarDropdownMenu& content(std::function<void()> content) {
         this->_content = std::move(content);

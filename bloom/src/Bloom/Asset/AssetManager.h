@@ -281,7 +281,7 @@ public:
     struct Impl;
 
 private:
-    void doInit() override;
+    void init() override;
 
     std::unique_ptr<Impl> impl;
 };

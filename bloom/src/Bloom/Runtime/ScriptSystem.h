@@ -39,7 +39,7 @@ public:
 private:
     friend class AssetManager;
 
-    void doInit() override;
+    void init() override;
 
     void deserializeScript(ScriptComponent& component,
                            ScriptPreservedData const& preservedData);

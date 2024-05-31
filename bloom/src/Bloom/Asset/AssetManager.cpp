@@ -376,7 +376,7 @@ AssetManager::~AssetManager() = default;
 
 AssetRegistry const& AssetManager::registry() const { return impl->registry; }
 
-void AssetManager::doInit() {
+void AssetManager::init() {
     impl = std::make_unique<Impl>(this);
     listen([this](GetAssetManager msg) {
         if (msg.assetManager) {

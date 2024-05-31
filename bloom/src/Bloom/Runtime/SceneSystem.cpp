@@ -11,7 +11,7 @@
 
 using namespace bloom;
 
-void SceneSystem::doInit() {
+void SceneSystem::init() {
     listen([this](ScriptsDidCompileEvent) {
         if (scene()) {
             application().coreSystems().scriptSystem().onScriptCompile(

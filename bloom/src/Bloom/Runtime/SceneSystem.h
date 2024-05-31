@@ -41,7 +41,7 @@ public:
     Scene* playScene() const { return mPlayScene.get(); }
 
 private:
-    void doInit() override;
+    void init() override;
 
     /// Implementation of `RuntimeDelegate` interface
     /// @{

@@ -33,6 +33,6 @@ std::unique_ptr<SystemType> CoreSystemManager::makeCoreSystem(auto&&... args) {
     system->assignEmitter(mApp->makeEmitter());
     system->assignReceiver(mApp->makeReceiver());
     system->mApp = mApp;
-    system->init();
+    static_cast<CoreSystem&>(*system).init();
     return system;
 }

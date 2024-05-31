@@ -12,6 +12,7 @@
 
 namespace bloom {
 
+/// Wrapper class around the external physics system (JPH)
 class BLOOM_API PhysicsSystem: public CoreSystem {
 public:
     struct Settings {

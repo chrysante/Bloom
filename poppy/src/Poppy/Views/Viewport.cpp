@@ -94,14 +94,14 @@ struct Viewport: View, BasicSceneInspector {
 
     void display() override;
 
-    void drawScenes();
-    void displayOverlays();
+    void drawScene(Scene& scene);
+    void displayOverlays(Scene& scene);
     void displayColorPicker(CommandBuffer& commandBuffer,
                             TextureView finalColor, float2 mouseCoord);
     utl::small_vector<EntityHandle> copyEntities(
         std::span<EntityHandle const> entities);
     void displayGizmo();
-    EntityHandle readEntityIDMap();
+    EntityID readEntityIDMap();
     void handleEntitySelection(EntityHandle clickedEntity);
 
     void displayToolbar() override {}
@@ -110,6 +110,7 @@ struct Viewport: View, BasicSceneInspector {
     void acceptDragDrop();
     void receiveSceneDragDrop();
     void openScene(AssetHandle handle);
+    void openScene(Reference<Scene> scene);
     void onInput(bloom::InputEvent&) override;
     YAML::Node serialize() const override;
     void deserialize(YAML::Node) override;
@@ -186,10 +187,10 @@ void Viewport::init() {
     }
 }
 
-void Viewport::displayOverlays() {
+void Viewport::displayOverlays(Scene& scene) {
     auto WStoSS = [&](float3 WS) { return worldSpaceToScreenSpace(WS); };
     EntityHandle clickedEntity =
-        displayLightOverlays(scenes(), selection(), WStoSS);
+        displayLightOverlays(scene, selection(), WStoSS);
     displayGizmo();
     if (gizmo.isUsing() || gizmo.isHovered()) {
         return;
@@ -198,19 +199,33 @@ void Viewport::displayOverlays() {
         ImGui::IsWindowHovered())
     {
         if (!clickedEntity) {
-            clickedEntity = readEntityIDMap();
+            auto ID = readEntityIDMap();
+            if (scene.isValid(ID)) {
+                clickedEntity = scene.getHandle(ID);
+            }
         }
         handleEntitySelection(clickedEntity);
     }
 }
 
+static Scene* selectDisplayScene(SceneSystem const& sceneSystem) {
+    if (sceneSystem.playScene()) {
+        return sceneSystem.playScene();
+    }
+    if (sceneSystem.scene()) {
+        return sceneSystem.scene();
+    }
+    return nullptr;
+}
+
 void Viewport::display() {
     ImGui::BeginChild("Child");
-    if (!scenes().empty()) {
+    auto* scene = selectDisplayScene(editor().coreSystems().sceneSystem());
+    if (scene) {
         readInput();
-        drawScenes();
+        drawScene(*scene);
         if (!gameView) {
-            displayOverlays();
+            displayOverlays(*scene);
         }
     }
     else {
@@ -233,8 +248,8 @@ void Viewport::display() {
         displayRenderGraphDebugger(*renderer->renderGraph(),
                                    &showRenderGraphDebugger);
     }
-    if (showSceneDebugger && !scenes().empty()) {
-        displaySceneDebugger(*scenes().front(), &showSceneDebugger);
+    if (showSceneDebugger && scene) {
+        displaySceneDebugger(*scene, &showSceneDebugger);
     }
 }
 
@@ -256,7 +271,7 @@ void Viewport::displayColorPicker(CommandBuffer& commandBuffer,
     displayTextureColorTooltip(colorPickerTmpTex, { 0, 0 }, mouseCoord);
 }
 
-void Viewport::drawScenes() {
+void Viewport::drawScene(Scene& scene) {
     float2 viewportSize =
         (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
     FrameParameters frameParams = {
@@ -267,7 +282,7 @@ void Viewport::drawScenes() {
     auto& sceneSystem = editor().coreSystems().sceneSystem();
     std::unique_lock sceneLock = sceneSystem.lock();
     if (renderGraphDirty || !renderer) {
-        auto* renderGraph = sceneSystem.scenes().front()->renderGraph();
+        auto* renderGraph = scene.renderGraph();
         if (!renderGraph) {
             displayEmptyWithError("Scene has no render graph");
             return;
@@ -281,10 +296,8 @@ void Viewport::drawScenes() {
     renderer->begin(frameParams, cameraController.camera(),
                     rendererSettings.bloomSettings,
                     rendererSettings.postProcessSettings);
-    sceneSystem.applyTransformHierarchy();
-    for (auto* scene: sceneSystem.scenes()) {
-        renderer->submit(*scene, selection());
-    }
+    scene.applyTransformHierarchy();
+    renderer->submit(scene, selection());
     sceneLock.unlock();
     auto commandBuffer = editor().commandQueue().createCommandBuffer();
     renderer->draw(*commandBuffer);
@@ -465,14 +478,13 @@ void Viewport::displayGizmo() {
     }
 }
 
-EntityHandle Viewport::readEntityIDMap() {
+EntityID Viewport::readEntityIDMap() {
     if (!renderer) {
         return {};
     }
     float2 mousePos = window().contentScaleFactor() *
                       screenSpaceToViewSpace(ImGui::GetMousePos());
-    return renderer->readEntityIDMap(editor().commandQueue(), scenes(),
-                                     mousePos);
+    return renderer->readEntityIDMap(editor().commandQueue(), mousePos);
 }
 
 void Viewport::handleEntitySelection(EntityHandle clickedEntity) {
@@ -528,9 +540,6 @@ static MouseState detectViewportInput(ImGuiButtonFlags buttonFlags) {
 }
 
 void Viewport::readInput() {
-    if (scenes().empty()) {
-        return;
-    }
     mouseState = ::detectViewportInput(ImGuiButtonFlags_MouseButtonRight);
     if (mouseState.held) {
         cameraController.update(editor().time(), editor().input());
@@ -567,11 +576,15 @@ void Viewport::openScene(AssetHandle handle) {
         Logger::Error("Cannot open scene. Asset is not a scene");
         return;
     }
+    openScene(scene);
+}
+
+void Viewport::openScene(Reference<Scene> scene) {
     using enum AssetRepresentation;
-    AM.makeAvailable(handle, CPU | GPU);
+    auto& AM = assetManager();
+    AM.makeAvailable(scene->handle(), CPU | GPU);
     auto& sceneSystem = editor().coreSystems().sceneSystem();
-    sceneSystem.unloadAll();
-    sceneSystem.loadScene(as<Scene>(asset));
+    sceneSystem.loadScene(scene);
 }
 
 void Viewport::onInput(bloom::InputEvent&) {}
@@ -599,7 +612,7 @@ Toolbar Viewport::makeToolbar() {
             .minWidth(400),
         ToolbarTextItem()
             .text([this] {
-                return scenes().empty() ? "" : scenes().front()->name().c_str();
+                return scene() ? scene()->name().c_str() : "";
             })
             .font(FontDesc::UIDefault().setWeight(FontWeight::Bold)),
         ToolbarSpacer{},
@@ -798,9 +811,8 @@ void Viewport::dropdownMenu() {
     ImGui::SetWindowSize({ ImGui::GetWindowSize().x,
                            std::min(ImGui::GetWindowSize().y, 250.0f) },
                          ImGuiCond_Once);
-    auto& sceneSystem = editor().coreSystems().sceneSystem();
-    if (sceneSystem.scenes().size() == 1 && beginSection("Scene Properties")) {
-        displaySceneSettings(*sceneSystem.scenes().front());
+    if (scene() && beginSection("Scene Properties")) {
+        displaySceneSettings(*scene());
         endSection();
     }
     if (beginSection("Viewport Settings")) {
@@ -818,13 +830,11 @@ void Viewport::dropdownMenu() {
 }
 
 void Viewport::receiveData(std::any data) {
-    auto* scenePtr = std::any_cast<Reference<Scene>>(&data);
-    if (!scenePtr) {
+    auto* scene = std::any_cast<Reference<Scene>>(&data);
+    if (!scene) {
         return;
     }
-    auto& sceneSystem = editor().coreSystems().sceneSystem();
-    sceneSystem.unloadAll();
-    sceneSystem.loadScene(std::move(*scenePtr));
+    openScene(*scene);
 }
 
 namespace bloom {

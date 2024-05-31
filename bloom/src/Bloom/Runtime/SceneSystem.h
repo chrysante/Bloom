@@ -23,23 +23,22 @@ class Scene;
 /// Can have multiple scenes loaded at the same time .
 class BLOOM_API SceneSystem: public CoreSystem, public RuntimeDelegate {
 public:
-    /// Loads the scene \p scene into the system
+    /// Loads the scene \p scene into the system.
+    /// Unloads the currently loaded scene
     void loadScene(Reference<Scene> scene);
 
-    /// Unloads the scene with ID \p ID
-    void unloadScene(utl::uuid ID);
-
-    /// Unloads all scenes
-    void unloadAll();
+    /// Unloads the currently loaded scene
+    void unloadScene();
 
     ///
     std::unique_lock<std::mutex> lock();
 
-    /// \Returns a view over all loaded scenes
-    std::span<Scene* const> scenes() const { return mScenePtrs; }
+    /// \Returns the loaded editor scene
+    Scene* scene() const { return mScene.get(); }
 
-    /// Computes the transform matrices for all entities based on the hierarchy
-    void applyTransformHierarchy();
+    /// \Returns the scene being run or simulated. This is null if no simulation
+    /// is running
+    Scene* playScene() const { return mPlayScene.get(); }
 
 private:
     void doInit() override;
@@ -58,9 +57,8 @@ private:
 
 private:
     std::mutex mMutex;
-    utl::hashmap<utl::uuid, Reference<Scene>> mSimScenes;
-    utl::hashmap<utl::uuid, Reference<Scene>> mScenes;
-    utl::small_vector<Scene*> mScenePtrs;
+    Reference<Scene> mScene;
+    Reference<Scene> mPlayScene;
 };
 
 struct BLOOM_API UnloadSceneEvent {

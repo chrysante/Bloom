@@ -221,6 +221,9 @@ public:
     /// transforms of all parents \pre \p entity must have a transform component
     Transform calculateWorldTransform(EntityID entity) const;
 
+    /// Computes the transform matrices for all entities based on the hierarchy
+    void applyTransformHierarchy();
+
     /// The render graph that will be used to draw the scene
     RenderGraph* renderGraph() const { return _renderGraph.get(); }
 

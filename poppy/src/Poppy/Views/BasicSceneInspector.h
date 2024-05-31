@@ -86,7 +86,7 @@ protected:
     BasicSceneInspector(View* view): view(view) {}
 
 public:
-    std::span<bloom::Scene* const> scenes() const;
+    bloom::Scene* scene() const;
 
     EntitySelectionManager& selection() const;
 

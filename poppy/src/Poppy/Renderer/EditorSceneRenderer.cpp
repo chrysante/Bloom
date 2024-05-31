@@ -262,10 +262,9 @@ bloom::TextureView EditorSceneRenderer::sceneColorWithOverlays() const {
     return mCompositeColor ? mCompositeColor->handle() : nullptr;
 }
 
-bloom::EntityHandle EditorSceneRenderer::readEntityIDMap(
-    CommandQueue& commandQueue, std::span<Scene* const> scenes,
-    float2 position) const {
-    if (!idMap || scenes.empty()) {
+bloom::EntityID EditorSceneRenderer::readEntityIDMap(CommandQueue& commandQueue,
+                                                     float2 position) const {
+    if (!idMap) {
         return {};
     }
     auto idTex = idMap->handle();
@@ -279,9 +278,5 @@ bloom::EntityHandle EditorSceneRenderer::readEntityIDMap(
     vml::AABB<uint32_t, 3> region = { uint3(position, 0),
                                       uint3(position, 0) + uint3(1) };
     copyTextureToMemory(RenderAPI::Metal, idTex, &ID, 4, region, 0);
-    auto* scene = scenes[0];
-    if (!scene->isValid(ID)) {
-        return {};
-    }
-    return scene->getHandle(ID);
+    return ID;
 }

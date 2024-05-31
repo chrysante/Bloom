@@ -137,8 +137,9 @@ std::array<Command const*, 2> Editor::Impl::addSimCommands(
         "Simulate",
         { Key::R, ModFlags::Control },
         [this] { editor->startSimulation(); },
-        [this] { return !editor->coreSystems().sceneSystem().scenes().empty() &&
-            !editor->isSimulating();
+        [this] {
+            auto& sceneSystem = editor->coreSystems().sceneSystem();
+            return sceneSystem.scene() && !editor->isSimulating();
         }
     });
     auto* stop = cmd.add({

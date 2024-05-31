@@ -171,29 +171,26 @@ static void drawArrow(float2 from, float2 to, float headSize, float4 color,
 }
 
 template <typename LightType>
-static void doDisplayLightOverlays(std::span<Scene* const> scenes,
+static void doDisplayLightOverlays(Scene& scene,
                                    EntitySelectionManager const& selection,
                                    utl::function_view<float3(float3)> WStoSS,
                                    auto draw, EntityHandle& clicked) {
-    for (auto* scene: scenes) {
-        auto view =
-            scene->view<TransformMatrixComponent const, LightType const>();
-        view.each([&](EntityID ID, TransformMatrixComponent const& transform,
-                      LightType const& light) {
-            float3 positionSS = WStoSS(transform.matrix.column(3).xyz);
-            if (positionSS.z < 0 || positionSS.z > 1) {
-                return;
-            }
-            EntityHandle entity = scene->getHandle(ID);
-            draw(entity, selection.contains(entity), positionSS.xy,
-                 Transform::fromMatrix(transform.matrix), light);
-            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-                vml::distance(positionSS.xy, (float2)ImGui::GetMousePos()) < 30)
-            {
-                clicked = entity;
-            }
-        });
-    }
+    auto view = scene.view<TransformMatrixComponent const, LightType const>();
+    view.each([&](EntityID ID, TransformMatrixComponent const& transform,
+                  LightType const& light) {
+        float3 positionSS = WStoSS(transform.matrix.column(3).xyz);
+        if (positionSS.z < 0 || positionSS.z > 1) {
+            return;
+        }
+        EntityHandle entity = scene.getHandle(ID);
+        draw(entity, selection.contains(entity), positionSS.xy,
+             Transform::fromMatrix(transform.matrix), light);
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+            vml::distance(positionSS.xy, (float2)ImGui::GetMousePos()) < 30)
+        {
+            clicked = entity;
+        }
+    });
 }
 
 namespace {
@@ -285,17 +282,17 @@ struct Draw {
 } // namespace
 
 bloom::EntityHandle poppy::displayLightOverlays(
-    std::span<Scene* const> scenes, EntitySelectionManager const& selection,
+    Scene& scene, EntitySelectionManager const& selection,
     utl::function_view<float3(float3)> WStoSS) {
     auto draw = Draw{ WStoSS };
     EntityHandle clicked;
-    doDisplayLightOverlays<PointLightComponent>(scenes, selection, WStoSS, draw,
+    doDisplayLightOverlays<PointLightComponent>(scene, selection, WStoSS, draw,
                                                 clicked);
-    doDisplayLightOverlays<SpotLightComponent>(scenes, selection, WStoSS, draw,
+    doDisplayLightOverlays<SpotLightComponent>(scene, selection, WStoSS, draw,
                                                clicked);
-    doDisplayLightOverlays<DirectionalLightComponent>(scenes, selection, WStoSS,
+    doDisplayLightOverlays<DirectionalLightComponent>(scene, selection, WStoSS,
                                                       draw, clicked);
-    doDisplayLightOverlays<SkyLightComponent>(scenes, selection, WStoSS, draw,
+    doDisplayLightOverlays<SkyLightComponent>(scene, selection, WStoSS, draw,
                                               clicked);
     return clicked;
 }

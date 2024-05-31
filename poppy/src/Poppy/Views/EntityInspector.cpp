@@ -104,7 +104,7 @@ void EntityInspector::display() {
         displayEmptyWithReason("Simulation Running");
         return;
     }
-    if (scenes().empty()) {
+    if (!scene()) {
         displayEmptyWithReason("No Active Scene");
         return;
     }

@@ -13,95 +13,52 @@ using namespace bloom;
 
 void SceneSystem::doInit() {
     listen([this](ScriptsDidCompileEvent) {
-        for (auto* scene: scenes()) {
-            application().coreSystems().scriptSystem().onScriptCompile(*scene);
+        if (scene()) {
+            application().coreSystems().scriptSystem().onScriptCompile(
+                *scene());
         }
     });
 }
 
 void SceneSystem::loadScene(Reference<Scene> scene) {
-    auto* raw = scene.get();
-    BL_ASSERT(raw);
-    auto [itr, success] =
-        mScenes.insert({ scene->handle().ID(), std::move(scene) });
-    if (!success) {
-        Logger::Error("Failed to load scene. Scene is already loaded.");
+    if (mScene.get() == scene.get()) {
+        Logger::Warn("Scene is already loaded");
         return;
     }
-    dispatch(DispatchToken::Now, SceneLoadedEvent{ raw });
-    setPointers(mScenes);
+    if (mScene) {
+        unloadScene();
+    }
+    mScene = std::move(scene);
+    dispatch(DispatchToken::Now, SceneLoadedEvent{ .scene = mScene.get() });
 }
 
-void SceneSystem::unloadScene(utl::uuid id) {
-    auto itr = mScenes.find(id);
-    auto* scene = itr->second.get();
-    if (itr == mScenes.end()) {
-        Logger::Error("Failed to unload scene. Scene was not loaded.");
+void SceneSystem::unloadScene() {
+    if (!scene()) {
+        Logger::Error("Failed to unload scene. No scene was loaded");
         return;
     }
-    mScenes.erase(itr);
-    dispatch(DispatchToken::Now, UnloadSceneEvent{ .scene = scene });
-    setPointers(mScenes);
-}
-
-void SceneSystem::unloadAll() {
-    for (auto&& [key, scene]: mScenes) {
-        dispatch(DispatchToken::Now, UnloadSceneEvent{ .scene = scene.get() });
-    }
-    mScenes.clear();
-    setPointers(mScenes);
+    dispatch(DispatchToken::Now, UnloadSceneEvent{ .scene = scene() });
+    mScene.reset();
 }
 
 std::unique_lock<std::mutex> SceneSystem::lock() {
     return std::unique_lock(mMutex);
 }
 
-void SceneSystem::applyTransformHierarchy() {
-    for (auto scene: scenes()) {
-        auto view = scene->view<Transform const, TransformMatrixComponent>();
-        view.each([&](auto /* ID */, Transform const& transform,
-                      TransformMatrixComponent& transformMatrix) {
-            transformMatrix.matrix = transform.calculate();
-        });
-        utl::stack<EntityID> stack(scene->gatherRoots());
-        while (!stack.empty()) {
-            auto current = stack.pop();
-            auto& currentTransform =
-                scene->getComponent<TransformMatrixComponent const>(current);
-
-            auto children = scene->gatherChildren(current);
-            for (auto c: children) {
-                auto& childTransform =
-                    scene->getComponent<TransformMatrixComponent>(c);
-                childTransform.matrix =
-                    currentTransform.matrix * childTransform.matrix;
-                stack.push(c);
-            }
-        }
-    }
-}
-
 void SceneSystem::start() {
     auto L = lock();
-    mSimScenes = mScenes | ranges::views::transform([](auto& p) {
-        return std::pair{ p.first, p.second->clone() };
-    }) | ranges::to<utl::hashmap<utl::uuid, Reference<Scene>>>;
-    setPointers(mSimScenes);
+    mPlayScene = scene()->clone();
     auto& scriptSystem = application().coreSystems().scriptSystem();
     auto& physicsSystem = application().coreSystems().physicsSystem();
-    BL_ASSERT(scenes().size() == 1);
-    for (auto* scene: scenes()) {
-        physicsSystem.onSceneInit(*scene, scene->physicsParameters());
-        scriptSystem.onSceneInit(*scene);
-    }
+    physicsSystem.onSceneInit(*playScene(), playScene()->physicsParameters());
+    scriptSystem.onSceneInit(*playScene());
 }
 
 void SceneSystem::stop() {
     auto& physicsSystem = application().coreSystems().physicsSystem();
     physicsSystem.onSceneStop();
     auto L = lock();
-    mSimScenes.clear();
-    setPointers(mScenes);
+    mPlayScene.reset();
 }
 
 void SceneSystem::pause() {}
@@ -112,16 +69,6 @@ void SceneSystem::step(Timestep timestep) {
     auto L = lock();
     auto& scriptSystem = application().coreSystems().scriptSystem();
     auto& physicsSystem = application().coreSystems().physicsSystem();
-    // We will change this system to only work on a single scene, but later
-    BL_ASSERT(scenes().size() == 1);
-    for (auto* scene: scenes()) {
-        physicsSystem.update(*scene, timestep);
-        scriptSystem.onSceneUpdate(*scene, timestep);
-    }
-}
-
-void SceneSystem::setPointers(auto const& sceneMap) {
-    mScenePtrs = sceneMap | ranges::views::transform([](auto&& p) {
-        return p.second.get();
-    }) | ranges::to<utl::small_vector<Scene*>>;
+    physicsSystem.update(*playScene(), timestep);
+    scriptSystem.onSceneUpdate(*playScene(), timestep);
 }

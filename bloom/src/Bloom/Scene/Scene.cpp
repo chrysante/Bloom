@@ -1,5 +1,6 @@
 #include "Bloom/Scene/Scene.h"
 
+#include <range/v3/view.hpp>
 #include <utl/hashmap.hpp>
 #include <utl/stack.hpp>
 #include <utl/strcat.hpp>
@@ -15,6 +16,7 @@
 #include "Bloom/Scene/Components/Transform.h"
 
 using namespace bloom;
+using namespace ranges::views;
 using namespace vml::short_types;
 
 EntityHandle Scene::createEmptyEntity() {
@@ -421,4 +423,25 @@ Transform Scene::calculateWorldTransform(EntityID ID) const {
         transform.position += current.position;
     }
     return transform;
+}
+
+void Scene::applyTransformHierarchy() {
+    auto transforms = view<Transform const, TransformMatrixComponent>();
+    transforms.each([&](auto /* ID */, Transform const& transform,
+                        TransformMatrixComponent& transformMatrix) {
+        transformMatrix.matrix = transform.calculate();
+    });
+    utl::stack<EntityID> stack(gatherRoots());
+    while (!stack.empty()) {
+        auto current = getHandle(stack.pop());
+        auto& currentTransform = current.get<TransformMatrixComponent const>();
+        auto children = current.gatherChildren();
+        for (auto c: children) {
+            auto child = getHandle(c);
+            auto& childTransform = child.get<TransformMatrixComponent>();
+            childTransform.matrix =
+                currentTransform.matrix * childTransform.matrix;
+            stack.push(c);
+        }
+    }
 }

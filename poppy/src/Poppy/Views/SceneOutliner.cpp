@@ -83,7 +83,7 @@ void SceneOutliner::init() {
 }
 
 void SceneOutliner::display() {
-    if (scenes().empty()) {
+    if (!scene()) {
         displayEmptyWithReason("No Active Scene");
         return;
     }
@@ -91,9 +91,7 @@ void SceneOutliner::display() {
         displayEmptyWithReason("Simulation Running");
         return;
     }
-    for (auto scene: scenes()) {
-        displayScene(*scene);
-    }
+    displayScene(*scene());
     if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() &&
         ImGui::IsMouseClicked(ImGuiMouseButton_Left))
     {
@@ -233,8 +231,8 @@ void SceneOutliner::sceneContextMenu(Scene& scene) {
         ImGui::EndMenu();
     }
     if (ImGui::MenuItem("Unload")) {
-        dispatch(DispatchToken::NextFrame, [this, ID = scene.handle().ID()] {
-            editor().coreSystems().sceneSystem().unloadScene(ID);
+        dispatch(DispatchToken::NextFrame, [this] {
+            editor().coreSystems().sceneSystem().unloadScene();
         });
         return;
     }

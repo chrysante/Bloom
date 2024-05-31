@@ -96,8 +96,7 @@ private:
 
 /// \Returns the clicked entity if any
 bloom::EntityHandle displayLightOverlays(
-    std::span<bloom::Scene* const> scenes,
-    EntitySelectionManager const& selection,
+    bloom::Scene& scene, EntitySelectionManager const& selection,
     utl::function_view<vml::float3(vml::float3)> WStoSS);
 
 } // namespace poppy

@@ -29,9 +29,8 @@ public:
     bloom::TextureView sceneColor() const;
     bloom::TextureView sceneColorWithOverlays() const;
 
-    bloom::EntityHandle readEntityIDMap(bloom::CommandQueue& commandQueue,
-                                        std::span<bloom::Scene* const> scenes,
-                                        vml::float2 position) const;
+    bloom::EntityID readEntityIDMap(bloom::CommandQueue& commandQueue,
+                                    vml::float2 position) const;
 
     bloom::RenderGraph* renderGraph() { return mRenderGraph.get(); }
     bloom::RenderGraph* sceneRenderGraph() { return mSceneRenderGraph; }

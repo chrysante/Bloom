@@ -42,8 +42,8 @@ std::optional<ComponentKind> poppy::getColliderType2(EntityHandle entity) {
         entity);
 }
 
-std::span<Scene* const> BasicSceneInspector::scenes() const {
-    return view->editor().coreSystems().sceneSystem().scenes();
+Scene* BasicSceneInspector::scene() const {
+    return view->editor().coreSystems().sceneSystem().scene();
 }
 
 EntitySelectionManager& BasicSceneInspector::selection() const {

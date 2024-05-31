@@ -656,9 +656,11 @@ void EntityInspector::inspectScript() {
     }
     sema::StructType const* type = component.type;
     bool haveObject = component.objectAddress != 0;
-    if (!type || !beginSubSection("Attributes")) {
+    if (!type) {
+        endSection();
         return;
     }
+    header("Attributes");
     ImGui::BeginDisabled(!haveObject);
     for (auto* variable: type->memberVariables()) {
         if (!variable->isPublic()) {

@@ -259,22 +259,23 @@ void EntityInspector::inspectTransform() {
                   style.ItemSpacing.x;
     ImGui::SetNextItemWidth(width);
     editComponent(transform, [&](TAToken&) {
-        dragFloat3Labelled("###position", transform.position.data());
+        dragFloat3Labelled("###Position", transform.position.data());
     });
     beginProperty("Orientation");
     ImGui::SetNextItemWidth(width);
     editComponent(transform, [&](TAToken&) {
-        float3 euler = vml::to_euler(transform.orientation) * 180;
-        if (dragFloat3Labelled("###orientation", euler.data(),
+        double const radToDegrees = 180 / vml::constants<>::pi;
+        float3 euler = vml::to_euler(transform.orientation) * radToDegrees;
+        if (dragFloat3Labelled("###Orientation", euler.data(),
                                { .format = "%.3f°" }))
         {
-            transform.orientation = vml::to_quaternion(euler / 180);
+            transform.orientation = vml::to_quaternion(euler / radToDegrees);
         }
     });
     beginProperty("Scale");
     ImGui::SetNextItemWidth(width);
     editComponent(transform, [&](TAToken&) {
-        dragFloat3Labelled("###scale", transform.scale.data(),
+        dragFloat3Labelled("###Scale", transform.scale.data(),
                            { .speed = 0.02,
                              .linkFields = transformScaleLinked });
     });

@@ -20,7 +20,7 @@ class Application;
 
 namespace poppy {
 
-enum class FontSize { Medium = 17, Large = 34 };
+enum class FontSize { Medium = 17, Default = Medium, Large = 34 };
 
 template <typename T>
     requires std::is_arithmetic_v<T>

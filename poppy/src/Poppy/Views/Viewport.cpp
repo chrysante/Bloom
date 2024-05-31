@@ -195,6 +195,11 @@ void Viewport::displayOverlays(Scene& scene) {
     if (gizmo.isUsing() || gizmo.isHovered()) {
         return;
     }
+    /// We don't want to select entities during simulation because the handles
+    /// get invalidated when the simulation ends and we crash
+    if (editor().isSimulating()) {
+        return;
+    }
     if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
         ImGui::IsWindowHovered())
     {
@@ -224,7 +229,7 @@ void Viewport::display() {
     if (scene) {
         readInput();
         drawScene(*scene);
-        if (!gameView) {
+        if (!gameView && !editor().isSimulating()) {
             displayOverlays(*scene);
         }
     }
@@ -297,7 +302,10 @@ void Viewport::drawScene(Scene& scene) {
                     rendererSettings.bloomSettings,
                     rendererSettings.postProcessSettings);
     scene.applyTransformHierarchy();
-    renderer->submit(scene, selection());
+    renderer->submit(scene);
+    if (!editor().isSimulating()) {
+        renderer->submitSelection(selection().entities());
+    }
     sceneLock.unlock();
     auto commandBuffer = editor().commandQueue().createCommandBuffer();
     renderer->draw(*commandBuffer);

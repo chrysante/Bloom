@@ -2,6 +2,7 @@
 #define POPPY_RENDERER_EDITORSCENERENDERER_H
 
 #include <memory>
+#include <span>
 #include <vector>
 
 #include <vml/vml.hpp>
@@ -22,8 +23,8 @@ public:
     void begin(bloom::FrameParameters const& frameParams,
                bloom::Camera const& camera, bloom::BloomSettings bloomSettings,
                bloom::PostProcessSettings postProcessSettings);
-    void submit(bloom::Scene const& scene,
-                EntitySelectionManager const& selectionManager);
+    void submit(bloom::Scene const& scene);
+    void submitSelection(std::span<bloom::EntityHandle const> selection);
     void draw(bloom::CommandBuffer& commandBuffer);
 
     bloom::TextureView sceneColor() const;

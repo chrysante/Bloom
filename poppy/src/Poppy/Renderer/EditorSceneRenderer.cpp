@@ -118,29 +118,22 @@ void EditorSceneRenderer::begin(bloom::FrameParameters const& frameParams,
     }
 }
 
-static void submitSelectedGeometry(
-    Scene const& scene, GeometryResource& geometry,
-    EntitySelectionManager const& selectionManager) {
-    auto view = scene.view<TransformMatrixComponent const,
-                           MeshRendererComponent const>();
-    view.each([&](EntityID ID, TransformMatrixComponent const& transform,
-                  MeshRendererComponent const& meshRenderer) {
-        if (!selectionManager.contains(scene.getHandle(ID))) {
-            return;
-        }
-        if (!meshRenderer.mesh || !meshRenderer.mesh->getRenderer() ||
-            !meshRenderer.materialInstance ||
-            !meshRenderer.materialInstance->material())
+static void submitSelectedGeometry(GeometryResource& geometry,
+                                   std::span<EntityHandle const> entities) {
+    for (auto entity: entities) {
+        auto* transform = entity.tryGet<TransformMatrixComponent>();
+        auto* meshRenderer = entity.tryGet<MeshRendererComponent>();
+        if (!transform || !meshRenderer || !meshRenderer->mesh ||
+            !meshRenderer->mesh->getRenderer() ||
+            !meshRenderer->materialInstance ||
+            !meshRenderer->materialInstance->material())
         {
-            return;
+            continue;
         }
-        auto impl = meshRenderer.mesh->getRenderer();
-        if (!impl) {
-            return;
-        }
-        geometry.add(std::move(impl), meshRenderer.materialInstance,
-                     transform.matrix, 0);
-    });
+        auto impl = meshRenderer->mesh->getRenderer();
+        geometry.add(std::move(impl), meshRenderer->materialInstance,
+                     transform->matrix, 0);
+    }
 }
 
 static void addSphereVis(Renderer2DScene& overlay, float3 position,
@@ -224,17 +217,19 @@ static void submitBoxColliderVis(ConstEntityHandle entity,
     addBoxVis(overlayScene, transform->matrix, collider->halfExtend, color, 6);
 }
 
-void EditorSceneRenderer::submit(
-    bloom::Scene const& scene, EntitySelectionManager const& selectionManager) {
-    if (!mRenderer) {
-        return;
+void EditorSceneRenderer::submit(Scene const& scene) {
+    if (mRenderer) {
+        mRenderer->submit(scene);
     }
-    mRenderer->submit(scene);
+}
+
+void EditorSceneRenderer::submitSelection(
+    std::span<EntityHandle const> selection) {
     if (selectedGeometry) {
-        submitSelectedGeometry(scene, *selectedGeometry, selectionManager);
+        submitSelectedGeometry(*selectedGeometry, selection);
     }
     if (overlayScene) {
-        for (auto& entity: selectionManager) {
+        for (auto& entity: selection) {
             submitPointlightOverlay(entity, overlayScene->scene);
             submitSphereColliderVis(entity, overlayScene->scene);
             submitBoxColliderVis(entity, overlayScene->scene);

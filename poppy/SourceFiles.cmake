@@ -18,6 +18,8 @@ set(poppy_sources
   src/Poppy/Editor/TransactionManager.h
   src/Poppy/Editor/Transaction.cpp
   src/Poppy/Editor/Transaction.h
+  src/Poppy/Editor/SceneTransactions.cpp
+  src/Poppy/Editor/SceneTransactions.h
 
   src/Poppy/Platform/MacOS/imgui_impl_metal.h
   src/Poppy/Platform/MacOS/imgui_impl_metal.mm

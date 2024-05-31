@@ -36,11 +36,11 @@ public:
     ///
     HardwareDevice& device() { return *mDevice; }
 
-    ///
-    CommandQueue& commandQueue() { return *mCommandQueue; }
-
     /// \overload
     HardwareDevice const& device() const { return *mDevice; }
+
+    ///
+    CommandQueue& commandQueue() { return *mCommandQueue; }
 
     ///
     AssetManager& assetManager() { return *mAssetManager; }

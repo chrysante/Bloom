@@ -1010,7 +1010,7 @@ void AssetManager::compileScripts() {
         return;
     }
     Logger::Info("Successfully compiled scripts");
-    ScriptSystem_setTarget(*application().coreSystems().scriptSystem().impl,
+    ScriptSystem_setTarget(*application().scriptSystem().impl,
                            std::move(*target));
     dispatch(DispatchToken::Now, ScriptsDidCompileEvent{});
 }

@@ -138,7 +138,7 @@ std::array<Command const*, 2> Editor::Impl::addSimCommands(
         { Key::R, ModFlags::Control },
         [this] { editor->startSimulation(); },
         [this] {
-            auto& sceneSystem = editor->coreSystems().sceneSystem();
+            auto& sceneSystem = editor->sceneSystem();
             return sceneSystem.scene() && !editor->isSimulating();
         }
     });
@@ -231,12 +231,12 @@ void Editor::openView(std::string name, std::function<void(View&)> completion) {
     });
 }
 
-void Editor::startSimulation() { coreSystems().runtime().run(); }
+void Editor::startSimulation() { runtime().run(); }
 
-void Editor::stopSimulation() { coreSystems().runtime().stop(); }
+void Editor::stopSimulation() { runtime().stop(); }
 
 bool Editor::isSimulating() const {
-    return coreSystems().runtime().state() == RuntimeState::Running;
+    return runtime().state() == RuntimeState::Running;
 }
 
 void Editor::invalidateUI(int numFrames) {
@@ -419,10 +419,10 @@ Command const* Editor::addCommand(Command command) {
     return impl->cmd.add(std::move(command));
 }
 
-void Editor::saveAll() { coreSystems().assetManager().saveAll(); }
+void Editor::saveAll() { assetManager().saveAll(); }
 
 void Editor::Impl::deleteSelectedEntities() {
-    auto& sceneSystem = editor->coreSystems().sceneSystem();
+    auto& sceneSystem = editor->sceneSystem();
     std::unique_lock lock = sceneSystem.lock();
     for (EntityHandle entity: selection.entities()) {
         entity.deleteEntity();

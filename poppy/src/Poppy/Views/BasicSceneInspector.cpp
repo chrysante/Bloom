@@ -43,7 +43,7 @@ std::optional<ComponentKind> poppy::getColliderType2(EntityHandle entity) {
 }
 
 Scene* BasicSceneInspector::scene() const {
-    return view->editor().coreSystems().sceneSystem().scene();
+    return view->editor().sceneSystem().scene();
 }
 
 EntitySelectionManager& BasicSceneInspector::selection() const {
@@ -51,7 +51,7 @@ EntitySelectionManager& BasicSceneInspector::selection() const {
 }
 
 AssetManager& BasicSceneInspector::assetManager() const {
-    return view->editor().coreSystems().assetManager();
+    return view->editor().assetManager();
 }
 
 bool BasicSceneInspector::hasLightComponent(EntityHandle entity) const {

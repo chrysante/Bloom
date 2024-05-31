@@ -188,7 +188,7 @@ void IBLGenTool::display() {
 
 bool IBLGenTool::verifySourceAndDest() {
     if (source) {
-        auto& AM = editor().coreSystems().assetManager();
+        auto& AM = editor().assetManager();
         AM.makeAvailable(source->handle(), AssetRepresentation::CPU);
     }
     if (!source || !source->pixelData || !dest) {
@@ -275,7 +275,7 @@ void IBLGenTool::displayFaceFillTool() {
     static bool fillUVs = false;
     ImGui::Checkbox("Fill UVs", &fillUVs);
     if (source && ImGui::Button("Fill Face")) {
-        auto& AM = editor().coreSystems().assetManager();
+        auto& AM = editor().assetManager();
         AM.makeAvailable(source->handle(), AssetRepresentation::CPU);
         float4* data = (float4*)source->pixelData.get();
         size_t imgStride = source->size.x * source->size.y;

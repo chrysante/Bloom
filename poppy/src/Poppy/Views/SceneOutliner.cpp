@@ -231,9 +231,8 @@ void SceneOutliner::sceneContextMenu(Scene& scene) {
         ImGui::EndMenu();
     }
     if (ImGui::MenuItem("Unload")) {
-        dispatch(DispatchToken::NextFrame, [this] {
-            editor().coreSystems().sceneSystem().unloadScene();
-        });
+        dispatch(DispatchToken::NextFrame,
+                 [this] { editor().sceneSystem().unloadScene(); });
         return;
     }
 }

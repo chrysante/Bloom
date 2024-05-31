@@ -252,7 +252,7 @@ void AssetBrowser::importFiles() {
 }
 
 void AssetBrowser::init() {
-    assetManager = &editor().coreSystems().assetManager();
+    assetManager = &editor().assetManager();
     dirView.init(std::make_unique<DirViewDelegate>(*this),
                  editor().makeEmitter(), commandPaletteWrite());
     if (!data.projectDir.empty()) {

@@ -14,8 +14,7 @@ using namespace bloom;
 void SceneSystem::init() {
     listen([this](ScriptsDidCompileEvent) {
         if (scene()) {
-            application().coreSystems().scriptSystem().onScriptCompile(
-                *scene());
+            application().scriptSystem().onScriptCompile(*scene());
         }
     });
 }
@@ -48,14 +47,14 @@ std::unique_lock<std::mutex> SceneSystem::lock() {
 void SceneSystem::start() {
     auto L = lock();
     mPlayScene = scene()->clone();
-    auto& scriptSystem = application().coreSystems().scriptSystem();
-    auto& physicsSystem = application().coreSystems().physicsSystem();
+    auto& scriptSystem = application().scriptSystem();
+    auto& physicsSystem = application().physicsSystem();
     physicsSystem.onSceneInit(*playScene(), playScene()->physicsParameters());
     scriptSystem.onSceneInit(*playScene());
 }
 
 void SceneSystem::stop() {
-    auto& physicsSystem = application().coreSystems().physicsSystem();
+    auto& physicsSystem = application().physicsSystem();
     physicsSystem.onSceneStop();
     auto L = lock();
     mPlayScene.reset();
@@ -67,8 +66,8 @@ void SceneSystem::resume() {}
 
 void SceneSystem::step(Timestep timestep) {
     auto L = lock();
-    auto& scriptSystem = application().coreSystems().scriptSystem();
-    auto& physicsSystem = application().coreSystems().physicsSystem();
+    auto& scriptSystem = application().scriptSystem();
+    auto& physicsSystem = application().physicsSystem();
     physicsSystem.update(*playScene(), timestep);
     scriptSystem.onSceneUpdate(*playScene(), timestep);
 }

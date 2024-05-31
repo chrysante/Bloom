@@ -40,7 +40,10 @@ enum class RunLoopMode {
 
 /// Base class of user application. Users are expected to derive from this class
 /// to implement their application
-class BLOOM_API Application: protected Receiver, public Emitter {
+class BLOOM_API Application:
+    protected Receiver,
+    public Emitter,
+    private CoreSystemManager {
 public:
     /// Dispatches \p message to the global application instance
     static void DispatchMessage(DispatchToken token, auto&& message);
@@ -50,17 +53,15 @@ public:
 
     virtual ~Application();
 
-    /// \Returns a reference to the current GPU
-    HardwareDevice& device() { return coreSystems().device(); }
-
-    /// \Returns a reference to the applicatins command queue
-    CommandQueue& commandQueue() { return coreSystems().commandQueue(); }
-
-    /// \Returns the core system manager
-    CoreSystemManager& coreSystems() { return mCoreSystems; }
-
-    /// \overload
-    CoreSystemManager const& coreSystems() const { return mCoreSystems; }
+    /// Getters inherited from `CoreSystemManager` @{
+    using CoreSystemManager::assetManager;
+    using CoreSystemManager::commandQueue;
+    using CoreSystemManager::device;
+    using CoreSystemManager::physicsSystem;
+    using CoreSystemManager::runtime;
+    using CoreSystemManager::sceneSystem;
+    using CoreSystemManager::scriptSystem;
+    /// @}
 
     /// \Returns the current timestep
     Timestep time() const { return mTimer.timestep(); }
@@ -120,6 +121,8 @@ private:
     /// \Returns `true` if the event has been handled
     virtual bool onInput(InputEvent) { return false; }
 
+    CoreSystemManager& coreSystemManager() { return *this; }
+
     friend class AppRunner;
 
     /// Main function of the application. Runs initialization, main loop and
@@ -134,7 +137,6 @@ private:
 
     std::shared_ptr<MessageSystem> messageSystem;
     std::vector<std::unique_ptr<Window>> mWindows;
-    CoreSystemManager mCoreSystems;
     Timer mTimer;
     RunLoopMode mRunLoopMode = RunLoopMode::Realtime;
     Input mInput;

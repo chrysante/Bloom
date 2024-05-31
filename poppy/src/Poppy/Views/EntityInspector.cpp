@@ -625,7 +625,7 @@ void EntityInspector::inspectScript() {
         ImGui::Text("Error: No preserved data");
         return;
     }
-    auto& scriptSystem = editor().coreSystems().scriptSystem();
+    auto& scriptSystem = editor().scriptSystem();
     auto* sym = scriptSystem.symbolTable();
     auto& component = entity.get<ScriptComponent>();
     auto& preservedData = entity.get<ScriptPreservedData>();

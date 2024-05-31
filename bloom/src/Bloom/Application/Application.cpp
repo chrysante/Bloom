@@ -40,7 +40,8 @@ struct Application::Impl {
     RenderThread renderThread;
 };
 
-Application::Application(): mCoreSystems(this), impl(std::make_unique<Impl>()) {
+Application::Application():
+    CoreSystemManager(this), impl(std::make_unique<Impl>()) {
     gInstance = this;
     messageSystem = MessageSystem::Create();
     assignEmitter(makeEmitter());
@@ -121,7 +122,7 @@ void Application::run() {
 void Application::doInit() {
     registerListeners();
     Window::InitWindowSystem();
-    mCoreSystems.init();
+    coreSystemManager().init();
     this->init();
     mTimer.reset();
 }
@@ -136,7 +137,7 @@ void Application::registerListeners() {
 
 void Application::doShutdown() {
     this->shutdown();
-    mCoreSystems.shutdown();
+    coreSystemManager().shutdown();
 }
 
 void Application::doFrame(RunLoopMode mode) {

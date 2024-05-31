@@ -35,8 +35,7 @@ API_EXPORT extern "C" void bloomSetEntityTransform(ScriptEntityHandle entity,
     if (!physics) {
         return;
     }
-    auto& physicsSystem =
-        Application::StaticInstance().coreSystems().physicsSystem();
+    auto& physicsSystem = Application::StaticInstance().physicsSystem();
     physicsSystem.setTransform(physics->bodyID, transform);
 }
 

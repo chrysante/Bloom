@@ -135,7 +135,7 @@ void MaterialInstanceViewer::receiveData(std::any data) {
     if (receiveAsset(inst, data)) {
         return;
     }
-    auto& AM = editor().coreSystems().assetManager();
+    auto& AM = editor().assetManager();
     using enum AssetRepresentation;
     AM.makeAvailable(inst->handle(), CPU | GPU);
 }

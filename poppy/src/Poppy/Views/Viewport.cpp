@@ -225,7 +225,7 @@ static Scene* selectDisplayScene(SceneSystem const& sceneSystem) {
 
 void Viewport::display() {
     ImGui::BeginChild("Child");
-    auto* scene = selectDisplayScene(editor().coreSystems().sceneSystem());
+    auto* scene = selectDisplayScene(editor().sceneSystem());
     if (scene) {
         readInput();
         drawScene(*scene);
@@ -284,7 +284,7 @@ void Viewport::drawScene(Scene& scene) {
         .shadowMapSize = rendererSettings.shadowMapResolution,
         .drawWireframe = drawOptions.mode == DebugDrawOptions::Mode::Wireframe
     };
-    auto& sceneSystem = editor().coreSystems().sceneSystem();
+    auto& sceneSystem = editor().sceneSystem();
     std::unique_lock sceneLock = sceneSystem.lock();
     if (renderGraphDirty || !renderer) {
         auto* renderGraph = scene.renderGraph();
@@ -591,7 +591,7 @@ void Viewport::openScene(Reference<Scene> scene) {
     using enum AssetRepresentation;
     auto& AM = assetManager();
     AM.makeAvailable(scene->handle(), CPU | GPU);
-    auto& sceneSystem = editor().coreSystems().sceneSystem();
+    auto& sceneSystem = editor().sceneSystem();
     sceneSystem.loadScene(scene);
 }
 
@@ -742,7 +742,7 @@ void Viewport::displayViewportSettings() {
 
 void Viewport::displayPhysicsSettings() {
     using namespace propertiesView;
-    auto& physicsSystem = editor().coreSystems().physicsSystem();
+    auto& physicsSystem = editor().physicsSystem();
     auto settings = physicsSystem.settings();
     bool modified = false;
     beginProperty("Collision Steps / Frame");

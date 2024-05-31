@@ -276,10 +276,8 @@ void MaterialEditor::deserialize(YAML::Node node) {
 void MaterialEditor::compile() {
     BL_ASSERT(material.get());
     dispatch(DispatchToken::NextFrame, [this] {
-        editor()
-            .coreSystems()
-            .assetManager()
-            .makeAvailable(material->handle(), AssetRepresentation::GPU,
-                           /* forceReload: */ true);
+        auto& AM = editor().assetManager();
+        AM.makeAvailable(material->handle(), AssetRepresentation::GPU,
+                         /* forceReload: */ true);
     });
 }

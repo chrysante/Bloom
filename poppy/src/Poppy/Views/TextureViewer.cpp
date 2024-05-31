@@ -235,7 +235,7 @@ void TextureViewerWrapper::receiveData(std::any data) {
         return;
     }
     Reference<Texture2D> texture = *texptr;
-    auto& AM = editor().coreSystems().assetManager();
+    auto& AM = editor().assetManager();
     AM.makeAvailable(texture->handle(), AssetRepresentation::GPU);
     impl = TextureViewer(texture, { .displayMode =
                                         TextureViewer::DisplayMode::Expanded });

@@ -978,7 +978,7 @@ static bool compileEngineLibrary(std::filesystem::path destDir) {
 }
 
 void AssetManager::compileScripts() {
-    dispatch(DispatchToken::Now, ScriptsWillLoadEvent{});
+    dispatch(DispatchToken::Now, ScriptsWillCompileEvent{});
     using namespace scatha;
     std::optional<scatha::Target> target;
     std::stringstream err;
@@ -1012,7 +1012,7 @@ void AssetManager::compileScripts() {
     Logger::Info("Successfully compiled scripts");
     ScriptSystem_setTarget(*application().coreSystems().scriptSystem().impl,
                            std::move(*target));
-    dispatch(DispatchToken::Now, ScriptsDidLoadEvent{});
+    dispatch(DispatchToken::Now, ScriptsDidCompileEvent{});
 }
 
 std::vector<AssetHandle> AssetManager::getAssetsOfType(AssetType type) const {

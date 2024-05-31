@@ -83,11 +83,6 @@ public:
     BL_DEFINE_ASSET_CTOR(ScriptSource, Asset)
 };
 
-/// Kind of misplaced here but we'll go with it for now
-
-struct BLOOM_API ScriptsWillLoadEvent {};
-struct BLOOM_API ScriptsDidLoadEvent {};
-
 } // namespace bloom
 
 #endif // BLOOM_ASSET_ASSET_H

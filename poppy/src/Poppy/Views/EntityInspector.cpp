@@ -620,6 +620,7 @@ void EntityInspector::inspectColliderComponent(BoxColliderComponent& collider) {
 
 void EntityInspector::inspectScript() {
     using namespace propertiesView;
+    using namespace scatha;
     if (!entity.has<ScriptPreservedData>()) {
         ImGui::Text("Error: No preserved data");
         return;
@@ -638,7 +639,7 @@ void EntityInspector::inspectScript() {
     beginProperty("Class");
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     char const* name = component.type ? component.type->name().data() : "";
-    if (ImGui::BeginCombo("##-script", name)) {
+    if (ImGui::BeginCombo("###Class", name)) {
         auto structTypes = sym->globalScope().entities() |
                            scatha::Filter<scatha::sema::StructType>;
         for (auto* type: structTypes) {
@@ -653,6 +654,24 @@ void EntityInspector::inspectScript() {
         }
         ImGui::EndCombo();
     }
+    sema::StructType const* type = component.type;
+    bool haveObject = component.objectAddress != 0;
+    if (!type || !beginSubSection("Attributes")) {
+        return;
+    }
+    ImGui::BeginDisabled(!haveObject);
+    for (auto* variable: type->memberVariables()) {
+        if (!variable->isPublic()) {
+            continue;
+        }
+        beginProperty(variable->name());
+        SC_MATCH(*variable->type()){ [&](sema::FloatType const& type) {
+            float value = 0;
+            ImGui::DragFloat(std::string(type.name()).c_str(), &value);
+        }, [&](sema::Type const&) {} };
+    }
+    ImGui::EndDisabled();
+
 #if 0
         if (!script.objectAddress == 0 || !beginSubSection("Attributes")) {
             return;

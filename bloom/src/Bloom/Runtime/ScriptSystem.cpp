@@ -24,6 +24,7 @@
 
 using namespace bloom;
 using namespace vml;
+using namespace scatha;
 
 template <typename... T>
     requires(std::is_standard_layout_v<T> && ...)
@@ -56,43 +57,57 @@ ScriptSystem::ScriptSystem(): impl(std::make_unique<Impl>()) {}
 ScriptSystem::~ScriptSystem() = default;
 
 void ScriptSystem::doInit() {
-    listen([this](ScriptsWillLoadEvent) { scriptsWillCompile(); });
-    listen([this](ScriptsDidLoadEvent) { scriptsDidCompile(); });
+    listen([this](ScriptsWillCompileEvent) { scriptsWillCompile(); });
+    listen([this](ScriptsDidCompileEvent) { scriptsDidCompile(); });
     listen([this](SceneLoadedEvent event) { onScriptCompile(*event.scene); });
 }
 
+static sema::Function const* selectConstructor(sema::StructType const* type) {
+    /// We are looking for a constructor that takes a `&this` or `&mut this` and
+    /// a `Bloom.Entity`
+    for (auto* ctor: type->constructors()) {
+        if (ctor->argumentCount() != 2) {
+            continue;
+        }
+        auto* firstArg =
+            dyncast<sema::ReferenceType const*>(ctor->argumentType(0));
+        if (!firstArg || firstArg->base().get() != type) {
+            continue;
+        }
+        auto* secondArg =
+            dyncast<sema::StructType const*>(ctor->argumentType(1));
+        if (!secondArg || (secondArg->name() != "Entity")) {
+            continue;
+        }
+        auto* library =
+            dyncast<sema::NativeLibrary const*>(secondArg->parent());
+        if (!library || library->name() != "Bloom") {
+            continue;
+        }
+        return ctor;
+    }
+    return nullptr;
+}
+
 static uint64_t allocateObject(svm::VirtualMachine& VM,
-                               scatha::sema::StructType const* type,
+                               sema::StructType const* type,
                                EntityHandle handle) {
     auto addr = VM.allocateMemory(type->size(), type->align());
     auto bitAddr = std::bit_cast<uint64_t>(addr);
     auto ctors = type->findFunctions("new");
-    if (ctors.empty()) {
+    if (ctors.empty() && type->hasTrivialLifetime()) {
         std::memset(VM.derefPointer(addr, type->size()), 0, type->size());
         return bitAddr;
     }
-    if (ctors.size() > 1) {
-        Logger::Warn(
-            "'", type->name(),
-            "' has multiple constructors; selecting unspecified constructor");
-    }
-    VM.execute(ctors.front()->binaryAddress().value(),
-               toWordArray(bitAddr, ScriptEntityHandle::make(handle)));
-    return bitAddr;
-    /// More rigorous implementation, but we're hacking around right now
-#if 0
-    using enum scatha::sema::LifetimeOperation::Kind;
-    switch (ctor.kind()) {
-    case Trivial:
-        std::memset(VM.derefPointer(addr, type->size()), 0, type->size());
-        return bitAddr;
-    case Nontrivial:
-        
-    default:
-        Logger::Error("Cannot instantiate type without default constructor");
+    auto* ctor = selectConstructor(type);
+    if (!ctor) {
+        Logger::Warn("Failed to find suitable constructor for object of type: ",
+                     type->name());
         return 0;
     }
-#endif
+    VM.execute(ctor->binaryAddress().value(),
+               toWordArray(bitAddr, ScriptEntityHandle::make(handle)));
+    return bitAddr;
 }
 
 void ScriptSystem::onScriptCompile(Scene& scene) {
@@ -148,7 +163,7 @@ void ScriptSystem::onSceneInit(Scene& scene) {
 
 void ScriptSystem::onSceneUpdate(Scene& scene, Timestep timestep) {
     scene.view<ScriptComponent>().each([&](ScriptComponent& component) {
-        if (!component.objectAddress || !component.updateFunction) {
+        if (component.objectAddress == 0 || !component.updateFunction) {
             return;
         }
         runGuarded([&] {
@@ -167,7 +182,7 @@ scatha::sema::SymbolTable const* ScriptSystem::symbolTable() const {
     return &impl->target->symbolTable();
 }
 
-void ScriptSystem::scriptsWillCompile() { impl->VM.reset(); }
+void ScriptSystem::scriptsWillCompile() { impl->VM = {}; }
 
 void ScriptSystem::scriptsDidCompile() {
     if (!impl->target) {

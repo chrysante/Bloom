@@ -81,7 +81,7 @@ set(poppy_sources
   src/Poppy/Views/MaterialNodeController.cpp
   src/Poppy/Views/MaterialNodeController.h
   src/Poppy/Views/MaterialNodes.cpp
-  src/Poppy/Views/MaterialInstanceViewer.cpp
+  src/Poppy/Views/MaterialInstanceEditor.cpp
   src/Poppy/Views/RendererDebuggerView.cpp
   src/Poppy/Views/RenderGraphEditor.cpp
   src/Poppy/Views/SceneOutliner.cpp

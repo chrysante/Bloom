@@ -405,7 +405,7 @@ void poppy::openAsset(bloom::AssetHandle handle) {
         break;
     }
     case AssetType::MaterialInstance: {
-        openAssetInView<MaterialInstance>("Material Instance Viewer", handle);
+        openAssetInView<MaterialInstance>("Material Instance Editor", handle);
         break;
     }
     case AssetType::Texture2D: {

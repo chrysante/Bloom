@@ -16,8 +16,8 @@ using namespace poppy;
 
 namespace {
 
-struct MaterialInstanceViewer: public View {
-    MaterialInstanceViewer();
+struct MaterialInstanceEditor: public View {
+    MaterialInstanceEditor();
 
     void display() override;
 
@@ -28,9 +28,9 @@ struct MaterialInstanceViewer: public View {
 
 } // namespace
 
-POPPY_REGISTER_VIEW(MaterialInstanceViewer, "Material Instance Viewer");
+POPPY_REGISTER_VIEW(MaterialInstanceEditor, "Material Instance Editor");
 
-MaterialInstanceViewer::MaterialInstanceViewer() {
+MaterialInstanceEditor::MaterialInstanceEditor() {
     // clang-format off
     setToolbar({
         ToolbarSpacer(),
@@ -39,7 +39,7 @@ MaterialInstanceViewer::MaterialInstanceViewer() {
             .font(FontDesc::UIDefault().setWeight(FontWeight::Semibold)),
         ToolbarSpacer(),
     }); // clang-format on
-    setPadding({ std::nullopt, 0 });
+    setPadding({ 0, 0 });
 }
 
 static std::string makeLabel(std::string_view name) {
@@ -90,12 +90,12 @@ static void displayParam(MaterialInstance& inst,
     }
 }
 
-void MaterialInstanceViewer::display() {
+void MaterialInstanceEditor::display() {
     if (!inst) {
         displayEmptyWithReason("No Material Instance Open");
         return;
     }
-    ImGui::BeginChild("Child");
+    ImGui::BeginChild("Child", {}, ImGuiChildFlags_AlwaysUseWindowPadding);
     using namespace propertiesView;
     if (beginSection()) {
         beginProperty("Material");
@@ -131,7 +131,7 @@ void MaterialInstanceViewer::display() {
     ImGui::EndChild();
 }
 
-void MaterialInstanceViewer::receiveData(std::any data) {
+void MaterialInstanceEditor::receiveData(std::any data) {
     if (receiveAsset(inst, data)) {
         return;
     }

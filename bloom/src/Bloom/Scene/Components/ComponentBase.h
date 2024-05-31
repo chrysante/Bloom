@@ -74,19 +74,24 @@ decltype(auto) visitComponentType(ComponentKind dynamicKind, auto&& fn) {
     switch (dynamicKind) {
 #define BLOOM_COMPONENT_DEF(Type, ...)                                         \
     case ComponentKind::Type:                                                  \
-        return std::invoke(fn, utl::tag<Type>{});
+        return std::invoke(fn, utl::tag<bloom::Type>{});
 #include "Bloom/Scene/Components/Components.def"
     }
 }
 
-/// \overload
-decltype(auto) visitComponentType(ComponentKind typeA, ComponentKind typeB,
-                                  auto&& fn) {
-    return visitComponentType(typeA, [&]<typename A>(utl::tag<A>) {
-        return visitComponentType(typeB, [&]<typename B>(utl::tag<B>) {
-            return std::invoke(fn, utl::tag<A>{}, utl::tag<B>{});
-        });
-    });
+/// Visit a subset of components
+template <typename... Include>
+    requires(sizeof...(Include) > 0)
+decltype(auto) visitComponentType(ComponentKind dynamicKind, auto&& fn) {
+    switch (dynamicKind) {
+#define BLOOM_COMPONENT_DEF(Type, ...)                                         \
+    case ComponentKind::Type:                                                  \
+        if constexpr ((std::is_same_v<Include, bloom::Type> || ...))           \
+            return std::invoke(fn, utl::tag<bloom::Type>{});                   \
+        else                                                                   \
+            BL_UNREACHABLE();
+#include "Bloom/Scene/Components/Components.def"
+    }
 }
 
 /// Type traits that has a static member variable `value` set to `true` if \p T

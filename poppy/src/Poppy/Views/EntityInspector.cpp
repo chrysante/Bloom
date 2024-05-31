@@ -365,9 +365,6 @@ static std::optional<E> inspectTypeGeneric(char const* ID, E type,
     return inspectTypeGeneric(ID, type, magic_enum::enum_values<E>(), exchange);
 }
 
-#define IF_WELL_FORMED(...)                                                    \
-    if constexpr (requires __VA_ARGS__) __VA_ARGS__
-
 static Transaction* makeComponentExchange(EntityHandle entity,
                                           ComponentKind oldType,
                                           ComponentKind newType) {
@@ -422,8 +419,10 @@ void EntityInspector::inspectLight() {
         removeComponentType(type, entity);
 #endif
     }).value_or(type);
-    visitComponentType(type, [&]<typename L>(utl::tag<L>) {
-        IF_WELL_FORMED({ inspectLightComponent(entity.get<L>()); });
+    visitComponentType<PointLightComponent, SpotLightComponent,
+                       DirectionalLightComponent,
+                       SkyLightComponent>(type, [&]<typename L>(utl::tag<L>) {
+        inspectLightComponent(entity.get<L>());
     });
     endSection();
 }
@@ -590,8 +589,10 @@ void EntityInspector::inspectPhysics() {
             makeComponentExchange(entity, colliderType, newType);
         editor().transactionManager().commit(transaction);
     }).value_or(colliderType);
-    visitComponentType(colliderType, [&]<typename C>(utl::tag<C>) {
-        IF_WELL_FORMED({ inspectColliderComponent(entity, entity.get<C>()); });
+    visitComponentType<SphereColliderComponent,
+                       BoxColliderComponent>(colliderType,
+                                             [&]<typename C>(utl::tag<C>) {
+        inspectColliderComponent(entity.get<C>());
     });
     endSection();
 }
@@ -728,8 +729,8 @@ bool EntityInspector::beginGenericSection(std::string_view name,
         cursorPos.x + ImGui::GetContentRegionAvail().x - textSize.x, cursorPos.y
     };
     ImGui::SetCursorPos(buttonPos);
-    char deleteButtonLabel[64] = "delete";
-    std::strncpy(&deleteButtonLabel[14], name.data(), 49);
+    char deleteButtonLabel[64] = "##delete-";
+    std::strncpy(&deleteButtonLabel[9], name.data(), 64 - 9 - 1);
     if (ImGui::InvisibleButton(deleteButtonLabel, textSize)) {
         deleter();
         open = false;

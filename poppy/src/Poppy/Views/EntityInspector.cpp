@@ -292,15 +292,15 @@ void EntityInspector::inspectMesh() {
     auto& meshRenderer = entity.get<MeshRendererComponent>();
     using enum AssetRepresentation;
     beginProperty("Mesh");
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     editComponent(meshRenderer, [&](TAToken& token) {
+        fullWidth();
         if (assetButton("###Mesh", meshRenderer.mesh, { .repr = GPU })) {
             token.commit();
         }
     });
     beginProperty("Material");
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     editComponent(meshRenderer, [&](TAToken& token) {
+        fullWidth();
         if (assetButton("###MaterialInstance", meshRenderer.materialInstance,
                         { .repr = GPU }))
         {
@@ -638,7 +638,7 @@ void EntityInspector::inspectScript() {
         return;
     }
     beginProperty("Class");
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    fullWidth();
     char const* name = component.type ? component.type->name().data() : "";
     if (ImGui::BeginCombo("###Class", name)) {
         auto structTypes = sym->globalScope().entities() |
@@ -669,6 +669,7 @@ void EntityInspector::inspectScript() {
         }
         beginProperty(variable->name());
         SC_MATCH(*variable->type()){ [&](sema::FloatType const& type) {
+            fullWidth();
             float value = 0;
             ImGui::DragFloat(std::string(type.name()).c_str(), &value);
         }, [&](sema::Type const&) {} };

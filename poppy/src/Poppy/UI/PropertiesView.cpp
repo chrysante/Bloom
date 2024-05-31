@@ -24,19 +24,14 @@ void propertiesView::header(std::string_view name, FontDesc const& font) {
 }
 
 bool propertiesView::beginSection() {
-    bool open =
-        ImGui::BeginTable("Property Table", 2,
-                          ImGuiTableFlags_Resizable |
-                              ImGuiTableFlags_NoBordersInBodyUntilResize);
+    auto tableFlags = ImGuiTableFlags_Resizable |
+                      ImGuiTableFlags_NoBordersInBodyUntilResize;
+    bool open = ImGui::BeginTable("Property Table", 2, tableFlags);
     if (!open) {
         return false;
     }
-    ImGui::TableSetupColumn("Label",
-                            ImGuiTableColumnFlags_WidthStretch); // Default to
-                                                                 // 100.0f
-    ImGui::TableSetupColumn("Property",
-                            ImGuiTableColumnFlags_WidthStretch); // Default to
-                                                                 // 200.0f
+    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.3);
+    ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthStretch);
     return true;
 }
 

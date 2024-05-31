@@ -157,8 +157,12 @@ bool poppy::dragFloat3Labelled(char const* label, float v[3],
         ImDrawFlags drawFlags = i == 0 ? ImDrawFlags_RoundCornersLeft :
                                          ImDrawFlags_RoundCornersNone;
         float2 cursorPos = beginCursor + float2(i * fullWidth / 3, 0);
-        float2 pMin = cursorPos - float2(1, 0);
-        float2 pMax = cursorPos + labelButtonSize + float2(1, 0);
+        float2 pMin = cursorPos;
+        float2 pMax = cursorPos + labelButtonSize + float2(2, 0);
+        if (i > 0) {
+            pMin.x -= 1;
+            pMax.x -= 1;
+        }
         DL->AddRectFilled(pMin, pMax, colors[i], rounding, drawFlags);
         if (haveButtonLabels) {
             char const* label = labels[i];

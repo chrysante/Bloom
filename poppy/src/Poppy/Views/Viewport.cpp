@@ -717,21 +717,21 @@ void Viewport::displayViewportSettings() {
     beginProperty("Game View");
     ImGui::Checkbox("###game-view", &gameView);
     beginProperty("Field Of View");
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    fullWidth();
     if (float fov = cameraController.fieldOfView();
         ImGui::SliderFloat("###field-of-view", &fov, 30, 180))
     {
         cameraController.setFieldOfView(fov);
     }
     beginProperty("Near Clip Plane");
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    fullWidth();
     if (float clip = cameraController.nearClipPlane();
         ImGui::SliderFloat("###near-clip-plane", &clip, 0, 1))
     {
         cameraController.setNearClipPlane(clip);
     }
     beginProperty("Camera Speed");
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    fullWidth();
     if (float speed = cameraController.speed();
         ImGui::DragFloat("###Camera Speed", &speed))
     {

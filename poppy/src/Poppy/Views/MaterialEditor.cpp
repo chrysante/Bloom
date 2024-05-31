@@ -240,7 +240,7 @@ void MaterialEditor::displayOptions() {
     beginSection("Properties");
     beginProperty("Shading Model");
     auto currentModel = model->shadingModel;
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    fullWidth();
     if (ImGui::BeginCombo("###Shading Model",
                           std::string(magic_enum::enum_name(currentModel))
                               .c_str()))

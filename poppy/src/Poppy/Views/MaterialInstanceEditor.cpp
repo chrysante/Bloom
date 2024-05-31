@@ -100,7 +100,7 @@ void MaterialInstanceEditor::display() {
     if (beginSection()) {
         beginProperty("Material");
         auto material = inst->materialRef();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        fullWidth();
         if (assetButton("###Material", material,
                         { .repr = AssetRepresentation::GPU }))
         {

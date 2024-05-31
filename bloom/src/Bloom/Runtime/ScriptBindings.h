@@ -15,6 +15,9 @@ namespace bloom {
 
 class Scene;
 
+/// We replicate the transform component because we need to exactly match the
+/// memory layout of the `Transform` type in script. This way we don't couple
+/// the engine transform's memory with the script system
 struct ScriptTransform {
     vml::packed_double3 position;
     vml::packed_double4 orientation; // Packed quaternions don't exist
@@ -24,11 +27,14 @@ struct ScriptTransform {
         return { t.position, t.orientation, t.scale };
     }
 
-    explicit operator Transform() const {
+    Transform native() const {
         return Transform{ position, orientation, scale };
     }
+
+    operator Transform() const { return native(); }
 };
 
+/// See `ScriptTransform`
 struct ScriptEntityHandle {
     EntityID::RawType ID;
     Scene* scene;
@@ -37,9 +43,9 @@ struct ScriptEntityHandle {
         return { e.ID().raw(), e.scene() };
     }
 
-    explicit operator EntityHandle() const {
-        return EntityHandle(EntityID(ID), scene);
-    }
+    EntityHandle native() const { return EntityHandle(EntityID(ID), scene); }
+
+    operator EntityHandle() const { return native(); }
 };
 
 /// \Returns a string of Scatha source that defines global constants for each

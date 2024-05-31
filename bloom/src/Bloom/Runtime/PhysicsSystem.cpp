@@ -357,6 +357,14 @@ void PhysicsSystem::Impl::update(Scene& scene, Timestep time) {
     });
 }
 
+void PhysicsSystem::setTransform(uint32_t bodyID, Transform const& transform) {
+    auto& interface = impl->system->GetBodyInterface();
+    interface.SetPositionAndRotation(JPH::BodyID(bodyID),
+                                     toJPHScaled(transform.position),
+                                     toJPH(transform.orientation),
+                                     JPH::EActivation::Activate);
+}
+
 PhysicsSystem::Settings PhysicsSystem::settings() const {
     return impl->settings;
 }

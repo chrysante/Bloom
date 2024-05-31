@@ -92,7 +92,7 @@ public:
     void onRenderThread(std::function<void()> callback);
 
     ///
-    static Application const& StaticInstance() { return *gInstance; }
+    static Application& StaticInstance() { return *gInstance; }
 
 protected:
     ///

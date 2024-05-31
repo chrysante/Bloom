@@ -6,6 +6,7 @@
 
 #include "Bloom/Application/Application.h"
 #include "Bloom/Application/Input.h"
+#include "Bloom/Runtime/PhysicsSystem.h"
 #include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Scene.h"
 
@@ -30,6 +31,13 @@ API_EXPORT extern "C" void bloomSetEntityTransform(ScriptEntityHandle entity,
                                                    ScriptTransform source) {
     Transform transform(source);
     EntityHandle(entity).get<Transform>() = transform;
+    auto* physics = entity.native().tryGet<PhysicsMovableComponent>();
+    if (!physics) {
+        return;
+    }
+    auto& physicsSystem =
+        Application::StaticInstance().coreSystems().physicsSystem();
+    physicsSystem.setTransform(physics->bodyID, transform);
 }
 
 API_EXPORT extern "C" bool bloomIsKeyDown(uint64_t key) {

@@ -6,6 +6,8 @@
 #include "Bloom/Application/CoreSystem.h"
 #include "Bloom/Core/Base.h"
 #include "Bloom/Core/Time.h"
+#include "Bloom/Scene/Components/PhysicsComponents.h"
+#include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Fwd.h"
 
 namespace bloom {
@@ -27,6 +29,8 @@ public:
     void onSceneStop();
 
     void update(Scene& scene, Timestep time);
+
+    void setTransform(uint32_t bodyID, Transform const& transform);
 
     Settings settings() const;
 

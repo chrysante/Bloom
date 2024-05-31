@@ -81,7 +81,7 @@ static sema::Function const* selectConstructor(sema::StructType const* type) {
         }
         auto* library =
             dyncast<sema::NativeLibrary const*>(secondArg->parent());
-        if (!library || library->name() != "Bloom") {
+        if (!library || library->name() != "Bloom") {
             continue;
         }
         return ctor;

@@ -91,6 +91,9 @@ public:
     /// Executes \p callback on the render thread
     void onRenderThread(std::function<void()> callback);
 
+    ///
+    static Application const& StaticInstance() { return *gInstance; }
+
 protected:
     ///
     Application();

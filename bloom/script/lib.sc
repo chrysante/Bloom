@@ -3,6 +3,8 @@ extern "C" fn bloomGetEntityTransform(e: Entity) -> Transform;
 
 extern "C" fn bloomSetEntityTransform(e: Entity, t: Transform) -> void;
 
+extern "C" fn bloomIsKeyDown(key: u64) -> bool;
+
 public struct Timestep {
     /// The time in seconds that has passed since the program started running
     var absolute: double;
@@ -53,3 +55,5 @@ public struct Entity {
     private var ID: u64;
     private var scene: u64;
 }
+
+public fn isKeyDown(key: u64) -> bool { return bloomIsKeyDown(key); }

@@ -1,5 +1,11 @@
 #include "Bloom/Runtime/ScriptBindings.h"
 
+#include <sstream>
+
+#include <magic_enum.hpp>
+
+#include "Bloom/Application/Application.h"
+#include "Bloom/Application/Input.h"
 #include "Bloom/Scene/Components/Transform.h"
 #include "Bloom/Scene/Scene.h"
 
@@ -24,4 +30,17 @@ API_EXPORT extern "C" void bloomSetEntityTransform(ScriptEntityHandle entity,
                                                    ScriptTransform source) {
     Transform transform(source);
     EntityHandle(entity).get<Transform>() = transform;
+}
+
+API_EXPORT extern "C" bool bloomIsKeyDown(uint64_t key) {
+    return Application::StaticInstance().input().keyDown((Key)key);
+}
+
+std::string bloom::makeKeyTableSource() {
+    std::stringstream source;
+    for (Key key: magic_enum::enum_values<Key>()) {
+        source << "public let Key_" << magic_enum::enum_name(key)
+               << ": u64 = " << (uint64_t)key << ";\n";
+    }
+    return std::move(source).str();
 }

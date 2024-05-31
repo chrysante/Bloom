@@ -4,6 +4,8 @@
 #ifndef BLOOM_RUNTIME_SCRIPTBINDINGS_H
 #define BLOOM_RUNTIME_SCRIPTBINDINGS_H
 
+#include <string>
+
 #include <vml/vml.hpp>
 
 #include "Bloom/Scene/Components/Transform.h"
@@ -39,6 +41,10 @@ struct ScriptEntityHandle {
         return EntityHandle(EntityID(ID), scene);
     }
 };
+
+/// \Returns a string of Scatha source that defines global constants for each
+/// key
+std::string makeKeyTableSource();
 
 } // namespace bloom
 

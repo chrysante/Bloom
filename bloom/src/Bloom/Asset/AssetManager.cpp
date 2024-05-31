@@ -22,6 +22,7 @@
 #include "Bloom/Graphics/RenderGraph/RenderGraph.h"
 #include "Bloom/Graphics/StaticMesh.h"
 #include "Bloom/Graphics/Texture.h"
+#include "Bloom/Runtime/ScriptBindings.h"
 #include "Bloom/Runtime/ScriptSystem.h"
 
 using namespace bloom;
@@ -962,6 +963,7 @@ static bool compileEngineLibrary(std::filesystem::path destDir) {
             sourceFiles.push_back(SourceFile::load(entry.path()));
         }
     }
+    sourceFiles.push_back(SourceFile::make(makeKeyTableSource()));
     CompilerInvocation inv(TargetType::StaticLibrary, "Bloom");
     inv.setInputs(sourceFiles);
     std::stringstream err;

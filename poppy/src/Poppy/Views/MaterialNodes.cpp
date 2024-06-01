@@ -165,6 +165,9 @@ struct OutputController: MaterialNodeController {
             { .name = "Normal",
               .flags = PinFlags::Optional,
               .userType = mask(DataType::Float3) },
+            { .name = "Transparency",
+              .flags = PinFlags::Optional,
+              .userType = mask(DataType::Float) },
         };
     }
 
@@ -177,6 +180,7 @@ struct OutputController: MaterialNodeController {
             ctx.floatType(),
             ctx.floatType(),
             ctx.float3Type(),
+            ctx.floatType(),
         });
         auto* value = graph.addValue<AggregateBuilder>(type);
         graph.setRoot(value);
@@ -197,6 +201,8 @@ struct OutputController: MaterialNodeController {
             return ctx.floatConstant(1);
         case 5: // Normal
             return ctx.float3Constant({ 0, 0, 1 });
+        case 6: // Normal
+            return ctx.floatConstant(1);
         default:
             BL_UNREACHABLE();
         }

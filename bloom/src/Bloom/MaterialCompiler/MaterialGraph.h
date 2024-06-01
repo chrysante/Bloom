@@ -19,10 +19,15 @@
 
 namespace bloom::matc {
 
+struct CodegenParameters {
+    MaterialShadingModel shadingModel = {};
+    MaterialTransparency transparency = {};
+    bool twoSided = false;
+};
+
 class MaterialGraph {
 public:
-    explicit MaterialGraph(MaterialShadingModel shadingModel):
-        _shadingModel(shadingModel) {}
+    explicit MaterialGraph(CodegenParameters params): params(params) {}
 
     void setRoot(Value* value) { _root = value; }
 
@@ -46,12 +51,12 @@ public:
                              [](auto& p) -> auto const* { return p.get(); });
     }
 
-    MaterialShadingModel shadingModel() const { return _shadingModel; }
+    CodegenParameters const& parameters() const { return params; }
 
 private:
     std::vector<DynUniquePtr<Value>> _values;
     Value* _root = nullptr;
-    MaterialShadingModel _shadingModel;
+    CodegenParameters params;
 };
 
 } // namespace bloom::matc

@@ -72,6 +72,7 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
         primitiveParameters = std::move(sourceData.primitiveParameters);
         paramBufferSize = sourceData.parameterBufferSize;
         textureParameters = std::move(sourceData.textureParameters);
+        cullMode = sourceData.cullMode;
         updateInstances(*this, instances);
     }
     catch (std::exception const& e) {

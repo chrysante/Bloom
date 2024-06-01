@@ -10,6 +10,7 @@
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/Serialization.h"
 #include "Bloom/Core/Yaml.h"
+#include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/Graphics/Material/MaterialSourceData.h"
 
@@ -49,6 +50,7 @@ struct MaterialSourceData {
     std::vector<MaterialPrimitiveParameter> primitiveParameters;
     std::vector<MaterialTextureParameter> textureParameters;
     size_t parameterBufferSize;
+    TriangleCullMode cullMode{};
 };
 
 } // namespace bloom

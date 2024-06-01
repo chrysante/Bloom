@@ -35,6 +35,9 @@ void displayMaterialNodeColorEditor();
 
 }
 
+BLOOM_MAKE_TEXT_SERIALIZER(matc::CodegenParameters, shadingModel, transparency,
+                           twoSided);
+
 namespace {
 
 struct MaterialModelImpl: bloom::MaterialModel {
@@ -42,13 +45,14 @@ struct MaterialModelImpl: bloom::MaterialModel {
 
     YAML::Node serialize() const override {
         YAML::Node root;
-        root["ShadingModel"] = shadingModel;
+        root["CodegenParameters"] = params;
         root["NodeGraph"] = editorGraph.serialize();
         return root;
     }
 
     void deserialize(YAML::Node const& node) override {
-        shadingModel = node["ShadingModel"].as<MaterialShadingModel>();
+        params = node["CodegenParameters"].as<CodegenParameters>(
+            CodegenParameters{});
         editorGraph.deserialize(node["NodeGraph"], [](YAML::Node const& node) {
             return deserializeMaterialNodeController(node);
         });
@@ -60,7 +64,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
 
     MaterialSourceData generateSource() const override {
         Context ctx;
-        MaterialGraph graph(shadingModel);
+        MaterialGraph graph(params);
         MaterialNodeController::ValueMap map;
         for (auto* node: editorGraph.nodes()) {
             auto* controller = getController(node);
@@ -73,7 +77,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
         for (auto* node: editorGraph.nodes()) {
             getController(node)->linkGraphNode(ctx, map);
         }
-        switch (shadingModel) {
+        switch (params.shadingModel) {
         case MaterialShadingModel::Unlit:
             if (auto* root = graph.root()) {
                 auto* newRoot = graph.addValue<AggregateElement>(root, 1);
@@ -87,15 +91,8 @@ struct MaterialModelImpl: bloom::MaterialModel {
         return codegen->run();
     }
 
-    void setShadingModel(MaterialShadingModel model) {
-        if (shadingModel == model) {
-            return;
-        }
-        shadingModel = model;
-    }
-
     mutable NodeEditorGraph editorGraph;
-    MaterialShadingModel shadingModel;
+    CodegenParameters params;
 };
 
 } // namespace
@@ -239,24 +236,20 @@ void MaterialEditor::displayOptions() {
     BL_ASSERT(model);
     beginSection("Properties");
     beginProperty("Shading Model");
-    auto currentModel = model->shadingModel;
     fullWidth();
-    if (ImGui::BeginCombo("###Shading Model",
-                          std::string(magic_enum::enum_name(currentModel))
-                              .c_str()))
+    if (auto value = enumCombo2("###Shading Model", model->params.shadingModel))
     {
-        for (auto value: magic_enum::enum_values<MaterialShadingModel>()) {
-            bool selected = value == currentModel;
-            if (ImGui::Selectable(std::string(magic_enum::enum_name(value))
-                                      .c_str(),
-                                  selected) &&
-                !selected)
-            {
-                model->setShadingModel(value);
-            }
-        }
-        ImGui::EndCombo();
+        model->params.shadingModel = *value;
     }
+    beginProperty("Transparency");
+    fullWidth();
+    if (auto value = enumCombo2("###Transparency", model->params.transparency))
+    {
+        model->params.transparency = *value;
+    }
+    beginProperty("Two Sided");
+    fullWidth();
+    ImGui::Checkbox("###Two Sided", &model->params.twoSided);
     endSection();
     ImGui::EndChild();
 }

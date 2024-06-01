@@ -23,7 +23,7 @@ using namespace ranges::views;
 
 [[noreturn]] static void unreacheable() { __builtin_unreachable(); }
 
-static MaterialDataType translate(TextureType const* type) {
+static MaterialDataType translate(matc::TextureType const* type) {
     switch (type->subtype()) {
     case TextureSubType::Texture2D:
         return MaterialDataType::Texture2D;
@@ -105,8 +105,10 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
         visit(*type, [this](auto& type) { declareTypeImpl(&type); });
     }
     void declareTypeImpl(Type const*) {}
-    void declareTypeImpl(TextureType const* type);
+    void declareTypeImpl(matc::TextureType const* type);
     void declareTypeImpl(VectorType const* type);
+    void declareRootType(AggregateType const* type);
+
     void declareTypeImpl(AggregateType const* type);
 
     void beginFunction();
@@ -310,10 +312,12 @@ MaterialSourceData MetalCodeGenerator::run() {
              .constantFragmentTextures = std::move(textureConstants),
              .primitiveParameters = std::move(primitiveParameters),
              .textureParameters = std::move(textureParameters),
-             .parameterBufferSize = parameterBufferSize };
+             .parameterBufferSize = parameterBufferSize,
+             .cullMode = graph.parameters().twoSided ? TriangleCullMode::None :
+                                                       TriangleCullMode::Back };
 }
 
-void MetalCodeGenerator::declareTypeImpl(TextureType const* type) {
+void MetalCodeGenerator::declareTypeImpl(matc::TextureType const* type) {
     typeNameGen.setName(type, [&] {
         switch (type->subtype()) {
         case TextureSubType::Texture2D:
@@ -333,9 +337,23 @@ void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
     }());
 }
 
+void MetalCodeGenerator::declareRootType(AggregateType const* root) {
+    typeNameGen.setName(root, "MaterialData");
+    auto item = makeItem();
+    writeRaw("struct ", getName(root));
+    auto scope = makeScope(ScopeType::CompoundStmt);
+    writeItem(getName(root->element(0)), " albedo");
+    writeItem(getName(root->element(1)), " emissive");
+    writeItem(getName(root->element(2)), " roughness");
+    writeItem(getName(root->element(3)), " metallic");
+    writeItem(getName(root->element(4)), " ao");
+    writeItem(getName(root->element(5)), " normal");
+    writeItem(getName(root->element(6)), " transparency");
+}
+
 void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
     if (type == graph.root()->type()) {
-        typeNameGen.setName(type, "PBRData");
+        declareRootType(type);
         return;
     }
     // TODO: This does not handle nested structs
@@ -365,7 +383,7 @@ void MetalCodeGenerator::beginFunction() {
 
 void MetalCodeGenerator::endFunction() {
     std::string valueName = getName(graph.root());
-    switch (graph.shadingModel()) {
+    switch (graph.parameters().shadingModel) {
     case MaterialShadingModel::Unlit:
         clampGreaterZero(returnType, valueName);
         break;
@@ -453,7 +471,7 @@ void MetalCodeGenerator::writeVertexFunction() {
 }
 
 void MetalCodeGenerator::writeFragmentFunction() {
-    switch (graph.shadingModel()) {
+    switch (graph.parameters().shadingModel) {
     case MaterialShadingModel::Unlit:
         writeUnlitFragmentFunction();
         break;
@@ -541,7 +559,7 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
     writeItem("in.tangentWS.xyz = normalize(in.tangentWS.xyz)");
     writeItem("in.binormalWS.xyz = normalize(in.binormalWS.xyz)");
     writeItem([&] {
-        writeRaw("PBRData pbr = ", MaterialFragmentFunctionName);
+        writeRaw("auto materialData = ", MaterialFragmentFunctionName);
         auto argScope = makeScope(ScopeType::Paran);
         writeItem("in");
         if (paramBufferType) {
@@ -551,6 +569,9 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
             writeItem(getName(tex));
         }
     });
+    if (graph.parameters().transparency == MaterialTransparency::Masked) {
+        writeItem("if (materialData.transparency < 0.5) discard_fragment()");
+    }
     writeItem([&] {
         writeRaw("float3x3 TBN");
         writeScope(ScopeType::Paran, [&] {
@@ -559,7 +580,18 @@ void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
             writeItem("in.normalWS.xyz");
         });
     });
-    writeItem("pbr.normal = TBN * normalize(pbr.normal)");
+    writeItem("materialData.normal = TBN * normalize(materialData.normal)");
+    writeItem([&] {
+        writeRaw("PBRData pbr = ");
+        writeScope(ScopeType::BraceList, [&] {
+            writeItem("materialData.albedo");
+            writeItem("materialData.emissive");
+            writeItem("materialData.roughness");
+            writeItem("materialData.metallic");
+            writeItem("materialData.ao");
+            writeItem("materialData.normal");
+        });
+    });
     writeItem([&] {
         writeRaw("float3 color = PBRForwardShader");
         auto argScope = makeScope(ScopeType::Paran);

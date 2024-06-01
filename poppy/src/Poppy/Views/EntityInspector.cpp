@@ -339,35 +339,9 @@ void EntityInspector::inspectMesh() {
 }
 
 template <typename E>
-static std::optional<E> myEnumCombo(char const* label, E value, auto toName,
-                                    auto&& values) {
-    std::optional<E> newValue;
-    if (ImGui::BeginCombo(label, toName(value).data())) {
-        for (auto current: values) {
-            bool selected = value == current;
-            if (ImGui::Selectable(toName(current).data(), selected) &&
-                !selected)
-            {
-                newValue = current;
-            }
-            if (selected) {
-                ImGui::SetItemDefaultFocus();
-            }
-        }
-        ImGui::EndCombo();
-    }
-    return newValue;
-}
-
-template <typename E>
-static std::optional<E> myEnumCombo(char const* label, E value, auto toName) {
-    return myEnumCombo(label, value, toName, magic_enum::enum_values<E>());
-}
-
-template <typename E>
 static std::optional<E> inspectTypeGeneric(char const* ID, E type,
                                            auto&& values, auto exchange) {
-    auto newType = myEnumCombo(ID, type, toPrettyName, values);
+    auto newType = enumCombo2(ID, type, values, toPrettyName);
     if (newType) {
         std::invoke(exchange, *newType);
     }

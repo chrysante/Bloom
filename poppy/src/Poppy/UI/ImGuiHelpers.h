@@ -107,6 +107,37 @@ bool enumCombo(E e, std::invocable<E> auto set,
     return false;
 }
 
+inline constexpr auto DefaultEnumToName = [](auto value) {
+    return std::string(magic_enum::enum_name(value));
+};
+
+template <typename E, typename ToName = decltype(DefaultEnumToName)>
+static std::optional<E> enumCombo2(char const* label, E value, auto&& values,
+                                   ToName toName = {}) {
+    std::optional<E> newValue;
+    if (ImGui::BeginCombo(label, toName(value).data())) {
+        for (auto current: values) {
+            bool selected = value == current;
+            if (ImGui::Selectable(toName(current).data(), selected) &&
+                !selected)
+            {
+                newValue = current;
+            }
+            if (selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    return newValue;
+}
+
+template <typename E, typename ToName = decltype(DefaultEnumToName)>
+static std::optional<E> enumCombo2(char const* label, E value,
+                                   ToName toName = {}) {
+    return enumCombo2(label, value, magic_enum::enum_values<E>(), toName);
+}
+
 /// Placeholder for views that don't display content for good reason
 void displayEmptyWithReason(std::string_view reason, vml::float2 size = {});
 

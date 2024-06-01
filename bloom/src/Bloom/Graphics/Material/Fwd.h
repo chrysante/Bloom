@@ -26,7 +26,10 @@ size_t layoutSize(MaterialDataType type);
 /// Global buffer and texture binding points used for shading
 
 /// Different material shading models
-enum class MaterialShadingModel { Unlit, DefaultLit, LAST = DefaultLit };
+enum class MaterialShadingModel { Unlit, DefaultLit };
+
+/// Different material transparency modes
+enum class MaterialTransparency { Opaque, Masked };
 
 /// Types of shaders used in materials
 enum class MaterialShaderType { Vertex, Fragment };

@@ -57,14 +57,15 @@ static ImGuizmo::MODE translateSpace(GizmoSpace space) {
 }
 
 static std::optional<float4x4> manipulateGizmo(
-    int ID, ImGuizmo::Context* context, float4x4 view, float4x4 proj,
-    GizmoOperation operation, GizmoSpace space, float4x4 transform) {
+    int ID, ImGuizmo::Context* context, vml::rectangle<float> rect,
+    float4x4 view, float4x4 proj, GizmoOperation operation, GizmoSpace space,
+    float4x4 transform) {
     ImGuizmo::SetContext(context);
     ImGuizmo::BeginFrame();
     ImGuizmo::SetOrthographic(false);
     ImGuizmo::SetDrawlist();
-    float2 pos = ImGui::GetWindowPos();
-    float2 size = ImGui::GetWindowSize();
+    float2 pos = rect.lower_bound();
+    float2 size = rect.size();
     ImGuizmo::SetRect(pos.x, pos.y, size.x, size.y);
     view = vml::transpose(view);
     proj = vml::transpose(proj);
@@ -79,13 +80,14 @@ static std::optional<float4x4> manipulateGizmo(
     return std::nullopt;
 }
 
-bool Gizmo::display(Camera const& camera, vml::float4x4& wsTransform) {
+bool Gizmo::display(Camera const& camera, vml::rectangle<float> rect,
+                    vml::float4x4& wsTransform) {
     auto view = camera.view();
     auto proj = camera.projection();
     auto ID = ImGui::GetID("Gizmo");
     auto newEntityWSTransform =
         manipulateGizmo(ID, static_cast<ImGuizmo::Context*>(context.get()),
-                        view, proj, operation(), space(), wsTransform);
+                        rect, view, proj, operation(), space(), wsTransform);
     _hovered = ImGuizmo::IsOver();
     bool usedLastFrame = _using;
     _using = newEntityWSTransform.has_value() ||

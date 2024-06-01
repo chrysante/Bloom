@@ -28,6 +28,8 @@ using namespace bloom;
 using namespace vml::short_types;
 using namespace poppy;
 
+static constexpr auto SceneContextMenuName = "SceneContextMenu";
+
 namespace {
 
 struct TreeNodeDescription {
@@ -61,6 +63,7 @@ struct SceneOutliner: View, BasicSceneInspector {
     void displayScene(Scene& scene);
     void sceneContextMenu(Scene& scene);
     void displayEntity(EntityHandle entity);
+    void backgroundBehaviour();
     void entityContextMenu(EntityHandle entity, ImGuiID popupID);
 
     void dragDropSource(EntityHandle child);
@@ -68,7 +71,6 @@ struct SceneOutliner: View, BasicSceneInspector {
 
     bool expanded(Scene const*) const;
     bool expanded(ConstEntityHandle) const;
-    void setExpanded(Scene const*, bool);
     void setExpanded(ConstEntityHandle, bool);
 
     utl::hashset<ConstEntityHandle> mExpanded;
@@ -92,11 +94,10 @@ void SceneOutliner::display() {
         return;
     }
     displayScene(*scene());
-    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() &&
-        ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-    {
-        selection().clear();
+    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered()) {
+        backgroundBehaviour();
     }
+    sceneContextMenu(*scene());
 }
 
 static bool eyeButton(float2 nodePosLocal, bool selectedOrHovered,
@@ -176,29 +177,22 @@ TreeNodeResult SceneOutliner::treeNode(TreeNodeDescription const& desc) {
 }
 
 void SceneOutliner::displayScene(Scene& scene) {
-    bool isExpanded = treeNode({ .name = scene.name(),
-                                 .id = scene.hashID(),
-                                 .selected = false,
-                                 .expanded = expanded(&scene),
-                                 .isLeaf = false,
-                                 .haveEyeButton = false })
-                          .isExpanded;
-    sceneContextMenu(scene);
-    setExpanded(&scene, isExpanded);
-    dragDropTarget(EntityHandle(EntityID{}, &scene));
-    if (isExpanded) {
-        for (auto id: scene.gatherRoots()) {
-            displayEntity(scene.getHandle(id));
-        }
-        ImGui::TreePop();
+    for (auto id: scene.gatherRoots()) {
+        displayEntity(scene.getHandle(id));
+    }
+}
+
+void SceneOutliner::backgroundBehaviour() {
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        selection().clear();
+    }
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        ImGui::OpenPopup(SceneContextMenuName);
     }
 }
 
 void SceneOutliner::sceneContextMenu(Scene& scene) {
-    ImGui::PushID((void*)scene.hashID());
-    utl_defer { ImGui::PopID(); };
-    ImGui::OpenPopupOnItemClick("Context Menu");
-    if (!ImGui::BeginPopup("Context Menu")) {
+    if (!ImGui::BeginPopup(SceneContextMenuName)) {
         return;
     }
     utl_defer { ImGui::EndPopup(); };
@@ -230,10 +224,9 @@ void SceneOutliner::sceneContextMenu(Scene& scene) {
         }
         ImGui::EndMenu();
     }
-    if (ImGui::MenuItem("Unload")) {
+    if (ImGui::MenuItem("Unload Scene")) {
         dispatch(DispatchToken::NextFrame,
                  [this] { editor().sceneSystem().unloadScene(); });
-        return;
     }
 }
 
@@ -246,7 +239,7 @@ void SceneOutliner::displayEntity(EntityHandle entity) {
         entityContextMenu(entity, popupID);
         dragDropSource(entity);
         dragDropTarget(entity);
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
+        if (ImGui::IsItemHovered() && ImGui::IsKeyDown(ImGuiMod_Alt)) {
             if (ImGui::BeginTooltip()) {
                 ImGui::Text("Volatile ID: %d", entity.raw());
                 ImGui::Text("Persistent ID: %s",
@@ -350,10 +343,6 @@ bool SceneOutliner::expanded(Scene const* scene) const {
 
 bool SceneOutliner::expanded(ConstEntityHandle entity) const {
     return mExpanded.contains(entity);
-}
-
-void SceneOutliner::setExpanded(Scene const* scene, bool expanded) {
-    setExpanded(ConstEntityHandle(EntityID{}, scene), expanded);
 }
 
 void SceneOutliner::setExpanded(ConstEntityHandle entity, bool expanded) {

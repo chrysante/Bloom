@@ -27,8 +27,8 @@ public:
     void submitSelection(std::span<bloom::EntityHandle const> selection);
     void draw(bloom::CommandBuffer& commandBuffer);
 
-    bloom::TextureView sceneColor() const;
-    bloom::TextureView sceneColorWithOverlays() const;
+    bloom::TextureHandle sceneColor() const;
+    bloom::TextureHandle sceneColorWithOverlays() const;
 
     bloom::EntityID readEntityIDMap(bloom::CommandQueue& commandQueue,
                                     vml::float2 position) const;

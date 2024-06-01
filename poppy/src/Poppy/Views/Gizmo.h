@@ -51,7 +51,8 @@ public:
 
     /// Displays the gizmo
     /// \Returns `true` if any edits where made this frame
-    bool display(bloom::Camera const& camera, vml::float4x4& wsTransform);
+    bool display(bloom::Camera const& camera, vml::rectangle<float> rect,
+                 vml::float4x4& wsTransform);
 
     /// Resets the gizmo to unused state
     void reset() {

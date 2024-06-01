@@ -94,13 +94,14 @@ struct Viewport: View, BasicSceneInspector {
 
     void display() override;
 
-    void drawScene(Scene& scene);
-    void displayOverlays(Scene& scene);
-    void displayColorPicker(CommandBuffer& commandBuffer,
-                            TextureView finalColor, float2 mouseCoord);
+    void drawScene(Scene& scene, vml::rectangle<float> sceneRect);
+    void displayScene();
+    TextureHandle getSceneTexture();
+    void displayOverlays(Scene& scene, vml::rectangle<float> sceneRect);
+    void displayColorPicker(vml::rectangle<float> sceneRect);
     utl::small_vector<EntityHandle> copyEntities(
         std::span<EntityHandle const> entities);
-    void displayGizmo();
+    void displayGizmo(vml::rectangle<float> sceneRect);
     EntityID readEntityIDMap();
     void handleEntitySelection(EntityHandle clickedEntity);
 
@@ -179,11 +180,11 @@ void Viewport::init() {
     listen([this](UnloadSceneEvent) { renderGraphDirty = true; });
 }
 
-void Viewport::displayOverlays(Scene& scene) {
+void Viewport::displayOverlays(Scene& scene, vml::rectangle<float> sceneRect) {
     auto WStoSS = [&](float3 WS) { return worldSpaceToScreenSpace(WS); };
     EntityHandle clickedEntity =
         displayLightOverlays(scene, selection(), WStoSS);
-    displayGizmo();
+    displayGizmo(sceneRect);
     if (gizmo.isUsing() || gizmo.isHovered()) {
         return;
     }
@@ -216,23 +217,36 @@ static Scene* selectDisplayScene(SceneSystem const& sceneSystem) {
 }
 
 void Viewport::display() {
-    ImGui::BeginChild("Child");
+    vml::rectangle<float> sceneRect((float2)ImGui::GetWindowPos(),
+                                    (float2)ImGui::GetWindowPos() +
+                                        (float2)ImGui::GetWindowSize());
     auto* scene = selectDisplayScene(editor().sceneSystem());
-    if (scene) {
-        readInput();
-        drawScene(*scene);
-        if (!gameView && !editor().isSimulating()) {
-            displayOverlays(*scene);
-        }
-    }
-    else {
+    if (!scene) {
         if (renderGraphDirty) {
             renderer = nullptr;
             renderGraphDirty = false;
         }
         displayEmptyWithReason("No Active Scene");
+        displayToolbarWithBackground();
+        return;
     }
+    displayScene();
     displayToolbarWithBackground();
+    if (scene) {
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, 0);
+        ImGui::BeginChild("Overlays");
+        ImGui::PopStyleColor();
+        readInput();
+        if (!gameView && !editor().isSimulating()) {
+            displayOverlays(*scene, sceneRect);
+        }
+        if (ImGui::IsWindowHovered() && ImGui::IsKeyDown(ImGuiMod_Alt)) {
+            displayColorPicker(sceneRect);
+        }
+        ImGui::EndChild();
+    }
+    ///
+    drawScene(*scene, sceneRect);
     acceptDragDrop();
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
         ImGui::IsMouseReleased(ImGuiMouseButton_Right) ||
@@ -240,7 +254,6 @@ void Viewport::display() {
     {
         viewData.reset();
     }
-    ImGui::EndChild();
     if (showRenderGraphDebugger && renderer && renderer->renderGraph()) {
         displayRenderGraphDebugger(*renderer->renderGraph(),
                                    &showRenderGraphDebugger);
@@ -250,29 +263,67 @@ void Viewport::display() {
     }
 }
 
-void Viewport::displayColorPicker(CommandBuffer& commandBuffer,
-                                  TextureView finalColor, float2 mouseCoord) {
-    auto encoder = commandBuffer.makeBlitEncoder();
+void Viewport::displayColorPicker(vml::rectangle<float> sceneRect) {
+    auto color = getSceneTexture();
+    if (!color) {
+        return;
+    }
+    float2 localMousePos =
+        (float2)ImGui::GetMousePos() - sceneRect.lower_bound();
+    float2 mouseCoord = localMousePos * color.size().xy / sceneRect.size();
+    mouseCoord.x = std::clamp(mouseCoord.x, 0.0f, (float)color.size().x - 1);
+    mouseCoord.y = std::clamp(mouseCoord.y, 0.0f, (float)color.size().y - 1);
+    auto buffer = editor().commandQueue().createCommandBuffer();
+    auto encoder = buffer->makeBlitEncoder();
     if (!colorPickerTmpTex || colorPickerTmpTex.description().pixelFormat !=
-                                  finalColor.description().pixelFormat)
+                                  color.description().pixelFormat)
     {
-        auto desc = finalColor.description();
+        auto desc = color.description();
         desc.size = { 1, 1, 1 };
         desc.storageMode = StorageMode::Managed;
         colorPickerTmpTex = editor().device().createTexture(desc);
     }
-    encoder->copyTextureRegion(finalColor, 0, 0, { mouseCoord, 0 }, { 1, 1, 1 },
+    encoder->copyTextureRegion(color, 0, 0, { mouseCoord, 0 }, { 1, 1, 1 },
                                colorPickerTmpTex, 0, 0, { 0, 0, 0 });
     encoder->synchronizeTexture(colorPickerTmpTex, 0, 0);
     encoder->end();
     displayTextureColorTooltip(colorPickerTmpTex, { 0, 0 }, mouseCoord);
+    buffer->commit();
 }
 
-void Viewport::drawScene(Scene& scene) {
-    float2 viewportSize =
-        (float2)ImGui::GetContentRegionAvail() * window().contentScaleFactor();
+TextureHandle Viewport::getSceneTexture() {
+    if (!renderer) {
+        return {};
+    }
+    return gameView ? renderer->sceneColor() :
+                      renderer->sceneColorWithOverlays();
+}
+
+void Viewport::displayScene() {
+    if (!renderer || !renderer->renderGraph()) {
+        displayEmptyWithError("No renderer");
+        return;
+    }
+    auto* renderGraph = renderer->renderGraph();
+    if (renderGraph->sources().empty()) {
+        displayEmptyWithError("Render graph has no outputs");
+        return;
+    }
+    auto sceneColor = getSceneTexture();
+    if (!sceneColor) {
+        displayEmptyWithError("Renderer output is null");
+        return;
+    }
+    float2 size = ImGui::GetWindowSize();
+    markObjectRenderHazard(sceneColor);
+    auto* DL = ImGui::GetWindowDrawList();
+    float2 pos = ImGui::GetWindowPos();
+    DL->AddImage(sceneColor.nativeHandle(), pos, pos + size);
+}
+
+void Viewport::drawScene(Scene& scene, vml::rectangle<float> sceneRect) {
     FrameParameters frameParams = {
-        .screenSize = viewportSize,
+        .screenSize = sceneRect.size() * window().contentScaleFactor(),
         .shadowMapSize = rendererSettings.shadowMapResolution,
         .drawWireframe = drawOptions.mode == DebugDrawOptions::Mode::Wireframe
     };
@@ -281,7 +332,6 @@ void Viewport::drawScene(Scene& scene) {
     if (renderGraphDirty || !renderer) {
         auto* renderGraph = scene.renderGraph();
         if (!renderGraph) {
-            displayEmptyWithError("Scene has no render graph");
             return;
         }
         renderer =
@@ -289,7 +339,7 @@ void Viewport::drawScene(Scene& scene) {
                                                   editor().commandQueue());
         renderGraphDirty = false;
     }
-    cameraController.applyProjection(viewportSize);
+    cameraController.applyProjection(sceneRect.size());
     renderer->begin(frameParams, cameraController.camera(),
                     rendererSettings.bloomSettings,
                     rendererSettings.postProcessSettings);
@@ -301,29 +351,6 @@ void Viewport::drawScene(Scene& scene) {
     sceneLock.unlock();
     auto commandBuffer = editor().commandQueue().createCommandBuffer();
     renderer->draw(*commandBuffer);
-    auto* renderGraph = renderer->renderGraph();
-    if (renderGraph->sources().empty()) {
-        displayEmptyWithError("Render graph has no outputs");
-        return;
-    }
-    auto finalColor = gameView ? renderer->sceneColor() :
-                                 renderer->sceneColorWithOverlays();
-    if (!finalColor) {
-        displayEmptyWithError("Render graph output is null");
-        return;
-    }
-    float2 size = ImGui::GetContentRegionAvail();
-    float2 mouseCoord =
-        finalColor.size().xy *
-        ((float2)ImGui::GetMousePos() - (float2)ImGui::GetCursorScreenPos()) /
-        size;
-    markObjectRenderHazard(finalColor);
-    ImGui::Image(finalColor.nativeHandle(), size);
-    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows) &&
-        ImGui::IsKeyDown(ImGuiMod_Alt))
-    {
-        displayColorPicker(*commandBuffer, finalColor, mouseCoord);
-    }
     commandBuffer->commit();
 }
 
@@ -370,7 +397,7 @@ static auto getWeakTransforms(std::span<EntityHandle const> entities) {
     }) | ToSmallVector<>;
 }
 
-void Viewport::displayGizmo() {
+void Viewport::displayGizmo(vml::rectangle<float> sceneRect) {
     using WeakHandle = EntityTransaction::WeakHandle;
     auto entities = selection().entities() | filter([](EntityHandle entity) {
         return entity.has<Transform>();
@@ -403,7 +430,8 @@ void Viewport::displayGizmo() {
         return viewData.gizmoWSTransform;
     }();
     float4x4 oldTransform = avgWSTransform;
-    bool modified = gizmo.display(cameraController.camera(), avgWSTransform);
+    bool modified =
+        gizmo.display(cameraController.camera(), sceneRect, avgWSTransform);
     if (modified) {
         float4x4 transformDelta = getDelta(oldTransform, avgWSTransform);
         for (auto [entity, local, parent]:
@@ -512,8 +540,6 @@ void Viewport::displayToolbarWithBackground() {
     DL->AddRectFilled(winpos,
                       winpos + float2(winsize.x, toolbar()->getHeight()),
                       ImGui::ColorConvertFloat4ToU32(color));
-    ImGui::SetCursorPos({});
-    ImGui::SetCursorPos({});
     View::displayToolbar();
 }
 

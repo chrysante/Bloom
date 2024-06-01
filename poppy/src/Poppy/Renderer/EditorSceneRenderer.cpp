@@ -249,11 +249,11 @@ void EditorSceneRenderer::draw(bloom::CommandBuffer& commandBuffer) {
     mRenderer->draw(commandBuffer);
 }
 
-bloom::TextureView EditorSceneRenderer::sceneColor() const {
+bloom::TextureHandle EditorSceneRenderer::sceneColor() const {
     return mSceneColor ? mSceneColor->handle() : nullptr;
 }
 
-bloom::TextureView EditorSceneRenderer::sceneColorWithOverlays() const {
+bloom::TextureHandle EditorSceneRenderer::sceneColorWithOverlays() const {
     return mCompositeColor ? mCompositeColor->handle() : nullptr;
 }
 

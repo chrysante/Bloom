@@ -174,6 +174,9 @@ public:
     /// \Returns `true` if the pin flags \p f are set on this pin
     bool hasFlags(PinFlags f) const { return test(desc().flags & f); }
 
+    /// \Returns `true` if disabled flag is set
+    bool disabled() const { return hasFlags(PinFlags::Disabled); }
+
 protected:
     explicit Pin(PinType type, PinDesc const& desc, Node& parent):
         _desc(desc), _type(type), _parent(&parent) {}

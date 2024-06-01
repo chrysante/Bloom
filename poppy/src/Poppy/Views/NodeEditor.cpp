@@ -1568,9 +1568,7 @@ void Impl::displayPinLink(InputPin& pin, float2 pinPosition) {
                    styleVars().PinAreaSize * viewData.zoom / 2;
     float2 end = pinPosition + styleVars().PinAreaSize * viewData.zoom / 2;
     float4 color = getLinkColor(origin->userType());
-    if (origin->hasFlags(PinFlags::Disabled) ||
-        pin.hasFlags(PinFlags::Disabled))
-    {
+    if (origin->disabled() || pin.disabled()) {
         color.alpha *= styleColors().disabledLinkAlpha;
     }
     bool mayHighlight = viewData.hoveredLink.getLast() == link;
@@ -1589,7 +1587,8 @@ static bool isDraggingLinkVisible(ViewData const& viewData) {
                      ImGui::IsMouseReleased(ImGuiMouseButton_Left);
     bool havePopup = viewData.activePopupName ==
                      (void*)DraggingLinkReleasedPopupName;
-    return viewData.activePin && (mouseDown || havePopup);
+    return viewData.activePin && !viewData.activePin->disabled() &&
+           (mouseDown || havePopup);
 }
 
 void Impl::displayDraggingLink() {
@@ -1697,6 +1696,7 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
     ImGui::ItemSize(float2(areaSize));
     auto ID = ImGui::GetID("Pin_Handle");
     ImGui::ItemAdd(bb, ID);
+    bool disabled = pin.disabled();
     bool hovered = ImGui::ItemHoverable(bb, ID, ImGuiItemFlags_AllowOverlap);
     bool clickedLeft = ImGui::IsItemClicked(ImGuiMouseButton_Left);
     bool clickedRight = ImGui::IsItemClicked(ImGuiMouseButton_Right);
@@ -1707,7 +1707,7 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
         }
     }
     pinPopup(pin, /* show: */ clickedRight);
-    bool isDraggingCompatiblePin = viewData.activePin &&
+    bool isDraggingCompatiblePin = !disabled && viewData.activePin &&
                                    isLinkable(*viewData.activePin, pin);
     bool drawConnected =
         isConnected(pin) || (hovered && isDraggingCompatiblePin) ||
@@ -1723,7 +1723,7 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
               .missingInput = inputMissing(pin) && viewData.activePin != &pin,
               .connected = drawConnected,
               .hovered = drawHovered,
-              .disabled = pin.hasFlags(PinFlags::Disabled) });
+              .disabled = pin.disabled() });
     if (displayLabelInBody) {
         displayPinLabelInBody(selectPinLabel(pin),
                               pinInBodyLabelPosition(pin, position,
@@ -2167,8 +2167,9 @@ void Impl::handleDraggingLinkMouseReleased() {
         return;
     }
     bool shallOpenDraggingLinkMenu =
-        viewData.activePin && !viewData.hoveredPin.get() &&
-        !viewData.hoveredNode.get() && !viewData.activePopupName;
+        viewData.activePin && !viewData.activePin->disabled() &&
+        !viewData.hoveredPin.get() && !viewData.hoveredNode.get() &&
+        !viewData.activePopupName;
     if (shallOpenDraggingLinkMenu) {
         openPopup(DraggingLinkReleasedPopupName);
     }

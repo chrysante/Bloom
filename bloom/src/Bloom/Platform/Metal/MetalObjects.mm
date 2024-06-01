@@ -666,6 +666,7 @@ Reference<ShaderLibrary> MetalShaderCompiler::compileSource(
     std::string source, ShaderCompilerOptions const& options) {
     Logger::Trace("Compiling shader source: ", source);
     if (options.preprocessIncludes) {
+        BL_PROFILE_FUNCTION("Shader source preprocessing");
         source =
             preprocessIncludes(std::move(source), std::array{ resourceDir() });
     }

@@ -60,7 +60,11 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
             library->createFunction(std::string(MaterialVertexShaderName));
         auto fragmentFunction =
             library->createFunction(std::string(MaterialFragmentShaderName));
-        rgMainPass = createPipeline(device, vertexFunction, fragmentFunction);
+        {
+            BL_PROFILE_FUNCTION("Create pipeline state");
+            rgMainPass =
+                createPipeline(device, vertexFunction, fragmentFunction);
+        }
         for (auto [index, assetHandle]: sourceData.constantFragmentTextures) {
             constantFragmentTextures[index] =
                 as<Texture2D>(AM.get(assetHandle, AssetRepresentation::GPU));

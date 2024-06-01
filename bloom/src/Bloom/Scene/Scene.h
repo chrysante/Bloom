@@ -122,8 +122,14 @@ public:
     decltype(auto) addComponent(EntityID entity, Args&&... args) {
         BL_EXPECT(!hasComponent<std::decay_t<T>>(entity),
                   "ComponentType already present");
-        return _registry.emplace<std::decay_t<T>>(entity.value(),
-                                                  std::forward<Args>(args)...);
+        using TD = std::decay_t<T>;
+        if constexpr (sizeof...(Args) == 0 && requires { TD::Default(); }) {
+            return _registry.emplace<TD>(entity.value(), TD::Default());
+        }
+        else {
+            return _registry.emplace<TD>(entity.value(),
+                                         std::forward<Args>(args)...);
+        }
     }
 
     ///

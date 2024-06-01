@@ -84,7 +84,7 @@ private:
 
     void inspectLight();
 
-    void inspectLightCommon(ComponentType auto& light, LightType type);
+    void inspectLightCommon(ComponentType auto& light);
     void inspectLightComponent(PointLightComponent&);
     void inspectLightComponent(SpotLightComponent&);
     void inspectLightComponent(DirectionalLightComponent&);
@@ -158,11 +158,11 @@ void EntityInspector::display() {
         inspectMesh();
         ImGui::Separator();
     }
-    if (hasLightComponent(entity)) {
+    if (entity.hasAny<LightComponentList>()) {
         inspectLight();
         ImGui::Separator();
     }
-    if (entity.hasAny<PhysicsStaticComponent, PhysicsMovableComponent>()) {
+    if (entity.hasAny<MovabilityList>()) {
         inspectPhysics();
         ImGui::Separator();
     }
@@ -234,8 +234,8 @@ void EntityInspector::inspectTag() {
     ImGui::PopStyleVar();
     if (comboOpen) {
         ImGui::PushFont(nullptr);
-        bool hasLight = hasLightComponent(entity);
-        bool hasCollider = hasColliderComponent(entity);
+        bool hasLight = entity.hasAny<LightComponentList>();
+        bool hasCollider = entity.hasAny<ColliderList>();
         addComponentButton<MeshRendererComponent>("Mesh Renderer");
         addComponentButton<PointLightComponent>("Point Light", hasLight);
         addComponentButton<SpotLightComponent>("Spot Light", hasLight);
@@ -387,9 +387,10 @@ static std::optional<E> inspectTypeGeneric(char const* ID, E type,
     return inspectTypeGeneric(ID, type, magic_enum::enum_values<E>(), exchange);
 }
 
-static Transaction* makeComponentExchange(EntityHandle entity,
-                                          ComponentKind oldType,
-                                          ComponentKind newType) {
+[[nodiscard]]
+static Transaction* makeComponentExchange(
+    EntityHandle entity, ComponentKind oldType, ComponentKind newType,
+    std::function<void(EntityHandle)> postProcess = {}) {
     return visitComponentType(oldType, [&]<typename Old>(utl::tag<Old>) {
         auto* ptr = entity.tryGet<Old>();
         std::optional<Old> old = ptr ? std::optional(*ptr) : std::nullopt;
@@ -397,6 +398,9 @@ static Transaction* makeComponentExchange(EntityHandle entity,
             if (old) {
                 entity.tryRemove<Old>();
                 entity.tryAdd(newType);
+                if (postProcess) {
+                    postProcess(entity);
+                }
                 return true;
             }
             return false;
@@ -415,7 +419,7 @@ static Transaction* makeComponentExchange(EntityHandle entity,
 
 void EntityInspector::inspectLight() {
     using namespace propertiesView;
-    auto type = getLightType2(entity).value();
+    auto type = getLightType(entity).value();
     auto deleter = [&] { entity.remove(type); };
     auto font = FontDesc::UIDefault().setWeight(FontWeight::Semibold);
     if (!beginGenericSection("Light Component", font, deleter)) {
@@ -430,14 +434,16 @@ void EntityInspector::inspectLight() {
                                                              utl::tag<L>) {
             return entity.get<L>().color;
         });
-        makeComponentExchange(entity, type, newType);
-#if 0
-        dispatchComponentType(newType, [&]<typename C>(utl::tag<C>) {
-            auto& c = entity.add(C{ C::Light::Default() });
-            c.color = color;
+        auto* transaction = makeComponentExchange(entity, type, newType,
+                                                  [=](EntityHandle entity) {
+            visitComponentType<LightComponentList>(newType, [&]<typename L>(
+                                                                utl::tag<L>) {
+                if (auto* light = entity.tryGet<L>()) {
+                    light->color = color;
+                }
+            });
         });
-        removeComponentType(type, entity);
-#endif
+        editor().transactionManager().commit(transaction);
     }).value_or(type);
     visitComponentType<LightComponentList>(type, [&]<typename L>(utl::tag<L>) {
         inspectLightComponent(entity.get<L>());
@@ -445,9 +451,10 @@ void EntityInspector::inspectLight() {
     endSection();
 }
 
-void EntityInspector::inspectLightCommon(ComponentType auto& light,
-                                         LightType type) {
+template <ComponentType T>
+void EntityInspector::inspectLightCommon(T& light) {
     using namespace propertiesView;
+    auto type = DynamicType<T>;
     beginProperty("Color");
     editComponent(light, [&](TAToken&) {
         auto flags = ImGuiColorEditFlags_NoInputs |
@@ -457,9 +464,9 @@ void EntityInspector::inspectLightCommon(ComponentType auto& light,
         ImGui::ColorEdit3("###Color", light.color.data(), flags);
     });
     beginProperty("Intensity");
-    float speed = type == LightType::DirectionalLight ? 0.01 :
-                  type == LightType::SkyLight         ? 0.0001 :
-                                                        100;
+    float speed = type == ComponentKind::DirectionalLightComponent ? 0.01 :
+                  type == ComponentKind::SkyLightComponent         ? 0.0001 :
+                                                                     100;
     fullWidth();
     editComponent(light, [&](TAToken&) {
         ImGui::DragFloat("###Intensity", &light.intensity, speed, 0, FLT_MAX,
@@ -469,7 +476,7 @@ void EntityInspector::inspectLightCommon(ComponentType auto& light,
 
 void EntityInspector::inspectLightComponent(PointLightComponent& light) {
     using namespace propertiesView;
-    inspectLightCommon(light, LightType::PointLight);
+    inspectLightCommon(light);
     beginProperty("Radius");
     fullWidth();
     editComponent(light, [&](TAToken&) {
@@ -486,7 +493,7 @@ void EntityInspector::inspectLightComponent(PointLightComponent& light) {
 
 void EntityInspector::inspectLightComponent(SpotLightComponent& light) {
     using namespace propertiesView;
-    inspectLightCommon(light, LightType::SpotLight);
+    inspectLightCommon(light);
     beginProperty("Radius");
     fullWidth();
     editComponent(light, [&](TAToken&) {
@@ -512,7 +519,7 @@ void EntityInspector::inspectLightComponent(SpotLightComponent& light) {
 
 void EntityInspector::inspectLightComponent(DirectionalLightComponent& light) {
     using namespace propertiesView;
-    inspectLightCommon(light, LightType::DirectionalLight);
+    inspectLightCommon(light);
     beginProperty("Source Size");
     fullWidth();
     editComponent(light, [&](TAToken&) {
@@ -565,7 +572,7 @@ void EntityInspector::inspectLightComponent(DirectionalLightComponent& light) {
 }
 
 void EntityInspector::inspectLightComponent(SkyLightComponent& light) {
-    inspectLightCommon(light, LightType::SkyLight);
+    inspectLightCommon(light);
     using namespace propertiesView;
     beginProperty("IBL Texture");
     fullWidth();
@@ -577,8 +584,8 @@ void EntityInspector::inspectLightComponent(SkyLightComponent& light) {
 
 void EntityInspector::inspectPhysics() {
     using namespace propertiesView;
-    auto physicsType = getPhysicsType2(entity).value();
-    auto colliderType = getColliderType2(entity).value();
+    auto physicsType = getPhysicsType(entity).value();
+    auto colliderType = getColliderType(entity).value();
     auto deleter = [&] {
         entity.remove(physicsType);
         entity.remove(colliderType);

@@ -27,59 +27,9 @@ class Editor;
 class View;
 class EntitySelectionManager;
 
-enum struct LightType {
-    PointLight = 0,
-    SpotLight = 1,
-    DirectionalLight = 2,
-    SkyLight = 3,
-    LAST = SkyLight
-};
-
-std::string toString(LightType type);
-
-enum struct ColliderType { Sphere = 0, Box = 1 };
-
-std::string toString(ColliderType type);
-
-std::optional<bloom::ComponentKind> getPhysicsType2(bloom::EntityHandle entity);
-std::optional<bloom::ComponentKind> getColliderType2(
-    bloom::EntityHandle entity);
-std::optional<bloom::ComponentKind> getLightType2(bloom::EntityHandle entity);
-
-decltype(auto) dispatchComponentType(LightType type, auto&& f) {
-    using namespace bloom;
-    switch (type) {
-    case LightType::PointLight:
-        return f(utl::tag<PointLightComponent>{});
-    case LightType::SpotLight:
-        return f(utl::tag<SpotLightComponent>{});
-    case LightType::DirectionalLight:
-        return f(utl::tag<DirectionalLightComponent>{});
-    case LightType::SkyLight:
-        return f(utl::tag<SkyLightComponent>{});
-    }
-}
-
-decltype(auto) dispatchComponentType(ColliderType type, auto&& f) {
-    using namespace bloom;
-    switch (type) {
-    case ColliderType::Sphere:
-        return f(utl::tag<SphereColliderComponent>{});
-    case ColliderType::Box:
-        return f(utl::tag<BoxColliderComponent>{});
-    }
-}
-
-decltype(auto) dispatchComponentType(bloom::PhysicsComponentType type,
-                                     auto&& f) {
-    using namespace bloom;
-    switch (type) {
-    case PhysicsComponentType::Static:
-        return f(utl::tag<PhysicsStaticComponent>{});
-    case PhysicsComponentType::Movable:
-        return f(utl::tag<PhysicsMovableComponent>{});
-    }
-}
+std::optional<bloom::ComponentKind> getPhysicsType(bloom::EntityHandle entity);
+std::optional<bloom::ComponentKind> getColliderType(bloom::EntityHandle entity);
+std::optional<bloom::ComponentKind> getLightType(bloom::EntityHandle entity);
 
 class BasicSceneInspector {
 protected:
@@ -93,25 +43,6 @@ public:
     bloom::AssetManager& assetManager() const;
 
     bool isSimulating() const;
-
-    bool hasLightComponent(bloom::EntityHandle entity) const;
-
-    std::optional<LightType> getLightType(bloom::EntityHandle entity) const;
-
-    void removeComponentType(LightType type, bloom::EntityHandle entity);
-
-    std::optional<bloom::PhysicsComponentType> getPhysicsType(
-        bloom::EntityHandle entity) const;
-
-    void removeComponentType(bloom::PhysicsComponentType type,
-                             bloom::EntityHandle entity);
-
-    bool hasColliderComponent(bloom::EntityHandle entity) const;
-
-    std::optional<ColliderType> getColliderType(
-        bloom::EntityHandle entity) const;
-
-    void removeComponentType(ColliderType type, bloom::EntityHandle entity);
 
 private:
     View* view = nullptr;

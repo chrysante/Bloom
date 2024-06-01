@@ -101,10 +101,24 @@ public:
         return (has<T>() && ... && has<U>());
     }
 
+    /// \overload
+    template <ComponentList L>
+    bool hasAll() const {
+        return
+            [&]<typename... T>(TypeList<T...>) { return hasAll<T...>(); }(L());
+    }
+
     /// \Return `true` if this entity has any of the given component types
     template <ComponentType T, ComponentType... U>
     bool hasAny() const {
         return (has<T>() || ... || has<U>());
+    }
+
+    /// \overload
+    template <ComponentList L>
+    bool hasAny() const {
+        return
+            [&]<typename... T>(TypeList<T...>) { return hasAny<T...>(); }(L());
     }
 
     /// \Returns the component \p T of this entity

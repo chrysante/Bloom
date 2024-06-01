@@ -44,6 +44,14 @@ using NoParent = void;
 
 namespace bloom::matc {
 
+/// Different kinds of functions that can be defined by material nodes
+enum class GraphRoot {
+    VertexFunction,
+    LitFragmentFunction,
+    UnlitFragmentFunction,
+    TransparencyFunction,
+};
+
 enum class TextureSubType { Texture2D, TextureCube };
 
 enum class RasterizerInputKind {

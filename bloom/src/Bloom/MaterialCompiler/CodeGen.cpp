@@ -21,7 +21,7 @@ using namespace bloom;
 using namespace matc;
 using namespace ranges::views;
 
-[[noreturn]] static void unreacheable() { __builtin_unreachable(); }
+[[noreturn]] static void unreachable() { __builtin_unreachable(); }
 
 static MaterialDataType translate(matc::TextureType const* type) {
     switch (type->subtype()) {
@@ -83,10 +83,6 @@ private:
     utl::hashmap<T, std::string> map;
 };
 
-static constexpr std::string_view MaterialVertexFunctionName =
-    "materialVertexFunction";
-static constexpr std::string_view MaterialFragmentFunctionName =
-    "materialFragmentFunction";
 inline constexpr std::string_view MaterialVertexOutName = "MatVertexOut";
 inline constexpr std::string_view MaterialFragmentOutName = "MatFragmentOut";
 inline constexpr std::string_view ParameterObjectName = "parameters";
@@ -107,20 +103,20 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void declareTypeImpl(Type const*) {}
     void declareTypeImpl(matc::TextureType const* type);
     void declareTypeImpl(VectorType const* type);
-    void declareRootType(AggregateType const* type);
+    void declareRootType(GraphRoot root, AggregateType const* type);
 
     void declareTypeImpl(AggregateType const* type);
 
-    void beginFunction();
-    void endFunction();
+    void defineMaterialFunction(GraphRoot kind,
+                                std::span<Value const* const> order);
+    void beginFunction(GraphRoot rootKind, Value* root);
+    void endFunction(GraphRoot rootKind, Value* root);
 
     void writeFilePrologue();
-    void writeVertexOutput();
-    void writeFragmentOutput();
-    void writeFragmentFunction();
-    void writeVertexFunction();
-    void writeUnlitFragmentFunction();
-    void writeDefaultLitFragmentFunction();
+    void defineVertexShaderOutputType();
+    void defineFragmentShaderOutputType();
+    void defineFragmentShaderFunction();
+    void defineVertexShaderFunction();
 
     void codegen(Value const& value) {
         visit(value, [this](auto& value) { codegenImpl(value); });
@@ -152,17 +148,17 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
 
     std::string getName(Type const* type) { return typeNameGen.get(type); }
 
+    void callMaterialFunction(GraphRoot kind, std::string_view variableName);
     void clampGreaterZero(Type const* type, auto const&... valueName);
+    void normalize(auto const&... valueName);
+
+    static constexpr int ReservedTextureSlots = 8;
 
     Context& ctx;
     MaterialGraph const& graph;
     CodeGenOptions options;
-
-    static constexpr int ReservedTextureSlots = 8;
     int textureIndexCounter = 0;
     int parameterIndexCounter = 0;
-
-    Type const* returnType = nullptr;
     AggregateType const* paramBufferType = nullptr;
     NameGenerator<Type const*> typeNameGen{ "Type_" };
     NameGenerator<Value const*> valueNameGen{ "Value_" };
@@ -220,7 +216,7 @@ static std::pair<uint32_t, uint32_t> getSizeAndAlign(MaterialDataType type) {
     case Float4:
         return { 16, 16 };
     default:
-        unreacheable();
+        unreachable();
     }
 }
 
@@ -268,13 +264,32 @@ static std::vector<MaterialPrimitiveParameter> makePrimitiveParameters(
     }) | ranges::to<std::vector>;
 }
 
-MaterialSourceData MetalCodeGenerator::run() {
-    if (!graph.root()) {
-        throw std::runtime_error("Material graph has no root");
+void MetalCodeGenerator::defineMaterialFunction(
+    GraphRoot kind, std::span<Value const* const> order) {
+    auto* root = graph.getRoot(kind);
+    beginFunction(kind, root);
+    for (auto* value: order) {
+        if (!value) {
+            throw std::runtime_error("Encountered NULL value");
+        }
+        codegen(*value);
     }
-    returnType = graph.root()->type();
-    auto order = topsort(graph.root());
-    auto vectorParameters = order | filter(isa<VectorParameter>) |
+    endFunction(kind, root);
+}
+
+MaterialSourceData MetalCodeGenerator::run() {
+    utl::hashset<Value const*> activeValues;
+    utl::hashmap<GraphRoot, std::vector<Value const*>> orders;
+    for (auto kind: magic_enum::enum_values<GraphRoot>()) {
+        auto* root = graph.getRoot(kind);
+        if (!root) {
+            continue;
+        }
+        auto order = topsort(root);
+        ranges::copy(order, std::inserter(activeValues, activeValues.begin()));
+        orders.insert({ kind, std::move(order) });
+    }
+    auto vectorParameters = activeValues | filter(isa<VectorParameter>) |
                             transform(cast<VectorParameter const*>) |
                             ToSmallVector<>;
     primitiveParameters = makePrimitiveParameters(vectorParameters);
@@ -284,29 +299,22 @@ MaterialSourceData MetalCodeGenerator::run() {
     for (auto [index, param]: vectorParameters | enumerate) {
         parameterIndexMap[param] = (int)index;
     }
-    for (auto* value: order) {
+    for (auto* value: activeValues) {
         genName(*value);
     }
     writeFilePrologue();
-    writeVertexOutput();
-    writeFragmentOutput();
     for (auto* type: ctx.types()) {
         declareType(type);
     }
     if (paramBufferType) {
         writeItem("static_assert(", "sizeof(", getName(paramBufferType),
-                  ") == ", parameterBufferSize, ")");
+                  ") == ", parameterBufferSize, ", \"\")");
     }
-    beginFunction();
-    for (auto* value: order) {
-        if (!value) {
-            throw std::runtime_error("Encountered NULL value");
-        }
-        codegen(*value);
+    for (auto& [kind, order]: orders) {
+        defineMaterialFunction(kind, order);
     }
-    endFunction();
-    writeVertexFunction();
-    writeFragmentFunction();
+    defineVertexShaderFunction();
+    defineFragmentShaderFunction();
     writeInclude(IncludeType::Local, "Shader/PBRShader.metal");
     return { .source = takeSource(),
              .constantFragmentTextures = std::move(textureConstants),
@@ -337,23 +345,76 @@ void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
     }());
 }
 
-void MetalCodeGenerator::declareRootType(AggregateType const* root) {
-    typeNameGen.setName(root, "MaterialData");
+static std::string rootTypeName(GraphRoot root) {
+    using enum GraphRoot;
+    switch (root) {
+    case VertexFunction:
+        return "VertexData";
+    case LitFragmentFunction:
+        return "LitFragmentData";
+    case UnlitFragmentFunction:
+        return "UnlitFragmentData";
+    case TransparencyFunction:
+        return "TransparencyData";
+    }
+}
+
+static std::string functionName(GraphRoot root) {
+    using enum GraphRoot;
+    switch (root) {
+    case VertexFunction:
+        return "VertexFunction";
+    case LitFragmentFunction:
+        return "LitFragmentFunction";
+    case UnlitFragmentFunction:
+        return "UnlitFragmentFunction";
+    case TransparencyFunction:
+        return "TransparencyFunction";
+    }
+}
+
+void MetalCodeGenerator::declareRootType(GraphRoot root,
+                                         AggregateType const* type) {
+    typeNameGen.setName(type, rootTypeName(root));
     auto item = makeItem();
-    writeRaw("struct ", getName(root));
+    writeRaw("struct ", getName(type));
     auto scope = makeScope(ScopeType::CompoundStmt);
-    writeItem(getName(root->element(0)), " albedo");
-    writeItem(getName(root->element(1)), " emissive");
-    writeItem(getName(root->element(2)), " roughness");
-    writeItem(getName(root->element(3)), " metallic");
-    writeItem(getName(root->element(4)), " ao");
-    writeItem(getName(root->element(5)), " normal");
-    writeItem(getName(root->element(6)), " transparency");
+    using enum GraphRoot;
+    switch (root) {
+    case VertexFunction:
+        unreachable();
+        break;
+    case LitFragmentFunction:
+        writeItem(getName(type->element(0)), " albedo");
+        writeItem(getName(type->element(1)), " emissive");
+        writeItem(getName(type->element(2)), " roughness");
+        writeItem(getName(type->element(3)), " metallic");
+        writeItem(getName(type->element(4)), " ao");
+        writeItem(getName(type->element(5)), " normal");
+        break;
+    case UnlitFragmentFunction:
+        writeItem(getName(type->element(0)), " emissive");
+        break;
+    case TransparencyFunction:
+        writeItem(getName(type->element(0)), " transparency");
+        break;
+    }
+}
+
+static std::optional<GraphRoot> getRootType(MaterialGraph const& graph,
+                                            Type const* type) {
+    for (auto root: magic_enum::enum_values<GraphRoot>()) {
+        auto* rootValue = graph.getRoot(root);
+        if (rootValue && type == rootValue->type()) {
+            return root;
+        }
+    }
+    return std::nullopt;
 }
 
 void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
-    if (type == graph.root()->type()) {
-        declareRootType(type);
+    if (auto root = getRootType(graph, type)) {
+        declareRootType(*root, type);
         return;
     }
     // TODO: This does not handle nested structs
@@ -365,9 +426,9 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
     }
 }
 
-void MetalCodeGenerator::beginFunction() {
+void MetalCodeGenerator::beginFunction(GraphRoot rootKind, Value* root) {
     beginItem();
-    writeRaw("static ", getName(returnType), " ", MaterialFragmentFunctionName);
+    writeRaw("static ", getName(root->type()), " ", functionName(rootKind));
     beginScope(ScopeType::FuncParams);
     writeItem(MaterialVertexOutName, " in");
     if (paramBufferType) {
@@ -381,15 +442,23 @@ void MetalCodeGenerator::beginFunction() {
     beginScope(ScopeType::CompoundStmt);
 }
 
-void MetalCodeGenerator::endFunction() {
-    std::string valueName = getName(graph.root());
-    switch (graph.parameters().shadingModel) {
-    case MaterialShadingModel::Unlit:
-        clampGreaterZero(returnType, valueName);
+void MetalCodeGenerator::endFunction(GraphRoot rootKind, Value* root) {
+    std::string valueName = getName(root);
+    using enum GraphRoot;
+    switch (rootKind) {
+    case VertexFunction:
         break;
-    case MaterialShadingModel::DefaultLit:
+    case LitFragmentFunction:
         clampGreaterZero(ctx.float3Type(), valueName, ".albedo");
         clampGreaterZero(ctx.float3Type(), valueName, ".emissive");
+        normalize(valueName, ".normal");
+        break;
+
+    case UnlitFragmentFunction:
+        clampGreaterZero(ctx.float3Type(), valueName, ".emissive");
+        break;
+
+    case TransparencyFunction:
         break;
     }
     writeItem("return ", valueName);
@@ -404,9 +473,11 @@ void MetalCodeGenerator::writeFilePrologue() {
     writeInclude(IncludeType::Local, "Shader/Vertex.h");
     writeItem("using namespace metal");
     writeItem("using namespace bloom");
+    defineVertexShaderOutputType();
+    defineFragmentShaderOutputType();
 }
 
-void MetalCodeGenerator::writeVertexOutput() {
+void MetalCodeGenerator::defineVertexShaderOutputType() {
     auto type = makeItem();
     writeRaw("struct ", MaterialVertexOutName);
     writeScope(ScopeType::CompoundStmt, [&] {
@@ -421,7 +492,7 @@ void MetalCodeGenerator::writeVertexOutput() {
     });
 }
 
-void MetalCodeGenerator::writeFragmentOutput() {
+void MetalCodeGenerator::defineFragmentShaderOutputType() {
     auto type = makeItem();
     writeRaw("struct ", MaterialFragmentOutName);
     writeScope(ScopeType::CompoundStmt, [&] {
@@ -435,7 +506,7 @@ static int getBindIndex(MaterialShaderType shaderType,
     return getGlobalMaterialBindingPoint(shaderType, bindingType).index;
 }
 
-void MetalCodeGenerator::writeVertexFunction() {
+void MetalCodeGenerator::defineVertexShaderFunction() {
     using enum GlobalMaterialBindingType;
     using enum MaterialShaderType;
     auto fn = makeItem();
@@ -470,21 +541,36 @@ void MetalCodeGenerator::writeVertexFunction() {
     });
 }
 
-void MetalCodeGenerator::writeFragmentFunction() {
-    switch (graph.parameters().shadingModel) {
-    case MaterialShadingModel::Unlit:
-        writeUnlitFragmentFunction();
-        break;
-    case MaterialShadingModel::DefaultLit:
-        writeDefaultLitFragmentFunction();
-        break;
+void MetalCodeGenerator::callMaterialFunction(GraphRoot kind,
+                                              std::string_view variableName) {
+    auto item = makeItem();
+    writeRaw(rootTypeName(kind), " ", variableName, " = ", functionName(kind));
+    auto argScope = makeScope(ScopeType::Paran);
+    writeItem("in");
+    if (paramBufferType) {
+        writeItem(ParameterObjectName);
+    }
+    for (auto [tex, index]: textureIndexMap) {
+        writeItem(getName(tex));
     }
 }
 
-void MetalCodeGenerator::writeUnlitFragmentFunction() {
+void MetalCodeGenerator::defineFragmentShaderFunction() {
+    using enum MaterialShadingModel;
     using enum GlobalMaterialBindingType;
     using enum MaterialShaderType;
+    auto SM = graph.parameters().shadingModel;
+    GraphRoot materialFunction = [&] {
+        switch (SM) {
+        case DefaultLit:
+            return GraphRoot::LitFragmentFunction;
+        case Unlit:
+            return GraphRoot::UnlitFragmentFunction;
+        }
+    }();
     auto fn = makeItem();
+
+    /// Parameters
     writeRaw("fragment ", MaterialFragmentOutName, " ",
              MaterialFragmentShaderName);
     auto paramScope = makeScope(ScopeType::FuncParams);
@@ -493,6 +579,18 @@ void MetalCodeGenerator::writeUnlitFragmentFunction() {
               getBindIndex(Fragment, Camera), ")]]");
     writeItem("uint32_t device const& entityID [[buffer(",
               getBindIndex(Fragment, GeometryIDBuffer), ")]]");
+    if (SM == DefaultLit) {
+        writeItem("LightBufferContents device const& lights [[buffer(",
+                  getBindIndex(Fragment, Lights), ")]]");
+        writeItem("float4x4 device const* lightSpaceTransforms [[buffer(",
+                  getBindIndex(Fragment, LightSpaceTransforms), ")]]");
+        writeItem("texture2d_array<float> shadowMaps [[texture(",
+                  getBindIndex(Fragment, ShadowMaps), ")]]");
+        writeItem("texturecube<float> specularMap [[texture(",
+                  getBindIndex(Fragment, SpecularTexture), ")]]");
+        writeItem("texture2d<float> bdrfMap [[texture(",
+                  getBindIndex(Fragment, BRDFTexture), ")]]");
+    }
     if (paramBufferType) {
         writeItem(getName(paramBufferType), " device const& ",
                   ParameterObjectName, " [[buffer(",
@@ -503,108 +601,57 @@ void MetalCodeGenerator::writeUnlitFragmentFunction() {
                   ")]]");
     }
     paramScope.pop();
-    auto fnScope = makeScope(ScopeType::CompoundStmt);
-    writeItem("in.normalWS.xyz = normalize(in.normalWS.xyz)");
-    writeItem("in.tangentWS.xyz = normalize(in.tangentWS.xyz)");
-    writeItem("in.binormalWS.xyz = normalize(in.binormalWS.xyz)");
-    writeItem([&] {
-        writeRaw("float3 color = ", MaterialFragmentFunctionName);
-        auto argScope = makeScope(ScopeType::Paran);
-        writeItem("in");
-        if (paramBufferType) {
-            writeItem(ParameterObjectName);
-        }
-        for (auto [tex, index]: textureIndexMap) {
-            writeItem(getName(tex));
-        }
-    });
-    writeItem("return { float4(color, 1), entityID }");
-    fnScope.pop();
-}
 
-void MetalCodeGenerator::writeDefaultLitFragmentFunction() {
-    using enum GlobalMaterialBindingType;
-    using enum MaterialShaderType;
-    auto fn = makeItem();
-    writeRaw("fragment ", MaterialFragmentOutName, " ",
-             MaterialFragmentShaderName);
-    auto paramScope = makeScope(ScopeType::FuncParams);
-    writeItem(MaterialVertexOutName, " in [[stage_in]]");
-    writeItem("CameraInput device const& cameraBuffer [[buffer(",
-              getBindIndex(Fragment, Camera), ")]]");
-    writeItem("LightBufferContents device const& lights [[buffer(",
-              getBindIndex(Fragment, Lights), ")]]");
-    writeItem("float4x4 device const* lightSpaceTransforms [[buffer(",
-              getBindIndex(Fragment, LightSpaceTransforms), ")]]");
-    writeItem("uint32_t device const& entityID [[buffer(",
-              getBindIndex(Fragment, GeometryIDBuffer), ")]]");
-    if (paramBufferType) {
-        writeItem(getName(paramBufferType), " device const& ",
-                  ParameterObjectName, " [[buffer(",
-                  getBindIndex(Fragment, MaterialParameterBuffer), ")]]");
-    }
-    writeItem("texture2d_array<float> shadowMaps [[texture(",
-              getBindIndex(Fragment, ShadowMaps), ")]]");
-    writeItem("texturecube<float> specularMap [[texture(",
-              getBindIndex(Fragment, SpecularTexture), ")]]");
-    writeItem("texture2d<float> brdfMap [[texture(",
-              getBindIndex(Fragment, BRDFTexture), ")]]");
-    for (auto [tex, index]: textureIndexMap) {
-        writeItem(getName(tex->type()), " ", getName(tex), " [[texture(", index,
-                  ")]]");
-    }
-    paramScope.pop();
+    /// Function body
     auto fnScope = makeScope(ScopeType::CompoundStmt);
-    writeItem("in.normalWS.xyz = normalize(in.normalWS.xyz)");
-    writeItem("in.tangentWS.xyz = normalize(in.tangentWS.xyz)");
-    writeItem("in.binormalWS.xyz = normalize(in.binormalWS.xyz)");
-    writeItem([&] {
-        writeRaw("auto materialData = ", MaterialFragmentFunctionName);
-        auto argScope = makeScope(ScopeType::Paran);
-        writeItem("in");
-        if (paramBufferType) {
-            writeItem(ParameterObjectName);
-        }
-        for (auto [tex, index]: textureIndexMap) {
-            writeItem(getName(tex));
-        }
-    });
     if (graph.parameters().transparency == MaterialTransparency::Masked) {
-        writeItem("if (materialData.transparency < 0.5) discard_fragment()");
+        callMaterialFunction(GraphRoot::TransparencyFunction, "value");
+        writeItem("if (value.transparency < 0.5) discard_fragment()");
     }
-    writeItem([&] {
-        writeRaw("float3x3 TBN");
-        writeScope(ScopeType::Paran, [&] {
-            writeItem("in.tangentWS.xyz");
-            writeItem("in.binormalWS.xyz");
-            writeItem("in.normalWS.xyz");
+    writeItem("in.normalWS.xyz = normalize(in.normalWS.xyz)");
+    writeItem("in.tangentWS.xyz = normalize(in.tangentWS.xyz)");
+    writeItem("in.binormalWS.xyz = normalize(in.binormalWS.xyz)");
+    callMaterialFunction(materialFunction, "materialData");
+    switch (SM) {
+    case DefaultLit:
+        writeItem([&] {
+            writeRaw("float3x3 TBN");
+            writeScope(ScopeType::Paran, [&] {
+                writeItem("in.tangentWS.xyz");
+                writeItem("in.binormalWS.xyz");
+                writeItem("in.normalWS.xyz");
+            });
         });
-    });
-    writeItem("materialData.normal = TBN * normalize(materialData.normal)");
-    writeItem([&] {
-        writeRaw("PBRData pbr = ");
-        writeScope(ScopeType::BraceList, [&] {
-            writeItem("materialData.albedo");
-            writeItem("materialData.emissive");
-            writeItem("materialData.roughness");
-            writeItem("materialData.metallic");
-            writeItem("materialData.ao");
-            writeItem("materialData.normal");
+        writeItem("materialData.normal = TBN * normalize(materialData.normal)");
+        writeItem([&] {
+            writeRaw("PBRData pbr = ");
+            writeScope(ScopeType::BraceList, [&] {
+                writeItem("materialData.albedo");
+                writeItem("materialData.emissive");
+                writeItem("materialData.roughness");
+                writeItem("materialData.metallic");
+                writeItem("materialData.ao");
+                writeItem("materialData.normal");
+            });
         });
-    });
-    writeItem([&] {
-        writeRaw("float3 color = PBRForwardShader");
-        auto argScope = makeScope(ScopeType::Paran);
-        writeItem("pbr");
-        writeItem("in.positionWS");
-        writeItem("cameraBuffer.position");
-        writeItem("lightSpaceTransforms");
-        writeItem("lights");
-        writeItem("shadowMaps");
-        writeItem("specularMap");
-        writeItem("brdfMap");
-    });
-    writeItem("return { float4(color, 1), entityID }");
+        writeItem([&] {
+            writeRaw("float3 color = PBRForwardShader");
+            auto argScope = makeScope(ScopeType::Paran);
+            writeItem("pbr");
+            writeItem("in.positionWS");
+            writeItem("cameraBuffer.position");
+            writeItem("lightSpaceTransforms");
+            writeItem("lights");
+            writeItem("shadowMaps");
+            writeItem("specularMap");
+            writeItem("bdrfMap");
+        });
+        writeItem("return { float4(color, 1), entityID }");
+        break;
+    case Unlit:
+        writeItem("return { float4(materialData.emissive, 1), entityID }");
+        break;
+    }
     fnScope.pop();
 }
 
@@ -781,5 +828,12 @@ void MetalCodeGenerator::clampGreaterZero(Type const* type,
             writeItem(getName(type), "()");
             writeItem(valueName...);
         });
+    });
+}
+
+void MetalCodeGenerator::normalize(auto const&... valueName) {
+    writeItem([&] {
+        writeRaw(valueName..., " = normalize");
+        writeScope(ScopeType::Paran, [&] { writeItem(valueName...); });
     });
 }

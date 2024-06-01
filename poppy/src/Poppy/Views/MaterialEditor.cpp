@@ -56,7 +56,6 @@ struct MaterialModelImpl: bloom::MaterialModel {
         });
         auto codegenParams = node["CodegenParameters"].as<CodegenParameters>(
             CodegenParameters{});
-        ;
         setParameters(codegenParams);
     }
 
@@ -78,16 +77,6 @@ struct MaterialModelImpl: bloom::MaterialModel {
         }
         for (auto* node: editorGraph.nodes()) {
             getController(node)->linkGraphNode(ctx, map);
-        }
-        switch (params.shadingModel) {
-        case MaterialShadingModel::Unlit:
-            if (auto* root = graph.root()) {
-                auto* newRoot = graph.addValue<AggregateElement>(root, 1);
-                graph.setRoot(newRoot);
-            }
-            break;
-        case MaterialShadingModel::DefaultLit:
-            break;
         }
         auto codegen = makeCodeGenerator(ctx, graph, {});
         return codegen->run();

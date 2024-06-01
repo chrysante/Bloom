@@ -127,6 +127,32 @@ static std::unique_ptr<Node> enumMenu(
                     filter);
 }
 
+static AggregateType const* makeDefaultLitOutputType(Context& ctx) {
+    auto* materialDataType = ctx.aggregateType({
+        ctx.float3Type(),
+        ctx.float3Type(),
+        ctx.floatType(),
+        ctx.floatType(),
+        ctx.floatType(),
+        ctx.float3Type(),
+    });
+    return materialDataType;
+}
+
+static AggregateType const* makeUnlitOutputType(Context& ctx) {
+    auto* materialDataType = ctx.aggregateType({
+        ctx.float3Type(),
+    });
+    return materialDataType;
+}
+
+static AggregateType const* makeTransparencyOutputType(Context& ctx) {
+    auto* materialDataType = ctx.aggregateType({
+        ctx.floatType(),
+    });
+    return materialDataType;
+}
+
 struct OutputController: MaterialNodeController {
     static constexpr auto Name = "OutputController";
 
@@ -144,6 +170,16 @@ struct OutputController: MaterialNodeController {
         node["Type"] = Name;
         return node;
     }
+
+    enum InputKind {
+        BaseColor,
+        Emissive,
+        Roughness,
+        Metallic,
+        AmbientOcclusion,
+        Normal,
+        Transparency
+    };
 
     std::vector<PinDesc> makeInputDescriptors() override {
         auto params = parameters();
@@ -181,35 +217,89 @@ struct OutputController: MaterialNodeController {
 
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& graph) const override {
-        auto* type = ctx.aggregateType(std::vector<Type const*>{
-            ctx.float3Type(),
-            ctx.float3Type(),
-            ctx.floatType(),
-            ctx.floatType(),
-            ctx.floatType(),
-            ctx.float3Type(),
-            ctx.floatType(),
-        });
-        auto* value = graph.addValue<AggregateBuilder>(type);
-        graph.setRoot(value);
-        return { value };
+        auto [materialRoot, materialDataType] = [&] {
+            using enum MaterialShadingModel;
+            using enum GraphRoot;
+            switch (parameters().shadingModel) {
+            case DefaultLit:
+                return std::pair{ LitFragmentFunction,
+                                  makeDefaultLitOutputType(ctx) };
+            case Unlit:
+                return std::pair{ UnlitFragmentFunction,
+                                  makeUnlitOutputType(ctx) };
+            }
+        }();
+        auto* materialData = graph.addValue<AggregateBuilder>(materialDataType);
+        utl::small_vector<Value*> values = { materialData };
+        graph.setRoot(materialRoot, materialData);
+        switch (parameters().transparency) {
+        case MaterialTransparency::Opaque:
+            break;
+        case MaterialTransparency::Masked: {
+            auto* transparencyDataType = makeTransparencyOutputType(ctx);
+            auto* transparencyData =
+                graph.addValue<AggregateBuilder>(transparencyDataType);
+            values.push_back(transparencyData);
+            graph.setRoot(GraphRoot::TransparencyFunction, transparencyData);
+            break;
+        }
+        }
+        return values;
+    }
+
+    void linkGraphNode(Context& ctx, ValueMap const& map) const override {
+        auto values = map.get(node());
+        auto getValue = [&](InputKind position) {
+            auto* pin = node()->input(position);
+            if (auto* o = pin->origin()) {
+                return map.get(&o->parent(), o->indexInParent());
+            }
+            return defaultInputValue(ctx, position);
+        };
+        auto* materialValue = cast<AggregateBuilder*>(values[0]);
+        using enum MaterialShadingModel;
+        switch (parameters().shadingModel) {
+        case DefaultLit:
+            materialValue->setOperand(BaseColor, getValue(BaseColor));
+            materialValue->setOperand(Emissive, getValue(Emissive));
+            materialValue->setOperand(Roughness, getValue(Roughness));
+            materialValue->setOperand(Metallic, getValue(Metallic));
+            materialValue->setOperand(AmbientOcclusion,
+                                      getValue(AmbientOcclusion));
+            materialValue->setOperand(Normal, getValue(Normal));
+            break;
+        case Unlit:
+            materialValue->setOperand(0, getValue(Emissive));
+            break;
+        }
+        switch (parameters().transparency) {
+        case MaterialTransparency::Opaque:
+
+            break;
+        case MaterialTransparency::Masked: {
+            auto* transparencyValue = cast<AggregateBuilder*>(values[1]);
+            transparencyValue->setOperand(0, getValue(Transparency));
+
+            break;
+        }
+        }
     }
 
     Value* defaultInputValue(Context& ctx, size_t index) const override {
         switch (index) {
-        case 0: // Base color
+        case BaseColor:
             return ctx.float3Constant({ 0, 0, 0 });
-        case 1: // Emissive
+        case Emissive:
             return ctx.float3Constant({ 0, 0, 0 });
-        case 2: // Roughness
+        case Roughness:
             return ctx.floatConstant(1);
-        case 3: // Metallic
+        case Metallic:
             return ctx.floatConstant(0);
-        case 4: // AO
+        case AmbientOcclusion:
             return ctx.floatConstant(1);
-        case 5: // Normal
+        case Normal:
             return ctx.float3Constant({ 0, 0, 1 });
-        case 6: // Normal
+        case Transparency:
             return ctx.floatConstant(1);
         default:
             BL_UNREACHABLE();

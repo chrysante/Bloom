@@ -11,6 +11,7 @@
 #include <utl/vector.hpp>
 #include <vml/vml.hpp>
 
+#include "Bloom/Core/EnumCount.h"
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/MaterialCompiler/Context.h"
@@ -29,7 +30,11 @@ class MaterialGraph {
 public:
     explicit MaterialGraph(CodegenParameters params): params(params) {}
 
-    void setRoot(Value* value) { _root = value; }
+    void setRoot(GraphRoot root, Value* value) { _roots[root] = value; }
+
+    Value* getRoot(GraphRoot root) const { return _roots[root]; }
+
+    std::span<Value* const> roots() const { return _roots; }
 
     Value* addValue(DynUniquePtr<Value> value);
 
@@ -44,8 +49,6 @@ public:
         return addValue(allocate<T>(std::forward<Args>(args)...));
     }
 
-    Value* root() const { return _root; }
-
     auto values() const {
         return _values | ranges::views::transform(
                              [](auto& p) -> auto const* { return p.get(); });
@@ -55,7 +58,7 @@ public:
 
 private:
     std::vector<DynUniquePtr<Value>> _values;
-    Value* _root = nullptr;
+    EnumArray<GraphRoot, Value*> _roots{};
     CodegenParameters params;
 };
 

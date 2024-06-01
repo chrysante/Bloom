@@ -36,6 +36,10 @@ public:
     RasterizerInput* rasterizerInput(RasterizerInputKind kind);
 
     AggregateType const* aggregateType(std::span<Type const* const> elements);
+    AggregateType const* aggregateType(
+        std::initializer_list<Type const*> elements) {
+        return aggregateType(std::span(elements));
+    }
 
     TextureType const* textureType(TextureSubType subtype);
 

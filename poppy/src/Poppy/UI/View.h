@@ -116,6 +116,9 @@ public:
     /// Hides or (unhides) this view
     void setHidden(bool value = true) { data.hidden = value; }
 
+    /// Hides or (unhides) this view
+    void toggleHidden() { setHidden(data.hidden ^ true); }
+
     struct BackendImpl;
 
 protected:

@@ -59,7 +59,7 @@ struct Editor::Impl {
 
     void deleteSelectedEntities();
     void toggleSelectedEntitiesHidden();
-    void toggleContentBrowser();
+    void toggleView(std::string_view name);
 
     std::array<Command const*, 2> addSimCommands(CommandPalette& cmd);
 
@@ -178,7 +178,12 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
     addCommand({
         "Toggle Content Browser",
         { Key::C, ModFlags::Control | ModFlags::Shift },
-        [this] { impl->toggleContentBrowser(); }
+        [this] { impl->toggleView("Content Browser"); }
+    });
+    addCommand({
+        "Toggle Console",
+        { Key::B, ModFlags::Control | ModFlags::Shift },
+        [this] { impl->toggleView("Console"); }
     });
     auto [startSimCmd, stopSimCmd] = impl->addSimCommands(impl->cmd);
     impl->dockspace.setLeftToolbar({
@@ -448,10 +453,9 @@ void Editor::Impl::toggleSelectedEntitiesHidden() {
     }
 }
 
-void Editor::Impl::toggleContentBrowser() {
-    auto* CB = viewManager.findByStaticName("Content Browser");
-    if (!CB) {
-        return;
+void Editor::Impl::toggleView(std::string_view name) {
+    auto* view = viewManager.findByStaticName(name);
+    if (view) {
+        view->toggleHidden();
     }
-    CB->setHidden(CB->isHidden() ^ true);
 }

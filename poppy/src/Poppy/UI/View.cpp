@@ -276,6 +276,7 @@ YAML::Node View::doSerialize() const {
     node["Position"] = data.position;
     node["Size"] = data.size;
     node["Docked"] = data.docked;
+    node["Hidden"] = data.hidden;
     node["Static Name"] = data.staticName;
     node["Derived Data"] = serialize();
     return node;
@@ -297,9 +298,10 @@ std::unique_ptr<View> View::doDeserialize(YAML::Node const& node,
         }
         auto view = entry->createView(editor);
         view->data.ID = ID;
-        view->data.position = node["Position"].as<float2>();
-        view->data.size = node["Size"].as<float2>();
-        view->data.docked = node["Docked"].as<bool>();
+        view->data.position = node["Position"].as<float2>(float2{ 300, 300 });
+        view->data.size = node["Size"].as<float2>(float2(float2{ 500, 500 }));
+        view->data.hidden = node["Hidden"].as<bool>(false);
+        view->data.docked = node["Docked"].as<bool>(false);
         view->deserialize(node["Derived Data"]);
         return view;
     }

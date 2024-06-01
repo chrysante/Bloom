@@ -23,6 +23,11 @@ namespace bloom {
 class HardwareDevice;
 struct StaticMeshData;
 
+/// Sent when a new project is opened
+struct BLOOM_API DidOpenProject {
+    AssetManager* AM;
+};
+
 /// Object stored by the asset manager for each asset
 class AssetRegistryEntry {
     friend class AssetRegistry;

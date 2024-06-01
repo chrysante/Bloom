@@ -60,6 +60,7 @@ struct Editor::Impl {
     void deleteSelectedEntities();
     void toggleSelectedEntitiesHidden();
     void toggleView(std::string_view name);
+    void showOpenProjectPanel();
 
     std::array<Command const*, 2> addSimCommands(CommandPalette& cmd);
 
@@ -325,6 +326,9 @@ void Editor::frame() {
 
 void Editor::menuBar() {
     if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("Open Project...")) {
+            impl->showOpenProjectPanel();
+        }
         if (ImGui::MenuItem("New Scene...")) {
             // newScene();
         }
@@ -385,11 +389,13 @@ void Editor::saveConfigToDisk() {
     /// We load the existing config to not destroy any saved state that is not
     /// currently active
     YAML::Node root = getStoredConfig();
-    auto windows = getWindows();
-    if (!windows.empty()) {
-        root["Window"] = windows.front()->getDescription();
+    if (mainWindow()) {
+        root["Window"] = mainWindow()->getDescription();
     }
     root["Views"] = impl->viewManager.serialize();
+    root["Active Project"] = assetManager().projectRootDir();
+    auto* scene = sceneSystem().scene();
+    root["Active Scene"] = scene ? scene->handle() : AssetHandle();
     YAML::Emitter out;
     out << root;
     auto filename = configFile();
@@ -407,6 +413,15 @@ void Editor::restoreConfigFromDisk() {
     Logger::Warn("Resetting style colors on startup");
     ImGui::StyleColorsDark();
     impl->viewManager.deserialize(root["Views"]);
+    auto activeProject = root["Active Project"].as<std::filesystem::path>("");
+    if (!activeProject.empty()) {
+        assetManager().openProject(activeProject);
+    }
+    auto activeScene = root["Active Scene"].as<AssetHandle>(AssetHandle());
+    if (activeScene) {
+        auto scene = getAsset<Scene>(activeScene, AssetRepresentation::CPU);
+        sceneSystem().loadScene(scene);
+    }
 }
 
 WindowDescription Editor::loadWindowConfig() {
@@ -458,4 +473,20 @@ void Editor::Impl::toggleView(std::string_view name) {
     if (view) {
         view->toggleHidden();
     }
+}
+
+void Editor::Impl::showOpenProjectPanel() {
+    OpenPanelDescription desc;
+    desc.canChooseFiles = false;
+    desc.canChooseDirectories = true;
+    desc.allowsMultipleSelection = false;
+    showOpenPanel(desc, [this](std::filesystem::path const& dir) {
+        if (!std::filesystem::exists(dir)) {
+            Logger::Error("Directory does not exist: ", dir);
+        }
+        editor->dispatch(DispatchToken::NextFrame, [=, this] {
+            editor->sceneSystem().unloadScene();
+            editor->assetManager().openProject(dir);
+        });
+    });
 }

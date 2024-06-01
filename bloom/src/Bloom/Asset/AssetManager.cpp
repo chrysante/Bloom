@@ -419,6 +419,7 @@ void AssetManager::openProject(std::filesystem::path path) {
     /// Load working dir
     impl->registry.clear();
     refreshProject();
+    dispatch(DispatchToken::Now, DidOpenProject{ this });
 }
 
 void AssetManager::refreshProject() {

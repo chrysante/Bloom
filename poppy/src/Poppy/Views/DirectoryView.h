@@ -128,6 +128,9 @@ public:
     /// Opens \p directory in this view
     void openDirectory(std::filesystem::path path);
 
+    /// \Returns the deepest currently open directory
+    std::filesystem::path currentDirectory() const;
+
     /// \Returns the corresponding command.
     /// \Warning this must be called after `init()` to return nonnull values
     Command const* getCommand(CommandType commandType) const;

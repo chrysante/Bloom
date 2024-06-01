@@ -177,15 +177,6 @@ void Viewport::init() {
         }
     });
     listen([this](UnloadSceneEvent) { renderGraphDirty = true; });
-    if (auto* defaultScene = std::getenv("DEFAULT_SCENE")) {
-        AssetHandle handle = assetManager().findByName(defaultScene);
-        if (handle) {
-            openScene(handle);
-        }
-        else {
-            Logger::Warn("Failed to find default scene: ", defaultScene);
-        }
-    }
 }
 
 void Viewport::displayOverlays(Scene& scene) {

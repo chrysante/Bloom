@@ -35,9 +35,15 @@ struct YAML::convert<bloom::AssetHandle> {
     }
 
     static bool decode(Node const& node, bloom::AssetHandle& handle) {
-        handle = bloom::AssetHandle(node["AssetType"].as<bloom::AssetType>(),
-                                    node["AssetID"].as<utl::uuid>());
-        return true;
+        try {
+            handle =
+                bloom::AssetHandle(node["AssetType"].as<bloom::AssetType>(),
+                                   node["AssetID"].as<utl::uuid>());
+            return true;
+        }
+        catch (YAML::Exception const&) {
+            return false;
+        }
     }
 };
 

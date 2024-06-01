@@ -34,8 +34,6 @@ using namespace poppy;
 namespace {
 
 struct AssetBrowserData {
-    std::filesystem::path projectDir; // absolute path
-    std::filesystem::path currentDir; // absolute path
     bool showAssetManagerDebugger = false;
 };
 
@@ -52,12 +50,7 @@ struct AssetBrowser: View {
     void deserialize(YAML::Node) override;
 
     void newAssetPopup();
-    void displayNoOpenProject();
-
     void importAsset(std::filesystem::path);
-
-    void openProject(std::filesystem::path const&);
-    void openSubdirectory(std::filesystem::path const&);
     void refreshFilesystem();
     bool displayPreview(AssetHandle handle);
 
@@ -236,8 +229,7 @@ public:
 
 POPPY_REGISTER_VIEW(AssetBrowser, "Content Browser");
 
-BLOOM_MAKE_TEXT_SERIALIZER(AssetBrowserData, projectDir, currentDir,
-                           showAssetManagerDebugger);
+BLOOM_MAKE_TEXT_SERIALIZER(AssetBrowserData, showAssetManagerDebugger);
 
 AssetBrowser::AssetBrowser() = default;
 
@@ -252,11 +244,14 @@ void AssetBrowser::importFiles() {
 }
 
 void AssetBrowser::init() {
+    listen([this](DidOpenProject message) {
+        dirView.openDirectory(message.AM->projectRootDir());
+    });
     assetManager = &editor().assetManager();
     dirView.init(std::make_unique<DirViewDelegate>(*this),
                  editor().makeEmitter(), commandPaletteWrite());
-    if (!data.projectDir.empty()) {
-        openProject(data.projectDir);
+    if (!assetManager->projectRootDir().empty()) {
+        dirView.openDirectory(assetManager->projectRootDir());
     }
     using enum DirectoryView::CommandType;
     // clang-format off
@@ -307,11 +302,11 @@ void AssetBrowser::displayToolbar() {
 
 void AssetBrowser::display() {
     if (!assetManager) {
-        displayEmptyWithReason("Asset Manager Not Loaded");
+        displayEmptyWithReason("Asset Manager not loaded");
         return;
     }
     if (assetManager->projectRootDir().empty()) {
-        displayNoOpenProject();
+        displayEmptyWithReason("No Open Project");
         return;
     }
     newAssetPopup();
@@ -361,43 +356,12 @@ void AssetBrowser::newAssetPopup() {
     ImGui::SameLine();
     ImGui::BeginDisabled(!isConcreteAsset(type));
     if (ImGui::Button("Create")) {
-        assetManager->createAsset(type, nameBuffer, data.currentDir);
+        assetManager->createAsset(type, nameBuffer, dirView.currentDirectory());
         refreshFilesystem();
         ImGui::CloseCurrentPopup();
     }
     ImGui::EndDisabled();
     ImGui::EndPopup();
-}
-
-void AssetBrowser::displayNoOpenProject() {
-    char const* text = "Choose Working Directory...";
-    bool pressed =
-        withFont(FontDesc::UIDefault().setWeight(FontWeight::Semibold), [&] {
-        auto& style = ImGui::GetStyle();
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
-                            2 * (float2)style.FramePadding);
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,
-                            2 * style.FrameRounding);
-        utl_defer { ImGui::PopStyleVar(2); };
-        auto buttonSize = (float2)ImGui::CalcTextSize(text) +
-                          2 * (float2)ImGui::GetStyle().FramePadding;
-        auto cursor = ((float2)ImGui::GetContentRegionAvail() - buttonSize) / 2;
-        ImGui::SetCursorPos(cursor);
-        return ImGui::Button(text);
-    });
-    if (pressed) {
-        OpenPanelDescription desc;
-        desc.canChooseFiles = false;
-        desc.canChooseDirectories = true;
-        desc.allowsMultipleSelection = false;
-        showOpenPanel(desc, [this](std::filesystem::path const& dir) {
-            if (!std::filesystem::exists(dir)) {
-                Logger::Error("Directory does not exist: ", dir);
-            }
-            openProject(dir);
-        });
-    }
-    return;
 }
 
 YAML::Node AssetBrowser::serialize() const {
@@ -412,38 +376,15 @@ void AssetBrowser::deserialize(YAML::Node node) {
 
 /// MARK: -
 void AssetBrowser::importAsset(std::filesystem::path source) {
-    auto dest = std::filesystem::relative(data.currentDir,
-                                          assetManager->projectRootDir())
-                    .lexically_normal();
-    auto name = source.filename().replace_extension().string();
+    auto dest = dirView.currentDirectory();
+    auto name = source.stem().string();
     assetManager->importAsset(name, source, dest);
     refreshFilesystem();
 }
 
-void AssetBrowser::openProject(std::filesystem::path const& path) {
-    if (!path.is_absolute()) {
-        Logger::Error("Can't open Project: ", path);
-        return;
-    }
-    if (!assetManager) {
-        return;
-    }
-    data.projectDir = path;
-    assetManager->openProject(path);
-    openSubdirectory(path);
-}
-
-void AssetBrowser::openSubdirectory(std::filesystem::path const& path) {
-    if (path.is_relative()) {
-        return openSubdirectory(assetManager->projectRootDir() / path);
-    }
-    data.currentDir = path;
-    dirView.openDirectory(path);
-}
-
 void AssetBrowser::refreshFilesystem() {
     assetManager->refreshProject();
-    dirView.openDirectory(data.currentDir);
+    dirView.getCommand(DirectoryView::CommandType::Rescan)->execute();
 }
 
 bool AssetBrowser::displayPreview(AssetHandle handle) {

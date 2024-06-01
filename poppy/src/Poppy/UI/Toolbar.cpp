@@ -301,13 +301,13 @@ void Toolbar::cook() {
     /// Partition into blocks
     blocks.emplace_back();
     blocks.back().itemBeginIndex = 0;
-    for (auto [index, item]: activeItems | enumerate) {
+    for (size_t index = 0; auto& item: activeItems) {
         if (dynamic_cast<ToolbarSpacer const*>(item)) {
             blocks.back().itemEndIndex = index + 1;
             blocks.emplace_back();
             blocks.back().itemBeginIndex = index + 1;
-            continue;
         }
+        ++index;
     }
     blocks.back().itemEndIndex = activeItems.size();
     /// Calculate item widths

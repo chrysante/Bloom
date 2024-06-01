@@ -98,8 +98,12 @@ struct YAML::convert<std::filesystem::path> {
     }
 
     static bool decode(Node const& node, std::filesystem::path& path) {
-        path = std::filesystem::path(node.as<std::string>());
-        return true;
+        std::string s;
+        if (YAML::convert<std::string>::decode(node, s)) {
+            path = std::move(s);
+            return true;
+        }
+        return false;
     }
 };
 

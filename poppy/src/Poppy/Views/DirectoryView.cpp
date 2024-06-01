@@ -696,6 +696,13 @@ void DirectoryView::openDirectory(std::filesystem::path directory) {
     impl->history.push(directory);
 }
 
+std::filesystem::path DirectoryView::currentDirectory() const {
+    if (!impl->directoryLine.isValid()) {
+        return {};
+    }
+    return impl->directoryLine.current().entry()->path();
+}
+
 Command const* DirectoryView::getCommand(CommandType commandType) const {
     return impl->commands[commandType];
 }
@@ -739,6 +746,7 @@ Toolbar Impl::makeToolbar() {
 
 void Impl::display() {
     if (!directoryLine.isValid()) {
+        ImGui::Dummy({});
         return;
     }
     ImGui::BeginChild("DirectoryView");

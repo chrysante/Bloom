@@ -1,6 +1,8 @@
 #include "Bloom/GPU/CommandBuffer.h"
 #include "Bloom/GPU/HardwareDevice.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
+#include "Bloom/Graphics/Material/Material.h"
+#include "Bloom/Graphics/Material/MaterialInstance.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
@@ -71,6 +73,18 @@ BL_REGISTER_PASS(ShadowPass, "Shadow Pass");
 
 ShadowPass::ShadowPass(std::string name): PassImpl(std::move(name)) {}
 
+static TriangleCullMode transformCullMode(TriangleCullMode in) {
+    using enum TriangleCullMode;
+    switch (in) {
+    case None:
+        return None;
+    case Back:
+        return Front;
+    case Front:
+        return Back;
+    }
+}
+
 void ShadowPass::doExecute(FrameParameters const& frameParams,
                            CommandBuffer& commandBuffer) {
     size_t numCascades = frameParams.numShadowMaps;
@@ -83,12 +97,20 @@ void ShadowPass::doExecute(FrameParameters const& frameParams,
           .renderTargetArrayLength = numCascades,
           .renderTargetSize = shadowMaps.size().xy });
     encoder->setPipeline(pipeline);
-    encoder->setTriangleCullMode(TriangleCullMode::Front); /// TODO: temporary
+    TriangleCullMode currentCullMode = TriangleCullMode::Front;
+    encoder->setTriangleCullMode(currentCullMode);
     encoder->setDepthStencil(depthStencil);
     encoder->setVertexBuffer(lightSpaceTransforms, 1);
     encoder->setVertexBuffer(geometry->transformBuffer(), 2);
     StaticMeshRenderer* currentMesh = nullptr;
     for (size_t index = 0; auto&& object: geometry->getObjects()) {
+        auto* material = object.materialInstance->material();
+        /// We set the cull mode here to honor two-sided materials
+        auto cullMode = transformCullMode(material->cullMode);
+        if (cullMode != currentCullMode) {
+            encoder->setTriangleCullMode(cullMode);
+            currentCullMode = cullMode;
+        }
         if (object.mesh.get() != currentMesh) {
             currentMesh = object.mesh.get();
             encoder->setVertexBuffer(currentMesh->vertexBuffer(), 0);

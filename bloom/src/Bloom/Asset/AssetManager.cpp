@@ -205,6 +205,8 @@ struct AssetManager::Impl {
     std::filesystem::path rootDir;
     Reference<ShaderCompiler> shaderCompiler;
 
+    std::filesystem::path intDir() { return rootDir / ".int"; };
+
     explicit Impl(AssetManager* assetManager);
 
     RegistryEntry* getEntry(utl::uuid ID);
@@ -384,9 +386,11 @@ void AssetManager::init() {
         }
     });
     listen([this](AMGetAsset const& msg) {
+        if (!msg.handle) {
+            return;
+        }
         auto asset = get(msg.handle, msg.representation);
         if (!asset) {
-            Logger::Error("AssetManager: Failed to satisfy asset request");
             return;
         }
         if (msg.asset) {
@@ -704,9 +708,14 @@ AssetHandle AssetManager::findByName(std::string_view name) const {
 
 Reference<Asset> AssetManager::get(AssetHandle handle,
                                    AssetRepresentation repr) {
+    if (!handle) {
+        Logger::Warn("Attempt to get asset with null handle of type: ",
+                     handle.type());
+        return nullptr;
+    }
     auto* entry = impl->registry.find(handle.ID());
     if (!entry) {
-        Logger::Error("Failed to find asset ", handle);
+        Logger::Error("Failed to find asset: ", handle);
         return nullptr;
     }
     auto asset = [&] {
@@ -983,7 +992,7 @@ void AssetManager::compileScripts() {
     std::optional<scatha::Target> target;
     std::stringstream err;
     try {
-        auto engineLibDir = projectRootDir() / ".int";
+        auto engineLibDir = impl->intDir();
         if (!compileEngineLibrary(engineLibDir)) {
             return;
         }
@@ -1327,8 +1336,7 @@ void Impl::flushToDiskImpl(Material const& mat,
     YAML::Emitter out;
     out << mat.model->serialize();
     std::ios::sync_with_stdio(false);
-    auto file = openOrCreateFile(dest, std::ios::out | std::ios::trunc |
-                                           std::ios::binary);
+    auto file = openOrCreateFile(dest, std::ios::out);
     file << out.c_str();
 }
 

@@ -23,6 +23,11 @@ struct BLOOM_API SkyLightComponent: SkyLight {
     using Light = SkyLight;
 };
 
+/// Type list of all light components
+using LightComponentList =
+    TypeList<PointLightComponent, SpotLightComponent, DirectionalLightComponent,
+             SkyLightComponent>;
+
 } // namespace bloom
 
 #include "Bloom/Core/Yaml.h"

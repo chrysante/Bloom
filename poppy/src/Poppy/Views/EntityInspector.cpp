@@ -35,6 +35,34 @@ using namespace ranges::views;
 using namespace bloom;
 using namespace poppy;
 
+template <typename List>
+static constexpr auto DynamicTypes = []<typename... T>(TypeList<T...>) {
+    return std::array{ DynamicType<T>... };
+}(List{});
+
+static std::string toPrettyName(ComponentKind kind) {
+    switch (kind) {
+    case ComponentKind::PointLightComponent:
+        return "Point Light";
+    case ComponentKind::SpotLightComponent:
+        return "Spot Light";
+    case ComponentKind::DirectionalLightComponent:
+        return "Directional Light";
+    case ComponentKind::SkyLightComponent:
+        return "Sky Light";
+    case ComponentKind::PhysicsStaticComponent:
+        return "Static";
+    case ComponentKind::PhysicsMovableComponent:
+        return "Movable";
+    case ComponentKind::SphereColliderComponent:
+        return "Sphere Collider";
+    case ComponentKind::BoxColliderComponent:
+        return "Box Collider";
+    default:
+        return "Unknown";
+    }
+}
+
 namespace {
 
 class EntityInspector: public View, public BasicSceneInspector {
@@ -311,20 +339,13 @@ void EntityInspector::inspectMesh() {
 }
 
 template <typename E>
-static std::optional<E> myEnumCombo(char const* label, E value, auto&& values) {
-    auto myToString = [](E e) {
-        if constexpr (requires { toString(e); }) {
-            return std::string(toString(e));
-        }
-        else {
-            return std::string(magic_enum::enum_name(e));
-        }
-    };
+static std::optional<E> myEnumCombo(char const* label, E value, auto toName,
+                                    auto&& values) {
     std::optional<E> newValue;
-    if (ImGui::BeginCombo(label, myToString(value).data())) {
+    if (ImGui::BeginCombo(label, toName(value).data())) {
         for (auto current: values) {
             bool selected = value == current;
-            if (ImGui::Selectable(myToString(current).data(), selected) &&
+            if (ImGui::Selectable(toName(current).data(), selected) &&
                 !selected)
             {
                 newValue = current;
@@ -339,14 +360,14 @@ static std::optional<E> myEnumCombo(char const* label, E value, auto&& values) {
 }
 
 template <typename E>
-static std::optional<E> myEnumCombo(char const* label, E value) {
-    return myEnumCombo(label, value, magic_enum::enum_values<E>());
+static std::optional<E> myEnumCombo(char const* label, E value, auto toName) {
+    return myEnumCombo(label, value, toName, magic_enum::enum_values<E>());
 }
 
 template <typename E>
 static std::optional<E> inspectTypeGeneric(char const* ID, E type,
                                            auto&& values, auto exchange) {
-    auto newType = myEnumCombo(ID, type, values);
+    auto newType = myEnumCombo(ID, type, toPrettyName, values);
     if (newType) {
         std::invoke(exchange, *newType);
     }
@@ -402,14 +423,12 @@ void EntityInspector::inspectLight() {
     }
     beginProperty("Type");
     fullWidth();
-    type = inspectTypeGeneric("###Type", type, [&](ComponentKind newType) {
-        auto color = visitComponentType(type, [&]<typename C>(utl::tag<C>) {
-            if constexpr (requires { entity.get<C>().color; }) {
-                return entity.get<C>().color;
-            }
-            else {
-                return packed_float3{};
-            }
+    type = inspectTypeGeneric("###Type", type, DynamicTypes<LightComponentList>,
+                              [&](ComponentKind newType) {
+        auto color =
+            visitComponentType<LightComponentList>(type, [&]<typename L>(
+                                                             utl::tag<L>) {
+            return entity.get<L>().color;
         });
         makeComponentExchange(entity, type, newType);
 #if 0
@@ -420,9 +439,7 @@ void EntityInspector::inspectLight() {
         removeComponentType(type, entity);
 #endif
     }).value_or(type);
-    visitComponentType<PointLightComponent, SpotLightComponent,
-                       DirectionalLightComponent,
-                       SkyLightComponent>(type, [&]<typename L>(utl::tag<L>) {
+    visitComponentType<LightComponentList>(type, [&]<typename L>(utl::tag<L>) {
         inspectLightComponent(entity.get<L>());
     });
     endSection();
@@ -573,26 +590,22 @@ void EntityInspector::inspectPhysics() {
     beginProperty("Movability");
     fullWidth();
     physicsType = inspectTypeGeneric("###Movability", physicsType,
-                                     { ComponentKind::PhysicsStaticComponent,
-                                       ComponentKind::PhysicsMovableComponent },
+                                     DynamicTypes<MovabilityList>,
                                      [&](ComponentKind newType) {
         auto* transaction = makeComponentExchange(entity, physicsType, newType);
         editor().transactionManager().commit(transaction);
     }).value_or(physicsType);
     beginProperty("Collider");
     fullWidth();
-    colliderType =
-        inspectTypeGeneric("###Collider", colliderType,
-                           { ComponentKind::BoxColliderComponent,
-                             ComponentKind::SphereColliderComponent },
-                           [&](ComponentKind newType) {
+    colliderType = inspectTypeGeneric("###Collider", colliderType,
+                                      DynamicTypes<ColliderList>,
+                                      [&](ComponentKind newType) {
         auto* transaction =
             makeComponentExchange(entity, colliderType, newType);
         editor().transactionManager().commit(transaction);
     }).value_or(colliderType);
-    visitComponentType<SphereColliderComponent,
-                       BoxColliderComponent>(colliderType,
-                                             [&]<typename C>(utl::tag<C>) {
+    visitComponentType<ColliderList>(colliderType,
+                                     [&]<typename C>(utl::tag<C>) {
         inspectColliderComponent(entity.get<C>());
     });
     endSection();

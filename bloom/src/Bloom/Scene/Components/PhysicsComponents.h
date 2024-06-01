@@ -25,6 +25,9 @@ struct BLOOM_API PhysicsMovableComponent {
     uint32_t bodyID;
 };
 
+using MovabilityList =
+    TypeList<PhysicsStaticComponent, PhysicsMovableComponent>;
+
 /// Different colliders. Entities need a collider in order to have physics
 /// simulated
 
@@ -37,6 +40,8 @@ struct BLOOM_API SphereColliderComponent {
 struct BLOOM_API BoxColliderComponent {
     vml::packed_float3 halfExtend = { 50, 50, 50 };
 };
+
+using ColliderList = TypeList<SphereColliderComponent, BoxColliderComponent>;
 
 } // namespace bloom
 

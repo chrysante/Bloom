@@ -110,14 +110,14 @@ private:
 class EditEntityComponent: public EntityTransaction {
 public:
     using Variant =
-        bloom::CopyTypeParameters<bloom::ComponentList, std::variant>;
+        bloom::CopyTypeParameters<bloom::AllComponents, std::variant>;
 
     using WeakVariant =
-        bloom::CopyTypeParameters<bloom::ComponentList, std::variant,
+        bloom::CopyTypeParameters<bloom::AllComponents, std::variant,
                                   bloom::ToWeakComponent>;
 
     using ConstPtrVariant = bloom::CopyTypeParameters<
-        bloom::ComponentList, std::variant,
+        bloom::AllComponents, std::variant,
         bloom::Compose<std::add_pointer, std::add_const>::impl>;
 
     explicit EditEntityComponent(utl::small_vector<WeakHandle> handles,

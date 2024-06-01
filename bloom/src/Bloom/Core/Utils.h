@@ -177,6 +177,9 @@ inline constexpr ToAddressFn<T> ToAddress{};
 
 /// # Metaprogramming
 
+template <typename...>
+struct TypeList {};
+
 template <typename OldContainer, template <class...> class NewContainer,
           template <class> class Transform>
 struct CopyTypeParametersImpl;

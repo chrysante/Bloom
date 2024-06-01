@@ -199,13 +199,21 @@ public:
     id<MTLBlitCommandEncoder> commandEncoder;
 };
 
+class MetalShaderLibrary: public ShaderLibrary {
+public:
+    MetalShaderLibrary(id<MTLLibrary> library): library(library) {}
+
+    ShaderFunctionHandle createFunction(std::string name) override;
+
+    id<MTLLibrary> library;
+};
+
 class MetalShaderCompiler: public ShaderCompiler {
 public:
     MetalShaderCompiler(id<MTLDevice> device);
 
-    std::vector<ShaderFunctionHandle> compile(
-        std::string source,
-        std::span<std::string const> functionNames) override;
+    Reference<ShaderLibrary> compileSource(
+        std::string source, ShaderCompilerOptions const& options) override;
 
     id<MTLDevice> device;
 };

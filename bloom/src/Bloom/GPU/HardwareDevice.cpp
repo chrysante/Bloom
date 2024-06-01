@@ -19,18 +19,17 @@ Reference<HardwareDevice> HardwareDevice::create(RenderAPI api) {
     }
 }
 
-std::vector<ShaderFunctionHandle> ShaderCompiler::compile(
-    std::filesystem::path sourcepath,
-    std::span<std::string const> functionNames) {
-    if (sourcepath.is_relative()) {
-        sourcepath = resourceDir() / sourcepath;
+Reference<ShaderLibrary> ShaderCompiler::compileFile(
+    std::filesystem::path sourcePath, ShaderCompilerOptions const& options) {
+    if (sourcePath.is_relative()) {
+        sourcePath = resourceDir() / sourcePath;
     }
-    std::fstream file(sourcepath);
+    std::fstream file(sourcePath);
     if (!file) {
-        Logger::Error("Failed to open file: ", sourcepath);
+        Logger::Error("Failed to open file: ", sourcePath);
         return {};
     }
     std::stringstream sstr;
     sstr << file.rdbuf();
-    return compile(std::move(sstr).str(), std::move(functionNames));
+    return compileSource(std::move(sstr).str(), options);
 }

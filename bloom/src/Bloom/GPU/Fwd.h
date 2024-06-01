@@ -15,6 +15,7 @@ class CommandEncoder;
 class RenderEncoder;
 class ComputeEncoder;
 class BlitEncoder;
+class ShaderLibrary;
 class ShaderCompiler;
 
 struct RenderPassDescription;

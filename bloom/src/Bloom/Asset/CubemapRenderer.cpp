@@ -77,20 +77,16 @@ void bloom::renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
                           TextureHandle equirectangular) {
     BL_ASSERT(cubemap.description().type == TextureType::CubeTexture);
     auto shaderCompiler = device.createShaderCompiler();
-    auto functions =
-        shaderCompiler->compile(std::filesystem::path(
-                                    "Shader/CubemapRenderer.metal"),
-                                std::vector<std::string>{
-                                    "cubeRendererVS", "cubemapRendererFS" });
-    if (functions.empty()) {
+    auto library = shaderCompiler->compileFile("Shader/CubemapRenderer.metal");
+    if (!library) {
         return;
     }
     auto pipeline = device.createRenderPipeline({
         .colorAttachments = { {
             .pixelFormat = cubemap.description().pixelFormat,
         } },
-        .vertexFunction = functions[0],
-        .fragmentFunction = functions[1],
+        .vertexFunction = library->createFunction("cubeRendererVS"),
+        .fragmentFunction = library->createFunction("cubemapRendererFS"),
     });
     renderCube(commandBuffer, device, pipeline, cubemap,
                [&](RenderEncoder& encoder) {
@@ -431,12 +427,8 @@ void bloom::renderSpecularIBL(HardwareDevice& device,
     BL_ASSERT(source.description().type == TextureType::CubeTexture);
     BL_ASSERT(dest.description().type == TextureType::CubeTexture);
     auto shaderCompiler = device.createShaderCompiler();
-    auto functions =
-        shaderCompiler
-            ->compile(std::filesystem::path("Shader/CubemapRenderer.metal"),
-                      std::vector<std::string>{ "cubeRendererVS",
-                                                "specularIBLRendererFS" });
-    if (functions.empty()) {
+    auto library = shaderCompiler->compileFile("Shader/CubemapRenderer.metal");
+    if (!library) {
         return;
     }
     size_t numMips = dest.description().mipmapLevelCount;
@@ -451,8 +443,8 @@ void bloom::renderSpecularIBL(HardwareDevice& device,
         .colorAttachments = { {
             .pixelFormat = dest.description().pixelFormat,
         } },
-        .vertexFunction = functions[0],
-        .fragmentFunction = functions[1],
+        .vertexFunction = library->createFunction("cubeRendererVS"),
+        .fragmentFunction = library->createFunction("specularIBLRendererFS"),
     });
     for (size_t i = 0; i < numMips; ++i) {
         auto destMip = createSharedTextureView(RenderAPI::Metal, dest,
@@ -470,14 +462,12 @@ void bloom::renderSpecularIBL(HardwareDevice& device,
 void bloom::computeBDRF(HardwareDevice& device, CommandBuffer& commandBuffer,
                         TextureHandle dest) {
     auto compiler = device.createShaderCompiler();
-    auto functions =
-        compiler->compile(std::filesystem::path("Shader/CubemapRenderer.metal"),
-                          std::vector<std::string>{ "IntegrateBRDFKernel" });
-    if (functions.empty()) {
+    auto library = compiler->compileFile("Shader/CubemapRenderer.metal");
+    if (!library) {
         return;
     }
-    auto pipeline =
-        device.createComputePipeline({ .computeFunction = functions[0] });
+    auto pipeline = device.createComputePipeline(
+        { .computeFunction = library->createFunction("IntegrateBRDFKernel") });
     auto encoder = commandBuffer.makeComputeEncoder();
     encoder->setPipeline(pipeline);
     encoder->setTexture(dest, 0);

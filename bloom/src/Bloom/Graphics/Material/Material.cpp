@@ -51,12 +51,15 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
             std::string(MaterialFragmentShaderName)
         };
         auto shaderCompiler = device.createShaderCompiler();
-        auto functions =
-            shaderCompiler->compile(sourceData.source, functionNames);
-        if (functions.empty()) {
+        auto library = shaderCompiler->compileSource(sourceData.source);
+        if (!library) {
             throw std::runtime_error("Failed to compile shaders");
         }
-        rgMainPass = createPipeline(device, functions[0], functions[1]);
+        auto vertexFunction =
+            library->createFunction(std::string(MaterialVertexShaderName));
+        auto fragmentFunction =
+            library->createFunction(std::string(MaterialFragmentShaderName));
+        rgMainPass = createPipeline(device, vertexFunction, fragmentFunction);
         for (auto [index, assetHandle]: sourceData.constantFragmentTextures) {
             constantFragmentTextures[index] =
                 as<Texture2D>(AM.get(assetHandle, AssetRepresentation::GPU));

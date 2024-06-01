@@ -653,40 +653,34 @@ void MetalBlitEncoder::synchronizeResource(HardwareResourceView resource) {
 
 void MetalBlitEncoder::end() { [commandEncoder endEncoding]; }
 
+ShaderFunctionHandle MetalShaderLibrary::createFunction(std::string name) {
+    id<MTLFunction> function = [library
+        newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
+    return ShaderFunctionHandle(bloom_retain(function), bloom_release);
+}
+
 MetalShaderCompiler::MetalShaderCompiler(id<MTLDevice> device):
     device(device) {}
 
-std::vector<ShaderFunctionHandle> MetalShaderCompiler::compile(
-    std::string source, std::span<std::string const> functionNames) {
+Reference<ShaderLibrary> MetalShaderCompiler::compileSource(
+    std::string source, ShaderCompilerOptions const& options) {
     Logger::Trace("Compiling shader source: ", source);
-    source = preprocessIncludes(std::move(source), std::array{ resourceDir() });
+    if (options.preprocessIncludes) {
+        source =
+            preprocessIncludes(std::move(source), std::array{ resourceDir() });
+    }
     NSError* error = nil;
-    MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-    options.libraryType = MTLLibraryTypeExecutable;
-    id<MTLLibrary> lib = [&] {
-        BL_PROFILE_FUNCTION("Shader compilation");
-        return [device
-            newLibraryWithSource:[NSString stringWithUTF8String:source.c_str()]
-                         options:options
-                           error:&error];
-    }();
+    MTLCompileOptions* mtlOptions = [[MTLCompileOptions alloc] init];
+    mtlOptions.libraryType = MTLLibraryTypeExecutable;
+    id<MTLLibrary> lib = [device
+        newLibraryWithSource:[NSString stringWithUTF8String:source.c_str()]
+                     options:mtlOptions
+                       error:&error];
     if (error != nil) {
         Logger::Error("Failed to compile shader library: ",
                       error.localizedDescription.UTF8String);
-        return {};
+        return nullptr;
     }
     Logger::Info("Successfully compiled shader library");
-    std::vector<ShaderFunctionHandle> result;
-    result.reserve(functionNames.size());
-    for (auto& name: functionNames) {
-        id<MTLFunction> function = [lib
-            newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
-        if (!function) {
-            Logger::Error("Failed to create shader function: ", name);
-            return {};
-        }
-        result.push_back(
-            ShaderFunctionHandle(bloom_retain(function), bloom_release));
-    }
-    return result;
+    return allocateRef<MetalShaderLibrary>(lib);
 }

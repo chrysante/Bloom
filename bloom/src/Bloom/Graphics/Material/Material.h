@@ -38,7 +38,7 @@ public:
 
     std::unique_ptr<MaterialModel> model;
 
-    /// Main pass for the render graph. We will clean this up in the future
+    Reference<ShaderLibrary> shaderLibrary;
     RenderPipelineHandle rgMainPass;
     TriangleCullMode cullMode = TriangleCullMode::Back;
     DepthStencilHandle depthStencil;

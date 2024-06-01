@@ -55,6 +55,7 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
         if (!library) {
             throw std::runtime_error("Failed to compile shaders");
         }
+        shaderLibrary = library;
         auto vertexFunction =
             library->createFunction(std::string(MaterialVertexShaderName));
         auto fragmentFunction =

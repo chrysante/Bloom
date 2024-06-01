@@ -21,6 +21,7 @@
 #include "Poppy/UI/Dockspace.h"
 #include "Poppy/UI/ImGuiContext.h"
 #include "Poppy/UI/ImGuiHelpers.h"
+#include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewManager.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/DebugViews.h"
@@ -58,6 +59,7 @@ struct Editor::Impl {
 
     void deleteSelectedEntities();
     void toggleSelectedEntitiesHidden();
+    void toggleContentBrowser();
 
     std::array<Command const*, 2> addSimCommands(CommandPalette& cmd);
 
@@ -172,6 +174,11 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
     // clang-format off
     addCommand({
         "Save", { Key::S, ModFlags::Control }, [this] { saveAll(); }
+    });
+    addCommand({
+        "Toggle Content Browser",
+        { Key::C, ModFlags::Control | ModFlags::Shift },
+        [this] { impl->toggleContentBrowser(); }
     });
     auto [startSimCmd, stopSimCmd] = impl->addSimCommands(impl->cmd);
     impl->dockspace.setLeftToolbar({
@@ -439,4 +446,12 @@ void Editor::Impl::toggleSelectedEntitiesHidden() {
             vis->value ^= true;
         }
     }
+}
+
+void Editor::Impl::toggleContentBrowser() {
+    auto* CB = viewManager.findByStaticName("Content Browser");
+    if (!CB) {
+        return;
+    }
+    CB->setHidden(CB->isHidden() ^ true);
 }

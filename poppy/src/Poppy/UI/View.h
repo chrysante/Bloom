@@ -109,6 +109,13 @@ public:
     /// Unexpected data will be ignored
     void sendData(std::any data) { receiveData(std::move(data)); }
 
+    /// \Returns `true` if this view is hidden.
+    /// Hidden views don't have their `display()` function called on updates
+    bool isHidden() const { return data.hidden; }
+
+    /// Hides or (unhides) this view
+    void setHidden(bool value = true) { data.hidden = value; }
+
     struct BackendImpl;
 
 protected:
@@ -178,6 +185,7 @@ private:
         bool maximized = false;
         bool open = true;
         bool isFocused = false;
+        bool hidden = false;
         /// `ImGuiWindowFlags` to use on the next frame. This is reset after the
         /// call to `Begin()`
         int nextFrameFlags = 0;

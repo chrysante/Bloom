@@ -120,6 +120,9 @@ void ViewManager::display() {
         return;
     }
     for (auto& view: views) {
+        if (view->isHidden()) {
+            continue;
+        }
         view->doFrame();
         if (displayDebugger) {
             Impl::displayDebugInfo(*view);

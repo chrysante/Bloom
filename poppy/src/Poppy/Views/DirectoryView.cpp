@@ -433,6 +433,8 @@ struct DirectoryLine {
         }
     }
 
+    bool isValid() const { return _root != nullptr; }
+
     SortCondition getSortCondition() const { return sortCondition; }
 
     ScannedDirectory& current() { return line[activeIndex]; }
@@ -736,6 +738,9 @@ Toolbar Impl::makeToolbar() {
 }
 
 void Impl::display() {
+    if (!directoryLine.isValid()) {
+        return;
+    }
     ImGui::BeginChild("DirectoryView");
     viewData.updateEarly();
     switch (layout) {

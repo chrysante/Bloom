@@ -53,6 +53,7 @@ enum class RasterizerInputKind {
     WorldBinormals,
     ModelNormals,
     WorldPosition,
+    VertexColor,
 };
 
 enum class BuiltinFunction {

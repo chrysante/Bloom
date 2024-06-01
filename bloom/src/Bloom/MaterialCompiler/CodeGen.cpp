@@ -416,7 +416,7 @@ void MetalCodeGenerator::writeVertexOutput() {
         writeItem("float3 binormalWS");
         writeItem("float3 positionWS");
         writeItem("float3 normalMS");
-        writeItem("float3 vertexColor");
+        writeItem("float4 vertexColor");
         writeItem("float2 textureCoords");
     });
 }
@@ -465,7 +465,7 @@ void MetalCodeGenerator::writeVertexFunction() {
         writeItem(".binormalWS = (transform * vertexBitangentMS).xyz");
         writeItem(".positionWS = vertexPositionWS.xyz");
         writeItem(".normalMS = vertexNormalMS.xyz");
-        writeItem(".vertexColor = v.color.rgb");
+        writeItem(".vertexColor = v.color");
         writeItem(".textureCoords = v.textureCoordinates[0]");
     });
 }
@@ -760,6 +760,8 @@ std::string MetalCodeGenerator::genNameImpl(RasterizerInput const& input) {
         return "in.positionWS";
     case ModelNormals:
         return "in.normalMS";
+    case VertexColor:
+        return "in.vertexColor";
     }
 }
 

@@ -256,6 +256,8 @@ struct InputController: MaterialNodeController {
             [[fallthrough]];
         case ModelNormals:
             return { { .name = "Vector", .userType = mask(DataType::Float3) } };
+        case VertexColor:
+            return { { .name = "Color", .userType = mask(DataType::Float4) } };
         }
     }
 

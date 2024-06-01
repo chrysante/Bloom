@@ -38,6 +38,8 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
         [[fallthrough]];
     case ModelNormals:
         return ctx.vectorType(3);
+    case VertexColor:
+        return ctx.vectorType(4);
     }
 }
 

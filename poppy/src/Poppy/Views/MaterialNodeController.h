@@ -17,6 +17,7 @@
 
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
+#include "Bloom/MaterialCompiler/MaterialGraph.h"
 #include "Poppy/Views/NodeEditor.h"
 
 namespace poppy {
@@ -180,11 +181,17 @@ public:
     virtual void linkGraphNode(bloom::matc::Context& ctx,
                                ValueMap const& map) const;
 
+    bloom::matc::CodegenParameters const& parameters() const { return params; }
+
+    void updateCodegenParameters(bloom::matc::CodegenParameters params);
+
 private:
     virtual bloom::matc::Value* defaultInputValue(
         bloom::matc::Context&, [[maybe_unused]] size_t inputIndex) const {
         return nullptr;
     }
+
+    bloom::matc::CodegenParameters params;
 };
 
 /// Base class of material nodes that support multiple input types.

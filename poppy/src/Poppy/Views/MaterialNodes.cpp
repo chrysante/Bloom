@@ -146,27 +146,35 @@ struct OutputController: MaterialNodeController {
     }
 
     std::vector<PinDesc> makeInputDescriptors() override {
+        auto params = parameters();
+        using enum PinFlags;
+        PinFlags disabledIfUnlit =
+            (params.shadingModel == MaterialShadingModel::Unlit ? Disabled :
+                                                                  None);
+        PinFlags disabledIfOpaque =
+            (params.transparency == MaterialTransparency::Opaque ? Disabled :
+                                                                   None);
         return {
             { .name = "Base Color",
-              .flags = PinFlags::Optional,
+              .flags = Optional | disabledIfUnlit,
               .userType = mask(DataType::Float3) },
             { .name = "Emissive",
-              .flags = PinFlags::Optional,
+              .flags = Optional,
               .userType = mask(DataType::Float3) },
             { .name = "Roughness",
-              .flags = PinFlags::Optional,
+              .flags = Optional | disabledIfUnlit,
               .userType = mask(DataType::Float) },
             { .name = "Metallic",
-              .flags = PinFlags::Optional,
+              .flags = Optional | disabledIfUnlit,
               .userType = mask(DataType::Float) },
             { .name = "Ambient Occlusion",
-              .flags = PinFlags::Optional,
+              .flags = Optional | disabledIfUnlit,
               .userType = mask(DataType::Float) },
             { .name = "Normal",
-              .flags = PinFlags::Optional,
+              .flags = Optional | disabledIfUnlit,
               .userType = mask(DataType::Float3) },
             { .name = "Transparency",
-              .flags = PinFlags::Optional,
+              .flags = Optional | disabledIfOpaque,
               .userType = mask(DataType::Float) },
         };
     }

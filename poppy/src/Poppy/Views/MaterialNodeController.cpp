@@ -100,6 +100,14 @@ void MaterialNodeController::linkGraphNode(Context& ctx,
     }
 }
 
+void MaterialNodeController::updateCodegenParameters(CodegenParameters params) {
+    this->params = params;
+    auto inputDescs = makeInputDescriptors();
+    for (auto [desc, pin]: zip(inputDescs, node()->inputs())) {
+        pin->setDesc(desc);
+    }
+}
+
 OverloadableNodeController::OverloadableNodeController(
     size_t numInputs, DataTypeMask defaultType):
     OverloadableNodeController(

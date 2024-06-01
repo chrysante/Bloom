@@ -45,6 +45,8 @@ struct NodeEditorStyleColors {
     float4 backgroundGridline;
     float4 selectionRect;
     float4 selectionRectOutline;
+    float disabledPinAlpha = 0.33;
+    float disabledLinkAlpha = 0.33;
 };
 
 struct NodeEditorStyleVars {
@@ -157,6 +159,8 @@ static void styleEditor(bool* open) {
     ImGui::ColorEdit4("Optional Pin Background", col.pinOptBG.data());
     ImGui::ColorEdit4("Missing Pin Indicator", col.pinMissingIndicator.data());
     ImGui::ColorEdit4("Pin Link Indicator", col.pinLinkIndicator.data());
+    ImGui::SliderFloat("Disabled Pin Alpha", &col.disabledPinAlpha, 0, 1);
+    ImGui::SliderFloat("Disabled Link Alpha", &col.disabledLinkAlpha, 0, 1);
     ImGui::SeparatorText("Style Vars");
     ImGui::SliderFloat("LinkWidth", &var.LinkWidth, 0, 10);
     ImGui::SliderFloat("LinkWidthHovered", &var.LinkWidthHovered, 0, 10);
@@ -1367,6 +1371,7 @@ struct PinDrawOptions {
     bool missingInput;
     bool connected;
     bool hovered;
+    bool disabled;
 };
 
 } // namespace
@@ -1374,17 +1379,23 @@ struct PinDrawOptions {
 static void drawPin(float2 position, float zoom, PinDrawOptions options) {
     auto* DL = ImGui::GetWindowDrawList();
     float2 center = position + (styleVars().PinAreaSize / 2) * zoom;
+    if (options.disabled) {
+        options.color.alpha *= styleColors().disabledPinAlpha;
+    }
     DL->AddCircleFilled(center, styleVars().PinRadius * zoom,
                         ImGui::ColorConvertFloat4ToU32(options.color));
     if (options.connected || options.missingInput) {
         float radius = (options.hovered || options.missingInput) ?
                            styleVars().PinConnectIndicatorRadiusHovered :
                            styleVars().PinConnectIndicatorRadius;
-        float4 color = options.missingInput && !options.connected ?
+        float4 indicatorColor = options.missingInput && !options.connected ?
                            styleColors().pinMissingIndicator :
                            styleColors().pinLinkIndicator;
+        if (options.disabled) {
+            indicatorColor.alpha *= styleColors().disabledPinAlpha;
+        }
         DL->AddCircleFilled(center, radius * zoom,
-                            ImGui::ColorConvertFloat4ToU32(color));
+                            ImGui::ColorConvertFloat4ToU32(indicatorColor));
     }
 }
 
@@ -1557,6 +1568,11 @@ void Impl::displayPinLink(InputPin& pin, float2 pinPosition) {
                    styleVars().PinAreaSize * viewData.zoom / 2;
     float2 end = pinPosition + styleVars().PinAreaSize * viewData.zoom / 2;
     float4 color = getLinkColor(origin->userType());
+    if (origin->hasFlags(PinFlags::Disabled) ||
+        pin.hasFlags(PinFlags::Disabled))
+    {
+        color.alpha *= styleColors().disabledLinkAlpha;
+    }
     bool mayHighlight = viewData.hoveredLink.getLast() == link;
     bool mustHighlight = link.contains(viewData.hoveredPin.getLast()) &&
                          !viewData.activePin;
@@ -1706,7 +1722,8 @@ void Impl::displayPin(Pin& pin, float2 position, float& maxLabelWith,
             { .color = selectPinColor(pin),
               .missingInput = inputMissing(pin) && viewData.activePin != &pin,
               .connected = drawConnected,
-              .hovered = drawHovered });
+              .hovered = drawHovered,
+              .disabled = pin.hasFlags(PinFlags::Disabled) });
     if (displayLabelInBody) {
         displayPinLabelInBody(selectPinLabel(pin),
                               pinInBodyLabelPosition(pin, position,

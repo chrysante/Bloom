@@ -51,11 +51,13 @@ struct MaterialModelImpl: bloom::MaterialModel {
     }
 
     void deserialize(YAML::Node const& node) override {
-        params = node["CodegenParameters"].as<CodegenParameters>(
-            CodegenParameters{});
         editorGraph.deserialize(node["NodeGraph"], [](YAML::Node const& node) {
             return deserializeMaterialNodeController(node);
         });
+        auto codegenParams = node["CodegenParameters"].as<CodegenParameters>(
+            CodegenParameters{});
+        ;
+        setParameters(codegenParams);
     }
 
     static MaterialNodeController* getController(Node* node) {
@@ -91,6 +93,22 @@ struct MaterialModelImpl: bloom::MaterialModel {
         return codegen->run();
     }
 
+    CodegenParameters const& parameters() const { return params; }
+
+    void setParameters(CodegenParameters p) {
+        params = p;
+        for (auto* node: editorGraph.nodes()) {
+            auto* controller =
+                dynamic_cast<MaterialNodeController*>(node->controller());
+            if (controller) {
+                controller->updateCodegenParameters(params);
+            }
+        }
+    }
+
+    NodeEditorGraph* getEditorGraph() const { return &editorGraph; }
+
+private:
     mutable NodeEditorGraph editorGraph;
     CodegenParameters params;
 };
@@ -121,7 +139,8 @@ struct MaterialEditor: View {
     void receiveData(std::any data) override {
         if (auto* mat = std::any_cast<Reference<Material>>(&data)) {
             material = *mat;
-            nodeEditor.setModel(&getModel(material.get())->editorGraph);
+            auto* model = getModel(material.get());
+            nodeEditor.setModel(model->getEditorGraph());
         }
     }
     void compile();
@@ -136,10 +155,7 @@ struct Delegate: NodeEditorDelegate {
     Delegate(MaterialEditor& editor): editor(editor) {}
 
     Node* createNodePopupMenu() override {
-        auto* editorGraph = &getModel()->editorGraph;
-        if (!editorGraph) {
-            return nullptr;
-        }
+        auto* editorGraph = getModel()->getEditorGraph();
         std::unique_ptr<Node> node;
         for (auto& entry: getMaterialNodeRegistry()) {
             if (auto n = entry.menu()) {
@@ -237,20 +253,25 @@ void MaterialEditor::displayOptions() {
     beginSection("Properties");
     beginProperty("Shading Model");
     fullWidth();
-    if (auto value = enumCombo2("###Shading Model", model->params.shadingModel))
-    {
-        model->params.shadingModel = *value;
+    auto params = model->parameters();
+    bool modified = false;
+    if (auto value = enumCombo2("###Shading Model", params.shadingModel)) {
+        params.shadingModel = *value;
+        modified = true;
     }
     beginProperty("Transparency");
     fullWidth();
-    if (auto value = enumCombo2("###Transparency", model->params.transparency))
-    {
-        model->params.transparency = *value;
+    if (auto value = enumCombo2("###Transparency", params.transparency)) {
+        params.transparency = *value;
+        modified = true;
     }
     beginProperty("Two Sided");
     fullWidth();
-    ImGui::Checkbox("###Two Sided", &model->params.twoSided);
+    modified |= ImGui::Checkbox("###Two Sided", &params.twoSided);
     endSection();
+    if (modified) {
+        model->setParameters(params);
+    }
     ImGui::EndChild();
 }
 

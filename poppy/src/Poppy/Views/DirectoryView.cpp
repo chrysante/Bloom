@@ -1459,6 +1459,11 @@ void Impl::updateDragSelection(ScannedDirectory& dir) {
 }
 
 void Impl::displayDirectoryPopup() {
+    /// This should never be true but there is a bug somewhere and I don't want
+    /// the application to crash because of this
+    if (!viewData.popupDirectory) {
+        return;
+    }
     if (!ImGui::BeginPopup(DirectoryPopupName)) {
         viewData.popupDirectory = nullptr;
         return;

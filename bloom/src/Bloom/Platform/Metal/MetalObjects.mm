@@ -364,8 +364,18 @@ MetalBackbuffer::MetalBackbuffer(id<CAMetalDrawable> drawable) {
 }
 
 TextureHandle MetalBackbuffer::texture() {
-    return TextureHandle(bloom_retain(drawable.texture), bloom_release,
-                         TextureDescription{});
+    id<MTLTexture> tex = drawable.texture;
+    TextureDescription desc = {
+        .type = (TextureType)tex.textureType,
+        .pixelFormat = (PixelFormat)tex.pixelFormat,
+        .size = { tex.width, tex.height, tex.depth },
+        .mipmapLevelCount = tex.mipmapLevelCount,
+        .sampleCount = tex.sampleCount,
+        .arrayLength = tex.arrayLength,
+        .storageMode = (StorageMode)tex.storageMode,
+        .usage = (TextureUsage)tex.usage,
+    };
+    return TextureHandle(bloom_retain(tex), bloom_release, desc);
 }
 
 // MARK: MetalSwapchain

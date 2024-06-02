@@ -45,7 +45,10 @@ public:
     /// \Returns the descriptor that was used to create the swapchain
     SwapchainDescription const& description() const { return desc; }
 
-    /// \Returns the size in pixels of the framebuffers
+    /// \Returns the size in pixels of the framebuffers.
+    /// \Warning This may differ from the size of the texture returned by
+    /// `nextBackbuffer()`. That texture may have been allocated before a resize
+    /// and may still reflect the old size
     vml::usize2 size() const { return desc.size; }
 
 protected:

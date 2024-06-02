@@ -30,11 +30,10 @@ void poppy::ImGuiContext::newFramePlatform() {
 }
 
 static void assignBackbufferToRPDesc(MTLRenderPassDescriptor* desc,
-                                     Backbuffer& backbuffer) {
+                                     TextureView framebuffer) {
     MTLRenderPassColorAttachmentDescriptor* caDesc =
         [[MTLRenderPassColorAttachmentDescriptor alloc] init];
-    caDesc.texture =
-        (__bridge id<MTLTexture>)backbuffer.texture().nativeHandle();
+    caDesc.texture = (__bridge id<MTLTexture>)framebuffer.nativeHandle();
     caDesc.loadAction = MTLLoadActionClear;
     caDesc.storeAction = MTLStoreActionStore;
     [desc.colorAttachments setObject:caDesc atIndexedSubscript:0];
@@ -52,14 +51,14 @@ struct poppy::ImGuiContext::BackendImpl {
             return;
         }
         auto backbuffer = swapchain.nextBackbuffer();
-        // TODO: Check if we got a valid backbuffer
-        assignBackbufferToRPDesc(renderPassDescriptor, *backbuffer);
+        auto framebuffer = backbuffer->texture();
+        assignBackbufferToRPDesc(renderPassDescriptor, framebuffer);
         id<MTLCommandBuffer> commandBuffer = [commandQueue.queue commandBuffer];
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer
             renderCommandEncoderWithDescriptor:renderPassDescriptor];
         [renderEncoder pushDebugGroup:@"Dear ImGui rendering"];
         ImGui_ImplMetal_RenderDrawData(drawData, commandBuffer, renderEncoder,
-                                       swapchain.size());
+                                       framebuffer.size().xy);
         [renderEncoder popDebugGroup];
         [renderEncoder endEncoding];
         lock.unlock();

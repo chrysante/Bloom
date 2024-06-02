@@ -38,14 +38,14 @@ private:
 
 class AggregateType: public Type {
 public:
-    AggregateType(std::vector<Type const*> elements);
+    AggregateType(std::string name, std::vector<AggregateElement> elements);
 
-    std::span<Type const* const> elements() const { return _elements; }
+    std::span<AggregateElement const> elements() const { return _elements; }
 
-    Type const* element(size_t index) const { return _elements[index]; }
+    AggregateElement element(size_t index) const { return _elements[index]; }
 
 private:
-    std::vector<Type const*> _elements;
+    std::vector<AggregateElement> _elements;
 };
 
 class TextureType: public Type {

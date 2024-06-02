@@ -194,26 +194,25 @@ VectorBuilder::VectorBuilder(Context& ctx, std::vector<Value*> values):
 VectorBuilder::VectorBuilder(VectorType const* type, int numInputs):
     User(ValueNodeType::VectorBuilder, type, std::vector<Value*>(numInputs)) {}
 
-VectorElement::VectorElement(Context& ctx, int index, Value* operand):
-    User(ValueNodeType::VectorElement, ctx.floatType(), { operand }),
+ExtractVectorValue::ExtractVectorValue(Context& ctx, int index, Value* operand):
+    User(ValueNodeType::ExtractVectorValue, ctx.floatType(), { operand }),
     _index(index) {}
 
-AggregateBuilder::AggregateBuilder(Context& ctx, std::vector<Value*> values):
-    User(ValueNodeType::AggregateBuilder,
-         ctx.aggregateType(values | ranges::views::transform(&Value::type) |
-                           ToSmallVector<>),
-         std::move(values)) {}
+AggregateBuilder::AggregateBuilder(AggregateType const* type,
+                                   std::vector<Value*> values):
+    User(ValueNodeType::AggregateBuilder, type, std::move(values)) {}
 
 AggregateBuilder::AggregateBuilder(AggregateType const* type):
-    User(ValueNodeType::AggregateBuilder, type,
-         std::vector<Value*>(type->elements().size())) {}
+    AggregateBuilder(type, std::vector<Value*>(type->elements().size())) {}
 
-AggregateElement::AggregateElement(Value* baseValue, int index):
-    User(ValueNodeType::AggregateElement,
-         cast<AggregateType const*>(baseValue->type())->element(index),
+ExtractAggregateValue::ExtractAggregateValue(Value* baseValue, int index):
+    User(ValueNodeType::ExtractAggregateValue,
+         cast<AggregateType const*>(baseValue->type())->element(index).type,
          { baseValue }),
     _index(index) {}
 
-AggregateElement::AggregateElement(Type const* elementType, int index):
-    User(ValueNodeType::AggregateElement, elementType, std::vector<Value*>(1)),
+ExtractAggregateValue::ExtractAggregateValue(Type const* elementType,
+                                             int index):
+    User(ValueNodeType::ExtractAggregateValue, elementType,
+         std::vector<Value*>(1)),
     _index(index) {}

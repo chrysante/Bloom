@@ -128,28 +128,33 @@ static std::unique_ptr<Node> enumMenu(
 }
 
 static AggregateType const* makeDefaultLitOutputType(Context& ctx) {
-    auto* materialDataType = ctx.aggregateType({
-        ctx.float3Type(),
-        ctx.float3Type(),
-        ctx.floatType(),
-        ctx.floatType(),
-        ctx.floatType(),
-        ctx.float3Type(),
-    });
+    auto* materialDataType =
+        ctx.aggregateType("LitFragmentData",
+                          {
+                              { ctx.float3Type(), "albedo" },
+                              { ctx.float3Type(), "emissive" },
+                              { ctx.floatType(), "roughness" },
+                              { ctx.floatType(), "metallic" },
+                              { ctx.floatType(), "ao" },
+                              { ctx.float3Type(), "normal" },
+                          });
     return materialDataType;
 }
 
 static AggregateType const* makeUnlitOutputType(Context& ctx) {
-    auto* materialDataType = ctx.aggregateType({
-        ctx.float3Type(),
-    });
+    auto* materialDataType =
+        ctx.aggregateType("UnlitFragmentData",
+                          {
+                              { ctx.float3Type(), "emissive" },
+                          });
     return materialDataType;
 }
 
 static AggregateType const* makeTransparencyOutputType(Context& ctx) {
-    auto* materialDataType = ctx.aggregateType({
-        ctx.floatType(),
-    });
+    auto* materialDataType =
+        ctx.aggregateType("TransparencyData", {
+                                                  { ctx.floatType(), "value" },
+                                              });
     return materialDataType;
 }
 
@@ -878,7 +883,8 @@ struct SplitController: MaterialNodeController {
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& graph) const override {
         return iota(0, numComponents) | transform([&](int i) {
-            return graph.addValue(allocate<VectorElement>(ctx, i, nullptr));
+            return graph.addValue(
+                allocate<ExtractVectorValue>(ctx, i, nullptr));
         }) | ToSmallVector<>;
     }
 
@@ -1047,10 +1053,10 @@ struct TextureSamplerController: MaterialNodeController {
         Context& ctx, MaterialGraph& graph) const override {
         auto* sample = graph.addValue(
             allocate<TextureSampler>(ctx, nullptr, nullptr, mode));
-        auto* r = graph.addValue(allocate<VectorElement>(ctx, 0, sample));
-        auto* g = graph.addValue(allocate<VectorElement>(ctx, 1, sample));
-        auto* b = graph.addValue(allocate<VectorElement>(ctx, 2, sample));
-        auto* a = graph.addValue(allocate<VectorElement>(ctx, 3, sample));
+        auto* r = graph.addValue(allocate<ExtractVectorValue>(ctx, 0, sample));
+        auto* g = graph.addValue(allocate<ExtractVectorValue>(ctx, 1, sample));
+        auto* b = graph.addValue(allocate<ExtractVectorValue>(ctx, 2, sample));
+        auto* a = graph.addValue(allocate<ExtractVectorValue>(ctx, 3, sample));
         auto* rgb = graph.addValue(
             allocate<VectorBuilder>(ctx, std::vector<Value*>{ r, g, b }));
         return {

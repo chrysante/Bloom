@@ -16,20 +16,6 @@ using namespace vml::short_types;
 
 using Impl = Context::Impl;
 
-namespace {
-
-struct AggregateHash {
-    size_t operator()(auto&& rng) const {
-        return utl::hash_combine_range(ranges::begin(rng), ranges::end(rng));
-    }
-};
-
-struct AggregateEqual {
-    bool operator()(auto&& a, auto&& b) const { return ranges::equal(a, b); }
-};
-
-} // namespace
-
 struct Context::Impl {
     Impl();
 
@@ -63,9 +49,7 @@ struct Context::Impl {
     std::vector<DynUniquePtr<Type>> typeOwners;
     VectorType const* vectorType[4]{};
     utl::hashmap<TextureSubType, TextureType const*> textureTypes;
-    utl::hashmap<utl::small_vector<Type const*>, AggregateType const*,
-                 AggregateHash, AggregateEqual>
-        aggTypes;
+    utl::hashmap<std::string, AggregateType const*> aggTypes;
     TextureType const* textureType = nullptr;
     // Values
     std::vector<DynUniquePtr<Value>> valueOwners;
@@ -90,9 +74,10 @@ Impl::Impl() {
 }
 
 AggregateType const* Context::aggregateType(
-    std::span<Type const* const> elements) {
-    return impl->getOrInsert(impl->aggTypes, elements | ToSmallVector<>, [&] {
-        return impl->addType<AggregateType>(elements | ranges::to<std::vector>);
+    std::string name, std::span<AggregateElement const> elements) {
+    return impl->getOrInsert(impl->aggTypes, name, [&] {
+        return impl->addType<AggregateType>(name,
+                                            elements | ranges::to<std::vector>);
     });
 }
 

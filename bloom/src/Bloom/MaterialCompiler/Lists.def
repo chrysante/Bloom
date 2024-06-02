@@ -27,9 +27,9 @@ BL_MATGRAPH_VALUE(FunctionCall, User, Concrete)
 BL_MATGRAPH_VALUE(ArithmeticOperation, User, Concrete)
 BL_MATGRAPH_VALUE(TextureSampler, User, Concrete)
 BL_MATGRAPH_VALUE(VectorBuilder, User, Concrete)
-BL_MATGRAPH_VALUE(VectorElement, User, Concrete)
+BL_MATGRAPH_VALUE(ExtractVectorValue, User, Concrete)
 BL_MATGRAPH_VALUE(AggregateBuilder, User, Concrete)
-BL_MATGRAPH_VALUE(AggregateElement, User, Concrete)
+BL_MATGRAPH_VALUE(ExtractAggregateValue, User, Concrete)
 
 #undef BL_MATGRAPH_VALUE
 

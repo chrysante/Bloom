@@ -214,11 +214,11 @@ public:
     explicit VectorBuilder(VectorType const* type, int numInputs);
 };
 
-class VectorElement: public User {
+class ExtractVectorValue: public User {
 public:
     DECLARE_TYPE(VectorType)
 
-    explicit VectorElement(Context& ctx, int index, Value* operand);
+    explicit ExtractVectorValue(Context& ctx, int index, Value* operand);
 
     int index() const { return _index; }
 
@@ -232,19 +232,24 @@ class AggregateBuilder: public User {
 public:
     DECLARE_TYPE(AggregateType)
 
-    explicit AggregateBuilder(Context& ctx, std::vector<Value*> values);
+    explicit AggregateBuilder(AggregateType const* type,
+                              std::vector<Value*> values);
+
+    explicit AggregateBuilder(AggregateType const* type,
+                              std::initializer_list<Value*> values):
+        AggregateBuilder(type, std::vector(values)) {}
 
     explicit AggregateBuilder(AggregateType const* type);
 };
 
 /// Element access into an aggregate, i.e., `value.member`
-class AggregateElement: public User {
+class ExtractAggregateValue: public User {
 public:
     /// \p baseValue may not be null and must be of type `AggregateType`
-    explicit AggregateElement(Value* baseValue, int index);
+    explicit ExtractAggregateValue(Value* baseValue, int index);
 
     /// \p elementType is the type of the extracted element
-    explicit AggregateElement(Type const* elementType, int index);
+    explicit ExtractAggregateValue(Type const* elementType, int index);
 
     int index() const { return _index; }
 

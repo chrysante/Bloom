@@ -1,6 +1,7 @@
 #ifndef BLOOM_MATERIALCOMPILER_FWD_H
 #define BLOOM_MATERIALCOMPILER_FWD_H
 
+#include <string>
 #include <string_view>
 
 #include "Bloom/Core/Dyncast.h"
@@ -25,7 +26,7 @@ enum class TypeCategory {
 enum class ValueNodeType {
 #define BL_MATGRAPH_VALUE(Name, ...) Name,
 #include "Bloom/MaterialCompiler/Lists.def"
-    LAST = AggregateElement
+    LAST = ExtractAggregateValue
 };
 
 using NoParent = void;
@@ -43,6 +44,11 @@ using NoParent = void;
 #include "Bloom/MaterialCompiler/Lists.def"
 
 namespace bloom::matc {
+
+struct AggregateElement {
+    Type const* type;
+    std::string name;
+};
 
 /// Different kinds of functions that can be defined by material nodes
 enum class GraphRoot {

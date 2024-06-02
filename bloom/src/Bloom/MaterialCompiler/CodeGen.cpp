@@ -103,8 +103,6 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void declareTypeImpl(Type const*) {}
     void declareTypeImpl(matc::TextureType const* type);
     void declareTypeImpl(VectorType const* type);
-    void declareRootType(GraphRoot root, AggregateType const* type);
-
     void declareTypeImpl(AggregateType const* type);
 
     void defineMaterialFunction(GraphRoot kind,
@@ -130,8 +128,8 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void codegenImpl(ArithmeticOperation const& value);
     void codegenImpl(TextureSampler const& value);
     void codegenImpl(VectorBuilder const& value);
-    void codegenImpl(VectorElement const&) {}
-    void codegenImpl(AggregateElement const&) {}
+    void codegenImpl(ExtractVectorValue const&) {}
+    void codegenImpl(ExtractAggregateValue const&) {}
     void codegenImpl(AggregateBuilder const& value);
 
     /// Called for every value that is part of the program
@@ -142,8 +140,8 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     std::string genNameImpl(TextureValue const&);
     std::string genNameImpl(VectorParameter const& c);
     std::string genNameImpl(RasterizerInput const&);
-    std::string genNameImpl(VectorElement const&);
-    std::string genNameImpl(AggregateElement const&);
+    std::string genNameImpl(ExtractVectorValue const&);
+    std::string genNameImpl(ExtractAggregateValue const&);
 
     std::string getName(Value const* value) { return valueNameGen.get(value); }
 
@@ -251,8 +249,11 @@ static AggregateType const* makeParameterBufferType(
     if (params.empty()) {
         return nullptr;
     }
-    return ctx.aggregateType(params | transform([&](auto& param) {
-        return translate(ctx, param.type);
+    return ctx.aggregateType("PrimitiveParameters",
+                             params |
+                                 transform([&, index = 0](auto& param) mutable {
+        return AggregateElement{ translate(ctx, param.type),
+                                 utl::strcat("_", index++) };
     }) | ranges::to<std::vector>);
 }
 
@@ -347,20 +348,6 @@ void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
     }());
 }
 
-static std::string rootTypeName(GraphRoot root) {
-    using enum GraphRoot;
-    switch (root) {
-    case VertexFunction:
-        return "VertexData";
-    case LitFragmentFunction:
-        return "LitFragmentData";
-    case UnlitFragmentFunction:
-        return "UnlitFragmentData";
-    case TransparencyFunction:
-        return "TransparencyData";
-    }
-}
-
 static std::string functionName(GraphRoot root) {
     using enum GraphRoot;
     switch (root) {
@@ -375,56 +362,14 @@ static std::string functionName(GraphRoot root) {
     }
 }
 
-void MetalCodeGenerator::declareRootType(GraphRoot root,
-                                         AggregateType const* type) {
-    typeNameGen.setName(type, rootTypeName(root));
-    auto item = makeItem();
-    writeRaw("struct ", getName(type));
-    auto scope = makeScope(ScopeType::CompoundStmt);
-    using enum GraphRoot;
-    switch (root) {
-    case VertexFunction:
-        unreachable();
-        break;
-    case LitFragmentFunction:
-        writeItem(getName(type->element(0)), " albedo");
-        writeItem(getName(type->element(1)), " emissive");
-        writeItem(getName(type->element(2)), " roughness");
-        writeItem(getName(type->element(3)), " metallic");
-        writeItem(getName(type->element(4)), " ao");
-        writeItem(getName(type->element(5)), " normal");
-        break;
-    case UnlitFragmentFunction:
-        writeItem(getName(type->element(0)), " emissive");
-        break;
-    case TransparencyFunction:
-        writeItem(getName(type->element(0)), " value");
-        break;
-    }
-}
-
-static std::optional<GraphRoot> getRootType(MaterialGraph const& graph,
-                                            Type const* type) {
-    for (auto root: magic_enum::enum_values<GraphRoot>()) {
-        auto* rootValue = graph.getRoot(root);
-        if (rootValue && type == rootValue->type()) {
-            return root;
-        }
-    }
-    return std::nullopt;
-}
-
 void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
-    if (auto root = getRootType(graph, type)) {
-        declareRootType(*root, type);
-        return;
-    }
     // TODO: This does not handle nested structs
+    typeNameGen.setName(type, type->name());
     auto item = makeItem();
     writeRaw("struct ", getName(type));
     auto scope = makeScope(ScopeType::CompoundStmt);
-    for (auto [index, memberType]: type->elements() | enumerate) {
-        writeItem(getName(memberType), " _", index);
+    for (auto [index, member]: type->elements() | enumerate) {
+        writeItem(getName(member.type), " ", member.name);
     }
 }
 
@@ -545,8 +490,11 @@ void MetalCodeGenerator::defineVertexShaderFunction() {
 
 void MetalCodeGenerator::callMaterialFunction(GraphRoot kind,
                                               std::string_view variableName) {
+    auto* root = graph.getRoot(kind);
+    assert(root);
     auto item = makeItem();
-    writeRaw(rootTypeName(kind), " ", variableName, " = ", functionName(kind));
+    writeRaw(getName(root->type()), " ", variableName, " = ",
+             functionName(kind));
     auto argScope = makeScope(ScopeType::Paran);
     writeItem("in");
     if (paramBufferType) {
@@ -815,11 +763,11 @@ std::string MetalCodeGenerator::genNameImpl(RasterizerInput const& input) {
     }
 }
 
-std::string MetalCodeGenerator::genNameImpl(VectorElement const& e) {
+std::string MetalCodeGenerator::genNameImpl(ExtractVectorValue const& e) {
     return utl::strcat(getName(e.operand()), ".", "xyzw"[e.index()]);
 }
 
-std::string MetalCodeGenerator::genNameImpl(AggregateElement const& e) {
+std::string MetalCodeGenerator::genNameImpl(ExtractAggregateValue const& e) {
     return utl::strcat(getName(e.operand()), "._", e.index());
 }
 

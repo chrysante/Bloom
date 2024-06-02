@@ -39,11 +39,16 @@ TEST_CASE() {
         g.addValue<TextureSampler>(ctx, tex0, coords, SampleMode::Normal);
     auto* sample1 =
         g.addValue<TextureSampler>(ctx, tex1, coords, SampleMode::Color);
+    auto* aggType = ctx.aggregateType("agg_type", { { const0->type(), "_0" },
+                                                    { const1->type(), "_1" },
+                                                    { vec0->type(), "_2" },
+                                                    { sample0->type(), "_3" },
+                                                    { sample1->type(), "_4" },
+                                                    { const2->type(), "_5" } });
     auto* aggregate =
-        g.addValue<AggregateBuilder>(ctx, std::vector<Value*>{
-                                              const0, const1, vec0, sample0,
-                                              sample1, const2 });
-    Value* resultVal = g.addValue<AggregateElement>(aggregate, 1);
+        g.addValue<AggregateBuilder>(aggType, { const0, const1, vec0, sample0,
+                                                sample1, const2 });
+    Value* resultVal = g.addValue<ExtractAggregateValue>(aggregate, 1);
     resultVal = g.addValue<FunctionCall>(ctx, BuiltinFunction::Normalize,
                                          std::vector<Value*>{ resultVal });
     g.setRoot(resultVal);

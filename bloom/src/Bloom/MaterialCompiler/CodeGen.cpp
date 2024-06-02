@@ -115,6 +115,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void writeFilePrologue();
     void defineVertexShaderOutputType();
     void defineFragmentShaderOutputType();
+
     void defineFragmentShaderFunction();
     void defineVertexShaderFunction();
 
@@ -148,6 +149,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
 
     std::string getName(Type const* type) { return typeNameGen.get(type); }
 
+    void writeIf(auto condition, auto body);
     void callMaterialFunction(GraphRoot kind, std::string_view variableName);
     void clampGreaterZero(Type const* type, auto const&... valueName);
     void normalize(auto const&... valueName);
@@ -396,7 +398,7 @@ void MetalCodeGenerator::declareRootType(GraphRoot root,
         writeItem(getName(type->element(0)), " emissive");
         break;
     case TransparencyFunction:
-        writeItem(getName(type->element(0)), " transparency");
+        writeItem(getName(type->element(0)), " value");
         break;
     }
 }
@@ -605,12 +607,13 @@ void MetalCodeGenerator::defineFragmentShaderFunction() {
     /// Function body
     auto fnScope = makeScope(ScopeType::CompoundStmt);
     if (graph.parameters().transparency == MaterialTransparency::Masked) {
-        callMaterialFunction(GraphRoot::TransparencyFunction, "value");
-        writeItem("if (value.transparency < 0.5) discard_fragment()");
+        callMaterialFunction(GraphRoot::TransparencyFunction, "transparency");
+        writeIf("transparency.value < 0.5",
+                [&] { writeItem("discard_fragment()"); });
     }
-    writeItem("in.normalWS.xyz = normalize(in.normalWS.xyz)");
-    writeItem("in.tangentWS.xyz = normalize(in.tangentWS.xyz)");
-    writeItem("in.binormalWS.xyz = normalize(in.binormalWS.xyz)");
+    normalize("in.normalWS.xyz");
+    normalize("in.tangentWS.xyz");
+    normalize("in.binormalWS.xyz");
     callMaterialFunction(materialFunction, "materialData");
     switch (SM) {
     case DefaultLit:
@@ -818,6 +821,13 @@ std::string MetalCodeGenerator::genNameImpl(VectorElement const& e) {
 
 std::string MetalCodeGenerator::genNameImpl(AggregateElement const& e) {
     return utl::strcat(getName(e.operand()), "._", e.index());
+}
+
+void MetalCodeGenerator::writeIf(auto condition, auto body) {
+    auto item = makeItem();
+    writeRaw("if (", condition, ")");
+    auto scope = makeScope(ScopeType::CompoundStmt);
+    body();
 }
 
 void MetalCodeGenerator::clampGreaterZero(Type const* type,

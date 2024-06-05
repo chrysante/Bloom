@@ -999,9 +999,9 @@ void AssetManager::compileScripts() {
         }
         CompilerInvocation inv(TargetType::BinaryOnly, "main");
         inv.setLibSearchPaths({ engineLibDir });
-        // FIXME: I temporarily disabled optimizations because of bugs in the
-        // optimizer
-        inv.setOptLevel(0);
+        auto* optLevelArg = std::getenv("SCRIPT_OPT_LEVEL");
+        int optLevel = optLevelArg ? std::atoi(optLevelArg) : 0;
+        inv.setOptLevel(optLevel);
         inv.setLinkerOptions({ .searchHost = true });
         auto sources = impl->registry | filter([](auto& entry) {
             return entry.handle.type() == AssetType::ScriptSource;

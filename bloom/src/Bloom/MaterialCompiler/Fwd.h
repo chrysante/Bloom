@@ -50,6 +50,23 @@ struct AggregateElement {
     std::string name;
 };
 
+enum class FunctionAttribute { None, Vertex, Fragment };
+
+struct ParameterAttribute {
+    enum Type { None, Buffer, Texture };
+
+    Type type = None;
+    int index = -1;
+};
+
+struct FunctionParameter {
+    enum Qualifier { None, DeviceConstRef, DeviceConstPointer };
+
+    Value* value;
+    Qualifier qualifier = None;
+    ParameterAttribute attribute;
+};
+
 /// Different kinds of functions that can be defined by material nodes
 enum class GraphRoot {
     VertexFunction,

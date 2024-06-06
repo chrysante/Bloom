@@ -72,6 +72,8 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
             return { Buffer, 1 };
         case Geometry:
             return { Buffer, 2 };
+        case MaterialParameterBuffer:
+            return { Buffer, 4 };
         default:
             assert(false);
         }

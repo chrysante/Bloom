@@ -12,6 +12,7 @@
 #include <utl/strcat.hpp>
 #include <utl/streammanip.hpp>
 
+#include "Bloom/Core/Ranges.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
 #include "Bloom/MaterialCompiler/SourceEmitter.h"
@@ -105,10 +106,9 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void declareTypeImpl(VectorType const* type);
     void declareTypeImpl(AggregateType const* type);
 
-    void defineMaterialFunction(GraphRoot kind,
-                                std::span<Value const* const> order);
-    void beginFunction(GraphRoot rootKind, Value* root);
-    void endFunction(GraphRoot rootKind, Value* root);
+    void defineMaterialFunction(Function const* F);
+    void beginFunction(Function const* F);
+    void endFunction(Function const* F);
 
     void writeFilePrologue();
     void defineVertexShaderOutputType();
@@ -267,20 +267,39 @@ static std::vector<MaterialPrimitiveParameter> makePrimitiveParameters(
     }) | ranges::to<std::vector>;
 }
 
-void MetalCodeGenerator::defineMaterialFunction(
-    GraphRoot kind, std::span<Value const* const> order) {
-    auto* root = graph.getRoot(kind);
-    beginFunction(kind, root);
-    for (auto* value: order) {
+void MetalCodeGenerator::defineMaterialFunction(Function const* F) {
+    beginFunction(F);
+    for (auto* value: F->body()) {
         if (!value) {
             throw std::runtime_error("Encountered NULL value");
         }
         codegen(*value);
     }
-    endFunction(kind, root);
+    endFunction(F);
 }
 
 MaterialSourceData MetalCodeGenerator::run() {
+    for (auto* value: graph.values()) {
+        genName(*value);
+    }
+    writeFilePrologue();
+    for (auto* type: ctx.types()) {
+        declareType(type);
+    }
+    for (auto* F: graph.functions()) {
+        if (F) {
+            defineMaterialFunction(F);
+        }
+    }
+    writeInclude(IncludeType::Local, "Shader/PBRShader.metal");
+    return { .source = takeSource(),
+             .constantFragmentTextures = std::move(textureConstants),
+             .primitiveParameters = std::move(primitiveParameters),
+             .textureParameters = std::move(textureParameters),
+             .parameterBufferSize = /*parameterBufferSize*/ 0,
+             .cullMode = graph.parameters().twoSided ? TriangleCullMode::None :
+                                                       TriangleCullMode::Back };
+
     utl::hashset<Value const*> activeValues;
     utl::hashmap<GraphRoot, std::vector<Value const*>> orders;
     for (auto kind: magic_enum::enum_values<GraphRoot>()) {
@@ -314,7 +333,7 @@ MaterialSourceData MetalCodeGenerator::run() {
                   ") == ", parameterBufferSize, ", \"\")");
     }
     for (auto& [kind, order]: orders) {
-        defineMaterialFunction(kind, order);
+        //        defineMaterialFunction(kind, order);
     }
     defineVertexShaderFunction();
     defineFragmentShaderFunction();
@@ -373,42 +392,43 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
     }
 }
 
-void MetalCodeGenerator::beginFunction(GraphRoot rootKind, Value* root) {
+void MetalCodeGenerator::beginFunction(Function const* F) {
     beginItem();
-    writeRaw("static ", getName(root->type()), " ", functionName(rootKind));
+    writeRaw("static ", getName(F->returnType()), " ", F->name());
     beginScope(ScopeType::FuncParams);
-    writeItem(MaterialVertexOutName, " in");
-    if (paramBufferType) {
-        writeItem(getName(paramBufferType), " device const& ",
-                  ParameterObjectName);
-    }
-    for (auto [tex, index]: textureIndexMap) {
-        writeItem(getName(tex->type()), " ", getName(tex));
+    for (auto param: F->parameters()) {
+        auto item = makeItem();
+        writeRaw(getName(param.value->type()));
+        switch (param.qualifier) {
+            using enum FunctionParameter::Qualifier;
+        case None:
+            break;
+        case DeviceConstRef:
+            writeRaw(" device const&");
+            break;
+        case DeviceConstPointer:
+            writeRaw(" device const*");
+            break;
+        }
+        writeRaw(" ", getName(param.value));
+        switch (param.attribute.type) {
+            using enum ParameterAttribute::Type;
+        case None:
+            break;
+        case Buffer:
+            writeRaw(" [[buffer(", param.attribute.index, ")]]");
+            break;
+        case Texture:
+            writeRaw(" [[texture(", param.attribute.index, ")]]");
+            break;
+        }
     }
     endScope();
     beginScope(ScopeType::CompoundStmt);
 }
 
-void MetalCodeGenerator::endFunction(GraphRoot rootKind, Value* root) {
-    std::string valueName = getName(root);
-    using enum GraphRoot;
-    switch (rootKind) {
-    case VertexFunction:
-        break;
-    case LitFragmentFunction:
-        clampGreaterZero(ctx.float3Type(), valueName, ".albedo");
-        clampGreaterZero(ctx.float3Type(), valueName, ".emissive");
-        normalize(valueName, ".normal");
-        break;
-
-    case UnlitFragmentFunction:
-        clampGreaterZero(ctx.float3Type(), valueName, ".emissive");
-        break;
-
-    case TransparencyFunction:
-        break;
-    }
-    writeItem("return ", valueName);
+void MetalCodeGenerator::endFunction(Function const* F) {
+    writeItem("return ", getName(F->root()));
     endScope();
     endItem();
 }
@@ -714,9 +734,10 @@ std::string MetalCodeGenerator::genNameImpl(VectorConstant const& c) {
 }
 
 std::string MetalCodeGenerator::genNameImpl(VectorParameter const& param) {
-    auto itr = parameterIndexMap.find(&param);
-    assert(itr != parameterIndexMap.end());
-    return utl::strcat(ParameterObjectName, "._", itr->second);
+    if (!param.buffer()) {
+        throw std::runtime_error("Parameter has no buffer");
+    }
+    return utl::strcat(getName(param.buffer()), "._", param.elementIndex());
 }
 
 static MaterialTextureParameter translate(TextureParameter const& param,

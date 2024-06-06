@@ -67,15 +67,28 @@ public:
 class VectorParameter: public VectorValue {
 public:
     explicit VectorParameter(Context& ctx, int numComponents,
-                             vml::float4 defaultValue, std::string name):
+                             vml::float4 defaultValue, std::string name,
+                             BufferParameter* buffer = nullptr):
         VectorValue(ValueNodeType::VectorParameter, ctx, numComponents,
                     defaultValue),
-        _name(std::move(name)) {}
+        _name(std::move(name)),
+        _buffer(buffer) {}
 
     std::string const& name() const { return _name; }
 
+    BufferParameter* buffer() const { return _buffer; }
+
+    int elementIndex() const { return _elemIndex; }
+
+    void setBufferAndElemIndex(BufferParameter* buffer, int index) {
+        _buffer = buffer;
+        _elemIndex = index;
+    }
+
 private:
     std::string _name;
+    BufferParameter* _buffer = nullptr;
+    int _elemIndex = -1;
 };
 
 class TextureValue: public Value {
@@ -84,12 +97,17 @@ public:
 
     AssetHandle asset() const { return _asset; }
 
+    int bindingPoint() const { return _bindingPoint; }
+
+    void setBindingPoint(int bindingPoint) { _bindingPoint = bindingPoint; }
+
 protected:
     explicit TextureValue(ValueNodeType nodeType, TextureType const* type,
                           AssetHandle asset);
 
 private:
     AssetHandle _asset;
+    int _bindingPoint = -1;
 };
 
 class TextureConstant: public TextureValue {
@@ -109,6 +127,20 @@ public:
 
 private:
     std::string _name;
+};
+
+class BufferParameter: public Value {
+public:
+    explicit BufferParameter(Type const* type, int bindingPoint):
+        Value(ValueNodeType::BufferParameter, type),
+        _bindingPoint(bindingPoint) {}
+
+    int bindingPoint() const { return _bindingPoint; }
+
+    void setBindingPoint(int bindingPoint) { _bindingPoint = bindingPoint; }
+
+private:
+    int _bindingPoint;
 };
 
 class RasterizerInput: public Value {

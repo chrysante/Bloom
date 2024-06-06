@@ -7,14 +7,16 @@
 #include <span>
 #include <vector>
 
+#include <range/v3/view.hpp>
 #include <utl/hashtable.hpp>
 #include <utl/vector.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Core/EnumCount.h"
-#include "Bloom/Core/Ranges.h"
+#include "Bloom/Core/Utils.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/MaterialCompiler/Context.h"
+#include "Bloom/MaterialCompiler/Function.h"
 #include "Bloom/MaterialCompiler/Types.h"
 #include "Bloom/MaterialCompiler/Values.h"
 
@@ -36,6 +38,14 @@ public:
 
     std::span<Value* const> roots() const { return _roots; }
 
+    Function* getFunction(GraphRoot root) const {
+        return _functions[root].get();
+    }
+
+    auto functions() const {
+        return _functions | ranges::views::transform(ToAddress<>);
+    }
+
     Value* addValue(DynUniquePtr<Value> value);
 
     template <std::derived_from<Value> T>
@@ -54,11 +64,16 @@ public:
                              [](auto& p) -> auto const* { return p.get(); });
     }
 
+    void buildFunctions(Context& ctx);
+
+    void generateShaderFunctions(Context& ctx);
+
     CodegenParameters const& parameters() const { return params; }
 
 private:
     std::vector<DynUniquePtr<Value>> _values;
     EnumArray<GraphRoot, Value*> _roots{};
+    EnumArray<GraphRoot, std::unique_ptr<Function>> _functions{};
     CodegenParameters params;
 };
 

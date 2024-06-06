@@ -12,9 +12,9 @@ target_link_libraries(matc
     utility
     vml
     range-v3
+    magic_enum
   PRIVATE
     termfmt
-    magic_enum
 )
 
 set(matc_sources
@@ -24,6 +24,8 @@ set(matc_sources
   src/Bloom/MaterialCompiler/Context.h
   src/Bloom/MaterialCompiler/Fwd.cpp
   src/Bloom/MaterialCompiler/Fwd.h
+  src/Bloom/MaterialCompiler/Function.cpp
+  src/Bloom/MaterialCompiler/Function.h
   src/Bloom/MaterialCompiler/Lists.def
   src/Bloom/MaterialCompiler/MaterialGraph.cpp
   src/Bloom/MaterialCompiler/MaterialGraph.h

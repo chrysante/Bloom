@@ -4,6 +4,7 @@
 #include <vml/vml.hpp>
 
 #include "Bloom/Asset/Serialization.h"
+#include "Bloom/Core/Ranges.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/Texture.h"

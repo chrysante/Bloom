@@ -16,7 +16,7 @@ static AssetHandle genTexture() {
 
 TEST_CASE() {
     Context ctx;
-    MaterialGraph g(MaterialShadingModel::DefaultLit);
+    MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit });
     auto* tex0 =
         g.addValue<TextureParameter>(ctx.textureType(TextureSubType::Texture2D),
                                      genTexture(), "TexParam");
@@ -46,12 +46,14 @@ TEST_CASE() {
                                                     { sample1->type(), "_4" },
                                                     { const2->type(), "_5" } });
     auto* aggregate =
-        g.addValue<AggregateBuilder>(aggType, { const0, const1, vec0, sample0,
-                                                sample1, const2 });
+        g.addValue<AggregateBuilder>(aggType, std::vector<Value*>{
+                                                  const0, const1, vec0, sample0,
+                                                  sample1, const2 });
     Value* resultVal = g.addValue<ExtractAggregateValue>(aggregate, 1);
     resultVal = g.addValue<FunctionCall>(ctx, BuiltinFunction::Normalize,
                                          std::vector<Value*>{ resultVal });
-    g.setRoot(resultVal);
+    g.setRoot(GraphRoot::LitFragmentFunction, resultVal);
+    g.buildFunctions(ctx);
     auto generator = makeCodeGenerator(ctx, g, {});
     auto result = generator->run();
     std::cout << result.source << std::endl;
@@ -59,7 +61,7 @@ TEST_CASE() {
 
 TEST_CASE("Builtins") {
     Context ctx;
-    MaterialGraph g(MaterialShadingModel::Unlit);
+    MaterialGraph g({ .shadingModel = MaterialShadingModel::Unlit });
     using enum BuiltinFunction;
     SECTION("Cross with invalid arguments") {
         CHECK_THROWS(g.addValue<FunctionCall>(ctx, Cross,

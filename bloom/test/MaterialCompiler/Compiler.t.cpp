@@ -18,39 +18,42 @@ TEST_CASE() {
     Context ctx;
     MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit });
     auto* tex0 =
-        g.addValue<TextureParameter>(ctx.textureType(TextureSubType::Texture2D),
-                                     genTexture(), "TexParam");
+        g.addValue<TextureParameter>("TexParam",
+                                     ctx.textureType(TextureSubType::Texture2D),
+                                     genTexture());
     auto* tex1 = ctx.textureConstant(TextureSubType::TextureCube, genTexture());
     auto* const0 =
-        g.addValue<VectorParameter>(ctx, 2, float4{ 1, 0, 0, 0 }, "Param0");
+        g.addValue<VectorParameter>(ctx, "Param0", 2, float4{ 1, 0, 0, 0 });
     auto* const1 =
-        g.addValue<VectorParameter>(ctx, 3, float4{ 2, 1, 5, 0 }, "Param1");
+        g.addValue<VectorParameter>(ctx, "Param1", 3, float4{ 2, 1, 5, 0 });
     auto* const2 =
-        g.addValue<VectorParameter>(ctx, 2, float4{ 2, 1, 5, 0 }, "Param2");
+        g.addValue<VectorParameter>(ctx, "Param2", 2, float4{ 2, 1, 5, 0 });
     auto* vec0 =
-        g.addValue<VectorBuilder>(ctx,
+        g.addValue<VectorBuilder>(ctx, "value",
                                   std::vector<Value*>{
                                       ctx.vectorConstant(1, { 1, 0, 0, 0 }),
                                       ctx.vectorConstant(1, { 2, 0, 0, 0 }),
                                       ctx.vectorConstant(1, { 3, 0, 0, 0 }),
                                   });
     auto* coords = ctx.rasterizerInput(RasterizerInputKind::TextureCoords);
-    auto* sample0 =
-        g.addValue<TextureSampler>(ctx, tex0, coords, SampleMode::Normal);
-    auto* sample1 =
-        g.addValue<TextureSampler>(ctx, tex1, coords, SampleMode::Color);
-    auto* aggType = ctx.aggregateType("agg_type", { { const0->type(), "_0" },
-                                                    { const1->type(), "_1" },
-                                                    { vec0->type(), "_2" },
-                                                    { sample0->type(), "_3" },
-                                                    { sample1->type(), "_4" },
-                                                    { const2->type(), "_5" } });
+    auto* sample0 = g.addValue<TextureSampler>(ctx, "sample", tex0, coords,
+                                               SampleMode::Normal);
+    auto* sample1 = g.addValue<TextureSampler>(ctx, "sample", tex1, coords,
+                                               SampleMode::Color);
+    auto* aggType = ctx.aggregateType("agg_type", { { const0->type(), "A" },
+                                                    { const1->type(), "B" },
+                                                    { vec0->type(), "C" },
+                                                    { sample0->type(), "D" },
+                                                    { sample1->type(), "E" },
+                                                    { const2->type(), "F" } });
     auto* aggregate =
-        g.addValue<AggregateBuilder>(aggType, std::vector<Value*>{
-                                                  const0, const1, vec0, sample0,
-                                                  sample1, const2 });
-    Value* resultVal = g.addValue<ExtractAggregateValue>(aggregate, 1);
-    resultVal = g.addValue<FunctionCall>(ctx, BuiltinFunction::Normalize,
+        g.addValue<AggregateBuilder>("agg_value", aggType,
+                                     std::vector<Value*>{ const0, const1, vec0,
+                                                          sample0, sample1,
+                                                          const2 });
+    Value* resultVal = g.addValue<ExtractAggregateValue>("elem", aggregate, 1);
+    resultVal = g.addValue<FunctionCall>(ctx, "value",
+                                         BuiltinFunction::Normalize,
                                          std::vector<Value*>{ resultVal });
     g.setRoot(GraphRoot::LitFragmentFunction, resultVal);
     g.buildFunctions(ctx);
@@ -64,26 +67,26 @@ TEST_CASE("Builtins") {
     MaterialGraph g({ .shadingModel = MaterialShadingModel::Unlit });
     using enum BuiltinFunction;
     SECTION("Cross with invalid arguments") {
-        CHECK_THROWS(g.addValue<FunctionCall>(ctx, Cross,
+        CHECK_THROWS(g.addValue<FunctionCall>(ctx, "value", Cross,
                                               std::vector<Value*>{
                                                   ctx.float2Constant({}),
                                                   ctx.float3Constant({}) }));
     }
     SECTION("Cross with valid arguments") {
-        auto* call = g.addValue<FunctionCall>(ctx, Cross,
+        auto* call = g.addValue<FunctionCall>(ctx, "value", Cross,
                                               std::vector<Value*>{
                                                   ctx.float3Constant({}),
                                                   ctx.float3Constant({}) });
         CHECK(call->type() == ctx.float3Type());
     }
     SECTION("Reflect with invalid arguments") {
-        CHECK_THROWS(g.addValue<FunctionCall>(ctx, Reflect,
+        CHECK_THROWS(g.addValue<FunctionCall>(ctx, "value", Reflect,
                                               std::vector<Value*>{
                                                   ctx.float2Constant({}),
                                                   ctx.float3Constant({}) }));
     }
     SECTION("Reflect with valid arguments") {
-        auto* call = g.addValue<FunctionCall>(ctx, Reflect,
+        auto* call = g.addValue<FunctionCall>(ctx, "value", Reflect,
                                               std::vector<Value*>{
                                                   ctx.float3Constant({}),
                                                   ctx.float3Constant({}) });

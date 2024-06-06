@@ -96,7 +96,8 @@ VectorType const* Context::vectorType(int numComponents) const {
 VectorConstant* Context::vectorConstant(int numComponents, float4 value) {
     return impl->getOrInsert(impl->vectorConstants, { numComponents, value },
                              [&] {
-        return impl->addValue<VectorConstant>(*this, numComponents, value);
+        return impl->addValue<VectorConstant>(*this, "VecConst", numComponents,
+                                              value);
     });
 }
 
@@ -119,13 +120,14 @@ VectorConstant* Context::float4Constant(vml::float4 value) {
 TextureConstant* Context::textureConstant(TextureSubType subtype,
                                           AssetHandle asset) {
     return impl->getOrInsert(impl->textureConstants, asset.ID(), [&] {
-        return impl->addValue<TextureConstant>(textureType(subtype), asset);
+        return impl->addValue<TextureConstant>("TexConst", textureType(subtype),
+                                               asset);
     });
 }
 
 RasterizerInput* Context::rasterizerInput(RasterizerInputKind kind) {
     return impl->getOrInsert(impl->rasterizerInputs, kind, [&] {
-        return impl->addValue<RasterizerInput>(*this, kind);
+        return impl->addValue<RasterizerInput>(*this, "RasterData", kind);
     });
 }
 

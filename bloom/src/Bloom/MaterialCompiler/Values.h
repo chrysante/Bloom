@@ -28,9 +28,11 @@ class Value {
 public:
     Type const* type() const { return _type; }
 
+    std::string const& name() const { return _name; }
+
 protected:
-    Value(ValueNodeType nodeType, Type const* type):
-        _nodeType(nodeType), _type(type) {}
+    Value(ValueNodeType nodeType, std::string name, Type const* type):
+        _nodeType(nodeType), _name(std::move(name)), _type(type) {}
 
 private:
     friend ValueNodeType dyncast_get_type(Value const& value) {
@@ -38,6 +40,7 @@ private:
     }
 
     ValueNodeType _nodeType;
+    std::string _name;
     Type const* _type;
 };
 
@@ -50,7 +53,7 @@ public:
     vml::float4 get() const { return _value; }
 
 protected:
-    explicit VectorValue(ValueNodeType nodeType, Context& ctx,
+    explicit VectorValue(ValueNodeType nodeType, std::string name, Context& ctx,
                          int numComponents, vml::float4 value);
 
 private:
@@ -60,21 +63,20 @@ private:
 
 class VectorConstant: public VectorValue {
 public:
-    explicit VectorConstant(Context& ctx, int numComponents, vml::float4 value):
-        VectorValue(ValueNodeType::VectorConstant, ctx, numComponents, value) {}
+    explicit VectorConstant(Context& ctx, std::string name, int numComponents,
+                            vml::float4 value):
+        VectorValue(ValueNodeType::VectorConstant, std::move(name), ctx,
+                    numComponents, value) {}
 };
 
 class VectorParameter: public VectorValue {
 public:
-    explicit VectorParameter(Context& ctx, int numComponents,
-                             vml::float4 defaultValue, std::string name,
+    explicit VectorParameter(Context& ctx, std::string name, int numComponents,
+                             vml::float4 defaultValue,
                              BufferParameter* buffer = nullptr):
-        VectorValue(ValueNodeType::VectorParameter, ctx, numComponents,
-                    defaultValue),
-        _name(std::move(name)),
+        VectorValue(ValueNodeType::VectorParameter, std::move(name), ctx,
+                    numComponents, defaultValue),
         _buffer(buffer) {}
-
-    std::string const& name() const { return _name; }
 
     BufferParameter* buffer() const { return _buffer; }
 
@@ -86,7 +88,6 @@ public:
     }
 
 private:
-    std::string _name;
     BufferParameter* _buffer = nullptr;
     int _elemIndex = -1;
 };
@@ -102,8 +103,8 @@ public:
     void setBindingPoint(int bindingPoint) { _bindingPoint = bindingPoint; }
 
 protected:
-    explicit TextureValue(ValueNodeType nodeType, TextureType const* type,
-                          AssetHandle asset);
+    explicit TextureValue(ValueNodeType nodeType, std::string name,
+                          TextureType const* type, AssetHandle asset);
 
 private:
     AssetHandle _asset;
@@ -112,27 +113,25 @@ private:
 
 class TextureConstant: public TextureValue {
 public:
-    explicit TextureConstant(TextureType const* type, AssetHandle asset):
-        TextureValue(ValueNodeType::TextureConstant, type, asset) {}
+    explicit TextureConstant(std::string name, TextureType const* type,
+                             AssetHandle asset):
+        TextureValue(ValueNodeType::TextureConstant, std::move(name), type,
+                     asset) {}
 };
 
 class TextureParameter: public TextureValue {
 public:
-    explicit TextureParameter(TextureType const* type, AssetHandle asset,
-                              std::string name):
-        TextureValue(ValueNodeType::TextureParameter, type, asset),
-        _name(std::move(name)) {}
-
-    std::string const& name() const { return _name; }
-
-private:
-    std::string _name;
+    explicit TextureParameter(std::string name, TextureType const* type,
+                              AssetHandle asset):
+        TextureValue(ValueNodeType::TextureParameter, std::move(name), type,
+                     asset) {}
 };
 
 class BufferParameter: public Value {
 public:
-    explicit BufferParameter(Type const* type, int bindingPoint):
-        Value(ValueNodeType::BufferParameter, type),
+    explicit BufferParameter(std::string name, Type const* type,
+                             int bindingPoint):
+        Value(ValueNodeType::BufferParameter, std::move(name), type),
         _bindingPoint(bindingPoint) {}
 
     int bindingPoint() const { return _bindingPoint; }
@@ -147,7 +146,8 @@ class RasterizerInput: public Value {
 public:
     DECLARE_TYPE(VectorType)
 
-    explicit RasterizerInput(Context& ctx, RasterizerInputKind kind);
+    explicit RasterizerInput(Context& ctx, std::string name,
+                             RasterizerInputKind kind);
 
     RasterizerInputKind kind() const { return _kind; }
 
@@ -172,9 +172,10 @@ public:
     }
 
 protected:
-    User(ValueNodeType nodeType, Type const* type,
+    User(ValueNodeType nodeType, std::string name, Type const* type,
          std::vector<Value*> operands):
-        Value(nodeType, type), _operands(std::move(operands)) {}
+        Value(nodeType, std::move(name), type),
+        _operands(std::move(operands)) {}
 
 private:
     std::vector<Value*> _operands;
@@ -182,10 +183,10 @@ private:
 
 class FunctionCall: public User {
 public:
-    FunctionCall(Context& ctx, BuiltinFunction function,
+    FunctionCall(Context& ctx, std::string name, BuiltinFunction function,
                  std::vector<Value*> arguments);
 
-    FunctionCall(Context& ctx, BuiltinFunction function,
+    FunctionCall(Context& ctx, std::string name, BuiltinFunction function,
                  std::span<Type const* const> argumentTypes);
 
     BuiltinFunction function() const { return _function; }
@@ -202,14 +203,15 @@ public:
 
     static Type const* commonType(Type const* lhs, Type const* rhs);
 
-    ArithmeticOperation(Kind kind, Value* lhs, Value* rhs):
-        User(ValueNodeType::ArithmeticOperation,
+    ArithmeticOperation(std::string name, Kind kind, Value* lhs, Value* rhs):
+        User(ValueNodeType::ArithmeticOperation, std::move(name),
              commonType(lhs->type(), rhs->type()), { lhs, rhs }),
         _kind(kind) {}
 
-    ArithmeticOperation(Kind kind, Type const* lhsType, Type const* rhsType):
-        User(ValueNodeType::ArithmeticOperation, commonType(lhsType, rhsType),
-             { nullptr, nullptr }),
+    ArithmeticOperation(Kind kind, std::string name, Type const* lhsType,
+                        Type const* rhsType):
+        User(ValueNodeType::ArithmeticOperation, std::move(name),
+             commonType(lhsType, rhsType), { nullptr, nullptr }),
         _kind(kind) {}
 
     DECLARE_OPERAND(Value, LHS, 0)
@@ -225,8 +227,8 @@ class TextureSampler: public User {
 public:
     DECLARE_TYPE(VectorType)
 
-    TextureSampler(Context& ctx, TextureValue* texture, Value* coords,
-                   SampleMode mode);
+    TextureSampler(Context& ctx, std::string name, TextureValue* texture,
+                   Value* coords, SampleMode mode);
 
     DECLARE_OPERAND(TextureValue, texture, 0)
     DECLARE_OPERAND(Value, coords, 1)
@@ -241,16 +243,19 @@ class VectorBuilder: public User {
 public:
     DECLARE_TYPE(VectorType)
 
-    explicit VectorBuilder(Context& ctx, std::vector<Value*> values);
+    explicit VectorBuilder(Context& ctx, std::string name,
+                           std::vector<Value*> values);
 
-    explicit VectorBuilder(VectorType const* type, int numInputs);
+    explicit VectorBuilder(std::string name, VectorType const* type,
+                           int numInputs);
 };
 
 class ExtractVectorValue: public User {
 public:
     DECLARE_TYPE(VectorType)
 
-    explicit ExtractVectorValue(Context& ctx, int index, Value* operand);
+    explicit ExtractVectorValue(Context& ctx, std::string name, int index,
+                                Value* operand);
 
     int index() const { return _index; }
 
@@ -264,24 +269,26 @@ class AggregateBuilder: public User {
 public:
     DECLARE_TYPE(AggregateType)
 
-    explicit AggregateBuilder(AggregateType const* type,
+    explicit AggregateBuilder(std::string name, AggregateType const* type,
                               std::vector<Value*> values);
 
-    explicit AggregateBuilder(AggregateType const* type,
+    explicit AggregateBuilder(std::string name, AggregateType const* type,
                               std::initializer_list<Value*> values):
-        AggregateBuilder(type, std::vector(values)) {}
+        AggregateBuilder(std::move(name), type, std::vector(values)) {}
 
-    explicit AggregateBuilder(AggregateType const* type);
+    explicit AggregateBuilder(std::string name, AggregateType const* type);
 };
 
 /// Element access into an aggregate, i.e., `value.member`
 class ExtractAggregateValue: public User {
 public:
     /// \p baseValue may not be null and must be of type `AggregateType`
-    explicit ExtractAggregateValue(Value* baseValue, int index);
+    explicit ExtractAggregateValue(std::string name, Value* baseValue,
+                                   int index);
 
     /// \p elementType is the type of the extracted element
-    explicit ExtractAggregateValue(Type const* elementType, int index);
+    explicit ExtractAggregateValue(std::string name, Type const* elementType,
+                                   int index);
 
     int index() const { return _index; }
 

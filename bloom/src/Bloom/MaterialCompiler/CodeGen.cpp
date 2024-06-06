@@ -58,16 +58,14 @@ static Type const* translate(Context& ctx, MaterialDataType type) {
 namespace {
 
 template <typename T>
-class NameGenerator {
+class NameMap {
 public:
-    explicit NameGenerator(std::string prefix): prefix(prefix) {}
-
     std::string get(T const& elem) {
         auto itr = map.find(elem);
         if (itr != map.end()) {
             return itr->second;
         }
-        return map.insert({ elem, generateNewName() }).first->second;
+        return map.insert({ elem, elem->name() }).first->second;
     }
 
     void setName(T const& elem, std::string name) {
@@ -77,10 +75,6 @@ public:
     bool contains(T const& elem) const { return map.contains(elem); }
 
 private:
-    std::string generateNewName() { return utl::strcat(prefix, index++); }
-
-    std::string prefix;
-    int index = 0;
     utl::hashmap<T, std::string> map;
 };
 
@@ -143,9 +137,9 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     std::string genNameImpl(ExtractVectorValue const&);
     std::string genNameImpl(ExtractAggregateValue const&);
 
-    std::string getName(Value const* value) { return valueNameGen.get(value); }
+    std::string getName(Value const* value) { return valueNameMap.get(value); }
 
-    std::string getName(Type const* type) { return typeNameGen.get(type); }
+    std::string getName(Type const* type) { return typeNameMap.get(type); }
 
     void writeIf(auto condition, auto body);
     void callMaterialFunction(GraphRoot kind, std::string_view variableName);
@@ -160,8 +154,8 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     int textureIndexCounter = 0;
     int parameterIndexCounter = 0;
     AggregateType const* paramBufferType = nullptr;
-    NameGenerator<Type const*> typeNameGen{ "Type_" };
-    NameGenerator<Value const*> valueNameGen{ "Value_" };
+    NameMap<Type const*> typeNameMap;
+    NameMap<Value const*> valueNameMap;
     utl::hashmap<TextureValue const*, int> textureIndexMap;
     utl::hashmap<int, AssetHandle> textureConstants;
     utl::hashmap<Value const*, int> parameterIndexMap;
@@ -348,7 +342,7 @@ MaterialSourceData MetalCodeGenerator::run() {
 }
 
 void MetalCodeGenerator::declareTypeImpl(matc::TextureType const* type) {
-    typeNameGen.setName(type, [&] {
+    typeNameMap.setName(type, [&] {
         switch (type->subtype()) {
         case TextureSubType::Texture2D:
             return "texture2d<float>";
@@ -359,7 +353,7 @@ void MetalCodeGenerator::declareTypeImpl(matc::TextureType const* type) {
 }
 
 void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
-    typeNameGen.setName(type, [&] {
+    typeNameMap.setName(type, [&] {
         if (type->numComponents() == 1) {
             return std::string("float");
         }
@@ -383,7 +377,7 @@ static std::string functionName(GraphRoot root) {
 
 void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
     // TODO: This does not handle nested structs
-    typeNameGen.setName(type, type->name());
+    typeNameMap.setName(type, type->name());
     auto item = makeItem();
     writeRaw("struct ", getName(type));
     auto scope = makeScope(ScopeType::CompoundStmt);
@@ -714,7 +708,7 @@ void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {
 void MetalCodeGenerator::genName(Value const& value) {
     visit(value, [this](auto& value) {
         if constexpr (requires { genNameImpl(value); }) {
-            valueNameGen.setName(&value, genNameImpl(value));
+            valueNameMap.setName(&value, genNameImpl(value));
         }
     });
 }
@@ -737,14 +731,15 @@ std::string MetalCodeGenerator::genNameImpl(VectorParameter const& param) {
     if (!param.buffer()) {
         throw std::runtime_error("Parameter has no buffer");
     }
-    return utl::strcat(getName(param.buffer()), "._", param.elementIndex());
+    auto* type = cast<AggregateType const*>(param.buffer()->type());
+    return utl::strcat(getName(param.buffer()), ".",
+                       type->element(param.elementIndex()).name);
 }
 
-static MaterialTextureParameter translate(TextureParameter const& param,
-                                          int fragmentIndex) {
+static MaterialTextureParameter translate(TextureParameter const& param) {
     return { .type = translate(param.type()),
-             .fragmentBindingPoint = fragmentIndex,
-             .vertexBindingPoint = MaterialTextureParameter::UnusedBindingPoint,
+             .fragmentBindingPoint = param.bindingPoint(),
+             .vertexBindingPoint = param.bindingPoint(),
              .name = param.name(),
              .value = param.asset() };
 }
@@ -755,13 +750,13 @@ std::string MetalCodeGenerator::genNameImpl(TextureValue const& tex) {
     // clang-format off
     visit(tex, utl::overload{
         [&](TextureConstant const& constant) {
-            textureConstants[index] = constant.asset();
+            textureConstants[constant.bindingPoint()] = constant.asset();
         },
         [&](TextureParameter const& param) {
-            textureParameters.push_back(translate(param, index));
+            textureParameters.push_back(translate(param));
         },
     }); // clang-format on
-    return utl::strcat("Texture_", index);
+    return tex.name();
 }
 
 std::string MetalCodeGenerator::genNameImpl(RasterizerInput const& input) {
@@ -789,7 +784,9 @@ std::string MetalCodeGenerator::genNameImpl(ExtractVectorValue const& e) {
 }
 
 std::string MetalCodeGenerator::genNameImpl(ExtractAggregateValue const& e) {
-    return utl::strcat(getName(e.operand()), "._", e.index());
+    auto* type = cast<AggregateType const*>(e.operand()->type());
+    return utl::strcat(getName(e.operand()), ".",
+                       type->element(e.index()).name);
 }
 
 void MetalCodeGenerator::writeIf(auto condition, auto body) {

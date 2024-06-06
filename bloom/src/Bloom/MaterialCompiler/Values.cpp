@@ -13,15 +13,15 @@ using namespace matc;
 using namespace vml::short_types;
 using namespace ranges::views;
 
-VectorValue::VectorValue(ValueNodeType nodeType, Context& ctx,
+VectorValue::VectorValue(ValueNodeType nodeType, std::string name, Context& ctx,
                          int numComponents, float4 value):
-    Value(nodeType, ctx.vectorType(numComponents)),
+    Value(nodeType, std::move(name), ctx.vectorType(numComponents)),
     _value(value),
     numc(numComponents) {}
 
-TextureValue::TextureValue(ValueNodeType nodeType, TextureType const* type,
-                           AssetHandle asset):
-    Value(nodeType, type), _asset(asset) {}
+TextureValue::TextureValue(ValueNodeType nodeType, std::string name,
+                           TextureType const* type, AssetHandle asset):
+    Value(nodeType, std::move(name), type), _asset(asset) {}
 
 static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     using enum RasterizerInputKind;
@@ -43,8 +43,11 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     }
 }
 
-RasterizerInput::RasterizerInput(Context& ctx, RasterizerInputKind kind):
-    Value(ValueNodeType::RasterizerInput, selectType(ctx, kind)), _kind(kind) {}
+RasterizerInput::RasterizerInput(Context& ctx, std::string name,
+                                 RasterizerInputKind kind):
+    Value(ValueNodeType::RasterizerInput, std::move(name),
+          selectType(ctx, kind)),
+    _kind(kind) {}
 
 namespace {
 
@@ -138,17 +141,19 @@ static Type const* getReturnType(Context& ctx, BuiltinFunction function,
     return type;
 }
 
-FunctionCall::FunctionCall(Context& ctx, BuiltinFunction function,
+FunctionCall::FunctionCall(Context& ctx, std::string name,
+                           BuiltinFunction function,
                            std::vector<Value*> arguments):
-    User(ValueNodeType::FunctionCall,
+    User(ValueNodeType::FunctionCall, std::move(name),
          getReturnType(ctx, function,
                        arguments | transform(&Value::type) | ToSmallVector<>),
          std::move(arguments)),
     _function(function) {}
 
-FunctionCall::FunctionCall(Context& ctx, BuiltinFunction function,
+FunctionCall::FunctionCall(Context& ctx, std::string name,
+                           BuiltinFunction function,
                            std::span<Type const* const> argumentTypes):
-    User(ValueNodeType::FunctionCall,
+    User(ValueNodeType::FunctionCall, std::move(name),
          getReturnType(ctx, function, argumentTypes),
          std::vector<Value*>(argumentTypes.size())),
     _function(function) {}
@@ -175,9 +180,11 @@ Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
     return LHS;
 }
 
-TextureSampler::TextureSampler(Context& ctx, TextureValue* texture,
-                               Value* coords, SampleMode mode):
-    User(ValueNodeType::TextureSampler, ctx.float4Type(), { texture, coords }),
+TextureSampler::TextureSampler(Context& ctx, std::string name,
+                               TextureValue* texture, Value* coords,
+                               SampleMode mode):
+    User(ValueNodeType::TextureSampler, std::move(name), ctx.float4Type(),
+         { texture, coords }),
     _mode(mode) {}
 
 static int accNumComponents(std::span<Value const* const> values) {
@@ -187,32 +194,41 @@ static int accNumComponents(std::span<Value const* const> values) {
     });
 }
 
-VectorBuilder::VectorBuilder(Context& ctx, std::vector<Value*> values):
-    User(ValueNodeType::VectorBuilder, ctx.vectorType(accNumComponents(values)),
-         std::move(values)) {}
+VectorBuilder::VectorBuilder(Context& ctx, std::string name,
+                             std::vector<Value*> values):
+    User(ValueNodeType::VectorBuilder, std::move(name),
+         ctx.vectorType(accNumComponents(values)), std::move(values)) {}
 
-VectorBuilder::VectorBuilder(VectorType const* type, int numInputs):
-    User(ValueNodeType::VectorBuilder, type, std::vector<Value*>(numInputs)) {}
+VectorBuilder::VectorBuilder(std::string name, VectorType const* type,
+                             int numInputs):
+    User(ValueNodeType::VectorBuilder, std::move(name), type,
+         std::vector<Value*>(numInputs)) {}
 
-ExtractVectorValue::ExtractVectorValue(Context& ctx, int index, Value* operand):
-    User(ValueNodeType::ExtractVectorValue, ctx.floatType(), { operand }),
+ExtractVectorValue::ExtractVectorValue(Context& ctx, std::string name,
+                                       int index, Value* operand):
+    User(ValueNodeType::ExtractVectorValue, std::move(name), ctx.floatType(),
+         { operand }),
     _index(index) {}
 
-AggregateBuilder::AggregateBuilder(AggregateType const* type,
+AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type,
                                    std::vector<Value*> values):
-    User(ValueNodeType::AggregateBuilder, type, std::move(values)) {}
+    User(ValueNodeType::AggregateBuilder, std::move(name), type,
+         std::move(values)) {}
 
-AggregateBuilder::AggregateBuilder(AggregateType const* type):
-    AggregateBuilder(type, std::vector<Value*>(type->elements().size())) {}
+AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type):
+    AggregateBuilder(std::move(name), type,
+                     std::vector<Value*>(type->elements().size())) {}
 
-ExtractAggregateValue::ExtractAggregateValue(Value* baseValue, int index):
-    User(ValueNodeType::ExtractAggregateValue,
+ExtractAggregateValue::ExtractAggregateValue(std::string name, Value* baseValue,
+                                             int index):
+    User(ValueNodeType::ExtractAggregateValue, std::move(name),
          cast<AggregateType const*>(baseValue->type())->element(index).type,
          { baseValue }),
     _index(index) {}
 
-ExtractAggregateValue::ExtractAggregateValue(Type const* elementType,
+ExtractAggregateValue::ExtractAggregateValue(std::string name,
+                                             Type const* elementType,
                                              int index):
-    User(ValueNodeType::ExtractAggregateValue, elementType,
+    User(ValueNodeType::ExtractAggregateValue, std::move(name), elementType,
          std::vector<Value*>(1)),
     _index(index) {}

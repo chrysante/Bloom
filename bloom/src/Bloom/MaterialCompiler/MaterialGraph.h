@@ -55,6 +55,7 @@ public:
     }
 
     template <std::derived_from<Value> T, typename... Args>
+        requires std::constructible_from<T, Args...>
     T* addValue(Args&&... args) {
         return addValue(allocate<T>(std::forward<Args>(args)...));
     }

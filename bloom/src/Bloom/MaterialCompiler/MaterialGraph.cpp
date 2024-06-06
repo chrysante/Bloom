@@ -97,9 +97,8 @@ static AggregateType const* makeParameterBufferType(
         return nullptr;
     }
     return ctx.aggregateType("PrimitiveParameters",
-                             params |
-                                 transform([&, index = 0](auto& param) mutable {
-        return AggregateElement{ param->type(), utl::strcat("_", index++) };
+                             params | transform([&](auto& param) mutable {
+        return AggregateElement{ param->type(), param->name() };
     }) | ranges::to<std::vector>);
 }
 
@@ -191,7 +190,7 @@ void MaterialGraph::buildFunctions(Context& ctx) {
             getParamBufferIndex(GraphRoot::LitFragmentFunction) &&
         "Parameter buffer must have the same binding point in vertex and fragment functions for now");
     auto* paramBuffer =
-        addValue<BufferParameter>(paramBufferType,
+        addValue<BufferParameter>("parameters", paramBufferType,
                                   getParamBufferIndex(
                                       GraphRoot::VertexFunction));
     ranges::for_each(allVectorParameters, [&, index = 0](auto* param) mutable {

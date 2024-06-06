@@ -103,6 +103,13 @@ View* ViewManager::findByStaticName(std::string_view name) {
     return itr != views.end() ? itr->get() : nullptr;
 }
 
+void ViewManager::closeFocusedView() {
+    if (auto* view = focusedView()) {
+        /// Will be closed by the next call to `display()`
+        view->data.open = false;
+    }
+}
+
 void ViewManager::closeAll() { views.clear(); }
 
 void ViewManager::display() {
@@ -132,9 +139,8 @@ void ViewManager::display() {
 
 bool ViewManager::onInput(InputEvent& event) {
     /// Give to focused view
-    auto focused = ranges::find_if(views, [](auto& v) { return v->focused(); });
-    if (focused != views.end()) {
-        (*focused)->doOnInput(event);
+    if (auto* focused = focusedView()) {
+        focused->doOnInput(event);
         if (event.handled()) {
             return true;
         }
@@ -171,4 +177,9 @@ void ViewManager::deserialize(YAML::Node const& node) {
         auto* view = views.back().get();
         view->doInit();
     }
+}
+
+View const* ViewManager::focusedView() const {
+    auto itr = ranges::find_if(views, [](auto& v) { return v->focused(); });
+    return itr != views.end() ? itr->get() : nullptr;
 }

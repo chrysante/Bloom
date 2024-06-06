@@ -48,6 +48,9 @@ public:
     /// Closes all open views
     void closeAll();
 
+    ///
+    void closeFocusedView();
+
     /// Displays all views
     void display();
 
@@ -59,6 +62,14 @@ public:
 
     /// Recreates the views stored in \p node
     void deserialize(YAML::Node const& node);
+
+    /// \Returns the currently focused view if any view is focused or null
+    View* focusedView() {
+        return const_cast<View*>(std::as_const(*this).focusedView());
+    }
+
+    /// \overload
+    View const* focusedView() const;
 
 private:
     struct Impl;

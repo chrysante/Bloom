@@ -186,6 +186,12 @@ Editor::Editor(): impl(std::make_unique<Impl>(this)) {
         { Key::B, ModFlags::Control | ModFlags::Shift },
         [this] { impl->toggleView("Console"); }
     });
+    addCommand({
+        "Close View",
+        { Key::W, ModFlags::Control },
+        [this] { impl->viewManager.closeFocusedView(); },
+        [this] { return impl->viewManager.focusedView() != nullptr; },
+    });
     auto [startSimCmd, stopSimCmd] = impl->addSimCommands(impl->cmd);
     impl->dockspace.setLeftToolbar({
         ToolbarDropdownMenu()
@@ -472,6 +478,9 @@ void Editor::Impl::toggleView(std::string_view name) {
     auto* view = viewManager.findByStaticName(name);
     if (view) {
         view->toggleHidden();
+    }
+    else {
+        viewManager.openView(name);
     }
 }
 

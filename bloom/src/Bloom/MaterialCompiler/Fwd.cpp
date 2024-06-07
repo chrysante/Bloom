@@ -3,10 +3,10 @@
 using namespace bloom;
 using namespace matc;
 
-std::string_view matc::toSpelling(BuiltinFunction function) {
+std::string_view matc::toSpelling(BuiltinFunctionKind function) {
     switch (function) {
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, ...)                               \
-    case BuiltinFunction::Name:                                                \
+    case BuiltinFunctionKind::Name:                                            \
         return #Spelling;
 #include "Bloom/MaterialCompiler/Lists.def"
     }

@@ -1,7 +1,10 @@
 #include "Bloom/MaterialCompiler//Values.h"
 
+#include <magic_enum.hpp>
+#include <range/v3/algorithm.hpp>
 #include <range/v3/numeric.hpp>
 #include <range/v3/view.hpp>
+#include <utl/strcat.hpp>
 
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/MaterialCompiler/Context.h"
@@ -13,15 +16,50 @@ using namespace matc;
 using namespace vml::short_types;
 using namespace ranges::views;
 
-VectorValue::VectorValue(ValueNodeType nodeType, std::string name, Context& ctx,
-                         int numComponents, float4 value):
-    Value(nodeType, std::move(name), ctx.vectorType(numComponents)),
+Value::~Value() { detachAllUsers(); }
+
+void Value::detachAllUsers() {
+    for (auto [user, count]: _users) {
+        user->killOperand(this);
+    }
+    _users.clear();
+}
+
+void Value::addUser(User* user) { ++_users[user]; }
+
+void Value::removeUser(User* user) {
+    auto itr = _users.find(user);
+    assert(itr != _users.end());
+    if (itr->second-- == 0) {
+        _users.erase(itr);
+    }
+}
+
+void User::setOperand(size_t index, Value* value) {
+    assert(index < _operands.size());
+    if (auto* old = _operands[index]) {
+        old->removeUser(this);
+    }
+    value->addUser(this);
+    _operands[index] = value;
+}
+
+void User::killOperand(Value* operand) {
+    auto itr = ranges::remove(_operands, operand);
+    _operands.erase(itr, _operands.end());
+}
+
+VectorConstant::VectorConstant(Context& ctx, std::string name,
+                               int numComponents, float4 value):
+    Constant(ValueNodeType::VectorConstant, std::move(name),
+             ctx.vectorType(numComponents)),
     _value(value),
     numc(numComponents) {}
 
-TextureValue::TextureValue(ValueNodeType nodeType, std::string name,
-                           TextureType const* type, AssetHandle asset):
-    Value(nodeType, std::move(name), type), _asset(asset) {}
+TextureConstant::TextureConstant(std::string name, TextureType const* type,
+                                 AssetHandle asset):
+    Constant(ValueNodeType::TextureConstant, std::move(name), type),
+    _asset(asset) {}
 
 static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     using enum RasterizerInputKind;
@@ -45,9 +83,23 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
 
 RasterizerInput::RasterizerInput(Context& ctx, std::string name,
                                  RasterizerInputKind kind):
-    Value(ValueNodeType::RasterizerInput, std::move(name),
-          selectType(ctx, kind)),
+    Constant(ValueNodeType::RasterizerInput, std::move(name),
+             selectType(ctx, kind)),
     _kind(kind) {}
+
+Callable::Callable(ValueNodeType nodeType, std::string name,
+                   FunctionType const* type,
+                   List<FunctionParameter> parameters):
+    Constant(nodeType, std::move(name), type),
+    _parameters(std::move(parameters)) {}
+
+Type const* Callable::returnType() const { return type()->returnType(); }
+
+Function::Function(std::string name, FunctionType const* type,
+                   List<FunctionParameter> parameters, List<Instruction> body):
+    Callable(ValueNodeType::Function, std::move(name), type,
+             std::move(parameters)),
+    _body(std::move(body)) {}
 
 namespace {
 
@@ -55,15 +107,15 @@ enum class SymType {
     Float,  /// Single floating point value
     Float3, /// Vector of three floating point values
     FloatN, /// Single floating point value or vector of 2-4 floating point
-            /// values
+    /// values
     VectorN /// Vector of 2-4 floating point values
 };
 
 } // namespace
 
-static Type const* deduceRetType(Context& ctx, SymType symRet,
-                                 std::span<SymType const> symArgs,
-                                 std::span<Type const* const> args) {
+static Type const* deduceRetTypeImpl(Context& ctx, SymType symRet,
+                                     std::span<SymType const> symArgs,
+                                     std::span<Type const* const> args) {
     using enum SymType;
     if (symArgs.size() != args.size()) {
         return nullptr;
@@ -120,43 +172,90 @@ static Type const* deduceRetType(Context& ctx, SymType symRet,
     }
 }
 
-static Type const* getReturnTypeImpl(Context& ctx, BuiltinFunction function,
-                                     std::span<Type const* const> args) {
+static Type const* deduceReturnType(Context& ctx, BuiltinFunctionKind function,
+                                    std::span<Type const* const> args) {
     switch (function) {
         using enum SymType;
 #define UNPACK(...) __VA_ARGS__
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, RetType, Args)                     \
-    case BuiltinFunction::Name:                                                \
-        return deduceRetType(ctx, RetType, { { UNPACK Args } }, args);
+    case BuiltinFunctionKind::Name:                                            \
+        return deduceRetTypeImpl(ctx, RetType, { { UNPACK Args } }, args);
 #include "Bloom/MaterialCompiler/Lists.def"
     }
 }
 
-static Type const* getReturnType(Context& ctx, BuiltinFunction function,
-                                 std::span<Type const* const> args) {
-    auto* type = getReturnTypeImpl(ctx, function, args);
-    if (!type) {
-        throw std::runtime_error("Invalid arguments for function call");
+static FunctionType const* deduceFunctionType(
+    Context& ctx, BuiltinFunctionKind function,
+    std::span<Type const* const> args) {
+    auto* ret = deduceReturnType(ctx, function, args);
+    if (!ret) {
+        throw std::runtime_error("Invalid arguments for builtin function");
     }
-    return type;
+    return ctx.functionType(ret, args);
 }
 
-FunctionCall::FunctionCall(Context& ctx, std::string name,
-                           BuiltinFunction function,
-                           std::vector<Value*> arguments):
-    User(ValueNodeType::FunctionCall, std::move(name),
-         getReturnType(ctx, function,
-                       arguments | transform(&Value::type) | ToSmallVector<>),
-         std::move(arguments)),
-    _function(function) {}
+static List<FunctionParameter> allocateParameters(
+    std::span<Type const* const> args) {
+    auto params = args | transform([index = 0](Type const* type) mutable {
+        return new FunctionParameter(utl::strcat("_", index++), type);
+    });
+    List<FunctionParameter> result;
+    for (auto* param: params) {
+        result.push_back(param);
+    }
+    return result;
+}
+
+BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
+                                 std::span<Type const* const> argTypes):
+    Callable(ValueNodeType::BuiltinFunction,
+             std::string(magic_enum::enum_name(kind)),
+             deduceFunctionType(ctx, kind, argTypes),
+             allocateParameters(argTypes)),
+    _kind(kind) {}
+
+struct FunctionCall::PrivArgs {
+    static PrivArgs make(Context& ctx, std::string name,
+                         BuiltinFunctionKind kind,
+                         std::span<Value* const> arguments) {
+        auto* function =
+            ctx.builtinFunction(kind, arguments | transform(&Value::type) |
+                                          ToSmallVector<>);
+        return { .name = std::move(name),
+                 .returnType = function->returnType(),
+                 .operands = concat(single(function), arguments) |
+                             ranges::to<std::vector<Value*>> };
+    }
+
+    static PrivArgs make(Context& ctx, std::string name,
+                         BuiltinFunctionKind kind,
+                         std::span<Type const* const> argumentTypes) {
+        auto* function = ctx.builtinFunction(kind, argumentTypes);
+        std::vector<Value*> operands(1 + argumentTypes.size());
+        operands[0] = function;
+        return { .name = std::move(name),
+                 .returnType = function->returnType(),
+                 .operands = std::move(operands) };
+    }
+
+    std::string name;
+    Type const* returnType;
+    std::vector<Value*> operands;
+};
+
+FunctionCall::FunctionCall(PrivArgs args):
+    Instruction(ValueNodeType::FunctionCall, std::move(args.name),
+                args.returnType, std::move(args.operands)) {}
 
 FunctionCall::FunctionCall(Context& ctx, std::string name,
-                           BuiltinFunction function,
+                           BuiltinFunctionKind kind,
+                           std::span<Value* const> arguments):
+    FunctionCall(PrivArgs::make(ctx, std::move(name), kind, arguments)) {}
+
+FunctionCall::FunctionCall(Context& ctx, std::string name,
+                           BuiltinFunctionKind kind,
                            std::span<Type const* const> argumentTypes):
-    User(ValueNodeType::FunctionCall, std::move(name),
-         getReturnType(ctx, function, argumentTypes),
-         std::vector<Value*>(argumentTypes.size())),
-    _function(function) {}
+    FunctionCall(PrivArgs::make(ctx, std::move(name), kind, argumentTypes)) {}
 
 static void throwArithmeticTypeError() {
     throw std::runtime_error("Invalid operand types for arithmetic operation");
@@ -181,10 +280,10 @@ Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
 }
 
 TextureSampler::TextureSampler(Context& ctx, std::string name,
-                               TextureValue* texture, Value* coords,
+                               TextureConstant* texture, Value* coords,
                                SampleMode mode):
-    User(ValueNodeType::TextureSampler, std::move(name), ctx.float4Type(),
-         { texture, coords }),
+    Instruction(ValueNodeType::TextureSampler, std::move(name),
+                ctx.float4Type(), { texture, coords }),
     _mode(mode) {}
 
 static int accNumComponents(std::span<Value const* const> values) {
@@ -196,24 +295,24 @@ static int accNumComponents(std::span<Value const* const> values) {
 
 VectorBuilder::VectorBuilder(Context& ctx, std::string name,
                              std::vector<Value*> values):
-    User(ValueNodeType::VectorBuilder, std::move(name),
-         ctx.vectorType(accNumComponents(values)), std::move(values)) {}
+    Instruction(ValueNodeType::VectorBuilder, std::move(name),
+                ctx.vectorType(accNumComponents(values)), std::move(values)) {}
 
 VectorBuilder::VectorBuilder(std::string name, VectorType const* type,
                              int numInputs):
-    User(ValueNodeType::VectorBuilder, std::move(name), type,
-         std::vector<Value*>(numInputs)) {}
+    Instruction(ValueNodeType::VectorBuilder, std::move(name), type,
+                std::vector<Value*>(numInputs)) {}
 
 ExtractVectorValue::ExtractVectorValue(Context& ctx, std::string name,
                                        int index, Value* operand):
-    User(ValueNodeType::ExtractVectorValue, std::move(name), ctx.floatType(),
-         { operand }),
+    Instruction(ValueNodeType::ExtractVectorValue, std::move(name),
+                ctx.floatType(), { operand }),
     _index(index) {}
 
 AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type,
                                    std::vector<Value*> values):
-    User(ValueNodeType::AggregateBuilder, std::move(name), type,
-         std::move(values)) {}
+    Instruction(ValueNodeType::AggregateBuilder, std::move(name), type,
+                std::move(values)) {}
 
 AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type):
     AggregateBuilder(std::move(name), type,
@@ -221,14 +320,16 @@ AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type):
 
 ExtractAggregateValue::ExtractAggregateValue(std::string name, Value* baseValue,
                                              int index):
-    User(ValueNodeType::ExtractAggregateValue, std::move(name),
-         cast<AggregateType const*>(baseValue->type())->element(index).type,
-         { baseValue }),
+    Instruction(ValueNodeType::ExtractAggregateValue, std::move(name),
+                cast<AggregateType const*>(baseValue->type())
+                    ->element(index)
+                    .type,
+                { baseValue }),
     _index(index) {}
 
 ExtractAggregateValue::ExtractAggregateValue(std::string name,
                                              Type const* elementType,
                                              int index):
-    User(ValueNodeType::ExtractAggregateValue, std::move(name), elementType,
-         std::vector<Value*>(1)),
+    Instruction(ValueNodeType::ExtractAggregateValue, std::move(name),
+                elementType, std::vector<Value*>(1)),
     _index(index) {}

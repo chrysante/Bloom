@@ -58,6 +58,20 @@ private:
     TextureSubType _subtype;
 };
 
+class FunctionType: public Type {
+public:
+    explicit FunctionType(Type const* returnType,
+                          std::vector<Type const*> argTypes);
+
+    Type const* returnType() const { return ret; }
+
+    std::span<Type const* const> argumentTypes() const { return args; }
+
+private:
+    Type const* ret;
+    std::vector<Type const*> args;
+};
+
 } // namespace bloom::matc
 
 #endif // BLOOM_MATERIALCOMPILER_TYPES_H

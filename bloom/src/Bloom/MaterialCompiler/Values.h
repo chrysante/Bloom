@@ -3,7 +3,11 @@
 
 #include <span>
 #include <string>
+#include <vector>
 
+#include <range/v3/view.hpp>
+#include <utl/hashtable.hpp>
+#include <utl/ilist.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/Asset/AssetHandle.h"
@@ -16,19 +20,50 @@
         return cast<T const*>(Value::type());                                  \
     }
 
-#define DECLARE_OPERAND(TYPE, NAME, INDEX)                                     \
+#define DECLARE_OPERAND(TYPE, NAME, CAP_NAME, INDEX)                           \
     template <typename T = TYPE>                                               \
     T* NAME() const {                                                          \
         return cast<T*>(User::operand(INDEX));                                 \
+    }                                                                          \
+    void set##CAP_NAME(Value* value) { User::setOperand(INDEX, value); }
+
+#define DECLARE_OPERAND_RANGE(TYPE, NAME, CAP_NAME, INDEX_OFFSET)              \
+    template <typename T = TYPE>                                               \
+    auto NAME##s() const {                                                     \
+        return User::operands().subspan(INDEX_OFFSET) |                        \
+               ranges::views::transform(cast<T*>);                             \
+    }                                                                          \
+    void set##CAP_NAME(size_t index, Value* value) {                           \
+        User::setOperand(index + INDEX_OFFSET, value);                         \
     }
 
 namespace bloom::matc {
 
+template <typename T>
+class DynAllocator: public std::allocator<T> {
+public:
+    void destroy(T* ptr) { utl::dyn_delete(ptr); }
+
+    void deallocate(T* ptr, size_t count) { ::operator delete(ptr, count); }
+};
+
+template <typename T>
+using List = utl::ilist<T, DynAllocator<T>>;
+
+template <typename T>
+using ListNode = utl::ilist_node<T>;
+
 class Value {
 public:
+    ~Value();
+
     Type const* type() const { return _type; }
 
     std::string const& name() const { return _name; }
+
+    auto users() const { return _users.values() | ranges::views::keys; }
+
+    void detachAllUsers();
 
 protected:
     Value(ValueNodeType nodeType, std::string name, Type const* type):
@@ -39,120 +74,20 @@ private:
         return value._nodeType;
     }
 
+    friend class User;
+    void addUser(User* user);
+    void removeUser(User* user);
+
     ValueNodeType _nodeType;
     std::string _name;
     Type const* _type;
+    utl::hashmap<User*, int> _users;
 };
 
-class VectorValue: public Value {
+class FunctionParameter: public Value, public ListNode<FunctionParameter> {
 public:
-    DECLARE_TYPE(VectorType)
-
-    int numComponents() const { return numc; }
-
-    vml::float4 get() const { return _value; }
-
-protected:
-    explicit VectorValue(ValueNodeType nodeType, std::string name, Context& ctx,
-                         int numComponents, vml::float4 value);
-
-private:
-    vml::float4 _value;
-    int numc;
-};
-
-class VectorConstant: public VectorValue {
-public:
-    explicit VectorConstant(Context& ctx, std::string name, int numComponents,
-                            vml::float4 value):
-        VectorValue(ValueNodeType::VectorConstant, std::move(name), ctx,
-                    numComponents, value) {}
-};
-
-class VectorParameter: public VectorValue {
-public:
-    explicit VectorParameter(Context& ctx, std::string name, int numComponents,
-                             vml::float4 defaultValue,
-                             BufferParameter* buffer = nullptr):
-        VectorValue(ValueNodeType::VectorParameter, std::move(name), ctx,
-                    numComponents, defaultValue),
-        _buffer(buffer) {}
-
-    BufferParameter* buffer() const { return _buffer; }
-
-    int elementIndex() const { return _elemIndex; }
-
-    void setBufferAndElemIndex(BufferParameter* buffer, int index) {
-        _buffer = buffer;
-        _elemIndex = index;
-    }
-
-private:
-    BufferParameter* _buffer = nullptr;
-    int _elemIndex = -1;
-};
-
-class TextureValue: public Value {
-public:
-    DECLARE_TYPE(TextureType)
-
-    AssetHandle asset() const { return _asset; }
-
-    int bindingPoint() const { return _bindingPoint; }
-
-    void setBindingPoint(int bindingPoint) { _bindingPoint = bindingPoint; }
-
-protected:
-    explicit TextureValue(ValueNodeType nodeType, std::string name,
-                          TextureType const* type, AssetHandle asset);
-
-private:
-    AssetHandle _asset;
-    int _bindingPoint = -1;
-};
-
-class TextureConstant: public TextureValue {
-public:
-    explicit TextureConstant(std::string name, TextureType const* type,
-                             AssetHandle asset):
-        TextureValue(ValueNodeType::TextureConstant, std::move(name), type,
-                     asset) {}
-};
-
-class TextureParameter: public TextureValue {
-public:
-    explicit TextureParameter(std::string name, TextureType const* type,
-                              AssetHandle asset):
-        TextureValue(ValueNodeType::TextureParameter, std::move(name), type,
-                     asset) {}
-};
-
-class BufferParameter: public Value {
-public:
-    explicit BufferParameter(std::string name, Type const* type,
-                             int bindingPoint):
-        Value(ValueNodeType::BufferParameter, std::move(name), type),
-        _bindingPoint(bindingPoint) {}
-
-    int bindingPoint() const { return _bindingPoint; }
-
-    void setBindingPoint(int bindingPoint) { _bindingPoint = bindingPoint; }
-
-private:
-    int _bindingPoint;
-};
-
-class RasterizerInput: public Value {
-public:
-    DECLARE_TYPE(VectorType)
-
-    explicit RasterizerInput(Context& ctx, std::string name,
-                             RasterizerInputKind kind);
-
-    RasterizerInputKind kind() const { return _kind; }
-
-private:
-    RasterizerInputKind _kind;
+    explicit FunctionParameter(std::string name, Type const* type):
+        Value(ValueNodeType::FunctionParameter, std::move(name), type) {}
 };
 
 class User: public Value {
@@ -166,36 +101,141 @@ public:
         return _operands[index];
     }
 
-    void setOperand(size_t index, Value* value) {
-        assert(index < _operands.size());
-        _operands[index] = value;
-    }
+    void setOperand(size_t index, Value* value);
 
 protected:
     User(ValueNodeType nodeType, std::string name, Type const* type,
-         std::vector<Value*> operands):
+         std::vector<Value*> operands = {}):
         Value(nodeType, std::move(name), type),
         _operands(std::move(operands)) {}
 
 private:
+    friend class Value;
+    void killOperand(Value* operand);
+
     std::vector<Value*> _operands;
 };
 
-class FunctionCall: public User {
-public:
-    FunctionCall(Context& ctx, std::string name, BuiltinFunction function,
-                 std::vector<Value*> arguments);
-
-    FunctionCall(Context& ctx, std::string name, BuiltinFunction function,
-                 std::span<Type const* const> argumentTypes);
-
-    BuiltinFunction function() const { return _function; }
-
-private:
-    BuiltinFunction _function;
+class Constant: public User {
+protected:
+    using User::User;
 };
 
-class ArithmeticOperation: public User {
+class VectorConstant: public Constant {
+public:
+    explicit VectorConstant(Context& ctx, std::string name, int numComponents,
+                            vml::float4 value);
+
+    DECLARE_TYPE(VectorType)
+
+    int numComponents() const { return numc; }
+
+    vml::float4 get() const { return _value; }
+
+private:
+    vml::float4 _value;
+    int numc;
+};
+
+class TextureConstant: public Constant {
+public:
+    explicit TextureConstant(std::string name, TextureType const* type,
+                             AssetHandle asset);
+
+    DECLARE_TYPE(TextureType)
+
+    AssetHandle asset() const { return _asset; }
+
+    int bindingPoint() const { return _bindingPoint; }
+
+    void setBindingPoint(int bindingPoint) { _bindingPoint = bindingPoint; }
+
+private:
+    AssetHandle _asset;
+    int _bindingPoint = -1;
+};
+
+class RasterizerInput: public Constant {
+public:
+    DECLARE_TYPE(VectorType)
+
+    explicit RasterizerInput(Context& ctx, std::string name,
+                             RasterizerInputKind kind);
+
+    RasterizerInputKind kind() const { return _kind; }
+
+private:
+    RasterizerInputKind _kind;
+};
+
+class Instruction: public User, public utl::ilist_node<Instruction> {
+protected:
+    using User::User;
+};
+
+class Callable: public Constant {
+public:
+    DECLARE_TYPE(FunctionType)
+
+    Type const* returnType() const;
+
+    List<FunctionParameter> const& parameters() const { return _parameters; }
+
+protected:
+    Callable(ValueNodeType nodeType, std::string name, FunctionType const* type,
+             List<FunctionParameter> parameters);
+
+private:
+    List<FunctionParameter> _parameters;
+};
+
+class Function: public Callable {
+public:
+    explicit Function(std::string name, FunctionType const* type,
+                      List<FunctionParameter> parameters,
+                      List<Instruction> body = {});
+
+    /// Container interface @{
+    auto begin() { return _body.begin(); }
+    auto begin() const { return _body.begin(); }
+    auto end() { return _body.end(); }
+    auto end() const { return _body.end(); }
+    bool empty() const { return _body.empty(); }
+    /// @}
+
+private:
+    List<Instruction> _body;
+};
+
+class BuiltinFunction: public Callable {
+public:
+    explicit BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
+                             std::span<Type const* const> argTypes);
+
+    BuiltinFunctionKind kind() const { return _kind; }
+
+private:
+    BuiltinFunctionKind _kind;
+};
+
+class FunctionCall: public Instruction {
+public:
+    FunctionCall(Context& ctx, std::string name, BuiltinFunctionKind function,
+                 std::span<Value* const> arguments);
+
+    FunctionCall(Context& ctx, std::string name, BuiltinFunctionKind function,
+                 std::span<Type const* const> argumentTypes);
+
+    DECLARE_OPERAND(BuiltinFunction, function, Function, 0)
+
+    DECLARE_OPERAND_RANGE(Value, argument, Argument, 1)
+
+private:
+    struct PrivArgs;
+    FunctionCall(PrivArgs args);
+};
+
+class ArithmeticOperation: public Instruction {
 public:
     DECLARE_TYPE(VectorType)
 
@@ -204,18 +244,18 @@ public:
     static Type const* commonType(Type const* lhs, Type const* rhs);
 
     ArithmeticOperation(std::string name, Kind kind, Value* lhs, Value* rhs):
-        User(ValueNodeType::ArithmeticOperation, std::move(name),
-             commonType(lhs->type(), rhs->type()), { lhs, rhs }),
+        Instruction(ValueNodeType::ArithmeticOperation, std::move(name),
+                    commonType(lhs->type(), rhs->type()), { lhs, rhs }),
         _kind(kind) {}
 
     ArithmeticOperation(Kind kind, std::string name, Type const* lhsType,
                         Type const* rhsType):
-        User(ValueNodeType::ArithmeticOperation, std::move(name),
-             commonType(lhsType, rhsType), { nullptr, nullptr }),
+        Instruction(ValueNodeType::ArithmeticOperation, std::move(name),
+                    commonType(lhsType, rhsType), { nullptr, nullptr }),
         _kind(kind) {}
 
-    DECLARE_OPERAND(Value, LHS, 0)
-    DECLARE_OPERAND(Value, RHS, 1)
+    DECLARE_OPERAND(Value, LHS, LHS, 0)
+    DECLARE_OPERAND(Value, RHS, RHS, 1)
 
     Kind kind() const { return _kind; }
 
@@ -223,15 +263,15 @@ private:
     Kind _kind;
 };
 
-class TextureSampler: public User {
+class TextureSampler: public Instruction {
 public:
     DECLARE_TYPE(VectorType)
 
-    TextureSampler(Context& ctx, std::string name, TextureValue* texture,
+    TextureSampler(Context& ctx, std::string name, TextureConstant* texture,
                    Value* coords, SampleMode mode);
 
-    DECLARE_OPERAND(TextureValue, texture, 0)
-    DECLARE_OPERAND(Value, coords, 1)
+    DECLARE_OPERAND(TextureConstant, texture, Texture, 0)
+    DECLARE_OPERAND(Value, coords, Coords, 1)
 
     SampleMode mode() const { return _mode; }
 
@@ -239,7 +279,7 @@ private:
     SampleMode _mode;
 };
 
-class VectorBuilder: public User {
+class VectorBuilder: public Instruction {
 public:
     DECLARE_TYPE(VectorType)
 
@@ -250,7 +290,7 @@ public:
                            int numInputs);
 };
 
-class ExtractVectorValue: public User {
+class ExtractVectorValue: public Instruction {
 public:
     DECLARE_TYPE(VectorType)
 
@@ -259,13 +299,13 @@ public:
 
     int index() const { return _index; }
 
-    DECLARE_OPERAND(Value, operand, 0)
+    DECLARE_OPERAND(Value, base, Base, 0)
 
 private:
     int _index = -1;
 };
 
-class AggregateBuilder: public User {
+class AggregateBuilder: public Instruction {
 public:
     DECLARE_TYPE(AggregateType)
 
@@ -280,7 +320,7 @@ public:
 };
 
 /// Element access into an aggregate, i.e., `value.member`
-class ExtractAggregateValue: public User {
+class ExtractAggregateValue: public Instruction {
 public:
     /// \p baseValue may not be null and must be of type `AggregateType`
     explicit ExtractAggregateValue(std::string name, Value* baseValue,
@@ -292,7 +332,7 @@ public:
 
     int index() const { return _index; }
 
-    DECLARE_OPERAND(Value, operand, 0)
+    DECLARE_OPERAND(Value, base, Base, 0)
 
 private:
     int _index;
@@ -302,5 +342,6 @@ private:
 
 #undef DECLARE_TYPE
 #undef DECLARE_OPERAND
+#undef DECLARE_OPERAND_RANGE
 
 #endif // BLOOM_MATERIALCOMPILER_VALUES_H

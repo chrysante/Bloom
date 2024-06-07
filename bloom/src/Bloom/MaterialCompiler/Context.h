@@ -35,6 +35,9 @@ public:
 
     RasterizerInput* rasterizerInput(RasterizerInputKind kind);
 
+    BuiltinFunction* builtinFunction(BuiltinFunctionKind kind,
+                                     std::span<Type const* const> args);
+
     AggregateType const* aggregateType(
         std::string name, std::span<AggregateElement const> elements);
     AggregateType const* aggregateType(
@@ -43,6 +46,9 @@ public:
     }
 
     TextureType const* textureType(TextureSubType subtype);
+
+    FunctionType const* functionType(Type const* returnType,
+                                     std::span<Type const* const> argTypes);
 
     ///  \Returns a list of all existing types
     std::vector<Type const*> types() const;

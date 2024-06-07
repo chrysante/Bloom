@@ -16,7 +16,6 @@
 #include "Bloom/Core/Utils.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/MaterialCompiler/Context.h"
-#include "Bloom/MaterialCompiler/Function.h"
 #include "Bloom/MaterialCompiler/Types.h"
 #include "Bloom/MaterialCompiler/Values.h"
 
@@ -30,7 +29,8 @@ struct CodegenParameters {
 
 class MaterialGraph {
 public:
-    explicit MaterialGraph(CodegenParameters params): params(params) {}
+    explicit MaterialGraph(CodegenParameters codegenParams):
+        codegenParams(codegenParams) {}
 
     void setRoot(GraphRoot root, Value* value) { _roots[root] = value; }
 
@@ -60,6 +60,13 @@ public:
         return addValue(allocate<T>(std::forward<Args>(args)...));
     }
 
+    Value* addVectorParameter(Context& ctx, std::string name, int numComponents,
+                              vml::float4 defaultValue);
+
+    TextureConstant* addTextureParameter(std::string name,
+                                         TextureSubType subtype,
+                                         AssetHandle asset);
+
     auto values() const {
         return _values | ranges::views::transform(
                              [](auto& p) -> auto const* { return p.get(); });
@@ -69,13 +76,13 @@ public:
 
     void generateShaderFunctions(Context& ctx);
 
-    CodegenParameters const& parameters() const { return params; }
+    CodegenParameters const& codegenParameters() const { return codegenParams; }
 
 private:
     std::vector<DynUniquePtr<Value>> _values;
     EnumArray<GraphRoot, Value*> _roots{};
     EnumArray<GraphRoot, std::unique_ptr<Function>> _functions{};
-    CodegenParameters params;
+    CodegenParameters codegenParams;
 };
 
 } // namespace bloom::matc

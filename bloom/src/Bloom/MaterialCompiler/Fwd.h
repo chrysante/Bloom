@@ -17,7 +17,7 @@ class Context;
 enum class TypeCategory {
 #define BL_MATGRAPH_TYPE(Name, ...) Name,
 #include "Bloom/MaterialCompiler/Lists.def"
-    LAST = TextureType
+    LAST = FunctionType
 };
 
 #define BL_MATGRAPH_VALUE(Name, ...) class Name;
@@ -87,12 +87,12 @@ enum class RasterizerInputKind {
     VertexColor,
 };
 
-enum class BuiltinFunction {
+enum class BuiltinFunctionKind {
 #define BL_MATGRAPH_BUILTIN(Name, ...) Name,
 #include "Bloom/MaterialCompiler/Lists.def"
 };
 
-std::string_view toSpelling(BuiltinFunction function);
+std::string_view toSpelling(BuiltinFunctionKind function);
 
 enum class SampleMode { Color, Normal };
 

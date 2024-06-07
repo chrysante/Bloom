@@ -16,6 +16,44 @@ using namespace vml::short_types;
 
 using Impl = Context::Impl;
 
+namespace {
+
+struct FuncTypeKey {
+    Type const* ret;
+    utl::small_vector<Type const*> args;
+
+    bool operator==(FuncTypeKey const&) const = default;
+};
+
+struct BuiltinKey {
+    BuiltinFunctionKind kind;
+    utl::small_vector<Type const*> args;
+
+    bool operator==(BuiltinKey const&) const = default;
+};
+
+} // namespace
+
+template <>
+struct std::hash<FuncTypeKey> {
+    size_t operator()(FuncTypeKey const& key) const {
+        size_t retHash = utl::hash<Type const*>{}(key.ret);
+        size_t argHash =
+            utl::hash_combine_range(key.args.begin(), key.args.end());
+        return utl::hash_combine(retHash, argHash);
+    }
+};
+
+template <>
+struct std::hash<BuiltinKey> {
+    size_t operator()(BuiltinKey const& key) const {
+        size_t kindHash = utl::hash<BuiltinFunctionKind>{}(key.kind);
+        size_t argHash =
+            utl::hash_combine_range(key.args.begin(), key.args.end());
+        return utl::hash_combine(kindHash, argHash);
+    }
+};
+
 struct Context::Impl {
     Impl();
 
@@ -50,12 +88,14 @@ struct Context::Impl {
     VectorType const* vectorType[4]{};
     utl::hashmap<TextureSubType, TextureType const*> textureTypes;
     utl::hashmap<std::string, AggregateType const*> aggTypes;
+    utl::hashmap<FuncTypeKey, FunctionType const*> funcTypes;
     TextureType const* textureType = nullptr;
     // Values
     std::vector<DynUniquePtr<Value>> valueOwners;
     utl::hashmap<std::pair<int, float4>, VectorConstant*> vectorConstants;
     utl::hashmap<RasterizerInputKind, RasterizerInput*> rasterizerInputs;
     utl::hashmap<utl::uuid, TextureConstant*> textureConstants;
+    utl::hashmap<BuiltinKey, BuiltinFunction*> builtins;
 };
 
 Context::Context(): impl(std::make_unique<Impl>()) {}
@@ -84,6 +124,15 @@ AggregateType const* Context::aggregateType(
 TextureType const* Context::textureType(TextureSubType subtype) {
     return impl->getOrInsert(impl->textureTypes, subtype, [&] {
         return impl->addType<TextureType>(subtype);
+    });
+}
+
+FunctionType const* Context::functionType(
+    Type const* returnType, std::span<Type const* const> argTypes) {
+    return impl->getOrInsert(impl->funcTypes,
+                             { returnType, argTypes | ToSmallVector<> }, [&] {
+        return impl->addType<FunctionType>(returnType,
+                                           argTypes | ranges::to<std::vector>);
     });
 }
 
@@ -128,6 +177,14 @@ TextureConstant* Context::textureConstant(TextureSubType subtype,
 RasterizerInput* Context::rasterizerInput(RasterizerInputKind kind) {
     return impl->getOrInsert(impl->rasterizerInputs, kind, [&] {
         return impl->addValue<RasterizerInput>(*this, "RasterData", kind);
+    });
+}
+
+BuiltinFunction* Context::builtinFunction(BuiltinFunctionKind kind,
+                                          std::span<Type const* const> args) {
+    return impl->getOrInsert(impl->builtins, { kind, args | ToSmallVector<> },
+                             [&] {
+        return impl->addValue<BuiltinFunction>(*this, kind, args);
     });
 }
 

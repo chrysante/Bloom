@@ -65,6 +65,8 @@ public:
 
     void detachAllUsers();
 
+    void replace(Value* other);
+
 protected:
     Value(ValueNodeType nodeType, std::string name, Type const* type):
         _nodeType(nodeType), _name(std::move(name)), _type(type) {}
@@ -75,9 +77,11 @@ private:
         return value._nodeType;
     }
 
-    friend class User;
+    friend class User; // To add and remove users
     void addUser(User* user);
     void removeUser(User* user);
+
+    friend class Callable; // To set the type after construction
 
     ValueNodeType _nodeType;
     std::string _name;
@@ -117,6 +121,8 @@ public:
     }
 
     void setOperand(size_t index, Value* value);
+
+    void replaceOperand(Value* existing, Value* replacement);
 
 protected:
     User(ValueNodeType nodeType, std::string name, Type const* type,
@@ -183,15 +189,19 @@ private:
     RasterizerInputKind _kind;
 };
 
-class Instruction: public User, public utl::ilist_node<Instruction> {
+class Instruction: public User, public ListNode<Instruction> {
 public:
     DynUniquePtr<Instruction> clone() const;
+
+    Function* function() const { return _function; }
 
 protected:
     using User::User;
 
 private:
     DynUniquePtr<Instruction> doClone() const;
+    friend class Function;
+    Function* _function;
 };
 
 class Callable: public Constant {
@@ -201,6 +211,10 @@ public:
     Type const* returnType() const;
 
     List<FunctionParameter> const& parameters() const { return _parameters; }
+
+    void setParameters(List<FunctionParameter> params);
+
+    FunctionType const* computeType(Context& ctx, Type const* returnType);
 
 protected:
     Callable(ValueNodeType nodeType, std::string name, FunctionType const* type,
@@ -217,15 +231,23 @@ public:
                       List<Instruction> body);
 
     /// Container interface @{
-    Instruction* push_back(DynUniquePtr<Instruction> inst) {
-        _body.push_back(inst.release());
-        return &_body.back();
+    Instruction* push_front(DynUniquePtr<Instruction> inst) {
+        return push_front(inst.release());
     }
+    Instruction* push_front(Instruction* inst);
+    Instruction* push_back(DynUniquePtr<Instruction> inst) {
+        return push_back(inst.release());
+    }
+    Instruction* push_back(Instruction* inst);
     auto begin() { return _body.begin(); }
     auto begin() const { return _body.begin(); }
     auto end() { return _body.end(); }
     auto end() const { return _body.end(); }
     bool empty() const { return _body.empty(); }
+    Instruction& back() { return _body.back(); }
+    Instruction const& back() const { return _body.back(); }
+    Instruction& front() { return _body.front(); }
+    Instruction const& front() const { return _body.front(); }
     /// @}
 
 private:
@@ -266,17 +288,16 @@ public:
 
     enum Kind { Add, Sub, Mul, Div };
 
-    static Type const* commonType(Type const* lhs, Type const* rhs);
-
-    ArithmeticOperation(std::string name, Kind kind, Value* lhs, Value* rhs):
+    ArithmeticOperation(Context& ctx, std::string name, Kind kind, Value* lhs,
+                        Value* rhs):
         Instruction(ValueNodeType::ArithmeticOperation, std::move(name),
-                    commonType(lhs->type(), rhs->type()), { lhs, rhs }),
+                    commonType(ctx, lhs->type(), rhs->type()), { lhs, rhs }),
         _kind(kind) {}
 
-    ArithmeticOperation(Kind kind, std::string name, Type const* lhsType,
-                        Type const* rhsType):
+    ArithmeticOperation(Context& ctx, std::string name, Kind kind,
+                        Type const* lhsType, Type const* rhsType):
         Instruction(ValueNodeType::ArithmeticOperation, std::move(name),
-                    commonType(lhsType, rhsType), { nullptr, nullptr }),
+                    commonType(ctx, lhsType, rhsType), { nullptr, nullptr }),
         _kind(kind) {}
 
     DECLARE_OPERAND(Value, LHS, LHS, 0)
@@ -285,6 +306,9 @@ public:
     Kind kind() const { return _kind; }
 
 private:
+    static Type const* commonType(Context& ctx, Type const* lhs,
+                                  Type const* rhs);
+
     Kind _kind;
 };
 
@@ -292,10 +316,10 @@ class TextureSampler: public Instruction {
 public:
     DECLARE_TYPE(VectorType)
 
-    TextureSampler(Context& ctx, std::string name, TextureConstant* texture,
+    TextureSampler(Context& ctx, std::string name, Value* texture,
                    Value* coords, SampleMode mode);
 
-    DECLARE_OPERAND(TextureConstant, texture, Texture, 0)
+    DECLARE_OPERAND(Value, texture, Texture, 0)
     DECLARE_OPERAND(Value, coords, Coords, 1)
 
     SampleMode mode() const { return _mode; }
@@ -319,8 +343,8 @@ class ExtractVectorValue: public Instruction {
 public:
     DECLARE_TYPE(VectorType)
 
-    explicit ExtractVectorValue(Context& ctx, std::string name, int index,
-                                Value* operand);
+    explicit ExtractVectorValue(Context& ctx, std::string name, Value* operand,
+                                int index);
 
     int index() const { return _index; }
 

@@ -88,6 +88,7 @@ struct Context::Impl {
     VoidType const* voidType = nullptr;
     BoolType const* boolType = nullptr;
     VectorType const* vectorType[4]{};
+    utl::hashmap<std::pair<int, int>, MatrixType const*> matrixTypes;
     utl::hashmap<TextureSubType, TextureType const*> textureTypes;
     utl::hashmap<std::string, AggregateType const*> aggTypes;
     utl::hashmap<FuncTypeKey, FunctionType const*> funcTypes;
@@ -148,6 +149,12 @@ VectorType const* Context::vectorType(int numComponents) const {
     assert(numComponents >= 1);
     assert(numComponents <= 4);
     return impl->vectorType[numComponents - 1];
+}
+
+MatrixType const* Context::matrixType(int rows, int columns) {
+    return impl->getOrInsert(impl->matrixTypes, { rows, columns }, [&] {
+        return impl->addType<MatrixType>(rows, columns);
+    });
 }
 
 static std::string makeVectorConstantName(int numComponents, float4 value) {

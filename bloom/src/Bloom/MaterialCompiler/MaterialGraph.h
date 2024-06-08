@@ -72,14 +72,6 @@ public:
                              [](auto& p) -> auto const* { return p.get(); });
     }
 
-    std::span<VectorConstant* const> vectorParameters() const {
-        return _vecParams;
-    }
-
-    std::span<TextureConstant* const> textureParameters() const {
-        return _texParams;
-    }
-
     void buildFunctions(Context& ctx);
 
     void generateShaderFunctions(Context& ctx);
@@ -87,11 +79,18 @@ public:
     CodegenParameters const& codegenParameters() const { return codegenParams; }
 
 private:
+    DynUniquePtr<Function> buildFunction(Context& ctx, Value* root,
+                                         std::string name,
+                                         utl::hashset<Value*>& usedParams);
+    void computeParameters(
+        Context& ctx, Function& F, AggregateType const* paramBufferType,
+        utl::hashset<Value*> const& usedParams,
+        std::span<VectorConstant const* const> vectorParameters);
+
     std::vector<DynUniquePtr<Value>> _values;
     EnumArray<GraphRoot, Value*> _roots{};
     EnumArray<GraphRoot, DynUniquePtr<Function>> _functions{};
-    std::vector<VectorConstant*> _vecParams;
-    std::vector<TextureConstant*> _texParams;
+    utl::hashset<Value*> _params;
     CodegenParameters codegenParams;
 };
 

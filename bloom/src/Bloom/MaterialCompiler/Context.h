@@ -26,6 +26,7 @@ public:
     VectorType const* float2Type() const { return vectorType(2); }
     VectorType const* float3Type() const { return vectorType(3); }
     VectorType const* float4Type() const { return vectorType(4); }
+    MatrixType const* matrixType(int rows, int columns);
 
     VectorConstant* vectorConstant(int numComponents, vml::float4 value);
     VectorConstant* floatConstant(float value);

@@ -95,9 +95,12 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void declareType(Type const* type) {
         visit(*type, [this](auto& type) { declareTypeImpl(&type); });
     }
-    void declareTypeImpl(Type const*) {}
-    void declareTypeImpl(matc::TextureType const* type);
+    void declareTypeImpl(VoidType const* type);
+    void declareTypeImpl(BoolType const* type);
     void declareTypeImpl(VectorType const* type);
+    void declareTypeImpl(MatrixType const* type);
+    void declareTypeImpl(FunctionType const* type);
+    void declareTypeImpl(matc::TextureType const* type);
     void declareTypeImpl(AggregateType const* type);
 
     void defineMaterialFunction(Function const* F);
@@ -260,15 +263,12 @@ MaterialSourceData MetalCodeGenerator::run() {
                              TriangleCullMode::Back };
 }
 
-void MetalCodeGenerator::declareTypeImpl(matc::TextureType const* type) {
-    typeNameMap.setName(type, [&] {
-        switch (type->subtype()) {
-        case TextureSubType::Texture2D:
-            return "texture2d<float>";
-        case TextureSubType::TextureCube:
-            return "texturecube<float>";
-        }
-    }());
+void MetalCodeGenerator::declareTypeImpl(VoidType const* type) {
+    typeNameMap.setName(type, "void");
+}
+
+void MetalCodeGenerator::declareTypeImpl(BoolType const* type) {
+    typeNameMap.setName(type, "bool");
 }
 
 void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
@@ -277,6 +277,24 @@ void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
             return std::string("float");
         }
         return utl::strcat("float", type->numComponents());
+    }());
+}
+
+void MetalCodeGenerator::declareTypeImpl(MatrixType const* type) {
+    typeNameMap.setName(type, utl::strcat("float", type->rows(), "x",
+                                          type->columns()));
+}
+
+void MetalCodeGenerator::declareTypeImpl(FunctionType const*) {}
+
+void MetalCodeGenerator::declareTypeImpl(matc::TextureType const* type) {
+    typeNameMap.setName(type, [&] {
+        switch (type->subtype()) {
+        case TextureSubType::Texture2D:
+            return "texture2d<float>";
+        case TextureSubType::TextureCube:
+            return "texturecube<float>";
+        }
     }());
 }
 

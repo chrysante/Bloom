@@ -51,6 +51,8 @@ TEST_CASE() {
                                          BuiltinFunctionKind::Normalize,
                                          std::vector<Value*>{ resultVal });
     g.setRoot(GraphRoot::LitFragmentFunction, resultVal);
+    auto* transparency = g.addValue<ExtractVectorValue>(ctx, "R", sample0, 0);
+    g.setRoot(GraphRoot::TransparencyFunction, transparency);
     g.buildFunctions(ctx);
     auto generator = makeCodeGenerator(ctx, g, {});
     auto result = generator->run();

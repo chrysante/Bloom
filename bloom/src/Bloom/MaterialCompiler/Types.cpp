@@ -12,6 +12,11 @@ VectorType::VectorType(int numComponents):
     Type(TypeCategory::VectorType, utl::strcat("Float", numComponents)),
     numComps(numComponents) {}
 
+MatrixType::MatrixType(int rows, int columns):
+    Type(TypeCategory::MatrixType, utl::strcat("Float", rows, "x", columns)),
+    _rows(rows),
+    _columns(columns) {}
+
 AggregateType::AggregateType(std::string name,
                              std::vector<AggregateElement> elements):
     Type(TypeCategory::AggregateType, std::move(name)),

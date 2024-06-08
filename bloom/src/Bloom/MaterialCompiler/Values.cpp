@@ -4,6 +4,7 @@
 #include <range/v3/algorithm.hpp>
 #include <range/v3/numeric.hpp>
 #include <range/v3/view.hpp>
+#include <utl/overload.hpp>
 #include <utl/strcat.hpp>
 
 #include "Bloom/Core/Ranges.h"
@@ -25,6 +26,13 @@ void Value::detachAllUsers() {
     _users.clear();
 }
 
+void Value::replace(Value* other) {
+    auto users = _users | keys | ToSmallVector<>;
+    for (auto* user: users) {
+        user->replaceOperand(this, other);
+    }
+}
+
 void Value::addUser(User* user) { ++_users[user]; }
 
 void Value::removeUser(User* user) {
@@ -37,7 +45,9 @@ void Value::removeUser(User* user) {
 
 User::~User() {
     for (auto* value: _operands) {
-        value->removeUser(this);
+        if (value) {
+            value->removeUser(this);
+        }
     }
 }
 
@@ -64,9 +74,18 @@ void User::setOperand(size_t index, Value* value) {
     _operands[index] = value;
 }
 
+void User::replaceOperand(Value* existing, Value* replacement) {
+    for (auto& value: _operands) {
+        if (value == existing) {
+            existing->removeUser(this);
+            replacement->addUser(this);
+            value = replacement;
+        }
+    }
+}
+
 void User::killOperand(Value* operand) {
-    auto itr = ranges::remove(_operands, operand);
-    _operands.erase(itr, _operands.end());
+    ranges::replace(_operands, operand, nullptr);
 }
 
 VectorConstant::VectorConstant(Context& ctx, std::string name,
@@ -126,11 +145,38 @@ Callable::Callable(ValueNodeType nodeType, std::string name,
 
 Type const* Callable::returnType() const { return type()->returnType(); }
 
+FunctionType const* Callable::computeType(Context& ctx,
+                                          Type const* returnType) {
+    auto args = parameters() | transform(&Value::type) | ToSmallVector<>;
+    _type = ctx.functionType(returnType, args);
+    return type();
+}
+
+void Callable::setParameters(List<FunctionParameter> params) {
+    assert(_parameters.empty());
+    _parameters = std::move(params);
+}
+
 Function::Function(std::string name, FunctionType const* type,
                    List<FunctionParameter> parameters, List<Instruction> body):
     Callable(ValueNodeType::Function, std::move(name), type,
              std::move(parameters)),
-    _body(std::move(body)) {}
+    _body(std::move(body)) {
+    for (auto& inst: *this) {
+        inst._function = this;
+    }
+}
+
+Instruction* Function::push_front(Instruction* inst) {
+    _body.push_front(inst);
+    inst->_function = this;
+    return inst;
+}
+Instruction* Function::push_back(Instruction* inst) {
+    _body.push_back(inst);
+    inst->_function = this;
+    return inst;
+}
 
 namespace {
 
@@ -292,27 +338,51 @@ static void throwArithmeticTypeError() {
     throw std::runtime_error("Invalid operand types for arithmetic operation");
 }
 
-Type const* ArithmeticOperation::commonType(Type const* lhs, Type const* rhs) {
-    auto* LHS = dyncast<VectorType const*>(lhs);
-    auto* RHS = dyncast<VectorType const*>(rhs);
-    if (!LHS || !RHS) {
+Type const* ArithmeticOperation::commonType(Context& ctx, Type const* lhs,
+                                            Type const* rhs) {
+    if (!lhs || !rhs) {
         throwArithmeticTypeError();
     }
-    if (LHS->numComponents() == 1) {
-        return RHS;
-    }
-    if (RHS->numComponents() == 1) {
-        return LHS;
-    }
-    if (LHS->numComponents() != RHS->numComponents()) {
-        throwArithmeticTypeError();
-    }
-    return LHS;
+    // clang-format off
+    return visit<Type const*>(*lhs, *rhs, utl::overload{
+        [&](VectorType const& LHS, VectorType const& RHS) {
+            if (LHS.numComponents() == 1) {
+                return &RHS;
+            }
+            if (RHS.numComponents() == 1) {
+                return &LHS;
+            }
+            if (LHS.numComponents() != RHS.numComponents()) {
+                throwArithmeticTypeError();
+            }
+            return &LHS;
+        },
+        [&](MatrixType const& LHS, MatrixType const& RHS) {
+            if (LHS.columns() != RHS.rows()) {
+                throwArithmeticTypeError();
+            }
+            return ctx.matrixType(LHS.rows(), RHS.columns());
+        },
+        [&](MatrixType const& LHS, VectorType const& RHS) {
+            if (LHS.columns() != RHS.numComponents()) {
+                throwArithmeticTypeError();
+            }
+            return ctx.vectorType(LHS.rows());
+        },
+        [&](VectorType const& LHS, MatrixType const& RHS) {
+            if (LHS.numComponents() != RHS.columns()) {
+                throwArithmeticTypeError();
+            }
+            return ctx.vectorType(RHS.columns());
+        },
+        [&](Type const&, Type const&) {
+            throwArithmeticTypeError();
+        }
+    }); // clang-format on
 }
 
-TextureSampler::TextureSampler(Context& ctx, std::string name,
-                               TextureConstant* texture, Value* coords,
-                               SampleMode mode):
+TextureSampler::TextureSampler(Context& ctx, std::string name, Value* texture,
+                               Value* coords, SampleMode mode):
     Instruction(ValueNodeType::TextureSampler, std::move(name),
                 ctx.float4Type(), { texture, coords }),
     _mode(mode) {}
@@ -335,7 +405,7 @@ VectorBuilder::VectorBuilder(std::string name, VectorType const* type,
                 std::vector<Value*>(numInputs)) {}
 
 ExtractVectorValue::ExtractVectorValue(Context& ctx, std::string name,
-                                       int index, Value* operand):
+                                       Value* operand, int index):
     Instruction(ValueNodeType::ExtractVectorValue, std::move(name),
                 ctx.floatType(), { operand }),
     _index(index) {}

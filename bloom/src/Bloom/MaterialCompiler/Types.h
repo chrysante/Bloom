@@ -46,6 +46,19 @@ private:
     int numComps;
 };
 
+class MatrixType: public Type {
+public:
+    explicit MatrixType(int rows, int columns);
+
+    int rows() const { return _rows; }
+
+    int columns() const { return _columns; }
+
+private:
+    int _rows;
+    int _columns;
+};
+
 class AggregateType: public Type {
 public:
     AggregateType(std::string name, std::vector<AggregateElement> elements);

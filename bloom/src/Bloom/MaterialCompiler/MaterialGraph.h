@@ -63,13 +63,21 @@ public:
     Value* addVectorParameter(Context& ctx, std::string name, int numComponents,
                               vml::float4 defaultValue);
 
-    TextureConstant* addTextureParameter(std::string name,
+    TextureConstant* addTextureParameter(Context& ctx, std::string name,
                                          TextureSubType subtype,
                                          AssetHandle asset);
 
     auto values() const {
         return _values | ranges::views::transform(
                              [](auto& p) -> auto const* { return p.get(); });
+    }
+
+    std::span<VectorConstant* const> vectorParameters() const {
+        return _vecParams;
+    }
+
+    std::span<TextureConstant* const> textureParameters() const {
+        return _texParams;
     }
 
     void buildFunctions(Context& ctx);
@@ -81,7 +89,9 @@ public:
 private:
     std::vector<DynUniquePtr<Value>> _values;
     EnumArray<GraphRoot, Value*> _roots{};
-    EnumArray<GraphRoot, std::unique_ptr<Function>> _functions{};
+    EnumArray<GraphRoot, DynUniquePtr<Function>> _functions{};
+    std::vector<VectorConstant*> _vecParams;
+    std::vector<TextureConstant*> _texParams;
     CodegenParameters codegenParams;
 };
 

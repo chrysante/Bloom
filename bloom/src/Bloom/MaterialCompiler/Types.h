@@ -26,6 +26,16 @@ private:
     std::string _name;
 };
 
+class VoidType: public Type {
+public:
+    VoidType(): Type(TypeCategory::VoidType, "Void") {}
+};
+
+class BoolType: public Type {
+public:
+    BoolType(): Type(TypeCategory::BoolType, "Bool") {}
+};
+
 class VectorType: public Type {
 public:
     explicit VectorType(int numComponents);

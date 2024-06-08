@@ -4,6 +4,8 @@
 #endif
 
 BL_MATGRAPH_TYPE(Type, NoParent, Abstract)
+BL_MATGRAPH_TYPE(VoidType, Type, Concrete)
+BL_MATGRAPH_TYPE(BoolType, Type, Concrete)
 BL_MATGRAPH_TYPE(VectorType, Type, Concrete)
 BL_MATGRAPH_TYPE(AggregateType, Type, Concrete)
 BL_MATGRAPH_TYPE(TextureType, Type, Concrete)
@@ -33,6 +35,8 @@ BL_MATGRAPH_VALUE(VectorBuilder, Instruction, Concrete)
 BL_MATGRAPH_VALUE(ExtractVectorValue, Instruction, Concrete)
 BL_MATGRAPH_VALUE(AggregateBuilder, Instruction, Concrete)
 BL_MATGRAPH_VALUE(ExtractAggregateValue, Instruction, Concrete)
+BL_MATGRAPH_VALUE(DiscardFragment, Instruction, Concrete)
+BL_MATGRAPH_VALUE(ReturnInst, Instruction, Concrete)
 
 #undef BL_MATGRAPH_VALUE
 

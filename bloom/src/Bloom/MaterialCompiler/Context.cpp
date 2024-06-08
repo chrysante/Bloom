@@ -85,6 +85,8 @@ struct Context::Impl {
 
     // Types
     std::vector<DynUniquePtr<Type>> typeOwners;
+    VoidType const* voidType = nullptr;
+    BoolType const* boolType = nullptr;
     VectorType const* vectorType[4]{};
     utl::hashmap<TextureSubType, TextureType const*> textureTypes;
     utl::hashmap<std::string, AggregateType const*> aggTypes;
@@ -107,6 +109,8 @@ Context& Context::operator=(Context&&) noexcept = default;
 Context::~Context() = default;
 
 Impl::Impl() {
+    voidType = addType<VoidType>();
+    boolType = addType<BoolType>();
     vectorType[0] = addType<VectorType>(1);
     vectorType[1] = addType<VectorType>(2);
     vectorType[2] = addType<VectorType>(3);
@@ -136,17 +140,37 @@ FunctionType const* Context::functionType(
     });
 }
 
+VoidType const* Context::voidType() const { return impl->voidType; }
+
+BoolType const* Context::boolType() const { return impl->boolType; }
+
 VectorType const* Context::vectorType(int numComponents) const {
     assert(numComponents >= 1);
     assert(numComponents <= 4);
     return impl->vectorType[numComponents - 1];
 }
 
+static std::string makeVectorConstantName(int numComponents, float4 value) {
+    std::stringstream sstr;
+    sstr << "VecConst(";
+    bool first = true;
+    for (int i = 0; i < numComponents; ++i) {
+        if (!first) {
+            sstr << ", ";
+        }
+        first = false;
+        sstr << value[i];
+    }
+    sstr << ")";
+    return std::move(sstr).str();
+}
+
 VectorConstant* Context::vectorConstant(int numComponents, float4 value) {
     return impl->getOrInsert(impl->vectorConstants, { numComponents, value },
                              [&] {
-        return impl->addValue<VectorConstant>(*this, "VecConst", numComponents,
-                                              value);
+        auto name = makeVectorConstantName(numComponents, value);
+        return impl->addValue<VectorConstant>(*this, std::move(name),
+                                              numComponents, value);
     });
 }
 

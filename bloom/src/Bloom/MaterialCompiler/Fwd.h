@@ -26,7 +26,7 @@ enum class TypeCategory {
 enum class ValueNodeType {
 #define BL_MATGRAPH_VALUE(Name, ...) Name,
 #include "Bloom/MaterialCompiler/Lists.def"
-    LAST = ExtractAggregateValue
+    LAST = ReturnInst
 };
 
 using NoParent = void;
@@ -59,13 +59,7 @@ struct ParameterAttribute {
     int index = -1;
 };
 
-struct FunctionParameter {
-    enum Qualifier { None, DeviceConstRef, DeviceConstPointer };
-
-    Value* value;
-    Qualifier qualifier = None;
-    ParameterAttribute attribute;
-};
+enum class ParameterQualifier { None, DeviceConstRef, DeviceConstPointer };
 
 /// Different kinds of functions that can be defined by material nodes
 enum class GraphRoot {

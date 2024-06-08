@@ -17,17 +17,12 @@ static AssetHandle genTexture() {
 TEST_CASE() {
     Context ctx;
     MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit });
-    auto* tex0 =
-        g.addValue<TextureParameter>("TexParam",
-                                     ctx.textureType(TextureSubType::Texture2D),
-                                     genTexture());
+    auto* tex0 = g.addTextureParameter(ctx, "TexParam",
+                                       TextureSubType::Texture2D, genTexture());
     auto* tex1 = ctx.textureConstant(TextureSubType::TextureCube, genTexture());
-    auto* const0 =
-        g.addValue<VectorParameter>(ctx, "Param0", 2, float4{ 1, 0, 0, 0 });
-    auto* const1 =
-        g.addValue<VectorParameter>(ctx, "Param1", 3, float4{ 2, 1, 5, 0 });
-    auto* const2 =
-        g.addValue<VectorParameter>(ctx, "Param2", 2, float4{ 2, 1, 5, 0 });
+    auto* const0 = g.addVectorParameter(ctx, "Param0", 2, float4{ 1, 0, 0, 0 });
+    auto* const1 = g.addVectorParameter(ctx, "Param1", 3, float4{ 2, 1, 5, 0 });
+    auto* const2 = g.addVectorParameter(ctx, "Param2", 2, float4{ 2, 1, 5, 0 });
     auto* vec0 =
         g.addValue<VectorBuilder>(ctx, "value",
                                   std::vector<Value*>{
@@ -53,7 +48,7 @@ TEST_CASE() {
                                                           const2 });
     Value* resultVal = g.addValue<ExtractAggregateValue>("elem", aggregate, 1);
     resultVal = g.addValue<FunctionCall>(ctx, "value",
-                                         BuiltinFunction::Normalize,
+                                         BuiltinFunctionKind::Normalize,
                                          std::vector<Value*>{ resultVal });
     g.setRoot(GraphRoot::LitFragmentFunction, resultVal);
     g.buildFunctions(ctx);
@@ -65,7 +60,7 @@ TEST_CASE() {
 TEST_CASE("Builtins") {
     Context ctx;
     MaterialGraph g({ .shadingModel = MaterialShadingModel::Unlit });
-    using enum BuiltinFunction;
+    using enum BuiltinFunctionKind;
     SECTION("Cross with invalid arguments") {
         CHECK_THROWS(g.addValue<FunctionCall>(ctx, "value", Cross,
                                               std::vector<Value*>{

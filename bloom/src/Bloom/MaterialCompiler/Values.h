@@ -42,7 +42,7 @@ namespace bloom::matc {
 template <typename T>
 class DynAllocator: public std::allocator<T> {
 public:
-    void destroy(T* ptr) { utl::dyn_delete(ptr); }
+    void destroy(T* ptr) { utl::dyn_destroy(ptr); }
 
     void deallocate(T* ptr, size_t count) { ::operator delete(ptr, count); }
 };
@@ -68,6 +68,7 @@ public:
 protected:
     Value(ValueNodeType nodeType, std::string name, Type const* type):
         _nodeType(nodeType), _name(std::move(name)), _type(type) {}
+    Value(Value const&) = default;
 
 private:
     friend ValueNodeType dyncast_get_type(Value const& value) {
@@ -86,12 +87,26 @@ private:
 
 class FunctionParameter: public Value, public ListNode<FunctionParameter> {
 public:
-    explicit FunctionParameter(std::string name, Type const* type):
-        Value(ValueNodeType::FunctionParameter, std::move(name), type) {}
+    explicit FunctionParameter(std::string name, Type const* type,
+                               ParameterQualifier qualifier,
+                               ParameterAttribute attribute):
+        Value(ValueNodeType::FunctionParameter, std::move(name), type),
+        _qual(qualifier),
+        _attrib(attribute) {}
+
+    ParameterQualifier qualifier() const { return _qual; }
+
+    ParameterAttribute attribute() const { return _attrib; }
+
+private:
+    ParameterQualifier _qual;
+    ParameterAttribute _attrib;
 };
 
 class User: public Value {
 public:
+    ~User();
+
     std::span<Value* const> operands() const { return _operands; }
 
     size_t numOperands() const { return operands().size(); }
@@ -105,9 +120,9 @@ public:
 
 protected:
     User(ValueNodeType nodeType, std::string name, Type const* type,
-         std::vector<Value*> operands = {}):
-        Value(nodeType, std::move(name), type),
-        _operands(std::move(operands)) {}
+         std::vector<Value*> operands = {});
+
+    User(User const&);
 
 private:
     friend class Value;
@@ -169,8 +184,14 @@ private:
 };
 
 class Instruction: public User, public utl::ilist_node<Instruction> {
+public:
+    DynUniquePtr<Instruction> clone() const;
+
 protected:
     using User::User;
+
+private:
+    DynUniquePtr<Instruction> doClone() const;
 };
 
 class Callable: public Constant {
@@ -193,9 +214,13 @@ class Function: public Callable {
 public:
     explicit Function(std::string name, FunctionType const* type,
                       List<FunctionParameter> parameters,
-                      List<Instruction> body = {});
+                      List<Instruction> body);
 
     /// Container interface @{
+    Instruction* push_back(DynUniquePtr<Instruction> inst) {
+        _body.push_back(inst.release());
+        return &_body.back();
+    }
     auto begin() { return _body.begin(); }
     auto begin() const { return _body.begin(); }
     auto end() { return _body.end(); }
@@ -226,7 +251,7 @@ public:
     FunctionCall(Context& ctx, std::string name, BuiltinFunctionKind function,
                  std::span<Type const* const> argumentTypes);
 
-    DECLARE_OPERAND(BuiltinFunction, function, Function, 0)
+    DECLARE_OPERAND(Callable, function, Function, 0)
 
     DECLARE_OPERAND_RANGE(Value, argument, Argument, 1)
 
@@ -336,6 +361,20 @@ public:
 
 private:
     int _index;
+};
+
+class DiscardFragment: public Instruction {
+public:
+    DiscardFragment(Context& ctx, std::string name, Value* condition);
+
+    DECLARE_OPERAND(Value, condition, Condition, 0)
+};
+
+class ReturnInst: public Instruction {
+public:
+    explicit ReturnInst(Context& ctx, std::string name, Value* retVal);
+
+    DECLARE_OPERAND(Value, returnValue, ReturnValue, 0)
 };
 
 } // namespace bloom::matc

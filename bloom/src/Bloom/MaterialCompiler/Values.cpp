@@ -30,8 +30,28 @@ void Value::addUser(User* user) { ++_users[user]; }
 void Value::removeUser(User* user) {
     auto itr = _users.find(user);
     assert(itr != _users.end());
-    if (itr->second-- == 0) {
+    if (--itr->second == 0) {
         _users.erase(itr);
+    }
+}
+
+User::~User() {
+    for (auto* value: _operands) {
+        value->removeUser(this);
+    }
+}
+
+User::User(ValueNodeType nodeType, std::string name, Type const* type,
+           std::vector<Value*> operands):
+    Value(nodeType, std::move(name), type), _operands(std::move(operands)) {
+    for (auto* value: _operands) {
+        value->addUser(this);
+    }
+}
+
+User::User(User const& rhs): Value(rhs), _operands(rhs._operands) {
+    for (auto* value: _operands) {
+        value->addUser(this);
     }
 }
 
@@ -86,6 +106,17 @@ RasterizerInput::RasterizerInput(Context& ctx, std::string name,
     Constant(ValueNodeType::RasterizerInput, std::move(name),
              selectType(ctx, kind)),
     _kind(kind) {}
+
+DynUniquePtr<Instruction> Instruction::clone() const {
+    return visit(*this, [](auto& inst) { return inst.doClone(); });
+}
+
+DynUniquePtr<Instruction> Instruction::doClone() const {
+    return visit(*this,
+                 []<typename T>(T const& inst) -> DynUniquePtr<Instruction> {
+        return allocate<T>(inst);
+    });
+}
 
 Callable::Callable(ValueNodeType nodeType, std::string name,
                    FunctionType const* type,
@@ -197,7 +228,7 @@ static FunctionType const* deduceFunctionType(
 static List<FunctionParameter> allocateParameters(
     std::span<Type const* const> args) {
     auto params = args | transform([index = 0](Type const* type) mutable {
-        return new FunctionParameter(utl::strcat("_", index++), type);
+        return new FunctionParameter(utl::strcat("_", index++), type, {}, {});
     });
     List<FunctionParameter> result;
     for (auto* param: params) {
@@ -333,3 +364,12 @@ ExtractAggregateValue::ExtractAggregateValue(std::string name,
     Instruction(ValueNodeType::ExtractAggregateValue, std::move(name),
                 elementType, std::vector<Value*>(1)),
     _index(index) {}
+
+DiscardFragment::DiscardFragment(Context& ctx, std::string name,
+                                 Value* condition):
+    Instruction(ValueNodeType::DiscardFragment, std::move(name), ctx.voidType(),
+                { condition }) {}
+
+ReturnInst::ReturnInst(Context& ctx, std::string name, Value* retVal):
+    Instruction(ValueNodeType::ReturnInst, std::move(name), ctx.voidType(),
+                { retVal }) {}

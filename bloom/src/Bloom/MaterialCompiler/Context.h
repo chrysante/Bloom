@@ -19,6 +19,8 @@ public:
     Context& operator=(Context&&) noexcept;
     ~Context();
 
+    VoidType const* voidType() const;
+    BoolType const* boolType() const;
     VectorType const* vectorType(int numComponents) const;
     VectorType const* floatType() const { return vectorType(1); }
     VectorType const* float2Type() const { return vectorType(2); }

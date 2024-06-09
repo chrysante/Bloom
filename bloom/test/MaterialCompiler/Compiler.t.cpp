@@ -91,7 +91,8 @@ static void printSourceData(MaterialSourceData const& sourceData) {
 
 TEST_CASE() {
     Context ctx;
-    MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit });
+    MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit,
+                      .transparency = MaterialTransparency::Masked });
     auto* tex0 = g.addTextureParameter(ctx, "TexParam",
                                        TextureSubType::Texture2D, genTexture());
     auto* tex1 = ctx.textureConstant(TextureSubType::TextureCube, genTexture());

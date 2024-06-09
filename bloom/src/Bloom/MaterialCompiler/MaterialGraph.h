@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <span>
+#include <variant>
 #include <vector>
 
 #include <range/v3/view.hpp>
@@ -22,10 +23,32 @@
 
 namespace bloom::matc {
 
+class FunctionBuilder;
+
 struct CodegenParameters {
     MaterialShadingModel shadingModel = {};
     MaterialTransparency transparency = {};
     bool twoSided = false;
+};
+
+struct RasterizerMetadata {
+    AggregateType const* type;
+    EnumArray<RasterizerInputKind, int> indexMap;
+};
+
+enum class ParameterBufferTag : int;
+
+struct ParameterMetadata:
+    std::variant<RasterizerInput*, TextureConstant*, ParameterBufferTag> {
+    using variant::variant;
+};
+
+struct FunctionMetadata {
+    utl::hashset<RasterizerInput*> usedRasterizerInputs;
+    utl::hashmap<FunctionParameter*, ParameterMetadata> parameters;
+    FunctionParameter* primitiveBufferParam = nullptr;
+    FunctionParameter* rasterizerParam = nullptr;
+    utl::hashmap<TextureConstant*, FunctionParameter*> texParamMap;
 };
 
 class MaterialGraph {
@@ -81,10 +104,14 @@ private:
     DynUniquePtr<Function> buildFunction(Context& ctx, Value* root,
                                          std::string name,
                                          utl::hashset<Value*>& usedParams);
-    void computeParameters(
-        Context& ctx, Function& F, AggregateType const* paramBufferType,
-        utl::hashset<Value*> const& usedParams,
-        std::span<VectorConstant const* const> vectorParameters);
+    FunctionCall* callFunction(FunctionBuilder& builder, Function* callee,
+                               RasterizerMetadata const& rasterizerMetadata);
+
+    void defineShadingScenario(Context& ctx);
+    void computeParameters(Context& ctx, Function& F,
+                           AggregateType const* primitiveBufferType,
+                           utl::hashset<Value*> const& usedParams,
+                           std::span<VectorConstant* const> vectorParameters);
 
     std::vector<DynUniquePtr<Value>> _values;
     utl::hashmap<GraphRoot, Value*> _roots{};
@@ -93,6 +120,8 @@ private:
     /// Different shaders exposed to the renderer
     utl::hashmap<MaterialShaderType, DynUniquePtr<Function>> _shaders{};
     utl::hashset<Value*> _params;
+    utl::hashmap<Function*, FunctionMetadata> functionMetadata;
+    AggregateType const* primitiveBufferType = nullptr;
     CodegenParameters codegenParams;
 };
 

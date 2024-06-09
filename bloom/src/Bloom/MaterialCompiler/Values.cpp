@@ -160,10 +160,12 @@ void Callable::setParameters(List<FunctionParameter> params) {
 }
 
 Function::Function(std::string name, FunctionType const* type,
-                   List<FunctionParameter> parameters, List<Instruction> body):
+                   ShaderKind shaderKind, List<FunctionParameter> parameters,
+                   List<Instruction> body):
     Callable(ValueNodeType::Function, std::move(name), type,
              std::move(parameters)),
-    _body(std::move(body)) {
+    _body(std::move(body)),
+    _shaderKind(shaderKind) {
     for (auto& inst: *this) {
         inst._function = this;
     }
@@ -325,6 +327,14 @@ struct FunctionCall::PrivArgs {
 FunctionCall::FunctionCall(PrivArgs args):
     Instruction(ValueNodeType::FunctionCall, std::move(args.name),
                 args.returnType, std::move(args.operands)) {}
+
+FunctionCall::FunctionCall(std::string name, Callable* function,
+                           std::span<Value* const> arguments):
+    FunctionCall(
+        { .name = std::move(name),
+          .returnType = function->returnType(),
+          .operands = concat(single(static_cast<Value*>(function)), arguments) |
+                      ranges::to<std::vector> }) {}
 
 FunctionCall::FunctionCall(Context& ctx, std::string name,
                            BuiltinFunctionKind kind,

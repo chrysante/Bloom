@@ -245,6 +245,8 @@ static std::string toSpelling(ParameterAttribute attrib) {
         return {};
     case Position:
         return "[[position]]";
+    case StageIn:
+        return "[[stage_in]]";
     case Buffer:
         return utl::strcat("[[buffer(", attrib.index, ")]]");
     case Texture:
@@ -269,7 +271,18 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
 
 void MetalCodeGenerator::beginFunction(Function const* F) {
     beginItem();
-    writeRaw("static ", getName(F->returnType()), " ", F->name());
+    switch (F->shaderKind()) {
+    case ShaderKind::None:
+        writeRaw("static ");
+        break;
+    case ShaderKind::Fragment:
+        writeRaw("fragment ");
+        break;
+    case ShaderKind::Vertex:
+        writeRaw("vertex ");
+        break;
+    }
+    writeRaw(getName(F->returnType()), " ", F->name());
     beginScope(ScopeType::FuncParams);
     for (auto& param: F->parameters()) {
         auto item = makeItem();

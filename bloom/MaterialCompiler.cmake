@@ -22,6 +22,8 @@ set(matc_sources
   src/Bloom/MaterialCompiler/CodeGen.h
   src/Bloom/MaterialCompiler/Context.cpp
   src/Bloom/MaterialCompiler/Context.h
+  src/Bloom/MaterialCompiler/FunctionBuilder.cpp
+  src/Bloom/MaterialCompiler/FunctionBuilder.h
   src/Bloom/MaterialCompiler/Fwd.cpp
   src/Bloom/MaterialCompiler/Fwd.h
   src/Bloom/MaterialCompiler/Lists.def

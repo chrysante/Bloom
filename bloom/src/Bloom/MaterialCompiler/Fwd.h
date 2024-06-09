@@ -45,13 +45,16 @@ using NoParent = void;
 
 namespace bloom::matc {
 
-enum class FunctionAttribute { None, Vertex, Fragment };
+enum class ShaderKind { None, Vertex, Fragment };
 
 struct ParameterAttribute {
-    enum Type { None, Position, Buffer, Texture };
+    enum Type { None, Position, StageIn, Buffer, Texture };
 
-    Type type = None;
-    int index = -1;
+    Type type;
+    int index;
+
+    ParameterAttribute(Type type = None, int index = -1):
+        type(type), index(index) {}
 
     explicit operator bool() const { return type != None; }
 };

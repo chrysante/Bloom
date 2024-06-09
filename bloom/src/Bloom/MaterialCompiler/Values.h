@@ -13,6 +13,7 @@
 #include "Bloom/Asset/AssetHandle.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
+#include "Bloom/MaterialCompiler/Types.h"
 
 #define DECLARE_TYPE(TYPE)                                                     \
     template <typename T = TYPE>                                               \
@@ -238,10 +239,13 @@ private:
 class Function: public Callable {
 public:
     explicit Function(std::string name, FunctionType const* type,
-                      List<FunctionParameter> parameters,
-                      List<Instruction> body);
+                      ShaderKind shaderKind = ShaderKind::None,
+                      List<FunctionParameter> parameters = {},
+                      List<Instruction> body = {});
 
     /// Container interface @{
+    using iterator = List<Instruction>::iterator;
+    using const_iterator = List<Instruction>::const_iterator;
     Instruction* push_front(DynUniquePtr<Instruction> inst) {
         return push_front(inst.release());
     }
@@ -250,10 +254,14 @@ public:
         return push_back(inst.release());
     }
     Instruction* push_back(Instruction* inst);
-    auto begin() { return _body.begin(); }
-    auto begin() const { return _body.begin(); }
-    auto end() { return _body.end(); }
-    auto end() const { return _body.end(); }
+    Instruction* insert(const_iterator before, Instruction* inst) {
+        _body.insert(before, inst);
+        return inst;
+    }
+    iterator begin() { return _body.begin(); }
+    const_iterator begin() const { return _body.begin(); }
+    iterator end() { return _body.end(); }
+    const_iterator end() const { return _body.end(); }
     bool empty() const { return _body.empty(); }
     Instruction& back() { return _body.back(); }
     Instruction const& back() const { return _body.back(); }
@@ -261,8 +269,11 @@ public:
     Instruction const& front() const { return _body.front(); }
     /// @}
 
+    ShaderKind shaderKind() const { return _shaderKind; }
+
 private:
     List<Instruction> _body;
+    ShaderKind _shaderKind;
 };
 
 class BuiltinFunction: public Callable {
@@ -278,6 +289,9 @@ private:
 
 class FunctionCall: public Instruction {
 public:
+    FunctionCall(std::string name, Callable* function,
+                 std::span<Value* const> arguments);
+
     FunctionCall(Context& ctx, std::string name, BuiltinFunctionKind function,
                  std::span<Value* const> arguments);
 

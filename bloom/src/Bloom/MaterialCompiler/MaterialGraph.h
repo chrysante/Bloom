@@ -15,6 +15,7 @@
 #include "Bloom/Core/EnumCount.h"
 #include "Bloom/Core/Utils.h"
 #include "Bloom/Graphics/Material/Fwd.h"
+#include "Bloom/Graphics/Material/MaterialSourceData.h"
 #include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/Types.h"
 #include "Bloom/MaterialCompiler/Values.h"
@@ -34,17 +35,16 @@ public:
 
     void setRoot(GraphRoot root, Value* value) { _roots[root] = value; }
 
-    Value* getRoot(GraphRoot root) const { return _roots[root]; }
+    /// \Returns a view over all "functions" and "shaders" defined by the
+    /// material
+    utl::small_vector<Function*> functions() const;
 
-    std::span<Value* const> roots() const { return _roots; }
+    ///
+    Function* getFunction(GraphRoot kind) const;
 
-    Function* getFunction(GraphRoot root) const {
-        return _functions[root].get();
-    }
-
-    auto functions() const {
-        return _functions | ranges::views::transform(ToAddress<>);
-    }
+    ///
+    utl::small_vector<Function*> getFunctions(
+        std::span<GraphRoot const> kinds) const;
 
     Value* addValue(DynUniquePtr<Value> value);
 
@@ -67,18 +67,20 @@ public:
                                          TextureSubType subtype,
                                          AssetHandle asset);
 
+    MaterialSourceData generate(Context& ctx);
+
     auto values() const {
         return _values | ranges::views::transform(
                              [](auto& p) -> auto const* { return p.get(); });
     }
 
-    void buildFunctions(Context& ctx);
-
-    void generateShaderFunctions(Context& ctx);
-
     CodegenParameters const& codegenParameters() const { return codegenParams; }
 
 private:
+    void extracted(Context& ctx,
+                   utl::hashset<RasterizerInput*>& usedRasterizerInputs);
+
+    void buildFunctions(Context& ctx, MaterialSourceData& sourceData);
     DynUniquePtr<Function> buildFunction(Context& ctx, Value* root,
                                          std::string name,
                                          utl::hashset<Value*>& usedParams);
@@ -88,8 +90,11 @@ private:
         std::span<VectorConstant const* const> vectorParameters);
 
     std::vector<DynUniquePtr<Value>> _values;
-    EnumArray<GraphRoot, Value*> _roots{};
-    EnumArray<GraphRoot, DynUniquePtr<Function>> _functions{};
+    utl::hashmap<GraphRoot, Value*> _roots{};
+    /// Functions defined by the material editor and shared between shaders
+    utl::hashmap<GraphRoot, DynUniquePtr<Function>> _functions{};
+    /// Different shaders exposed to the renderer
+    utl::hashmap<MaterialShaderType, DynUniquePtr<Function>> _shaders{};
     utl::hashset<Value*> _params;
     CodegenParameters codegenParams;
 };

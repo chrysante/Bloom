@@ -32,7 +32,12 @@ enum class MaterialShadingModel { Unlit, DefaultLit };
 enum class MaterialTransparency { Opaque, Masked };
 
 /// Types of shaders used in materials
-enum class MaterialShaderType { Vertex, Fragment };
+enum class MaterialShaderType {
+    ShadingVertex,
+    ShadingFragment,
+    ShadowVertex,
+    ShadowFragment
+};
 
 ///
 struct MaterialBindingPoint {
@@ -64,7 +69,9 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
     using enum GlobalMaterialBindingType;
     using enum MaterialBindingPoint::Type;
     switch (shaderType) {
-    case MaterialShaderType::Vertex:
+    case MaterialShaderType::ShadingVertex:
+        [[fallthrough]];
+    case MaterialShaderType::ShadowVertex:
         switch (bindingType) {
         case Camera:
             return { Buffer, 0 };
@@ -77,7 +84,9 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
         default:
             assert(false);
         }
-    case MaterialShaderType::Fragment:
+    case MaterialShaderType::ShadingFragment:
+        [[fallthrough]];
+    case MaterialShaderType::ShadowFragment:
         switch (bindingType) {
         case Camera:
             return { Buffer, 0 };

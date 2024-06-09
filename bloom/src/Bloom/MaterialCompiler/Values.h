@@ -92,8 +92,8 @@ private:
 class FunctionParameter: public Value, public ListNode<FunctionParameter> {
 public:
     explicit FunctionParameter(std::string name, Type const* type,
-                               ParameterQualifier qualifier,
-                               ParameterAttribute attribute):
+                               ParameterQualifier qualifier = {},
+                               ParameterAttribute attribute = {}):
         Value(ValueNodeType::FunctionParameter, std::move(name), type),
         _qual(qualifier),
         _attrib(attribute) {}
@@ -201,7 +201,7 @@ protected:
 private:
     DynUniquePtr<Instruction> doClone() const;
     friend class Function;
-    Function* _function;
+    Function* _function = nullptr;
 };
 
 class Callable: public Constant {
@@ -213,6 +213,17 @@ public:
     List<FunctionParameter> const& parameters() const { return _parameters; }
 
     void setParameters(List<FunctionParameter> params);
+
+    FunctionParameter* addParameter(FunctionParameter* param) {
+        _parameters.push_back(param);
+        return param;
+    }
+
+    template <typename... Args>
+        requires std::constructible_from<FunctionParameter, Args...>
+    FunctionParameter* addParameter(Args&&... args) {
+        return addParameter(new FunctionParameter(std::forward<Args>(args)...));
+    }
 
     FunctionType const* computeType(Context& ctx, Type const* returnType);
 

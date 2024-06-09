@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <catch2/catch_test_macros.hpp>
+#include <range/v3/algorithm.hpp>
 
 #include "Bloom/MaterialCompiler/CodeGen.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
@@ -12,6 +13,80 @@ using namespace vml::short_types;
 
 static AssetHandle genTexture() {
     return AssetHandle(AssetType::Texture2D, utl::uuid::generate());
+}
+
+static void line(std::string_view msg, std::ostream& str) {
+    size_t const width = 80;
+    auto impl = [&](size_t width) {
+        for (size_t i = 0; i < width; ++i) {
+            str << "=";
+        }
+    };
+    if (msg.empty()) {
+        impl(width);
+        str << std::endl;
+    }
+    else if (width <= msg.size() + 2) {
+        str << msg << std::endl;
+    }
+    else {
+        size_t outerSpace = width - (msg.size() + 2);
+        size_t left = outerSpace / 4, right = outerSpace - left;
+        impl(left);
+        str << " " << msg << " ";
+        impl(right);
+        str << std::endl;
+    }
+}
+
+static void header(std::string_view title) {
+    std::cout << "\n";
+    line("", std::cout);
+    line(title, std::cout);
+    line("", std::cout);
+    std::cout << "\n";
+}
+
+static void subHeader(std::string_view title) {
+    std::cout << "\n";
+    line(title, std::cout);
+    std::cout << "\n";
+}
+
+static void printTexParam(MaterialTextureParameter const& param) {
+    subHeader(param.name);
+    std::cout << "Type:          " << magic_enum::enum_name(param.type)
+              << std::endl;
+    std::cout << "BindingPoints: \n";
+    for (auto shaderType: magic_enum::enum_values<MaterialShaderType>()) {
+        std::cout << "    " << magic_enum::enum_name(shaderType) << ": "
+                  << param.bindingPoint[shaderType] << std::endl;
+    }
+    std::cout << "Default Value: " << param.value.ID() << std::endl;
+}
+
+static void printPrimParam(MaterialPrimitiveParameter const& param) {
+    subHeader(param.name);
+    std::cout << "Type:          " << magic_enum::enum_name(param.type)
+              << std::endl;
+    std::cout << "Buffer Offset: " << param.bufferOffset << std::endl;
+    std::cout << "Default Value: " << param.value << std::endl;
+}
+
+static void printSourceData(MaterialSourceData const& sourceData) {
+    header("Source");
+    std::cout << sourceData.source << std::endl;
+    header("Texture Constants Parameters");
+    ranges::for_each(sourceData.textureConstants, printTexParam);
+    header("Texture Parameters");
+    ranges::for_each(sourceData.textureParameters, printTexParam);
+    header("Vector Parameters");
+    ranges::for_each(sourceData.primitiveParameters, printPrimParam);
+    header("Misc");
+    std::cout << "Param Buffer Size: " << sourceData.parameterBufferSize
+              << std::endl;
+    std::cout << "Cull Mode: " << magic_enum::enum_name(sourceData.cullMode)
+              << std::endl;
 }
 
 TEST_CASE() {
@@ -50,13 +125,21 @@ TEST_CASE() {
     resultVal = g.addValue<FunctionCall>(ctx, "value",
                                          BuiltinFunctionKind::Normalize,
                                          std::vector<Value*>{ resultVal });
-    g.setRoot(GraphRoot::LitFragmentFunction, resultVal);
+    g.setRoot(GraphRoot::ShadingFunction, resultVal);
     auto* transparency = g.addValue<ExtractVectorValue>(ctx, "R", sample0, 0);
     g.setRoot(GraphRoot::TransparencyFunction, transparency);
-    g.buildFunctions(ctx);
-    auto generator = makeCodeGenerator(ctx, g, {});
-    auto result = generator->run();
-    std::cout << result.source << std::endl;
+    auto sourceData = g.generate(ctx);
+    printSourceData(sourceData);
+}
+
+TEST_CASE() {
+    Context ctx;
+    MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit });
+    auto* UV = g.addValue<RasterizerInput>(ctx, "UV",
+                                           RasterizerInputKind::TextureCoords);
+    g.setRoot(GraphRoot::ShadingFunction, UV);
+    auto sourceData = g.generate(ctx);
+    printSourceData(sourceData);
 }
 
 TEST_CASE("Builtins") {

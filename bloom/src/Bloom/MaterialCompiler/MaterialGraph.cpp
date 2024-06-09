@@ -11,6 +11,7 @@
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/Graphics/Material/MaterialSourceData.h"
+#include "Bloom/MaterialCompiler/CodeGen.h"
 
 using namespace bloom;
 using namespace matc;
@@ -40,6 +41,29 @@ TextureConstant* MaterialGraph::addTextureParameter(Context& ctx,
                                            ctx.textureType(subtype), asset);
     _params.insert(value.get());
     return addValue(std::move(value));
+}
+
+utl::small_vector<Function*> MaterialGraph::functions() const {
+    auto getValues = [](auto&& rng) {
+        return rng | ranges::views::values | transform(ToAddress<>);
+    };
+    return concat(getValues(_functions), getValues(_shaders)) | ToSmallVector<>;
+}
+
+Function* MaterialGraph::getFunction(GraphRoot kind) const {
+    auto itr = _functions.find(kind);
+    return itr != _functions.end() ? itr->second.get() : nullptr;
+}
+
+utl::small_vector<Function*> MaterialGraph::getFunctions(
+    std::span<GraphRoot const> kinds) const {
+    utl::small_vector<Function*> result;
+    for (auto kind: kinds) {
+        if (auto* F = getFunction(kind)) {
+            result.push_back(F);
+        }
+    }
+    return result;
 }
 
 static MaterialDataType translate(matc::TextureType const* type) {
@@ -110,13 +134,55 @@ static std::vector<MaterialPrimitiveParameter> makePrimitiveParameters(
     }) | ranges::to<std::vector>;
 }
 
+static ParameterAttribute toAttrib(RasterizerInputKind kind) {
+    using enum RasterizerInputKind;
+    switch (kind) {
+    case ClipPosition:
+        return { ParameterAttribute::Position };
+    default:
+        return {};
+    }
+}
+
+namespace {
+
+struct FunctionMetadata {
+    utl::hashset<RasterizerInput*> usedRasterizerInputs;
+};
+
+struct RasterizerMetadata {
+    AggregateType const* type;
+    EnumArray<RasterizerInputKind, int> indexMap;
+};
+
+} // namespace
+
+static RasterizerMetadata makeRasterizerDataType(
+    Context& ctx, std::string name,
+    std::span<RasterizerInput const* const> values) {
+    if (values.empty()) {
+        return {};
+    }
+    auto* type = ctx.aggregateType(std::move(name),
+                                   values | transform([&](auto* value) mutable {
+        return AggregateElement{ value->type(),
+                                 std::string(toSpelling(value->kind())),
+                                 toAttrib(value->kind()) };
+    }) | ranges::to<std::vector>);
+    auto map = makeEnumArray<RasterizerInputKind>(-1);
+    for (auto [index, value]: values | enumerate) {
+        map[value->kind()] = utl::narrow_cast<int>(index);
+    }
+    return { type, map };
+}
+
 static AggregateType const* makeParameterBufferType(
     Context& ctx, std::span<VectorConstant const* const> params) {
     if (params.empty()) {
         return nullptr;
     }
     return ctx.aggregateType("PrimitiveParameters",
-                             params | transform([&](auto& param) mutable {
+                             params | transform([&](auto* param) mutable {
         return AggregateElement{ param->type(), param->name() };
     }) | ranges::to<std::vector>);
 }
@@ -156,28 +222,99 @@ static size_t computeBufferLayout(
     return offset;
 }
 
-static int getParamBufferIndex(GraphRoot kind) {
-    using enum GraphRoot;
-    using enum MaterialShaderType;
-    auto bindingType = GlobalMaterialBindingType::MaterialParameterBuffer;
-    switch (kind) {
-    case VertexFunction:
-        return getGlobalMaterialBindingPoint(Vertex, bindingType).index;
-    case LitFragmentFunction:
-        return getGlobalMaterialBindingPoint(Fragment, bindingType).index;
-    case UnlitFragmentFunction:
-        return getGlobalMaterialBindingPoint(Fragment, bindingType).index;
-    case TransparencyFunction:
-        return getGlobalMaterialBindingPoint(Fragment, bindingType).index;
-    }
-}
-
 static std::string functionName(GraphRoot kind) {
     return std::string(magic_enum::enum_name(kind));
 }
 
 static bool vectorTypeLess(VectorConstant const* a, VectorConstant const* b) {
     return a->type()->numComponents() < b->type()->numComponents();
+}
+
+MaterialSourceData MaterialGraph::generate(Context& ctx) {
+    MaterialSourceData sourceData;
+    buildFunctions(ctx, sourceData);
+    auto generator = makeCodeGenerator(ctx, *this);
+    sourceData.source = generator->run();
+    return sourceData;
+}
+
+namespace {
+
+enum class ShaderScenario { Shading, Shadow };
+
+} // namespace
+
+static void analyzeRasterizerUsageOfFunction(
+    Function& function, utl::hashset<RasterizerInput*>& usedInputs) {
+    for (auto& inst: function) {
+        for (auto* input: inst.operands() | Filter<RasterizerInput>) {
+            usedInputs.insert(input);
+        }
+    }
+}
+
+static void rewriteRasterizerUsage(
+    utl::hashset<RasterizerInput*> const& usedRasterizerInputs) {
+    utl::hashmap<Function const*,
+                 EnumArray<RasterizerInputKind, FunctionParameter*>>
+        paramMap;
+    for (auto* input: usedRasterizerInputs) {
+        for (auto* inst: input->users() | Filter<Instruction> | ToSmallVector<>)
+        {
+            auto* F = inst->function();
+            if (!F) {
+                continue;
+            }
+            auto& param = paramMap[F][input->kind()];
+            if (!param) {
+                std::string name(magic_enum::enum_name(input->kind()));
+                param = F->addParameter(std::move(name), input->type());
+            }
+            inst->replaceOperand(input, param);
+        }
+    }
+}
+
+void MaterialGraph::buildFunctions(Context& ctx,
+                                   MaterialSourceData& sourceData) {
+    utl::hashset<Value*> activeValues;
+    utl::hashmap<GraphRoot, utl::hashset<Value*>> paramMap;
+    // Build functions
+    for (auto [functionKind, root]: _roots) {
+        _functions[functionKind] = buildFunction(ctx, root,
+                                                 functionName(functionKind),
+                                                 paramMap[functionKind]);
+    }
+    utl::hashmap<Function*, FunctionMetadata> functionMetadata;
+    // Analyze rasterizer usage
+    auto fragmentFunctions = getFunctions(
+        { { GraphRoot::ShadingFunction, GraphRoot::TransparencyFunction } });
+    for (auto* F: fragmentFunctions) {
+        auto& metadata = functionMetadata[F];
+        analyzeRasterizerUsageOfFunction(*F, metadata.usedRasterizerInputs);
+        rewriteRasterizerUsage(metadata.usedRasterizerInputs);
+    }
+    auto vectorParameters = paramMap | ranges::views::values | join |
+                            Filter<VectorConstant> | ranges::to<std::vector>;
+    ranges::sort(vectorParameters, vectorTypeLess);
+    auto* paramBufferType = makeParameterBufferType(ctx, vectorParameters);
+    for (auto& [functionKind, F]: _functions) {
+        computeParameters(ctx, *F, paramBufferType, paramMap[functionKind],
+                          vectorParameters);
+        auto& ret = cast<ReturnInst const&>(F->back());
+        auto* retType = ret.returnValue()->type();
+        F->computeType(ctx, retType);
+    }
+
+    static constexpr int ReservedTextureSlots = 8;
+    int textureBindingPoint = ReservedTextureSlots;
+    for (auto* tex: ctx.textureConstants()) {
+        if (tex->users().empty()) {
+            continue;
+        }
+        int bindingPoint = textureBindingPoint++;
+        tex->setBindingPoint(bindingPoint);
+    }
 }
 
 namespace {
@@ -233,35 +370,41 @@ DynUniquePtr<Function> MaterialGraph::buildFunction(
                               List<FunctionParameter>{}, std::move(body));
 }
 
+static Value* makeParameter(
+    Function& F, Value* param, AggregateType const* paramBufferType,
+    FunctionParameter*& primitiveBuffer,
+    std::span<VectorConstant const* const> vectorParameters) {
+    // clang-format off
+    return visit(*param, utl::overload{
+        [&](VectorConstant const& param) {
+            if (!primitiveBuffer) {
+                primitiveBuffer = F.addParameter(
+                    "primitives", paramBufferType,
+                    ParameterQualifier::DeviceConstRef);
+            }
+            auto itr = ranges::find(vectorParameters, &param);
+            int index = utl::narrow_cast<int>(itr - vectorParameters.begin());
+            auto* value = new ExtractAggregateValue(param.name(), 
+                                                    primitiveBuffer, index);
+            return F.push_front(value);
+        },
+        [&](TextureConstant const& param) {
+            return F.addParameter(
+                new FunctionParameter(param.name(), param.type()));
+        },
+        [&](Value const&) -> Value* { unreachable(); }
+    });
+    // clang-format on
+}
+
 void MaterialGraph::computeParameters(
     Context& ctx, Function& F, AggregateType const* paramBufferType,
     utl::hashset<Value*> const& usedParams,
     std::span<VectorConstant const* const> vectorParameters) {
-    List<FunctionParameter> params;
     FunctionParameter* primitiveBuffer = nullptr;
     for (auto* param: usedParams) {
-        auto* newParam =
-            visit(*param, utl::overload{ [&](VectorConstant const& param) {
-            if (!primitiveBuffer) {
-                params.push_back(
-                    new FunctionParameter("primitive", paramBufferType,
-                                          ParameterQualifier::DeviceConstRef,
-                                          { ParameterAttribute::Buffer, -1 }));
-                primitiveBuffer = &params.back();
-            }
-            auto itr = ranges::find(vectorParameters, &param);
-            int index = utl::narrow_cast<int>(itr - vectorParameters.begin());
-            auto* value =
-                F.push_front(new ExtractAggregateValue(param.name(),
-                                                       primitiveBuffer, index));
-            return value;
-        }, [&](TextureConstant const& param) {
-            params.push_back(
-                new FunctionParameter(param.name(), param.type(),
-                                      ParameterQualifier::None,
-                                      { ParameterAttribute::Texture, -1 }));
-            return &params.back();
-        }, [&](Value const&) -> Value* { unreachable(); } });
+        Value* newParam = makeParameter(F, param, paramBufferType,
+                                        primitiveBuffer, vectorParameters);
         auto paramUsers = param->users() | ToSmallVector<>;
         for (auto* user: paramUsers) {
             if (auto* inst = dyncast<Instruction*>(user);
@@ -271,76 +414,4 @@ void MaterialGraph::computeParameters(
             }
         }
     }
-    F.setParameters(std::move(params));
-    F.computeType(ctx, cast<ReturnInst const&>(F.back()).returnValue()->type());
-}
-
-void MaterialGraph::buildFunctions(Context& ctx) {
-    utl::hashset<Value*> activeValues;
-    utl::hashmap<GraphRoot, utl::hashset<Value*>> paramMap;
-    for (auto functionKind: magic_enum::enum_values<GraphRoot>()) {
-        auto* root = getRoot(functionKind);
-        if (!root) {
-            continue;
-        }
-        _functions[functionKind] = buildFunction(ctx, root,
-                                                 functionName(functionKind),
-                                                 paramMap[functionKind]);
-    }
-    auto vectorParameters = paramMap | ranges::views::values | join |
-                            Filter<VectorConstant> | ranges::to<std::vector>;
-    ranges::sort(vectorParameters, vectorTypeLess);
-    auto* paramBufferType = makeParameterBufferType(ctx, vectorParameters);
-    for (auto functionKind: magic_enum::enum_values<GraphRoot>()) {
-        auto* F = getFunction(functionKind);
-        if (!F) {
-            continue;
-        }
-        computeParameters(ctx, *F, paramBufferType, paramMap[functionKind],
-                          vectorParameters);
-    }
-
-    //    auto allVectorParameters = activeValues | Filter<VectorParameter> |
-    //                               ToSmallVector<>;
-    //    ranges::sort(allVectorParameters, vectorTypeLess);
-    //    auto* paramBufferType = makeParameterBufferType(ctx,
-    //    allVectorParameters); assert(
-    //        getParamBufferIndex(GraphRoot::VertexFunction) ==
-    //            getParamBufferIndex(GraphRoot::LitFragmentFunction) &&
-    //        "Parameter buffer must have the same binding point in vertex and
-    //        fragment functions for now");
-    //    auto* paramBuffer =
-    //        addValue<BufferParameter>("parameters", paramBufferType,
-    //                                  getParamBufferIndex(
-    //                                      GraphRoot::VertexFunction));
-    //    ranges::for_each(allVectorParameters, [&, index = 0](auto* param)
-    //    mutable {
-    //        param->setBufferAndElemIndex(paramBuffer, index++);
-    //    });
-    //    static constexpr int NumReservedTextureSlots = 8;
-    //    ranges::for_each(activeValues | Filter<TextureValue>,
-    //                     [index = NumReservedTextureSlots](auto* tex) mutable
-    //                     {
-    //        tex->setBindingPoint(index++);
-    //    });
-    //    for (auto& [kind, values]: functions) {
-    //        bool needParamBuffer = ranges::any_of(values,
-    //        isa<VectorParameter>); std::vector<FunctionParameter> params; if
-    //        (needParamBuffer) {
-    //            params.push_back({ paramBuffer,
-    //                               FunctionParameter::Qualifier::None,
-    //                               { ParameterAttribute::Buffer,
-    //                                 paramBuffer->bindingPoint() } });
-    //        }
-    //        for (auto* texParam: values | Filter<TextureParameter>) {
-    //            params.push_back(
-    //                { texParam,
-    //                  FunctionParameter::Qualifier::None,
-    //                  { ParameterAttribute::Texture, texParam->bindingPoint()
-    //                  } });
-    //        }
-    //        _functions[kind] = std::make_unique<Function>(functionName(kind),
-    //                                                      std::move(params),
-    //                                                      std::move(values));
-    //    }
 }

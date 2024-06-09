@@ -175,6 +175,13 @@ inline constexpr ToAddressFn<T> ToAddress{};
 
 /// # Range Utils
 
+template <size_t N, typename T>
+constexpr std::array<T, N> makeArray(T const& value) {
+    return [&]<size_t... I>(std::index_sequence<I...>) {
+        return std::array{ ((void)I, value)... };
+    }(std::make_index_sequence<N>{});
+}
+
 /// # Metaprogramming
 
 template <typename...>

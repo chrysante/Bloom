@@ -45,33 +45,36 @@ using NoParent = void;
 
 namespace bloom::matc {
 
-struct AggregateElement {
-    Type const* type;
-    std::string name;
-};
-
 enum class FunctionAttribute { None, Vertex, Fragment };
 
 struct ParameterAttribute {
-    enum Type { None, Buffer, Texture };
+    enum Type { None, Position, Buffer, Texture };
 
     Type type = None;
     int index = -1;
+
+    explicit operator bool() const { return type != None; }
 };
 
 enum class ParameterQualifier { None, DeviceConstRef, DeviceConstPointer };
 
+struct AggregateElement {
+    Type const* type;
+    std::string name;
+    ParameterAttribute attrib = {};
+};
+
 /// Different kinds of functions that can be defined by material nodes
 enum class GraphRoot {
     VertexFunction,
-    LitFragmentFunction,
-    UnlitFragmentFunction,
+    ShadingFunction,
     TransparencyFunction,
 };
 
 enum class TextureSubType { Texture2D, TextureCube };
 
 enum class RasterizerInputKind {
+    ClipPosition,
     TextureCoords,
     WorldNormals,
     WorldTangents,
@@ -80,6 +83,8 @@ enum class RasterizerInputKind {
     WorldPosition,
     VertexColor,
 };
+
+std::string_view toSpelling(RasterizerInputKind kind);
 
 enum class BuiltinFunctionKind {
 #define BL_MATGRAPH_BUILTIN(Name, ...) Name,

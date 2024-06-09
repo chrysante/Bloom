@@ -9,7 +9,6 @@
 
 #include "Bloom/Asset/AssetHandle.h"
 #include "Bloom/Core/Base.h"
-#include "Bloom/Graphics/Material/MaterialSourceData.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
 
 namespace bloom::matc {
@@ -18,16 +17,14 @@ class CodeGenerator {
 public:
     virtual ~CodeGenerator() = default;
 
-    virtual MaterialSourceData run() = 0;
+    virtual std::string run() = 0;
 
 protected:
     CodeGenerator() = default;
 };
 
-struct CodeGenOptions {};
-
 BLOOM_API std::unique_ptr<CodeGenerator> makeCodeGenerator(
-    Context& ctx, MaterialGraph const& graph, CodeGenOptions const& options);
+    Context& ctx, MaterialGraph const& graph);
 
 } // namespace bloom::matc
 

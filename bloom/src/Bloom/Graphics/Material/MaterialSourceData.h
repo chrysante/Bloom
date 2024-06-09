@@ -9,6 +9,7 @@
 
 #include "Bloom/Asset/Asset.h"
 #include "Bloom/Asset/Serialization.h"
+#include "Bloom/Core/EnumCount.h"
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/GPU/Fwd.h"
 #include "Bloom/Graphics/Material/Fwd.h"
@@ -28,16 +29,14 @@ struct MaterialPrimitiveParameter {
 struct MaterialTextureParameter {
     static constexpr int UnusedBindingPoint = -1;
 
-    bool hasFragmentBinding() const {
-        return fragmentBindingPoint != UnusedBindingPoint;
-    }
-    bool hasVertexBinding() const {
-        return vertexBindingPoint != UnusedBindingPoint;
+    /// \Returns `true` if this parameter is used by the shader \p shaderType
+    bool hasBinding(MaterialShaderType shaderType) const {
+        return bindingPoint[shaderType] != UnusedBindingPoint;
     }
 
     MaterialDataType type;
-    int fragmentBindingPoint = UnusedBindingPoint;
-    int vertexBindingPoint = UnusedBindingPoint;
+    EnumArray<MaterialShaderType, int8_t> bindingPoint =
+        makeEnumArray<MaterialShaderType, int8_t>(UnusedBindingPoint);
     std::string name;
     AssetHandle value;
 };
@@ -46,10 +45,10 @@ struct MaterialTextureParameter {
 struct MaterialSourceData {
     /// Shader source to be passed to the renderering APIs shader compiler
     std::string source;
-    utl::hashmap<int, AssetHandle> constantFragmentTextures;
+    std::vector<MaterialTextureParameter> textureConstants;
     std::vector<MaterialPrimitiveParameter> primitiveParameters;
     std::vector<MaterialTextureParameter> textureParameters;
-    size_t parameterBufferSize;
+    size_t parameterBufferSize = 0;
     TriangleCullMode cullMode{};
 };
 

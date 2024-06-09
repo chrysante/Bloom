@@ -103,8 +103,10 @@ TextureConstant::TextureConstant(std::string name, TextureType const* type,
 static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     using enum RasterizerInputKind;
     switch (kind) {
+    case ClipPosition:
+        return ctx.float4Type();
     case TextureCoords:
-        return ctx.vectorType(2);
+        return ctx.float2Type();
     case WorldNormals:
         [[fallthrough]];
     case WorldTangents:
@@ -114,9 +116,9 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     case WorldPosition:
         [[fallthrough]];
     case ModelNormals:
-        return ctx.vectorType(3);
+        return ctx.float3Type();
     case VertexColor:
-        return ctx.vectorType(4);
+        return ctx.float4Type();
     }
 }
 

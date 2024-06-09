@@ -224,7 +224,6 @@ std::vector<Type const*> Context::types() const {
            ranges::to<std::vector>;
 }
 
-std::vector<TextureConstant const*> Context::textureConstants() const {
-    return impl->textureConstants | values |
-           ranges::to<std::vector<TextureConstant const*>>;
+std::vector<TextureConstant*> Context::textureConstants() const {
+    return impl->textureConstants | values | ranges::to<std::vector>;
 }

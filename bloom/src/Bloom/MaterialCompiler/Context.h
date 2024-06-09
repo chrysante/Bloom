@@ -57,7 +57,7 @@ public:
     std::vector<Type const*> types() const;
 
     ///  \Returns a list of all existing texture constants
-    std::vector<TextureConstant const*> textureConstants() const;
+    std::vector<TextureConstant*> textureConstants() const;
 
     struct Impl;
 

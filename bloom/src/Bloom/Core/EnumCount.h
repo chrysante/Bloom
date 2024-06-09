@@ -28,6 +28,13 @@ struct EnumArray: std::array<T, EnumCount<E>> {
     T const& operator[](E e) const { return (*this)[(size_t)e]; }
 };
 
+template <typename E, typename T>
+constexpr EnumArray<E, T> makeEnumArray(T const& value) {
+    return [&]<size_t... I>(std::index_sequence<I...>) {
+        return EnumArray<E, T>{ ((void)I, value)... };
+    }(std::make_index_sequence<EnumCount<E>>{});
+}
+
 } // namespace bloom
 
 #endif // BLOOM_CORE_ENUMCOUNT_H

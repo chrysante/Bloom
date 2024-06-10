@@ -14,7 +14,9 @@
 
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Graphics/Material/Fwd.h"
-#include "Bloom/MaterialCompiler/MaterialGraph.h"
+#include "Bloom/Graphics/Material/MaterialSourceData.h"
+#include "Bloom/MaterialCompiler/Context.h"
+#include "Bloom/MaterialCompiler/Module.h"
 #include "Bloom/MaterialCompiler/SourceEmitter.h"
 #include "Bloom/MaterialCompiler/Values.h"
 
@@ -81,8 +83,8 @@ private:
 };
 
 struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
-    MetalCodeGenerator(Context& ctx, MaterialGraph const& graph):
-        SourceEmitter(ScopeType::CompoundStmt), ctx(ctx), graph(graph) {}
+    MetalCodeGenerator(Context& ctx, Module const& mod):
+        SourceEmitter(ScopeType::CompoundStmt), ctx(ctx), mod(mod) {}
 
     std::string run() override;
 
@@ -150,7 +152,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void normalize(auto const&... valueName);
 
     Context& ctx;
-    MaterialGraph const& graph;
+    Module const& mod;
     int textureIndexCounter = 0;
     int parameterIndexCounter = 0;
     AggregateType const* paramBufferType = nullptr;
@@ -164,9 +166,9 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
 
 } // namespace
 
-std::unique_ptr<CodeGenerator> matc::makeCodeGenerator(
-    Context& ctx, MaterialGraph const& graph) {
-    return std::make_unique<MetalCodeGenerator>(ctx, graph);
+std::unique_ptr<CodeGenerator> matc::makeCodeGenerator(Context& ctx,
+                                                       Module const& mod) {
+    return std::make_unique<MetalCodeGenerator>(ctx, mod);
 }
 
 static std::pair<uint32_t, uint32_t> getSizeAndAlign(MaterialDataType type) {
@@ -198,7 +200,7 @@ std::string MetalCodeGenerator::run() {
     for (auto* type: ctx.types()) {
         declareType(type);
     }
-    for (auto* F: graph.functions()) {
+    for (auto* F: mod.functions()) {
         if (F && !F->empty()) {
             defineMaterialFunction(F);
         }

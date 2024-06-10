@@ -18,6 +18,8 @@ target_link_libraries(matc
 )
 
 set(matc_sources
+  src/Bloom/MaterialCompiler/BuildModule.cpp
+  src/Bloom/MaterialCompiler/BuildModule.h
   src/Bloom/MaterialCompiler/CodeGen.cpp
   src/Bloom/MaterialCompiler/CodeGen.h
   src/Bloom/MaterialCompiler/Context.cpp
@@ -29,6 +31,8 @@ set(matc_sources
   src/Bloom/MaterialCompiler/Lists.def
   src/Bloom/MaterialCompiler/MaterialGraph.cpp
   src/Bloom/MaterialCompiler/MaterialGraph.h
+  src/Bloom/MaterialCompiler/Module.cpp
+  src/Bloom/MaterialCompiler/Module.h
   src/Bloom/MaterialCompiler/Preprocessor.cpp
   src/Bloom/MaterialCompiler/Preprocessor.h
   src/Bloom/MaterialCompiler/SourceEmitter.cpp

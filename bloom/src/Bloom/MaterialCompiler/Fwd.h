@@ -5,11 +5,13 @@
 #include <string_view>
 
 #include "Bloom/Core/Dyncast.h"
+#include "Bloom/Graphics/Material/Fwd.h"
 
 namespace bloom::matc {
 
-class MaterialGraph;
 class Context;
+class MaterialGraph;
+class Module;
 
 #define BL_MATGRAPH_TYPE(Name, ...) class Name;
 #include "Bloom/MaterialCompiler/Lists.def"
@@ -44,6 +46,12 @@ using NoParent = void;
 #include "Bloom/MaterialCompiler/Lists.def"
 
 namespace bloom::matc {
+
+struct CodegenParameters {
+    MaterialShadingModel shadingModel = {};
+    MaterialTransparency transparency = {};
+    bool twoSided = false;
+};
 
 enum class ShaderKind { None, Extern, Vertex, Fragment };
 

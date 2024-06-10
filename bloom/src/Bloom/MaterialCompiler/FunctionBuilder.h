@@ -1,5 +1,5 @@
-#ifndef FunctionBuilder_hpp
-#define FunctionBuilder_hpp
+#ifndef BLOOM_MATERIALCOMPILER_FUNCTIONBUILDER_H
+#define BLOOM_MATERIALCOMPILER_FUNCTIONBUILDER_H
 
 #include <cassert>
 #include <concepts>
@@ -64,4 +64,4 @@ private:
 
 } // namespace bloom::matc
 
-#endif /* FunctionBuilder_hpp */
+#endif // BLOOM_MATERIALCOMPILER_FUNCTIONBUILDER_H

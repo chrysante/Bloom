@@ -23,8 +23,8 @@ protected:
     CodeGenerator() = default;
 };
 
-BLOOM_API std::unique_ptr<CodeGenerator> makeCodeGenerator(
-    Context& ctx, MaterialGraph const& graph);
+BLOOM_API std::unique_ptr<CodeGenerator> makeCodeGenerator(Context& ctx,
+                                                           Module const& mod);
 
 } // namespace bloom::matc
 

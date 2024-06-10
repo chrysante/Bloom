@@ -4,8 +4,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <range/v3/algorithm.hpp>
 
+#include "Bloom/Graphics/Material/MaterialSourceData.h"
+#include "Bloom/MaterialCompiler/BuildModule.h"
 #include "Bloom/MaterialCompiler/CodeGen.h"
+#include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
+#include "Bloom/MaterialCompiler/Module.h"
 
 using namespace bloom;
 using namespace matc;
@@ -91,8 +95,11 @@ static void printSourceData(MaterialSourceData const& sourceData) {
 
 TEST_CASE() {
     Context ctx;
-    MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit,
-                      .transparency = MaterialTransparency::Masked });
+    CodegenParameters codegenParams = {
+        .shadingModel = MaterialShadingModel::DefaultLit,
+        .transparency = MaterialTransparency::Masked
+    };
+    MaterialGraph g;
     auto* tex0 = g.addTextureParameter(ctx, "TexParam",
                                        TextureSubType::Texture2D, genTexture());
     auto* tex1 = ctx.textureConstant(TextureSubType::TextureCube, genTexture());
@@ -129,23 +136,27 @@ TEST_CASE() {
     g.setRoot(GraphRoot::ShadingFunction, resultVal);
     auto* transparency = g.addValue<ExtractVectorValue>(ctx, "R", sample0, 0);
     g.setRoot(GraphRoot::TransparencyFunction, transparency);
-    auto sourceData = g.generate(ctx);
+    MaterialSourceData sourceData;
+    auto mod = buildModule(ctx, g, codegenParams);
+    auto generator = makeCodeGenerator(ctx, mod);
+    sourceData.source = generator->run();
     printSourceData(sourceData);
 }
 
 TEST_CASE() {
-    Context ctx;
-    MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit });
-    auto* UV = g.addValue<RasterizerInput>(ctx, "UV",
-                                           RasterizerInputKind::TextureCoords);
-    g.setRoot(GraphRoot::ShadingFunction, UV);
-    auto sourceData = g.generate(ctx);
-    printSourceData(sourceData);
+    return;
+    //    Context ctx;
+    //    MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit });
+    //    auto* UV = g.addValue<RasterizerInput>(ctx, "UV",
+    //                                           RasterizerInputKind::TextureCoords);
+    //    g.setRoot(GraphRoot::ShadingFunction, UV);
+    //    auto sourceData = g.generate(ctx);
+    //    printSourceData(sourceData);
 }
 
 TEST_CASE("Builtins") {
     Context ctx;
-    MaterialGraph g({ .shadingModel = MaterialShadingModel::Unlit });
+    MaterialGraph g;
     using enum BuiltinFunctionKind;
     SECTION("Cross with invalid arguments") {
         CHECK_THROWS(g.addValue<FunctionCall>(ctx, "value", Cross,

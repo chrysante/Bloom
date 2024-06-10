@@ -24,21 +24,21 @@ using namespace ranges::views;
 
 namespace {
 
-struct RasterizerMetadata2 {
+struct RasterizerMetadata {
     AggregateType const* type;
     EnumArray<RasterizerInputKind, int> indexMap;
 };
 
-enum class ParameterBufferTag2 : int;
+enum class ParameterBufferTag : int;
 
-struct ParameterMetadata2:
-    std::variant<RasterizerInput*, TextureConstant*, ParameterBufferTag2> {
+struct ParameterMetadata:
+    std::variant<RasterizerInput*, TextureConstant*, ParameterBufferTag> {
     using variant::variant;
 };
 
-struct FunctionMetadata2 {
+struct FunctionMetadata {
     utl::hashset<RasterizerInput*> usedRasterizerInputs;
-    utl::hashmap<FunctionParameter*, ParameterMetadata2> parameters;
+    utl::hashmap<FunctionParameter*, ParameterMetadata> parameters;
     FunctionParameter* primitiveBufferParam = nullptr;
     FunctionParameter* rasterizerParam = nullptr;
     utl::hashmap<TextureConstant*, FunctionParameter*> texParamMap;
@@ -79,7 +79,7 @@ struct Builder {
     utl::hashmap<MaterialShaderType, Function*> shaderFunctions = {};
 
     /// Metadata stored for each function
-    utl::hashmap<Function*, FunctionMetadata2> functionMetadata = {};
+    utl::hashmap<Function*, FunctionMetadata> functionMetadata = {};
 
     /// Type of the vector parameter buffer
     AggregateType const* primitiveBufferType = nullptr;
@@ -90,12 +90,14 @@ struct Builder {
                                              utl::hashset<Value*>& usedParams);
     void analyzeRasterizerUsage(Function& F,
                                 utl::hashset<RasterizerInput*>& usedInputs);
-    void rewriteRasterizerUsage(Function& F, FunctionMetadata2& metadata);
+    void rewriteRasterizerUsage(Function& F, FunctionMetadata& metadata);
     void computeParameters(Function& F, utl::hashset<Value*> const& usedParams,
                            std::span<VectorConstant* const> vectorParameters);
     void defineTextureBindings();
-    Function* declarePBRShader(Type const* materialType);
     void defineShadingScenario();
+    Function* declarePBRShader(Type const* materialType);
+    Value* callPBRShader(FunctionBuilder& builder, Value* materialData,
+                         RasterizerMetadata const& rasterizerMetadata);
 
     /// # Utils
 
@@ -107,7 +109,7 @@ struct Builder {
     /// `builder.function()` as necessary to access required data
     FunctionCall* callFunction(std::string valueName, FunctionBuilder& builder,
                                Function* callee,
-                               RasterizerMetadata2 const& rasterizerMetadata);
+                               RasterizerMetadata const& rasterizerMetadata);
 };
 
 } // namespace
@@ -235,7 +237,7 @@ void Builder::analyzeRasterizerUsage(
 static Value* makeParameter(Function& F, Value* param,
                             AggregateType const* paramBufferType,
                             std::span<VectorConstant* const> vectorParameters,
-                            FunctionMetadata2& metadata) {
+                            FunctionMetadata& metadata) {
     // clang-format off
     return visit(*param, utl::overload{
         [&](VectorConstant const& matParam) {
@@ -243,7 +245,7 @@ static Value* makeParameter(Function& F, Value* param,
                 auto* P = F.addParameter({
                     "primitives", paramBufferType,
                     ParameterQualifier::DeviceConstRef});
-                metadata.parameters[P] = ParameterBufferTag2{};
+                metadata.parameters[P] = ParameterBufferTag{};
                 metadata.primitiveBufferParam = P;
             }
             auto itr = ranges::find(vectorParameters, &matParam);
@@ -281,7 +283,7 @@ void Builder::computeParameters(
     }
 }
 
-void Builder::rewriteRasterizerUsage(Function& F, FunctionMetadata2& metadata) {
+void Builder::rewriteRasterizerUsage(Function& F, FunctionMetadata& metadata) {
     utl::hashmap<Function const*,
                  EnumArray<RasterizerInputKind, FunctionParameter*>>
         paramMap;
@@ -337,7 +339,7 @@ static ParameterAttribute getGlobalBindingAttrib(
     }(), index };
 }
 
-static RasterizerMetadata2 makeRasterizerMetadata(
+static RasterizerMetadata makeRasterizerMetadata(
     Context& ctx, std::string name,
     std::span<RasterizerInput const* const> values) {
     if (values.empty()) {
@@ -356,9 +358,9 @@ static RasterizerMetadata2 makeRasterizerMetadata(
     return { type, map };
 }
 
-static Value* getRasterizerInput(
-    std::string name, FunctionBuilder& builder, RasterizerInputKind kind,
-    FunctionMetadata2& MD, RasterizerMetadata2 const& rasterizerMetadata) {
+static Value* getRasterizerInput(std::string name, FunctionBuilder& builder,
+                                 RasterizerInputKind kind, FunctionMetadata& MD,
+                                 RasterizerMetadata const& rasterizerMetadata) {
     return builder
         .insert<ExtractAggregateValue>(std::move(name), MD.rasterizerParam,
                                        rasterizerMetadata.indexMap[kind]);
@@ -407,83 +409,18 @@ void Builder::defineShadingScenario() {
     assert(shadingFunction);
     auto* materialData =
         callFunction("material", builder, shadingFunction, rasterizerMetadata);
-    Value* color = nullptr;
-    switch (codegenParams.shadingModel) {
-    case MaterialShadingModel::DefaultLit: {
-        Function* pbrShader = declarePBRShader(materialData->type());
-        auto* worldPosition =
-            getRasterizerInput("worldPosition", builder,
-                               RasterizerInputKind::WorldPosition, fragMD,
-                               rasterizerMetadata);
-        auto* cameraInputType =
-            ctx.aggregateType("CameraInput",
-                              {
-                                  { ctx.matrixType(4, 4), "camera" },
-                                  { ctx.matrixType(4, 4), "inverseCamera" },
-                                  { ctx.float3Type(), "position" },
-                                  { ctx.float3Type(), "front" },
-                                  { ctx.float2Type(), "viewportSize" },
-                              },
-                              /* isExtern: */ true);
-        auto* cameraBuffer = fragShader.addParameter(
-            { .name = "cameraBuffer",
-              .type = cameraInputType,
-              .qualifier = ParameterQualifier::DeviceConstRef,
-              .attribute =
-                  getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
-                                         GlobalMaterialBindingType::Camera) });
-        auto* cameraPosition =
-            builder.insert<ExtractAggregateValue>("cameraPosition",
-                                                  cameraBuffer, 2);
-        auto* lightBuffer = fragShader.addParameter(
-            { .name = "lights",
-              .type = ctx.aggregateType("LightBufferContents", {},
-                                        /* isExtern: */ true),
-              .qualifier = ParameterQualifier::DeviceConstPointer,
-              .attribute =
-                  getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
-                                         GlobalMaterialBindingType::Lights) });
-        auto* lightSpaceTransforms = fragShader.addParameter(
-            { .name = "lightSpaceTransforms",
-              .type = ctx.matrixType(4, 4),
-              .qualifier = ParameterQualifier::DeviceConstPointer,
-              .attribute = getGlobalBindingAttrib(
-                  MaterialShaderType::ShadingFragment,
-                  GlobalMaterialBindingType::LightSpaceTransforms) });
-        auto* shadowMaps = fragShader.addParameter(
-            { .name = "shadowMaps",
-              .type = ctx.textureType(TextureSubType::Texture2DArray),
-              .attribute = getGlobalBindingAttrib(
-                  MaterialShaderType::ShadingFragment,
-                  GlobalMaterialBindingType::ShadowMaps) });
-        auto* specularMap = fragShader.addParameter(
-            { .name = "specularMap",
-              .type = ctx.textureType(TextureSubType::TextureCube),
-              .attribute = getGlobalBindingAttrib(
-                  MaterialShaderType::ShadingFragment,
-                  GlobalMaterialBindingType::SpecularTexture) });
-        auto* bdrfMap = fragShader.addParameter(
-            { .name = "bdrfMap",
-              .type = ctx.textureType(TextureSubType::Texture2D),
-              .attribute = getGlobalBindingAttrib(
-                  MaterialShaderType::ShadingFragment,
-                  GlobalMaterialBindingType::BRDFTexture) });
-        auto* color3 =
-            builder.callFunction("color", pbrShader,
-                                 { { materialData, worldPosition,
-                                     cameraPosition, lightSpaceTransforms,
-                                     lightBuffer, shadowMaps, specularMap,
-                                     bdrfMap } });
-        color =
-            builder.insert<VectorBuilder>("colorOut",
-                                          std::vector<Value*>{
-                                              color3, ctx.floatConstant(1) });
-        break;
-    }
-    case MaterialShadingModel::Unlit:
-        assert(false);
-        break;
-    }
+    Value* color3 = [&]() -> Value* {
+        switch (codegenParams.shadingModel) {
+        case MaterialShadingModel::DefaultLit:
+            return callPBRShader(builder, materialData, rasterizerMetadata);
+        case MaterialShadingModel::Unlit:
+            return materialData;
+        }
+    }();
+    auto* colorOut =
+        builder.insert<VectorBuilder>("colorOut",
+                                      std::vector<Value*>{
+                                          color3, ctx.floatConstant(1) });
     auto* entityIDType = ctx.intType(IntType::U32);
     auto* retType = ctx.aggregateType("ShadingFragmentOut",
                                       { { ctx.float4Type(),
@@ -500,10 +437,77 @@ void Builder::defineShadingScenario() {
           entityIDAttrib });
     auto* retval = builder.insert<AggregateBuilder>("retval", retType,
                                                     std::vector<Value*>{
-                                                        color, entityID });
+                                                        colorOut, entityID });
     builder.insert<ReturnInst>("ret", retval);
     fragShader.computeType(ctx, retType);
     // Vertex Shader
+}
+
+Value* Builder::callPBRShader(FunctionBuilder& builder, Value* materialData,
+                              RasterizerMetadata const& rasterizerMetadata) {
+    Function* pbrShader = declarePBRShader(materialData->type());
+    Function& shader = *builder.function();
+    auto& MD = functionMetadata[&shader];
+    auto* worldPosition = getRasterizerInput("worldPosition", builder,
+                                             RasterizerInputKind::WorldPosition,
+                                             MD, rasterizerMetadata);
+    auto* cameraInputType =
+        ctx.aggregateType("CameraInput",
+                          {
+                              { ctx.matrixType(4, 4), "camera" },
+                              { ctx.matrixType(4, 4), "inverseCamera" },
+                              { ctx.float3Type(), "position" },
+                              { ctx.float3Type(), "front" },
+                              { ctx.float2Type(), "viewportSize" },
+                          },
+                          /* isExtern: */ true);
+    auto* cameraBuffer = shader.addParameter(
+        { .name = "cameraBuffer",
+          .type = cameraInputType,
+          .qualifier = ParameterQualifier::DeviceConstRef,
+          .attribute =
+              getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
+                                     GlobalMaterialBindingType::Camera) });
+    auto* cameraPosition =
+        builder.insert<ExtractAggregateValue>("cameraPosition", cameraBuffer,
+                                              2);
+    auto* lightBuffer = shader.addParameter(
+        { .name = "lights",
+          .type = ctx.aggregateType("LightBufferContents", {},
+                                    /* isExtern: */ true),
+          .qualifier = ParameterQualifier::DeviceConstPointer,
+          .attribute =
+              getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
+                                     GlobalMaterialBindingType::Lights) });
+    auto* lightSpaceTransforms = shader.addParameter(
+        { .name = "lightSpaceTransforms",
+          .type = ctx.matrixType(4, 4),
+          .qualifier = ParameterQualifier::DeviceConstPointer,
+          .attribute = getGlobalBindingAttrib(
+              MaterialShaderType::ShadingFragment,
+              GlobalMaterialBindingType::LightSpaceTransforms) });
+    auto* shadowMaps = shader.addParameter(
+        { .name = "shadowMaps",
+          .type = ctx.textureType(TextureSubType::Texture2DArray),
+          .attribute =
+              getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
+                                     GlobalMaterialBindingType::ShadowMaps) });
+    auto* specularMap = shader.addParameter(
+        { .name = "specularMap",
+          .type = ctx.textureType(TextureSubType::TextureCube),
+          .attribute = getGlobalBindingAttrib(
+              MaterialShaderType::ShadingFragment,
+              GlobalMaterialBindingType::SpecularTexture) });
+    auto* bdrfMap = shader.addParameter(
+        { .name = "bdrfMap",
+          .type = ctx.textureType(TextureSubType::Texture2D),
+          .attribute =
+              getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
+                                     GlobalMaterialBindingType::BRDFTexture) });
+    return builder.callFunction("color", pbrShader,
+                                { { materialData, worldPosition, cameraPosition,
+                                    lightSpaceTransforms, lightBuffer,
+                                    shadowMaps, specularMap, bdrfMap } });
 }
 
 static DynUniquePtr<Function> makeForwardDecl(
@@ -553,9 +557,9 @@ namespace {
 
 struct ArgumentContext {
     FunctionBuilder& builder;
-    RasterizerMetadata2 const& rasterizerMetadata;
-    FunctionMetadata2& callerMD;
-    FunctionMetadata2& calleeMD;
+    RasterizerMetadata const& rasterizerMetadata;
+    FunctionMetadata& callerMD;
+    FunctionMetadata& calleeMD;
     MaterialShaderType shaderType;
     Type const* primitiveBufferType;
 };
@@ -584,7 +588,7 @@ static Value* getFunctionArgument(TextureConstant* texParam,
     return param;
 }
 
-static Value* getFunctionArgument(ParameterBufferTag2, ArgumentContext AC) {
+static Value* getFunctionArgument(ParameterBufferTag, ArgumentContext AC) {
     auto& param = AC.callerMD.primitiveBufferParam;
     if (param) {
         return param;
@@ -600,7 +604,7 @@ static Value* getFunctionArgument(ParameterBufferTag2, ArgumentContext AC) {
 
 FunctionCall* Builder::callFunction(
     std::string valueName, FunctionBuilder& builder, Function* callee,
-    RasterizerMetadata2 const& rasterizerMetadata) {
+    RasterizerMetadata const& rasterizerMetadata) {
     auto* caller = builder.function();
     auto& callerMD = functionMetadata[caller];
     auto& calleeMD = functionMetadata[callee];

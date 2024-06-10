@@ -104,8 +104,11 @@ private:
     DynUniquePtr<Function> buildFunction(Context& ctx, Value* root,
                                          std::string name,
                                          utl::hashset<Value*>& usedParams);
-    FunctionCall* callFunction(FunctionBuilder& builder, Function* callee,
+    FunctionCall* callFunction(std::string valueName, FunctionBuilder& builder,
+                               Function* callee,
                                RasterizerMetadata const& rasterizerMetadata);
+
+    Function* declarePBRShader(Context& ctx, Type const* materialType);
 
     void defineShadingScenario(Context& ctx);
     void computeParameters(Context& ctx, Function& F,
@@ -113,12 +116,29 @@ private:
                            utl::hashset<Value*> const& usedParams,
                            std::span<VectorConstant* const> vectorParameters);
 
+    Function* addFunction(DynUniquePtr<Function> function) {
+        _functions.push_back(std::move(function));
+        return _functions.back().get();
+    }
+
+    Function* addFunction(DynUniquePtr<Function> function, GraphRoot root) {
+        _userFunctions[root] = function.get();
+        return addFunction(std::move(function));
+    }
+
+    Function* addFunction(DynUniquePtr<Function> function,
+                          MaterialShaderType shaderType) {
+        _shaderFunctions[shaderType] = function.get();
+        return addFunction(std::move(function));
+    }
+
     std::vector<DynUniquePtr<Value>> _values;
     utl::hashmap<GraphRoot, Value*> _roots{};
+    std::vector<DynUniquePtr<Function>> _functions;
     /// Functions defined by the material editor and shared between shaders
-    utl::hashmap<GraphRoot, DynUniquePtr<Function>> _functions{};
+    utl::hashmap<GraphRoot, Function*> _userFunctions{};
     /// Different shaders exposed to the renderer
-    utl::hashmap<MaterialShaderType, DynUniquePtr<Function>> _shaders{};
+    utl::hashmap<MaterialShaderType, Function*> _shaderFunctions{};
     utl::hashset<Value*> _params;
     utl::hashmap<Function*, FunctionMetadata> functionMetadata;
     AggregateType const* primitiveBufferType = nullptr;

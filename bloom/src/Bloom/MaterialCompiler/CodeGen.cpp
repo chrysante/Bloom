@@ -30,6 +30,8 @@ static MaterialDataType translate(matc::TextureType const* type) {
         return MaterialDataType::Texture2D;
     case TextureSubType::TextureCube:
         return MaterialDataType::TextureCube;
+    case TextureSubType::Texture2DArray:
+        assert(false);
     }
 }
 
@@ -89,6 +91,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     }
     void declareTypeImpl(VoidType const* type);
     void declareTypeImpl(BoolType const* type);
+    void declareTypeImpl(IntType const* type);
     void declareTypeImpl(VectorType const* type);
     void declareTypeImpl(MatrixType const* type);
     void declareTypeImpl(FunctionType const* type);
@@ -109,7 +112,8 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     }
     void codegenImpl(Instruction const&) { assert(false); }
     void codegenImpl(FunctionCall const& value);
-    void codegenImpl(ArithmeticOperation const& value);
+    void codegenImpl(ArithmeticInst const& value);
+    void codegenImpl(CompareInst const& value);
     void codegenImpl(TextureSampler const& value);
     void codegenImpl(VectorBuilder const& value);
     void codegenImpl(ExtractVectorValue const&) {}
@@ -195,7 +199,7 @@ std::string MetalCodeGenerator::run() {
         declareType(type);
     }
     for (auto* F: graph.functions()) {
-        if (F) {
+        if (F && !F->empty()) {
             defineMaterialFunction(F);
         }
     }
@@ -209,6 +213,26 @@ void MetalCodeGenerator::declareTypeImpl(VoidType const* type) {
 
 void MetalCodeGenerator::declareTypeImpl(BoolType const* type) {
     typeNameMap.setName(type, "bool");
+}
+
+void MetalCodeGenerator::declareTypeImpl(IntType const* type) {
+    typeNameMap.setName(type, [&] {
+        using enum IntType::Subtype;
+        switch (type->subtype()) {
+        case I8:
+            return "int8_t";
+        case I16:
+            return "int16_t";
+        case I32:
+            return "int32_t";
+        case U8:
+            return "uint8_t";
+        case U16:
+            return "uint16_t";
+        case U32:
+            return "uint32_t";
+        }
+    }());
 }
 
 void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
@@ -234,6 +258,8 @@ void MetalCodeGenerator::declareTypeImpl(matc::TextureType const* type) {
             return "texture2d<float>";
         case TextureSubType::TextureCube:
             return "texturecube<float>";
+        case TextureSubType::Texture2DArray:
+            return "texture2d_array<float>";
         }
     }());
 }
@@ -247,6 +273,8 @@ static std::string toSpelling(ParameterAttribute attrib) {
         return "[[position]]";
     case StageIn:
         return "[[stage_in]]";
+    case Color:
+        return utl::strcat("[[color(", attrib.index, ")]]");
     case Buffer:
         return utl::strcat("[[buffer(", attrib.index, ")]]");
     case Texture:
@@ -257,6 +285,9 @@ static std::string toSpelling(ParameterAttribute attrib) {
 void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
     // TODO: This does not handle nested structs
     typeNameMap.setName(type, type->name());
+    if (type->isExtern()) {
+        return;
+    }
     auto item = makeItem();
     writeRaw("struct ", getName(type));
     auto scope = makeScope(ScopeType::CompoundStmt);
@@ -272,14 +303,13 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
 void MetalCodeGenerator::beginFunction(Function const* F) {
     beginItem();
     switch (F->shaderKind()) {
-    case ShaderKind::None:
-        writeRaw("static ");
-        break;
     case ShaderKind::Fragment:
         writeRaw("fragment ");
         break;
     case ShaderKind::Vertex:
         writeRaw("vertex ");
+        break;
+    default:
         break;
     }
     writeRaw(getName(F->returnType()), " ", F->name());
@@ -477,8 +507,8 @@ void MetalCodeGenerator::codegenImpl(FunctionCall const& value) {
     });
 }
 
-static std::string_view getSourceRepr(ArithmeticOperation::Kind operation) {
-    using enum ArithmeticOperation::Kind;
+static std::string_view getSourceRepr(ArithmeticInst::Operation operation) {
+    using enum ArithmeticInst::Operation;
     switch (operation) {
     case Add:
         return "+";
@@ -491,10 +521,35 @@ static std::string_view getSourceRepr(ArithmeticOperation::Kind operation) {
     }
 }
 
-void MetalCodeGenerator::codegenImpl(ArithmeticOperation const& value) {
+void MetalCodeGenerator::codegenImpl(ArithmeticInst const& value) {
     auto item = makeItem();
     writeRaw(getName(value.type()), " ", getName(&value), " = ",
-             getName(value.LHS()), " ", getSourceRepr(value.kind()), " ",
+             getName(value.LHS()), " ", getSourceRepr(value.operation()), " ",
+             getName(value.RHS()));
+}
+
+static std::string_view getSourceRepr(CompareInst::Operation operation) {
+    using enum CompareInst::Operation;
+    switch (operation) {
+    case Less:
+        return "<";
+    case LessEq:
+        return "<=";
+    case Greater:
+        return ">";
+    case GreaterEq:
+        return ">=";
+    case Equal:
+        return "==";
+    case NotEqual:
+        return "!=";
+    }
+}
+
+void MetalCodeGenerator::codegenImpl(CompareInst const& value) {
+    auto item = makeItem();
+    writeRaw(getName(value.type()), " ", getName(&value), " = ",
+             getName(value.LHS()), " ", getSourceRepr(value.operation()), " ",
              getName(value.RHS()));
 }
 
@@ -552,6 +607,7 @@ void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {
 }
 
 void MetalCodeGenerator::codegenImpl(DiscardFragment const& inst) {
+    auto item = makeItem();
     writeRaw("if (", getName(inst.condition()), ") ");
     auto scope = makeScope(ScopeType::CompoundStmt);
     writeItem("discard_fragment()");
@@ -591,7 +647,7 @@ std::string MetalCodeGenerator::genNameImpl(TextureConstant const& tex) {
     return tex.name();
 }
 
-std::string MetalCodeGenerator::genNameImpl(RasterizerInput const& input) {
+std::string MetalCodeGenerator::genNameImpl(RasterizerInput const&) {
     assert(false);
 }
 

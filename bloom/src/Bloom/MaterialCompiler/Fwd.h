@@ -45,10 +45,10 @@ using NoParent = void;
 
 namespace bloom::matc {
 
-enum class ShaderKind { None, Vertex, Fragment };
+enum class ShaderKind { None, Extern, Vertex, Fragment };
 
 struct ParameterAttribute {
-    enum Type { None, Position, StageIn, Buffer, Texture };
+    enum Type { None, Position, StageIn, Color, Buffer, Texture };
 
     Type type;
     int index;
@@ -74,7 +74,7 @@ enum class GraphRoot {
     TransparencyFunction,
 };
 
-enum class TextureSubType { Texture2D, TextureCube };
+enum class TextureSubType { Texture2D, TextureCube, Texture2DArray };
 
 enum class RasterizerInputKind {
     ClipPosition,

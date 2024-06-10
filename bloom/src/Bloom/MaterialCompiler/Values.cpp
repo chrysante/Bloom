@@ -275,10 +275,14 @@ static FunctionType const* deduceFunctionType(
     return ctx.functionType(ret, args);
 }
 
-static List<FunctionParameter> allocateParameters(
-    std::span<Type const* const> args) {
-    auto params = args | transform([index = 0](Type const* type) mutable {
-        return new FunctionParameter(utl::strcat("_", index++), type, {}, {});
+List<FunctionParameter> matc::allocateParameters(
+    std::span<ParameterDescriptor const> args) {
+    auto params = args |
+                  transform([index = 0](ParameterDescriptor desc) mutable {
+        if (desc.name.empty()) {
+            desc.name = utl::strcat("_", index++);
+        }
+        return new FunctionParameter(desc);
     });
     List<FunctionParameter> result;
     for (auto* param: params) {
@@ -292,7 +296,10 @@ BuiltinFunction::BuiltinFunction(Context& ctx, BuiltinFunctionKind kind,
     Callable(ValueNodeType::BuiltinFunction,
              std::string(magic_enum::enum_name(kind)),
              deduceFunctionType(ctx, kind, argTypes),
-             allocateParameters(argTypes)),
+             allocateParameters(argTypes | transform([](auto* type) {
+                                    return ParameterDescriptor{ .type = type };
+                                }) |
+                                ToSmallVector<>)),
     _kind(kind) {}
 
 struct FunctionCall::PrivArgs {
@@ -350,8 +357,8 @@ static void throwArithmeticTypeError() {
     throw std::runtime_error("Invalid operand types for arithmetic operation");
 }
 
-Type const* ArithmeticOperation::commonType(Context& ctx, Type const* lhs,
-                                            Type const* rhs) {
+Type const* ArithmeticInst::commonType(Context& ctx, Type const* lhs,
+                                       Type const* rhs) {
     if (!lhs || !rhs) {
         throwArithmeticTypeError();
     }
@@ -392,6 +399,12 @@ Type const* ArithmeticOperation::commonType(Context& ctx, Type const* lhs,
         }
     }); // clang-format on
 }
+
+CompareInst::CompareInst(Context& ctx, std::string name, Operation operation,
+                         Value* lhs, Value* rhs):
+    Instruction(ValueNodeType::CompareInst, std::move(name), ctx.boolType(),
+                { lhs, rhs }),
+    _operation(operation) {}
 
 TextureSampler::TextureSampler(Context& ctx, std::string name, Value* texture,
                                Value* coords, SampleMode mode):

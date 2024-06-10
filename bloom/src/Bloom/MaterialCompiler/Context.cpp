@@ -4,6 +4,7 @@
 #include <utl/hash.hpp>
 #include <utl/vector.hpp>
 
+#include "Bloom/Core/EnumCount.h"
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Core/Utils.h"
 #include "Bloom/MaterialCompiler/Types.h"
@@ -87,6 +88,7 @@ struct Context::Impl {
     std::vector<DynUniquePtr<Type>> typeOwners;
     VoidType const* voidType = nullptr;
     BoolType const* boolType = nullptr;
+    EnumArray<IntType::Subtype, IntType const*> intTypes;
     VectorType const* vectorType[4]{};
     utl::hashmap<std::pair<int, int>, MatrixType const*> matrixTypes;
     utl::hashmap<TextureSubType, TextureType const*> textureTypes;
@@ -112,17 +114,42 @@ Context::~Context() = default;
 Impl::Impl() {
     voidType = addType<VoidType>();
     boolType = addType<BoolType>();
+    for (auto subtype: magic_enum::enum_values<IntType::Subtype>()) {
+        intTypes[subtype] = addType<IntType>(subtype);
+    }
     vectorType[0] = addType<VectorType>(1);
     vectorType[1] = addType<VectorType>(2);
     vectorType[2] = addType<VectorType>(3);
     vectorType[3] = addType<VectorType>(4);
 }
 
+VoidType const* Context::voidType() const { return impl->voidType; }
+
+BoolType const* Context::boolType() const { return impl->boolType; }
+
+IntType const* Context::intType(int subtype) const {
+    return impl->intTypes[subtype];
+}
+
+VectorType const* Context::vectorType(int numComponents) const {
+    assert(numComponents >= 1);
+    assert(numComponents <= 4);
+    return impl->vectorType[numComponents - 1];
+}
+
+MatrixType const* Context::matrixType(int rows, int columns) {
+    return impl->getOrInsert(impl->matrixTypes, { rows, columns }, [&] {
+        return impl->addType<MatrixType>(rows, columns);
+    });
+}
+
 AggregateType const* Context::aggregateType(
-    std::string name, std::span<AggregateElement const> elements) {
+    std::string name, std::span<AggregateElement const> elements,
+    bool isExtern) {
     return impl->getOrInsert(impl->aggTypes, name, [&] {
         return impl->addType<AggregateType>(name,
-                                            elements | ranges::to<std::vector>);
+                                            elements | ranges::to<std::vector>,
+                                            isExtern);
     });
 }
 
@@ -138,22 +165,6 @@ FunctionType const* Context::functionType(
                              { returnType, argTypes | ToSmallVector<> }, [&] {
         return impl->addType<FunctionType>(returnType,
                                            argTypes | ranges::to<std::vector>);
-    });
-}
-
-VoidType const* Context::voidType() const { return impl->voidType; }
-
-BoolType const* Context::boolType() const { return impl->boolType; }
-
-VectorType const* Context::vectorType(int numComponents) const {
-    assert(numComponents >= 1);
-    assert(numComponents <= 4);
-    return impl->vectorType[numComponents - 1];
-}
-
-MatrixType const* Context::matrixType(int rows, int columns) {
-    return impl->getOrInsert(impl->matrixTypes, { rows, columns }, [&] {
-        return impl->addType<MatrixType>(rows, columns);
     });
 }
 

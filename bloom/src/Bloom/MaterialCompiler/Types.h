@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <magic_enum.hpp>
+
 #include "Bloom/MaterialCompiler/Fwd.h"
 
 namespace bloom::matc {
@@ -36,6 +38,21 @@ public:
     BoolType(): Type(TypeCategory::BoolType, "Bool") {}
 };
 
+class IntType: public Type {
+public:
+    enum Subtype { I8, I16, I32, U8, U16, U32 };
+
+    explicit IntType(Subtype subtype):
+        Type(TypeCategory::IntType,
+             std::string(magic_enum::enum_name(subtype))),
+        _subtype(subtype) {}
+
+    Subtype subtype() const { return _subtype; }
+
+private:
+    Subtype _subtype;
+};
+
 class VectorType: public Type {
 public:
     explicit VectorType(int numComponents);
@@ -61,14 +78,18 @@ private:
 
 class AggregateType: public Type {
 public:
-    AggregateType(std::string name, std::vector<AggregateElement> elements);
+    AggregateType(std::string name, std::vector<AggregateElement> elements,
+                  bool isExtern = false);
 
     std::span<AggregateElement const> elements() const { return _elements; }
 
     AggregateElement element(size_t index) const { return _elements[index]; }
 
+    bool isExtern() const { return _isExtern; }
+
 private:
     std::vector<AggregateElement> _elements;
+    bool _isExtern = false;
 };
 
 class TextureType: public Type {

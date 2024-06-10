@@ -7,9 +7,18 @@ using namespace bloom;
 using namespace matc;
 using namespace ranges::views;
 
+static void checkArguments(std::span<Value const* const> args,
+                           Callable const* callee) {
+    assert(callee->type()->argumentTypes().size() == args.size());
+    for (auto [a, b]:
+         zip(callee->type()->argumentTypes(), args | transform(&Value::type)))
+    {
+        assert(a == b);
+    }
+}
+
 FunctionCall* FunctionBuilder::callFunction(std::string name, Callable* callee,
                                             std::span<Value* const> args) {
-    assert(ranges::equal(callee->type()->argumentTypes(),
-                         args | transform(&Value::type)));
+    checkArguments(args, callee);
     return insert<FunctionCall>(std::move(name), callee, args);
 }

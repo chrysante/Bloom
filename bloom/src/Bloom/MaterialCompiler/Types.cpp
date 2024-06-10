@@ -18,9 +18,11 @@ MatrixType::MatrixType(int rows, int columns):
     _columns(columns) {}
 
 AggregateType::AggregateType(std::string name,
-                             std::vector<AggregateElement> elements):
+                             std::vector<AggregateElement> elements,
+                             bool isExtern):
     Type(TypeCategory::AggregateType, std::move(name)),
-    _elements(std::move(elements)) {}
+    _elements(std::move(elements)),
+    _isExtern(isExtern) {}
 
 TextureType::TextureType(TextureSubType subtype):
     Type(TypeCategory::TextureType,

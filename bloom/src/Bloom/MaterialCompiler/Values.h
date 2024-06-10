@@ -90,14 +90,20 @@ private:
     utl::hashmap<User*, int> _users;
 };
 
+struct ParameterDescriptor {
+    std::string name = {};
+    Type const* type = nullptr;
+    ParameterQualifier qualifier = {};
+    ParameterAttribute attribute = {};
+};
+
 class FunctionParameter: public Value, public ListNode<FunctionParameter> {
 public:
-    explicit FunctionParameter(std::string name, Type const* type,
-                               ParameterQualifier qualifier = {},
-                               ParameterAttribute attribute = {}):
-        Value(ValueNodeType::FunctionParameter, std::move(name), type),
-        _qual(qualifier),
-        _attrib(attribute) {}
+    explicit FunctionParameter(ParameterDescriptor desc):
+        Value(ValueNodeType::FunctionParameter, std::move(desc.name),
+              desc.type),
+        _qual(desc.qualifier),
+        _attrib(desc.attribute) {}
 
     ParameterQualifier qualifier() const { return _qual; }
 
@@ -220,10 +226,8 @@ public:
         return param;
     }
 
-    template <typename... Args>
-        requires std::constructible_from<FunctionParameter, Args...>
-    FunctionParameter* addParameter(Args&&... args) {
-        return addParameter(new FunctionParameter(std::forward<Args>(args)...));
+    FunctionParameter* addParameter(ParameterDescriptor desc) {
+        return addParameter(new FunctionParameter(desc));
     }
 
     FunctionType const* computeType(Context& ctx, Type const* returnType);
@@ -235,6 +239,9 @@ protected:
 private:
     List<FunctionParameter> _parameters;
 };
+
+List<FunctionParameter> allocateParameters(
+    std::span<ParameterDescriptor const> args);
 
 class Function: public Callable {
 public:
@@ -307,34 +314,52 @@ private:
     FunctionCall(PrivArgs args);
 };
 
-class ArithmeticOperation: public Instruction {
+class ArithmeticInst: public Instruction {
 public:
     DECLARE_TYPE(VectorType)
 
-    enum Kind { Add, Sub, Mul, Div };
+    enum Operation { Add, Sub, Mul, Div };
 
-    ArithmeticOperation(Context& ctx, std::string name, Kind kind, Value* lhs,
-                        Value* rhs):
-        Instruction(ValueNodeType::ArithmeticOperation, std::move(name),
+    ArithmeticInst(Context& ctx, std::string name, Operation operation,
+                   Value* lhs, Value* rhs):
+        Instruction(ValueNodeType::ArithmeticInst, std::move(name),
                     commonType(ctx, lhs->type(), rhs->type()), { lhs, rhs }),
-        _kind(kind) {}
+        _operation(operation) {}
 
-    ArithmeticOperation(Context& ctx, std::string name, Kind kind,
-                        Type const* lhsType, Type const* rhsType):
-        Instruction(ValueNodeType::ArithmeticOperation, std::move(name),
+    ArithmeticInst(Context& ctx, std::string name, Operation operation,
+                   Type const* lhsType, Type const* rhsType):
+        Instruction(ValueNodeType::ArithmeticInst, std::move(name),
                     commonType(ctx, lhsType, rhsType), { nullptr, nullptr }),
-        _kind(kind) {}
+        _operation(operation) {}
 
     DECLARE_OPERAND(Value, LHS, LHS, 0)
     DECLARE_OPERAND(Value, RHS, RHS, 1)
 
-    Kind kind() const { return _kind; }
+    Operation operation() const { return _operation; }
 
 private:
     static Type const* commonType(Context& ctx, Type const* lhs,
                                   Type const* rhs);
 
-    Kind _kind;
+    Operation _operation;
+};
+
+class CompareInst: public Instruction {
+public:
+    DECLARE_TYPE(BoolType)
+
+    enum Operation { Less, LessEq, Greater, GreaterEq, Equal, NotEqual };
+
+    CompareInst(Context& ctx, std::string name, Operation operation, Value* lhs,
+                Value* rhs);
+
+    DECLARE_OPERAND(Value, LHS, LHS, 0)
+    DECLARE_OPERAND(Value, RHS, RHS, 1)
+
+    Operation operation() const { return _operation; }
+
+private:
+    Operation _operation;
 };
 
 class TextureSampler: public Instruction {

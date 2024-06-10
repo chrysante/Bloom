@@ -21,12 +21,24 @@ public:
 
     VoidType const* voidType() const;
     BoolType const* boolType() const;
+    IntType const* intType(int subtype) const;
     VectorType const* vectorType(int numComponents) const;
     VectorType const* floatType() const { return vectorType(1); }
     VectorType const* float2Type() const { return vectorType(2); }
     VectorType const* float3Type() const { return vectorType(3); }
     VectorType const* float4Type() const { return vectorType(4); }
     MatrixType const* matrixType(int rows, int columns);
+    AggregateType const* aggregateType(
+        std::string name, std::span<AggregateElement const> elements,
+        bool isExtern = false);
+    AggregateType const* aggregateType(
+        std::string name, std::initializer_list<AggregateElement> elements,
+        bool isExtern = false) {
+        return aggregateType(std::move(name), std::span(elements), isExtern);
+    }
+    TextureType const* textureType(TextureSubType subtype);
+    FunctionType const* functionType(Type const* returnType,
+                                     std::span<Type const* const> argTypes);
 
     VectorConstant* vectorConstant(int numComponents, vml::float4 value);
     VectorConstant* floatConstant(float value);
@@ -40,18 +52,6 @@ public:
 
     BuiltinFunction* builtinFunction(BuiltinFunctionKind kind,
                                      std::span<Type const* const> args);
-
-    AggregateType const* aggregateType(
-        std::string name, std::span<AggregateElement const> elements);
-    AggregateType const* aggregateType(
-        std::string name, std::initializer_list<AggregateElement> elements) {
-        return aggregateType(std::move(name), std::span(elements));
-    }
-
-    TextureType const* textureType(TextureSubType subtype);
-
-    FunctionType const* functionType(Type const* returnType,
-                                     std::span<Type const* const> argTypes);
 
     ///  \Returns a list of all existing types
     std::vector<Type const*> types() const;

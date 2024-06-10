@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 
+#include <utl/common.hpp>
+
 #include "Bloom/Core/Dyncast.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 
@@ -19,7 +21,7 @@ class Module;
 enum class TypeCategory {
 #define BL_MATGRAPH_TYPE(Name, ...) Name,
 #include "Bloom/MaterialCompiler/Lists.def"
-    LAST = FunctionType
+    LAST = ArrayType
 };
 
 #define BL_MATGRAPH_VALUE(Name, ...) class Name;
@@ -53,10 +55,23 @@ struct CodegenParameters {
     bool twoSided = false;
 };
 
+enum class Mutability { Mutable, Const };
+
+enum class IntSubType { I8, I16, I32, U8, U16, U32 };
+
 enum class ShaderKind { None, Extern, Vertex, Fragment };
 
 struct ParameterAttribute {
-    enum Type { None, Position, StageIn, Color, Buffer, Texture };
+    enum Type {
+        None,
+        VertexID,
+        InstanceID,
+        Position,
+        StageIn,
+        Color,
+        Buffer,
+        Texture
+    };
 
     Type type;
     int index;
@@ -105,6 +120,10 @@ enum class BuiltinFunctionKind {
 std::string_view toSpelling(BuiltinFunctionKind function);
 
 enum class SampleMode { Color, Normal };
+
+enum class VectorTypeFlags { None = 0, Packed = 1 << 0 };
+
+UTL_ENUM_OPERATORS(VectorTypeFlags)
 
 } // namespace bloom::matc
 

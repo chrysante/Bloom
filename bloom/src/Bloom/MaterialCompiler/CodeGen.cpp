@@ -89,7 +89,9 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     std::string run() override;
 
     void declareType(Type const* type) {
-        visit(*type, [this](auto& type) { declareTypeImpl(&type); });
+        if (!typeNameMap.contains(type)) {
+            visit(*type, [this](auto& type) { declareTypeImpl(&type); });
+        }
     }
     void declareTypeImpl(VoidType const* type);
     void declareTypeImpl(BoolType const* type);
@@ -99,6 +101,8 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void declareTypeImpl(FunctionType const* type);
     void declareTypeImpl(matc::TextureType const* type);
     void declareTypeImpl(AggregateType const* type);
+    void declareTypeImpl(PointerType const* type);
+    void declareTypeImpl(ArrayType const* type);
 
     void defineMaterialFunction(Function const* F);
     void beginFunction(Function const* F);
@@ -121,6 +125,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void codegenImpl(ExtractVectorValue const&) {}
     void codegenImpl(ExtractAggregateValue const&) {}
     void codegenImpl(AggregateBuilder const& value);
+    void codegenImpl(ArrayAccess const& inst);
     void codegenImpl(DiscardFragment const& inst);
     void codegenImpl(ReturnInst const& ret);
 
@@ -219,7 +224,7 @@ void MetalCodeGenerator::declareTypeImpl(BoolType const* type) {
 
 void MetalCodeGenerator::declareTypeImpl(IntType const* type) {
     typeNameMap.setName(type, [&] {
-        using enum IntType::Subtype;
+        using enum IntSubType;
         switch (type->subtype()) {
         case I8:
             return "int8_t";
@@ -238,11 +243,16 @@ void MetalCodeGenerator::declareTypeImpl(IntType const* type) {
 }
 
 void MetalCodeGenerator::declareTypeImpl(VectorType const* type) {
-    typeNameMap.setName(type, [&] {
+    typeNameMap.setName(type, [&]() -> std::string {
         if (type->numComponents() == 1) {
-            return std::string("float");
+            return "float";
         }
-        return utl::strcat("float", type->numComponents());
+        std::stringstream sstr;
+        if (type->packed()) {
+            sstr << "packed_";
+        }
+        sstr << "float" << type->numComponents();
+        return std::move(sstr).str();
     }());
 }
 
@@ -271,6 +281,10 @@ static std::string toSpelling(ParameterAttribute attrib) {
     switch (attrib.type) {
     case None:
         return {};
+    case VertexID:
+        return "[[vertex_id]]";
+    case InstanceID:
+        return "[[instance_id]]";
     case Position:
         return "[[position]]";
     case StageIn:
@@ -290,16 +304,37 @@ void MetalCodeGenerator::declareTypeImpl(AggregateType const* type) {
     if (type->isExtern()) {
         return;
     }
+    ranges::for_each(type->elements(),
+                     [&](auto elem) { declareType(elem.type); });
     auto item = makeItem();
     writeRaw("struct ", getName(type));
     auto scope = makeScope(ScopeType::CompoundStmt);
     for (auto [index, member]: type->elements() | enumerate) {
         auto item = makeItem();
-        writeRaw(getName(member.type), " ", member.name);
+        if (auto* arrayType = dyncast<ArrayType const*>(member.type)) {
+            writeRaw(getName(arrayType->elementType()), " ", member.name, "[",
+                     arrayType->count()->get(), "]");
+        }
+        else {
+            writeRaw(getName(member.type), " ", member.name);
+        }
         if (member.attrib) {
             writeRaw(" ", toSpelling(member.attrib));
         }
     }
+}
+
+void MetalCodeGenerator::declareTypeImpl(PointerType const* type) {
+    declareType(type->baseType());
+    typeNameMap.setName(type,
+                        utl::strcat(getName(type->baseType()), " device",
+                                    type->isConst() ? " const" : "", "*"));
+}
+
+void MetalCodeGenerator::declareTypeImpl(ArrayType const* type) {
+    declareType(type->elementType());
+    typeNameMap.setName(type, utl::strcat(getName(type->elementType()), "[",
+                                          type->count()->get(), "]"));
 }
 
 void MetalCodeGenerator::beginFunction(Function const* F) {
@@ -608,6 +643,12 @@ void MetalCodeGenerator::codegenImpl(AggregateBuilder const& value) {
     }
 }
 
+void MetalCodeGenerator::codegenImpl(ArrayAccess const& inst) {
+    auto item = makeItem();
+    writeRaw(getName(inst.type()), " ", getName(&inst), " = ",
+             getName(inst.array()), "[", getName(inst.index()), "]");
+}
+
 void MetalCodeGenerator::codegenImpl(DiscardFragment const& inst) {
     auto item = makeItem();
     writeRaw("if (", getName(inst.condition()), ") ");
@@ -658,7 +699,12 @@ std::string MetalCodeGenerator::genNameImpl(BuiltinFunction const& F) {
 }
 
 std::string MetalCodeGenerator::genNameImpl(ExtractVectorValue const& e) {
-    return utl::strcat(getName(e.base()), ".", "xyzw"[e.index()]);
+    std::stringstream sstr;
+    sstr << getName(e.base()) << ".";
+    for (int i = 0; i < e.numComponents(); ++i) {
+        sstr << "xyzw"[e.indices()[i]];
+    }
+    return std::move(sstr).str();
 }
 
 std::string MetalCodeGenerator::genNameImpl(ExtractAggregateValue const& e) {

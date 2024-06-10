@@ -18,11 +18,11 @@ public:
     using iterator = Function::iterator;
     using const_iterator = Function::const_iterator;
 
-    explicit FunctionBuilder(Context& ctx, Function& F): ctx(ctx), F(&F) {
+    explicit FunctionBuilder(Context& ctx, Function& F): ctx(&ctx), F(&F) {
         pushInsertPoint(F.end());
     }
 
-    Context& context() const { return ctx; }
+    Context& context() const { return *ctx; }
 
     Function* function() const { return F; }
 
@@ -44,11 +44,26 @@ public:
     template <std::derived_from<Instruction> Inst, typename... Args>
         requires std::constructible_from<Inst, Context&, Args...>
     Inst* insert(Args&&... args) {
-        return insert(new Inst(ctx, std::forward<Args>(args)...));
+        return insert(new Inst(*ctx, std::forward<Args>(args)...));
     }
+
+    /// # Utils
 
     FunctionCall* callFunction(std::string name, Callable* callee,
                                std::span<Value* const> args);
+    /// Access a vector or aggregate element
+    Value* getElem(std::string name, Value* base, int index);
+
+    /// Append values to a vector
+    Value* appendVector(std::string name, std::vector<Value*> values);
+
+    /// \overload
+    Value* appendVector(std::string name,
+                        std::derived_from<Value> auto*... values) {
+        return appendVector(std::move(name), { values... });
+    }
+
+    /// #
 
     const_iterator insertPoint() const { return insertPointStack.top(); }
 
@@ -57,7 +72,7 @@ public:
     void popInsertPoint() { insertPointStack.pop(); }
 
 private:
-    Context& ctx;
+    Context* ctx;
     Function* F = nullptr;
     utl::stack<const_iterator> insertPointStack;
 };

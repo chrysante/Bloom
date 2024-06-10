@@ -16,6 +16,13 @@ public:
     /// Adds the function \p F to this module
     Function* addFunction(DynUniquePtr<Function> F);
 
+    /// \overload for inplace construction
+    template <typename... Args>
+        requires std::constructible_from<Function, Args...>
+    Function* addFunction(Args&&... args) {
+        return addFunction(allocate<Function>(std::forward<Args>(args)...));
+    }
+
     /// \Returns a view over the functions in this module
     auto functions() const {
         return _functions | ranges::views::transform(ToAddress<Function const>);

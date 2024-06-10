@@ -165,6 +165,19 @@ private:
     int numc;
 };
 
+class IntConstant: public Constant {
+public:
+    explicit IntConstant(std::string name, IntType const* type,
+                         long long value);
+
+    DECLARE_TYPE(IntType)
+
+    long long get() const { return _value; }
+
+private:
+    long long _value;
+};
+
 class TextureConstant: public Constant {
 public:
     explicit TextureConstant(std::string name, TextureType const* type,
@@ -394,14 +407,21 @@ public:
     DECLARE_TYPE(VectorType)
 
     explicit ExtractVectorValue(Context& ctx, std::string name, Value* operand,
-                                int index);
+                                vml::int4 indices, int numComponents);
 
-    int index() const { return _index; }
+    explicit ExtractVectorValue(Context& ctx, std::string name, Value* operand,
+                                int indexA, int indexB = -1, int indexC = -1,
+                                int indexD = -1);
+
+    vml::int4 indices() const { return _indices; }
+
+    int numComponents() const { return _numComponents; }
 
     DECLARE_OPERAND(Value, base, Base, 0)
 
 private:
-    int _index = -1;
+    vml::int4 _indices{ -1 };
+    int _numComponents;
 };
 
 class AggregateBuilder: public Instruction {
@@ -437,9 +457,18 @@ private:
     int _index;
 };
 
+class ArrayAccess: public Instruction {
+public:
+    explicit ArrayAccess(std::string name, Value* array, Value* index);
+
+    DECLARE_OPERAND(Value, array, Array, 0)
+
+    DECLARE_OPERAND(Value, index, Index, 1)
+};
+
 class DiscardFragment: public Instruction {
 public:
-    DiscardFragment(Context& ctx, std::string name, Value* condition);
+    explicit DiscardFragment(Context& ctx, std::string name, Value* condition);
 
     DECLARE_OPERAND(Value, condition, Condition, 0)
 };

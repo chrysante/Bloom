@@ -40,27 +40,31 @@ public:
 
 class IntType: public Type {
 public:
-    enum Subtype { I8, I16, I32, U8, U16, U32 };
-
-    explicit IntType(Subtype subtype):
+    explicit IntType(IntSubType subtype):
         Type(TypeCategory::IntType,
              std::string(magic_enum::enum_name(subtype))),
         _subtype(subtype) {}
 
-    Subtype subtype() const { return _subtype; }
+    IntSubType subtype() const { return _subtype; }
 
 private:
-    Subtype _subtype;
+    IntSubType _subtype;
 };
 
 class VectorType: public Type {
 public:
-    explicit VectorType(int numComponents);
+    explicit VectorType(int numComponents,
+                        VectorTypeFlags flags = VectorTypeFlags::None);
 
     int numComponents() const { return numComps; }
 
+    VectorTypeFlags flags() const { return _flags; }
+
+    bool packed() const { return test(flags() & VectorTypeFlags::Packed); }
+
 private:
     int numComps;
+    VectorTypeFlags _flags;
 };
 
 class MatrixType: public Type {
@@ -114,6 +118,36 @@ public:
 private:
     Type const* ret;
     std::vector<Type const*> args;
+};
+
+class PointerType: public Type {
+public:
+    explicit PointerType(Type const* baseType, Mutability mutability);
+
+    Type const* baseType() const { return base; }
+
+    Mutability mutability() const { return mut; }
+
+    bool isConst() const { return mutability() == Mutability::Const; }
+
+    bool isMut() const { return mutability() == Mutability::Mutable; }
+
+private:
+    Type const* base;
+    Mutability mut;
+};
+
+class ArrayType: public Type {
+public:
+    explicit ArrayType(Type const* elementType, IntConstant const* count);
+
+    Type const* elementType() const { return elemType; }
+
+    IntConstant const* count() const { return _count; }
+
+private:
+    Type const* elemType;
+    IntConstant const* _count;
 };
 
 } // namespace bloom::matc

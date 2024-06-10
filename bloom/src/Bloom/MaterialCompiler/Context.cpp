@@ -2,6 +2,7 @@
 
 #include <range/v3/algorithm.hpp>
 #include <utl/hash.hpp>
+#include <utl/strcat.hpp>
 #include <utl/vector.hpp>
 
 #include "Bloom/Core/EnumCount.h"
@@ -88,15 +89,22 @@ struct Context::Impl {
     std::vector<DynUniquePtr<Type>> typeOwners;
     VoidType const* voidType = nullptr;
     BoolType const* boolType = nullptr;
-    EnumArray<IntType::Subtype, IntType const*> intTypes;
+    EnumArray<IntSubType, IntType const*> intTypes;
     VectorType const* vectorType[4]{};
+    utl::hashmap<std::pair<int, VectorTypeFlags>, VectorType const*>
+        vectorTypes;
     utl::hashmap<std::pair<int, int>, MatrixType const*> matrixTypes;
     utl::hashmap<TextureSubType, TextureType const*> textureTypes;
     utl::hashmap<std::string, AggregateType const*> aggTypes;
     utl::hashmap<FuncTypeKey, FunctionType const*> funcTypes;
+    utl::hashmap<std::pair<Type const*, Mutability>, PointerType const*>
+        pointerTypes;
+    utl::hashmap<std::pair<Type const*, IntConstant const*>, ArrayType const*>
+        arrayTypes;
     TextureType const* textureType = nullptr;
     // Values
     std::vector<DynUniquePtr<Value>> valueOwners;
+    utl::hashmap<std::pair<IntSubType, long long>, IntConstant*> intConstants;
     utl::hashmap<std::pair<int, float4>, VectorConstant*> vectorConstants;
     utl::hashmap<RasterizerInputKind, RasterizerInput*> rasterizerInputs;
     utl::hashmap<utl::uuid, TextureConstant*> textureConstants;
@@ -114,27 +122,26 @@ Context::~Context() = default;
 Impl::Impl() {
     voidType = addType<VoidType>();
     boolType = addType<BoolType>();
-    for (auto subtype: magic_enum::enum_values<IntType::Subtype>()) {
+    for (auto subtype: magic_enum::enum_values<IntSubType>()) {
         intTypes[subtype] = addType<IntType>(subtype);
     }
-    vectorType[0] = addType<VectorType>(1);
-    vectorType[1] = addType<VectorType>(2);
-    vectorType[2] = addType<VectorType>(3);
-    vectorType[3] = addType<VectorType>(4);
 }
 
-VoidType const* Context::voidType() const { return impl->voidType; }
+VoidType const* Context::voidType() { return impl->voidType; }
 
-BoolType const* Context::boolType() const { return impl->boolType; }
+BoolType const* Context::boolType() { return impl->boolType; }
 
-IntType const* Context::intType(int subtype) const {
+IntType const* Context::intType(IntSubType subtype) {
     return impl->intTypes[subtype];
 }
 
-VectorType const* Context::vectorType(int numComponents) const {
+VectorType const* Context::vectorType(int numComponents,
+                                      VectorTypeFlags flags) {
     assert(numComponents >= 1);
     assert(numComponents <= 4);
-    return impl->vectorType[numComponents - 1];
+    return impl->getOrInsert(impl->vectorTypes, { numComponents, flags }, [&] {
+        return impl->addType<VectorType>(numComponents, flags);
+    });
 }
 
 MatrixType const* Context::matrixType(int rows, int columns) {
@@ -165,6 +172,36 @@ FunctionType const* Context::functionType(
                              { returnType, argTypes | ToSmallVector<> }, [&] {
         return impl->addType<FunctionType>(returnType,
                                            argTypes | ranges::to<std::vector>);
+    });
+}
+
+PointerType const* Context::pointerType(Type const* baseType, Mutability mut) {
+    return impl->getOrInsert(impl->pointerTypes, { baseType, mut }, [&] {
+        return impl->addType<PointerType>(baseType, mut);
+    });
+}
+
+ArrayType const* Context::arrayType(Type const* elementType,
+                                    IntConstant const* count) {
+    return impl->getOrInsert(impl->arrayTypes, { elementType, count }, [&] {
+        return impl->addType<ArrayType>(elementType, count);
+    });
+}
+
+ArrayType const* Context::arrayType(Type const* elementType, int count) {
+    return arrayType(elementType, intConstant(IntSubType::I32, count));
+}
+
+std::string makeIntConstantName(IntSubType subtype, long long value) {
+    return utl::strcat(magic_enum::enum_name(subtype), "(", value, ")");
+}
+
+IntConstant* Context::intConstant(IntSubType subtype, long long value) {
+
+    return impl->getOrInsert(impl->intConstants, { subtype, value }, [&] {
+        auto name = makeIntConstantName(subtype, value);
+        return impl->addValue<IntConstant>(std::move(name), intType(subtype),
+                                           value);
     });
 }
 

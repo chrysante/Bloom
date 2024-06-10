@@ -95,6 +95,11 @@ VectorConstant::VectorConstant(Context& ctx, std::string name,
     _value(value),
     numc(numComponents) {}
 
+IntConstant::IntConstant(std::string name, IntType const* type,
+                         long long value):
+    Constant(ValueNodeType::IntConstant, std::move(name), type),
+    _value(value) {}
+
 TextureConstant::TextureConstant(std::string name, TextureType const* type,
                                  AssetHandle asset):
     Constant(ValueNodeType::TextureConstant, std::move(name), type),
@@ -430,10 +435,31 @@ VectorBuilder::VectorBuilder(std::string name, VectorType const* type,
                 std::vector<Value*>(numInputs)) {}
 
 ExtractVectorValue::ExtractVectorValue(Context& ctx, std::string name,
-                                       Value* operand, int index):
+                                       Value* operand, vml::int4 indices,
+                                       int numComponents):
     Instruction(ValueNodeType::ExtractVectorValue, std::move(name),
-                ctx.floatType(), { operand }),
-    _index(index) {}
+                ctx.vectorType(numComponents), { operand }),
+    _indices(indices),
+    _numComponents(numComponents) {}
+
+static int getNumComponents(int indexA, int indexB, int indexC, int indexD) {
+    int indices[] = { indexA, indexB, indexC, indexD };
+    int num = 0;
+    for (int i: indices) {
+        if (i < 0) {
+            break;
+        }
+        ++num;
+    }
+    return num;
+}
+
+ExtractVectorValue::ExtractVectorValue(Context& ctx, std::string name,
+                                       Value* operand, int indexA, int indexB,
+                                       int indexC, int indexD):
+    ExtractVectorValue(ctx, std::move(name), operand,
+                       { indexA, indexB, indexC, indexD },
+                       getNumComponents(indexA, indexB, indexC, indexD)) {}
 
 AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type,
                                    std::vector<Value*> values):
@@ -459,6 +485,12 @@ ExtractAggregateValue::ExtractAggregateValue(std::string name,
     Instruction(ValueNodeType::ExtractAggregateValue, std::move(name),
                 elementType, std::vector<Value*>(1)),
     _index(index) {}
+
+ArrayAccess::ArrayAccess(std::string name, Value* array, Value* index):
+
+    Instruction(ValueNodeType::ArrayAccess, std::move(name),
+                cast<PointerType const*>(array->type())->baseType(),
+                { array, index }) {}
 
 DiscardFragment::DiscardFragment(Context& ctx, std::string name,
                                  Value* condition):

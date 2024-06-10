@@ -19,14 +19,26 @@ public:
     Context& operator=(Context&&) noexcept;
     ~Context();
 
-    VoidType const* voidType() const;
-    BoolType const* boolType() const;
-    IntType const* intType(int subtype) const;
-    VectorType const* vectorType(int numComponents) const;
-    VectorType const* floatType() const { return vectorType(1); }
-    VectorType const* float2Type() const { return vectorType(2); }
-    VectorType const* float3Type() const { return vectorType(3); }
-    VectorType const* float4Type() const { return vectorType(4); }
+    VoidType const* voidType();
+    BoolType const* boolType();
+    IntType const* intType(IntSubType subtype);
+    VectorType const* vectorType(int numComponents,
+                                 VectorTypeFlags flags = VectorTypeFlags::None);
+    VectorType const* floatType(VectorTypeFlags flags = VectorTypeFlags::None) {
+        return vectorType(1, flags);
+    }
+    VectorType const* float2Type(
+        VectorTypeFlags flags = VectorTypeFlags::None) {
+        return vectorType(2, flags);
+    }
+    VectorType const* float3Type(
+        VectorTypeFlags flags = VectorTypeFlags::None) {
+        return vectorType(3, flags);
+    }
+    VectorType const* float4Type(
+        VectorTypeFlags flags = VectorTypeFlags::None) {
+        return vectorType(4, flags);
+    }
     MatrixType const* matrixType(int rows, int columns);
     AggregateType const* aggregateType(
         std::string name, std::span<AggregateElement const> elements,
@@ -39,7 +51,12 @@ public:
     TextureType const* textureType(TextureSubType subtype);
     FunctionType const* functionType(Type const* returnType,
                                      std::span<Type const* const> argTypes);
+    PointerType const* pointerType(Type const* baseType, Mutability mutabiliy);
+    ArrayType const* arrayType(Type const* elementType,
+                               IntConstant const* count);
+    ArrayType const* arrayType(Type const* elementType, int count);
 
+    IntConstant* intConstant(IntSubType subtype, long long value);
     VectorConstant* vectorConstant(int numComponents, vml::float4 value);
     VectorConstant* floatConstant(float value);
     VectorConstant* float2Constant(vml::float2 value);

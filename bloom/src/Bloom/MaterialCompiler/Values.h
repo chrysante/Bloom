@@ -34,6 +34,10 @@
         return User::operands().subspan(INDEX_OFFSET) |                        \
                ranges::views::transform(cast<T*>);                             \
     }                                                                          \
+    template <typename T = TYPE>                                               \
+    T* NAME(size_t index) const {                                              \
+        return NAME##s()[index];                                               \
+    }                                                                          \
     void set##CAP_NAME(size_t index, Value* value) {                           \
         User::setOperand(index + INDEX_OFFSET, value);                         \
     }
@@ -61,6 +65,8 @@ public:
     Type const* type() const { return _type; }
 
     std::string const& name() const { return _name; }
+
+    void setName(std::string name) { _name = std::move(name); }
 
     auto users() const { return _users.values() | ranges::views::keys; }
 
@@ -230,6 +236,7 @@ public:
 
     Type const* returnType() const;
 
+    List<FunctionParameter>& parameters() { return _parameters; }
     List<FunctionParameter> const& parameters() const { return _parameters; }
 
     void setParameters(List<FunctionParameter> params);
@@ -290,6 +297,12 @@ public:
     /// @}
 
     ShaderKind shaderKind() const { return _shaderKind; }
+
+    ReturnInst* getReturn() {
+        return const_cast<ReturnInst*>(std::as_const(*this).getReturn());
+    }
+
+    ReturnInst const* getReturn() const;
 
 private:
     List<Instruction> _body;
@@ -427,6 +440,8 @@ private:
 class AggregateBuilder: public Instruction {
 public:
     DECLARE_TYPE(AggregateType)
+
+    DECLARE_OPERAND_RANGE(Value, element, Element, 0)
 
     explicit AggregateBuilder(std::string name, AggregateType const* type,
                               std::vector<Value*> values);

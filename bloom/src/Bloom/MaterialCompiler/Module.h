@@ -24,6 +24,11 @@ public:
     }
 
     /// \Returns a view over the functions in this module
+    auto functions() {
+        return _functions | ranges::views::transform(ToAddress<>);
+    }
+
+    /// \overload
     auto functions() const {
         return _functions | ranges::views::transform(ToAddress<Function const>);
     }

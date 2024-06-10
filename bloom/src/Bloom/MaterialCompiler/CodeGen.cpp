@@ -133,6 +133,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     /// Derived value types can overload `genNameImpl()` to generate custom
     /// names
     void genName(Value const& value);
+    std::string genNameImpl(IntConstant const& c);
     std::string genNameImpl(VectorConstant const& c);
     std::string genNameImpl(TextureConstant const&);
     std::string genNameImpl(RasterizerInput const&);
@@ -160,6 +161,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     Module const& mod;
     int textureIndexCounter = 0;
     int parameterIndexCounter = 0;
+    int textureConstantCounter = 0;
     AggregateType const* paramBufferType = nullptr;
     NameMap<Type const*> typeNameMap;
     NameMap<Value const*> valueNameMap;
@@ -671,6 +673,10 @@ void MetalCodeGenerator::genName(Value const& value) {
     });
 }
 
+std::string MetalCodeGenerator::genNameImpl(IntConstant const& c) {
+    return std::to_string(c.get());
+}
+
 std::string MetalCodeGenerator::genNameImpl(VectorConstant const& c) {
     if (c.numComponents() == 1) {
         return utl::strcat(c.get().x);
@@ -685,9 +691,8 @@ std::string MetalCodeGenerator::genNameImpl(VectorConstant const& c) {
     return e.takeSource();
 }
 
-std::string MetalCodeGenerator::genNameImpl(TextureConstant const& tex) {
-    textureConstants[tex.bindingPoint()] = tex.asset();
-    return tex.name();
+std::string MetalCodeGenerator::genNameImpl(TextureConstant const&) {
+    assert(false);
 }
 
 std::string MetalCodeGenerator::genNameImpl(RasterizerInput const&) {

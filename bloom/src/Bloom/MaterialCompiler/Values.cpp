@@ -187,22 +187,17 @@ Instruction* Function::push_back(Instruction* inst) {
     return inst;
 }
 
-namespace {
+ReturnInst const* Function::getReturn() const {
+    if (_body.empty()) {
+        return nullptr;
+    }
+    return dyncast<ReturnInst const*>(&_body.back());
+}
 
-enum class SymType {
-    Float,  /// Single floating point value
-    Float3, /// Vector of three floating point values
-    FloatN, /// Single floating point value or vector of 2-4 floating point
-    /// values
-    VectorN /// Vector of 2-4 floating point values
-};
-
-} // namespace
-
-static Type const* deduceRetTypeImpl(Context& ctx, SymType symRet,
-                                     std::span<SymType const> symArgs,
+static Type const* deduceRetTypeImpl(Context& ctx, SymbolicType symRet,
+                                     std::span<SymbolicType const> symArgs,
                                      std::span<Type const* const> args) {
-    using enum SymType;
+    using enum SymbolicType;
     if (symArgs.size() != args.size()) {
         return nullptr;
     }
@@ -210,12 +205,13 @@ static Type const* deduceRetTypeImpl(Context& ctx, SymType symRet,
     for (auto [symArg, arg]: zip(symArgs, args)) {
         switch (symArg) {
         case Float:
-            if (arg != ctx.floatType()) {
-                return nullptr;
-            }
-            break;
+            [[fallthrough]];
+        case Float2:
+            [[fallthrough]];
         case Float3:
-            if (arg != ctx.float3Type()) {
+            [[fallthrough]];
+        case Float4:
+            if (arg != toConcreteType(ctx, symArg)) {
                 return nullptr;
             }
             break;
@@ -245,9 +241,13 @@ static Type const* deduceRetTypeImpl(Context& ctx, SymType symRet,
     }
     switch (symRet) {
     case Float:
-        return ctx.floatType();
+        [[fallthrough]];
+    case Float2:
+        [[fallthrough]];
     case Float3:
-        return ctx.float3Type();
+        [[fallthrough]];
+    case Float4:
+        return toConcreteType(ctx, symRet);
     case FloatN:
         [[fallthrough]];
     case VectorN:
@@ -261,7 +261,7 @@ static Type const* deduceRetTypeImpl(Context& ctx, SymType symRet,
 static Type const* deduceReturnType(Context& ctx, BuiltinFunctionKind function,
                                     std::span<Type const* const> args) {
     switch (function) {
-        using enum SymType;
+        using enum SymbolicType;
 #define UNPACK(...) __VA_ARGS__
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, RetType, Args)                     \
     case BuiltinFunctionKind::Name:                                            \
@@ -486,11 +486,18 @@ ExtractAggregateValue::ExtractAggregateValue(std::string name,
                 elementType, std::vector<Value*>(1)),
     _index(index) {}
 
-ArrayAccess::ArrayAccess(std::string name, Value* array, Value* index):
+static Type const* getArrayElemType(Type const* type) {
+    return visit<Type const*>(*type,
+                              utl::overload{ [](PointerType const& type) {
+        return type.baseType();
+    }, [](ArrayType const& type) {
+        return type.elementType();
+    }, [](Type const&) { assert(false); } });
+}
 
+ArrayAccess::ArrayAccess(std::string name, Value* array, Value* index):
     Instruction(ValueNodeType::ArrayAccess, std::move(name),
-                cast<PointerType const*>(array->type())->baseType(),
-                { array, index }) {}
+                getArrayElemType(array->type()), { array, index }) {}
 
 DiscardFragment::DiscardFragment(Context& ctx, std::string name,
                                  Value* condition):

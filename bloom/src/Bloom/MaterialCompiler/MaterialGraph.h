@@ -53,6 +53,9 @@ public:
     ///
     utl::hashmap<GraphRoot, Value*> const& roots() const { return _roots; }
 
+    ///
+    Value* getRoot(GraphRoot) const;
+
     utl::hashset<Value*> const& userParameters() const { return _userParams; }
 
 private:

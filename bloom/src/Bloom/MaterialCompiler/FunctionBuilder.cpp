@@ -27,10 +27,10 @@ FunctionCall* FunctionBuilder::callFunction(std::string name, Callable* callee,
 Value* FunctionBuilder::getElem(std::string name, Value* base, int index) {
     // clang-format off
     return visit<Value*>(*base->type(), utl::overload {
-        [&](VectorType const& type) {
+        [&](VectorType const&) {
             return insert<ExtractVectorValue>(std::move(name), base, index);
         },
-        [&](AggregateType const& type) {
+        [&](AggregateType const&) {
             return insert<ExtractAggregateValue>(std::move(name), base, index);
         },
         [&](Type const& ) {
@@ -39,7 +39,13 @@ Value* FunctionBuilder::getElem(std::string name, Value* base, int index) {
     }); // clang-format on
 }
 
-Value* FunctionBuilder::appendVector(std::string name,
-                                     std::vector<Value*> values) {
+VectorBuilder* FunctionBuilder::appendVector(std::string name,
+                                             std::vector<Value*> values) {
     return insert<VectorBuilder>(std::move(name), std::move(values));
+}
+
+AggregateBuilder* FunctionBuilder::makeAggregate(std::string name,
+                                                 AggregateType const* type,
+                                                 std::vector<Value*> values) {
+    return insert<AggregateBuilder>(std::move(name), type, std::move(values));
 }

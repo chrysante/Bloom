@@ -55,13 +55,11 @@ public:
     Value* getElem(std::string name, Value* base, int index);
 
     /// Append values to a vector
-    Value* appendVector(std::string name, std::vector<Value*> values);
+    VectorBuilder* appendVector(std::string name, std::vector<Value*> values);
 
-    /// \overload
-    Value* appendVector(std::string name,
-                        std::derived_from<Value> auto*... values) {
-        return appendVector(std::move(name), { values... });
-    }
+    ///
+    AggregateBuilder* makeAggregate(std::string name, AggregateType const* type,
+                                    std::vector<Value*> values);
 
     /// #
 

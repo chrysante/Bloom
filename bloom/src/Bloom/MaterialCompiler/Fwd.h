@@ -49,6 +49,33 @@ using NoParent = void;
 
 namespace bloom::matc {
 
+/// Symbolic types used internally
+enum class SymbolicType {
+    Float,  /// Single floating point value
+    Float2, /// Vector of two floating point values
+    Float3, /// Vector of three floating point values
+    Float4, /// Vector of four floating point values
+    FloatN, /// Single floating point value or vector of 2-4 floating point
+    /// values
+    VectorN /// Vector of 2-4 floating point values
+};
+
+/// \Returns the actual type corresponding to \p symType or null if no type can
+/// be mapped
+Type const* toConcreteType(Context& ctx, SymbolicType symType);
+
+/// List of values in a default lit material
+enum class DefaultLitMaterialValue {
+#define BL_MATGRAPH_DEFLITVALUE(Name, Type) Name,
+#include "Bloom/MaterialCompiler/Lists.def"
+};
+
+/// \Returns the type of the material value \p value
+Type const* getType(Context& ctx, DefaultLitMaterialValue value);
+
+///
+AggregateType const* makeDefaultLitMaterialType(Context& ctx);
+
 struct CodegenParameters {
     MaterialShadingModel shadingModel = {};
     MaterialTransparency transparency = {};

@@ -100,41 +100,43 @@ TEST_CASE() {
         .transparency = MaterialTransparency::Masked
     };
     MaterialGraph g;
-    auto* tex0 = g.addTextureParameter(ctx, "TexParam",
-                                       TextureSubType::Texture2D, genTexture());
-    auto* tex1 = ctx.textureConstant(TextureSubType::TextureCube, genTexture());
-    auto* const0 = g.addVectorParameter(ctx, "Param0", 2, float4{ 1, 0, 0, 0 });
-    auto* const1 = g.addVectorParameter(ctx, "Param1", 3, float4{ 2, 1, 5, 0 });
-    auto* const2 = g.addVectorParameter(ctx, "Param2", 2, float4{ 2, 1, 5, 0 });
-    auto* vec0 =
-        g.addValue<VectorBuilder>(ctx, "value",
+    auto* AOTexture =
+        ctx.textureConstant(TextureSubType::TextureCube, genTexture());
+    auto* normalTexture =
+        ctx.textureConstant(TextureSubType::TextureCube, genTexture());
+    auto* albedo = g.addVectorParameter(ctx, "Albedo", 3, float4{ 1, 0, 0, 0 });
+    auto* roughness =
+        g.addVectorParameter(ctx, "Roughness", 1, float4{ 2, 1, 5, 0 });
+    auto* emissive =
+        g.addValue<VectorBuilder>(ctx, "Emissive",
                                   std::vector<Value*>{
                                       ctx.vectorConstant(1, { 1, 0, 0, 0 }),
                                       ctx.vectorConstant(1, { 2, 0, 0, 0 }),
                                       ctx.vectorConstant(1, { 3, 0, 0, 0 }),
                                   });
+    auto* metallic =
+        g.addVectorParameter(ctx, "Metallic", 1, float4{ 2, 1, 5, 0 });
     auto* coords = ctx.rasterizerInput(RasterizerInputKind::TextureCoords);
-    auto* sample0 = g.addValue<TextureSampler>(ctx, "sample", tex0, coords,
-                                               SampleMode::Normal);
-    auto* sample1 = g.addValue<TextureSampler>(ctx, "sample", tex1, coords,
-                                               SampleMode::Color);
-    auto* aggType = ctx.aggregateType("agg_type", { { const0->type(), "A" },
-                                                    { const1->type(), "B" },
-                                                    { vec0->type(), "C" },
-                                                    { sample0->type(), "D" },
-                                                    { sample1->type(), "E" },
-                                                    { const2->type(), "F" } });
-    auto* aggregate =
-        g.addValue<AggregateBuilder>("agg_value", aggType,
-                                     std::vector<Value*>{ const0, const1, vec0,
-                                                          sample0, sample1,
-                                                          const2 });
-    Value* resultVal = g.addValue<ExtractAggregateValue>("elem", aggregate, 1);
-    resultVal = g.addValue<FunctionCall>(ctx, "value",
-                                         BuiltinFunctionKind::Normalize,
-                                         std::vector<Value*>{ resultVal });
-    g.setRoot(GraphRoot::ShadingFunction, resultVal);
-    auto* transparency = g.addValue<ExtractVectorValue>(ctx, "R", sample0, 0);
+    auto* AOSample = g.addValue<TextureSampler>(ctx, "AOSample", AOTexture,
+                                                coords, SampleMode::Color);
+    auto* AO = g.addValue<ExtractVectorValue>(ctx, "AO", AOSample, 0);
+    auto* normalSample = g.addValue<TextureSampler>(ctx, "NormalSample",
+                                                    normalTexture, coords,
+                                                    SampleMode::Normal);
+    auto* normal =
+        g.addValue<ExtractVectorValue>(ctx, "Normal", normalSample, 0, 1, 2);
+    auto* normal2 = g.addValue<FunctionCall>(ctx, "Normal2",
+                                             BuiltinFunctionKind::Normalize,
+                                             std::vector<Value*>{ normal });
+    auto* materialType = makeDefaultLitMaterialType(ctx);
+    auto* material = g.addValue<AggregateBuilder>(
+        "material", materialType,
+        std::vector<Value*>{
+            albedo, roughness, emissive, metallic, AO, normal2
+            //            ctx.float3Constant({0,0,1})
+        });
+    g.setRoot(GraphRoot::ShadingFunction, material);
+    auto* transparency = g.addValue<ExtractVectorValue>(ctx, "R", AOSample, 1);
     g.setRoot(GraphRoot::TransparencyFunction, transparency);
     MaterialSourceData sourceData;
     auto mod = buildModule(ctx, g, codegenParams);

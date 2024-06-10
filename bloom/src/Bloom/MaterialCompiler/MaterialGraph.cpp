@@ -41,3 +41,8 @@ TextureConstant* MaterialGraph::addTextureParameter(Context& ctx,
     _userParams.insert(value.get());
     return addValue(std::move(value));
 }
+
+Value* MaterialGraph::getRoot(GraphRoot kind) const {
+    auto itr = _roots.find(kind);
+    return itr != _roots.end() ? itr->second : nullptr;
+}

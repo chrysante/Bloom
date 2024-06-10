@@ -47,6 +47,19 @@ BL_MATGRAPH_VALUE(ReturnInst,            Instruction, Concrete)
 
 #undef BL_MATGRAPH_VALUE
 
+#ifndef BL_MATGRAPH_DEFLITVALUE
+#define BL_MATGRAPH_DEFLITVALUE(Name, Type)
+#endif
+
+BL_MATGRAPH_DEFLITVALUE(Albedo, Float3)
+BL_MATGRAPH_DEFLITVALUE(Emissive, Float3)
+BL_MATGRAPH_DEFLITVALUE(Roughness, Float)
+BL_MATGRAPH_DEFLITVALUE(Metallic, Float)
+BL_MATGRAPH_DEFLITVALUE(AmbientOcclusion, Float)
+BL_MATGRAPH_DEFLITVALUE(Normal, Float3)
+
+#undef BL_MATGRAPH_DEFLITVALUE
+
 #ifndef BL_MATGRAPH_BUILTIN
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, Ret, Args)
 #endif

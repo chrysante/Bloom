@@ -61,6 +61,24 @@ public:
     AggregateBuilder* makeAggregate(std::string name, AggregateType const* type,
                                     std::vector<Value*> values);
 
+    MatrixBuilder* buildMatrix(std::string name, std::vector<Value*> columns);
+
+    ///
+    Value* clampMin(std::string name, Value* a, Value* b);
+
+    /// \overload
+    Value* clampMin(std::string name, Value* a, vml::float4 b);
+
+    ///
+    Value* callBuiltin(std::string name, BuiltinFunctionKind function,
+                       std::span<Value* const> arguments);
+
+    /// \overload
+    Value* callBuiltin(std::string name, BuiltinFunctionKind function,
+                       std::initializer_list<Value*> arguments) {
+        return callBuiltin(std::move(name), function, std::span(arguments));
+    }
+
     /// #
 
     const_iterator insertPoint() const { return insertPointStack.top(); }

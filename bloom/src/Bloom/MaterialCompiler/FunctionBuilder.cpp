@@ -44,8 +44,29 @@ VectorBuilder* FunctionBuilder::appendVector(std::string name,
     return insert<VectorBuilder>(std::move(name), std::move(values));
 }
 
+MatrixBuilder* FunctionBuilder::buildMatrix(std::string name,
+                                            std::vector<Value*> columns) {
+    return insert<MatrixBuilder>(std::move(name), std::move(columns));
+}
+
 AggregateBuilder* FunctionBuilder::makeAggregate(std::string name,
                                                  AggregateType const* type,
                                                  std::vector<Value*> values) {
     return insert<AggregateBuilder>(std::move(name), type, std::move(values));
+}
+
+Value* FunctionBuilder::clampMin(std::string name, Value* a, Value* b) {
+    return callBuiltin(std::move(name), BuiltinFunctionKind::Min, { a, b });
+}
+
+Value* FunctionBuilder::clampMin(std::string name, Value* a, vml::float4 b) {
+    auto* type = cast<VectorType const*>(a->type());
+    return clampMin(std::move(name), a,
+                    ctx->vectorConstant(type->numComponents(), b));
+}
+
+Value* FunctionBuilder::callBuiltin(std::string name,
+                                    BuiltinFunctionKind function,
+                                    std::span<Value* const> arguments) {
+    return insert<FunctionCall>(std::move(name), function, arguments);
 }

@@ -415,6 +415,33 @@ public:
                            int numInputs);
 };
 
+class MatrixBuilder: public Instruction {
+public:
+    DECLARE_TYPE(MatrixType)
+
+    explicit MatrixBuilder(Context& ctx, std::string name,
+                           std::vector<Value*> columns);
+
+    explicit MatrixBuilder(std::string name, MatrixType const* type,
+                           int numInputs);
+};
+
+class AggregateBuilder: public Instruction {
+public:
+    DECLARE_TYPE(AggregateType)
+
+    DECLARE_OPERAND_RANGE(Value, element, Element, 0)
+
+    explicit AggregateBuilder(std::string name, AggregateType const* type,
+                              std::vector<Value*> values);
+
+    explicit AggregateBuilder(std::string name, AggregateType const* type,
+                              std::initializer_list<Value*> values):
+        AggregateBuilder(std::move(name), type, std::vector(values)) {}
+
+    explicit AggregateBuilder(std::string name, AggregateType const* type);
+};
+
 class ExtractVectorValue: public Instruction {
 public:
     DECLARE_TYPE(VectorType)
@@ -435,22 +462,6 @@ public:
 private:
     vml::int4 _indices{ -1 };
     int _numComponents;
-};
-
-class AggregateBuilder: public Instruction {
-public:
-    DECLARE_TYPE(AggregateType)
-
-    DECLARE_OPERAND_RANGE(Value, element, Element, 0)
-
-    explicit AggregateBuilder(std::string name, AggregateType const* type,
-                              std::vector<Value*> values);
-
-    explicit AggregateBuilder(std::string name, AggregateType const* type,
-                              std::initializer_list<Value*> values):
-        AggregateBuilder(std::move(name), type, std::vector(values)) {}
-
-    explicit AggregateBuilder(std::string name, AggregateType const* type);
 };
 
 /// Element access into an aggregate, i.e., `value.member`

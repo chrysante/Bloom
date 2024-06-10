@@ -434,6 +434,28 @@ VectorBuilder::VectorBuilder(std::string name, VectorType const* type,
     Instruction(ValueNodeType::VectorBuilder, std::move(name), type,
                 std::vector<Value*>(numInputs)) {}
 
+MatrixBuilder::MatrixBuilder(Context& ctx, std::string name,
+                             std::vector<Value*> columns):
+    Instruction(ValueNodeType::MatrixBuilder, std::move(name),
+                ctx.matrixType(cast<VectorType const*>(columns[0]->type())
+                                   ->numComponents(),
+                               (int)columns.size()),
+                std::move(columns)) {}
+
+MatrixBuilder::MatrixBuilder(std::string name, MatrixType const* type,
+                             int numInputs):
+    Instruction(ValueNodeType::MatrixBuilder, std::move(name), type,
+                std::vector<Value*>(numInputs)) {}
+
+AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type,
+                                   std::vector<Value*> values):
+    Instruction(ValueNodeType::AggregateBuilder, std::move(name), type,
+                std::move(values)) {}
+
+AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type):
+    AggregateBuilder(std::move(name), type,
+                     std::vector<Value*>(type->elements().size())) {}
+
 ExtractVectorValue::ExtractVectorValue(Context& ctx, std::string name,
                                        Value* operand, vml::int4 indices,
                                        int numComponents):
@@ -460,15 +482,6 @@ ExtractVectorValue::ExtractVectorValue(Context& ctx, std::string name,
     ExtractVectorValue(ctx, std::move(name), operand,
                        { indexA, indexB, indexC, indexD },
                        getNumComponents(indexA, indexB, indexC, indexD)) {}
-
-AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type,
-                                   std::vector<Value*> values):
-    Instruction(ValueNodeType::AggregateBuilder, std::move(name), type,
-                std::move(values)) {}
-
-AggregateBuilder::AggregateBuilder(std::string name, AggregateType const* type):
-    AggregateBuilder(std::move(name), type,
-                     std::vector<Value*>(type->elements().size())) {}
 
 ExtractAggregateValue::ExtractAggregateValue(std::string name, Value* baseValue,
                                              int index):

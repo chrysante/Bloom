@@ -129,12 +129,11 @@ TEST_CASE() {
                                              BuiltinFunctionKind::Normalize,
                                              std::vector<Value*>{ normal });
     auto* materialType = makeDefaultLitMaterialType(ctx);
-    auto* material = g.addValue<AggregateBuilder>(
-        "material", materialType,
-        std::vector<Value*>{
-            albedo, roughness, emissive, metallic, AO, normal2
-            //            ctx.float3Constant({0,0,1})
-        });
+    auto* material =
+        g.addValue<AggregateBuilder>("material", materialType,
+                                     std::vector<Value*>{ albedo, roughness,
+                                                          emissive, metallic,
+                                                          AO, normal2 });
     g.setRoot(GraphRoot::ShadingFunction, material);
     auto* transparency = g.addValue<ExtractVectorValue>(ctx, "R", AOSample, 1);
     g.setRoot(GraphRoot::TransparencyFunction, transparency);

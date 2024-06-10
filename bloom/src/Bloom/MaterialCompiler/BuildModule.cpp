@@ -124,7 +124,8 @@ struct Builder {
 
     void defineShadingScenario();
     void analyzeShadingFunction(Function const& F, ScenarioMetadata& MD);
-    Value* postprocessMaterial(Value* value);
+    Value* postprocessMaterial(FunctionBuilder& builder, Value* value,
+                               ScenarioMetadata const& MD);
     Function* declarePBRShader(Type const* materialType);
     Value* callPBRShader(FunctionBuilder& builder, Value* materialData,
                          ScenarioMetadata const& scenarioMD);
@@ -511,7 +512,7 @@ void Builder::defineShadingScenario() {
     assert(shadingFunction);
     Value* materialData =
         callFunction("material", builder, shadingFunction, scenarioMD);
-    materialData = postprocessMaterial(materialData);
+    materialData = postprocessMaterial(builder, materialData, scenarioMD);
     Value* color3 = [&]() -> Value* {
         switch (codegenParams.shadingModel) {
         case MaterialShadingModel::DefaultLit:
@@ -577,39 +578,44 @@ void Builder::defineShadingScenario() {
     rasterizerValues[ClipPosition] =
         transformAttribFloat4(builder, "posCS", cameraMatrix,
                               rasterizerValues[WorldPosition]);
+    auto toFloat3 = [&](Value* value) {
+        return builder.insert<ExtractVectorValue>(value->name(), value, 0, 1,
+                                                  2);
+    };
     if (scenarioMD.isUsed(WorldNormals)) {
-        rasterizerValues[WorldNormals] =
+        rasterizerValues[WorldNormals] = toFloat3(
             transformAttribFloat3(builder, "normalWS", transformMatrix,
                                   builder.getElem("vNormal", vertex, 1),
-                                  VertexAttribKind::Direction);
+                                  VertexAttribKind::Direction));
     }
     if (scenarioMD.isUsed(WorldTangents)) {
-        rasterizerValues[WorldTangents] =
+        rasterizerValues[WorldTangents] = toFloat3(
             transformAttribFloat3(builder, "tangentWS", transformMatrix,
                                   builder.getElem("vTangent", vertex, 2),
-                                  VertexAttribKind::Direction);
+                                  VertexAttribKind::Direction));
     }
     if (scenarioMD.isUsed(WorldBinormals)) {
-        rasterizerValues[WorldBinormals] =
+        rasterizerValues[WorldBinormals] = toFloat3(
             transformAttribFloat3(builder, "binormalWS", transformMatrix,
                                   builder.getElem("vBinormal", vertex, 3),
-                                  VertexAttribKind::Direction);
+                                  VertexAttribKind::Direction));
     }
     if (scenarioMD.isUsed(VertexColor)) {
         rasterizerValues[VertexColor] =
             builder.getElem("vertexColor", vertex, 4);
     }
     if (scenarioMD.isUsed(TextureCoords)) {
-        auto* array = builder.getElem("coords", vertex, 5);
+        auto* array = builder.getElem("tmp", vertex, 5);
         rasterizerValues[TextureCoords] =
-            builder.insert<ArrayAccess>("elem", array,
+            builder.insert<ArrayAccess>("coords", array,
                                         ctx.intConstant(IntSubType::I32, 0));
     }
     auto usedRasterData = scenarioMD.usedRasterizerData |
                           transform([](auto* input) { return input->kind(); }) |
                           ToSmallVector<>;
-    ranges::sort(usedRasterData, ranges::less{},
-                 [](auto value) { return (int)value; });
+    ranges::sort(usedRasterData, ranges::less{}, [&](auto kind) {
+        return scenarioMD.rasterizerDataIndexMap[kind];
+    });
     auto* VSRetval =
         builder.makeAggregate("retval", scenarioMD.rasterizerDataType,
                               usedRasterData | transform([&](auto kind) {
@@ -641,14 +647,62 @@ void Builder::analyzeShadingFunction(Function const& F, ScenarioMetadata& MD) {
     }
 }
 
-Value* Builder::postprocessMaterial(Value* value) {
+static Value* getRasterizerData(FunctionBuilder& builder,
+                                RasterizerInputKind kind,
+                                FunctionMetadata const& functionMD,
+                                ScenarioMetadata const& scenarioMD) {
+    return builder.getElem(std::string(magic_enum::enum_name(kind)),
+                           functionMD.rasterizerParam,
+                           scenarioMD.rasterizerDataIndexMap[kind]);
+}
+
+Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
+                                    ScenarioMetadata const& MD) {
     switch (codegenParams.shadingModel) {
     case MaterialShadingModel::Unlit:
-        // TODO: Clamp to min zero
-        return value;
+        return builder.clampMin("emissive", value, { 0, 0, 0, 0 });
     case MaterialShadingModel::DefaultLit: {
-        // TODO: Clamp albeda and emissive to min zero and normalize normals
-        return value;
+        using enum DefaultLitMaterialValue;
+        EnumArray<DefaultLitMaterialValue, Value*> values{};
+        for (auto kind: magic_enum::enum_values<DefaultLitMaterialValue>()) {
+            values[kind] =
+                builder.getElem(std::string(magic_enum::enum_name(kind)), value,
+                                (int)kind);
+        }
+        values[Albedo] = builder.clampMin(values[Albedo]->name(),
+                                          values[Albedo], { 0, 0, 0, 0 });
+        values[Emissive] = builder.clampMin(values[Emissive]->name(),
+                                            values[Emissive], { 0, 0, 0, 0 });
+        auto getVertexAttrib = [&,
+                                &fnMD = functionMetadata[builder.function()]](
+                                   RasterizerInputKind kind) {
+            return getRasterizerData(builder, kind, fnMD, MD);
+        };
+        auto normalize = [&](std::string name, Value* value) {
+            return builder.callBuiltin(std::move(name),
+                                       BuiltinFunctionKind::Normalize,
+                                       { value });
+        };
+        if (MD.hasCustomNormals) {
+            using enum RasterizerInputKind;
+            // clang-format off
+            auto* TBN = builder.buildMatrix( "TBN", {
+                normalize("VertexTangents", getVertexAttrib(WorldTangents)),
+                normalize("VertexBinormals", getVertexAttrib(WorldBinormals)),
+                normalize("VertexNormals", getVertexAttrib(WorldNormals)),
+            }); // clang-format on
+            values[Normal] =
+                builder.insert<ArithmeticInst>("normalsWS", ArithmeticInst::Mul,
+                                               TBN, values[Normal]);
+        }
+        else {
+            using enum RasterizerInputKind;
+            values[Normal] = getVertexAttrib(WorldNormals);
+        }
+        values[Normal] = normalize("MaterialNormals", values[Normal]);
+        return builder.makeAggregate("postprocessed",
+                                     cast<AggregateType const*>(value->type()),
+                                     values | ranges::to<std::vector>);
     }
     }
 }

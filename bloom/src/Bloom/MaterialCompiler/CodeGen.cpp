@@ -122,9 +122,10 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void codegenImpl(CompareInst const& value);
     void codegenImpl(TextureSampler const& value);
     void codegenImpl(VectorBuilder const& value);
+    void codegenImpl(MatrixBuilder const& value);
+    void codegenImpl(AggregateBuilder const& value);
     void codegenImpl(ExtractVectorValue const&) {}
     void codegenImpl(ExtractAggregateValue const&) {}
-    void codegenImpl(AggregateBuilder const& value);
     void codegenImpl(ArrayAccess const& inst);
     void codegenImpl(DiscardFragment const& inst);
     void codegenImpl(ReturnInst const& ret);
@@ -628,6 +629,15 @@ void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
 }
 
 void MetalCodeGenerator::codegenImpl(VectorBuilder const& value) {
+    auto item = makeItem();
+    writeRaw(getName(value.type()), " ", getName(&value));
+    auto scope = makeScope(ScopeType::Paran);
+    for (auto* operand: value.operands()) {
+        writeItem(getName(operand));
+    }
+}
+
+void MetalCodeGenerator::codegenImpl(MatrixBuilder const& value) {
     auto item = makeItem();
     writeRaw(getName(value.type()), " ", getName(&value));
     auto scope = makeScope(ScopeType::Paran);

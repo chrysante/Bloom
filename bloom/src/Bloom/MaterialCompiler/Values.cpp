@@ -37,7 +37,7 @@ void Value::addUser(User* user) { ++_users[user]; }
 
 void Value::removeUser(User* user) {
     auto itr = _users.find(user);
-    assert(itr != _users.end());
+    VERIFY(itr != _users.end(), "Failed to remove user from value");
     if (--itr->second == 0) {
         _users.erase(itr);
     }
@@ -66,7 +66,7 @@ User::User(User const& rhs): Value(rhs), _operands(rhs._operands) {
 }
 
 void User::setOperand(size_t index, Value* value) {
-    assert(index < _operands.size());
+    VERIFY(index < _operands.size(), "Failed to set operand");
     if (auto* old = _operands[index]) {
         old->removeUser(this);
     }
@@ -160,7 +160,8 @@ FunctionType const* Callable::computeType(Context& ctx,
 }
 
 void Callable::setParameters(List<FunctionParameter> params) {
-    assert(_parameters.empty());
+    VERIFY(_parameters.empty(),
+           "Parameters must be empty when setting entire list");
     _parameters = std::move(params);
 }
 
@@ -500,12 +501,18 @@ ExtractAggregateValue::ExtractAggregateValue(std::string name,
     _index(index) {}
 
 static Type const* getArrayElemType(Type const* type) {
-    return visit<Type const*>(*type,
-                              utl::overload{ [](PointerType const& type) {
-        return type.baseType();
-    }, [](ArrayType const& type) {
-        return type.elementType();
-    }, [](Type const&) { assert(false); } });
+    // clang-format off
+    return visit<Type const*>(*type, utl::overload{
+        [](PointerType const& type) {
+            return type.baseType();
+        },
+        [](ArrayType const& type) {
+            return type.elementType();
+        },
+        [](Type const& type) {
+            UNREACHABLE("Invalid array access base type: ", type.name());
+        }
+    }); // clang-format off
 }
 
 ArrayAccess::ArrayAccess(std::string name, Value* array, Value* index):

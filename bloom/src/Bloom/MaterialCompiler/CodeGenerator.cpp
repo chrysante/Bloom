@@ -15,6 +15,7 @@
 #include "Bloom/Graphics/Material/MaterialSourceData.h"
 #include "Bloom/MaterialCompiler/Codegen.h"
 #include "Bloom/MaterialCompiler/Context.h"
+#include "Bloom/MaterialCompiler/Debug.h"
 #include "Bloom/MaterialCompiler/Module.h"
 #include "Bloom/MaterialCompiler/SourceEmitter.h"
 #include "Bloom/MaterialCompiler/Values.h"
@@ -22,41 +23,6 @@
 using namespace bloom;
 using namespace matc;
 using namespace ranges::views;
-
-[[noreturn]] static void unreachable() { __builtin_unreachable(); }
-
-static MaterialDataType translate(matc::TextureType const* type) {
-    switch (type->subtype()) {
-    case TextureSubType::Texture2D:
-        return MaterialDataType::Texture2D;
-    case TextureSubType::TextureCube:
-        return MaterialDataType::TextureCube;
-    case TextureSubType::Texture2DArray:
-        assert(false);
-    }
-}
-
-static MaterialDataType translate(VectorType const* type) {
-    using enum MaterialDataType;
-    return (MaterialDataType)((int)Float + type->numComponents() - 1);
-}
-
-static Type const* translate(Context& ctx, MaterialDataType type) {
-    switch (type) {
-    case MaterialDataType::Float:
-        return ctx.floatType();
-    case MaterialDataType::Float2:
-        return ctx.float2Type();
-    case MaterialDataType::Float3:
-        return ctx.float3Type();
-    case MaterialDataType::Float4:
-        return ctx.float4Type();
-    case MaterialDataType::Texture2D:
-        return ctx.textureType(TextureSubType::Texture2D);
-    case MaterialDataType::TextureCube:
-        return ctx.textureType(TextureSubType::TextureCube);
-    }
-}
 
 namespace {
 
@@ -103,19 +69,18 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     void declareTypeImpl(PointerType const* type);
     void declareTypeImpl(ArrayType const* type);
 
-    void defineMaterialFunction(Function const* F);
+    void writeFilePrologue();
+    void defineFunction(Function const* F);
     void beginFunction(Function const* F);
     void endFunction();
-
-    void writeFilePrologue();
-
-    void defineFragmentShaderFunction();
-    void defineVertexShaderFunction();
 
     void codegen(Instruction const& inst) {
         visit(inst, [this](auto& inst) { codegenImpl(inst); });
     }
-    void codegenImpl(Instruction const&) { assert(false); }
+    void codegenImpl(Instruction const& inst) {
+        UNREACHABLE("No codegen function for instruction: ",
+                    magic_enum::enum_name(inst.nodeType()));
+    }
     void codegenImpl(FunctionCall const& value);
     void codegenImpl(ArithmeticInst const& value);
     void codegenImpl(CompareInst const& value);
@@ -153,22 +118,10 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
         return typeNameMap.get(type).value();
     }
 
-    void writeIf(auto condition, auto body);
-    void clampGreaterZero(Type const* type, auto const&... valueName);
-    void normalize(auto const&... valueName);
-
     Context& ctx;
     Module const& mod;
-    int textureIndexCounter = 0;
-    int parameterIndexCounter = 0;
-    int textureConstantCounter = 0;
-    AggregateType const* paramBufferType = nullptr;
     NameMap<Type const*> typeNameMap;
     NameMap<Value const*> valueNameMap;
-    utl::hashmap<int, AssetHandle> textureConstants;
-    utl::hashmap<Value const*, int> parameterIndexMap;
-    std::vector<MaterialPrimitiveParameter> primitiveParameters;
-    std::vector<MaterialTextureParameter> textureParameters;
 };
 
 } // namespace
@@ -178,30 +131,6 @@ std::unique_ptr<CodeGenerator> matc::makeCodeGenerator(Context& ctx,
     return std::make_unique<MetalCodeGenerator>(ctx, mod);
 }
 
-static std::pair<uint32_t, uint32_t> getSizeAndAlign(MaterialDataType type) {
-    using enum MaterialDataType;
-    switch (type) {
-    case Float:
-        return { 4, 4 };
-    case Float2:
-        return { 8, 8 };
-    case Float3:
-        return { 16, 16 };
-    case Float4:
-        return { 16, 16 };
-    default:
-        unreachable();
-    }
-}
-
-void MetalCodeGenerator::defineMaterialFunction(Function const* F) {
-    beginFunction(F);
-    for (auto& inst: *F) {
-        codegen(inst);
-    }
-    endFunction();
-}
-
 std::string MetalCodeGenerator::run() {
     writeFilePrologue();
     for (auto* type: ctx.types()) {
@@ -209,7 +138,7 @@ std::string MetalCodeGenerator::run() {
     }
     for (auto* F: mod.functions()) {
         if (F && !F->empty()) {
-            defineMaterialFunction(F);
+            defineFunction(F);
         }
     }
     writeInclude(IncludeType::Local, "Shader/PBRShader.metal");
@@ -339,6 +268,23 @@ void MetalCodeGenerator::declareTypeImpl(ArrayType const* type) {
                                           type->count()->get(), "]"));
 }
 
+void MetalCodeGenerator::writeFilePrologue() {
+    writeInclude(IncludeType::System, "metal_stdlib");
+    writeInclude(IncludeType::Local, "Shader/PBRShader.h");
+    writeInclude(IncludeType::Local, "Shader/SharedTypes.h");
+    writeInclude(IncludeType::Local, "Shader/Vertex.h");
+    writeItem("using namespace metal");
+    writeItem("using namespace bloom");
+}
+
+void MetalCodeGenerator::defineFunction(Function const* F) {
+    beginFunction(F);
+    for (auto& inst: *F) {
+        codegen(inst);
+    }
+    endFunction();
+}
+
 void MetalCodeGenerator::beginFunction(Function const* F) {
     beginItem();
     switch (F->shaderKind()) {
@@ -379,160 +325,6 @@ void MetalCodeGenerator::beginFunction(Function const* F) {
 void MetalCodeGenerator::endFunction() {
     endScope();
     endItem();
-}
-
-void MetalCodeGenerator::writeFilePrologue() {
-    writeInclude(IncludeType::System, "metal_stdlib");
-    writeInclude(IncludeType::Local, "Shader/PBRShader.h");
-    writeInclude(IncludeType::Local, "Shader/SharedTypes.h");
-    writeInclude(IncludeType::Local, "Shader/Vertex.h");
-    writeItem("using namespace metal");
-    writeItem("using namespace bloom");
-}
-
-static int getBindIndex(MaterialShaderType shaderType,
-                        GlobalMaterialBindingType bindingType) {
-    return getGlobalMaterialBindingPoint(shaderType, bindingType).index;
-}
-
-void MetalCodeGenerator::defineVertexShaderFunction() {
-#if 0
-    using enum GlobalMaterialBindingType;
-    using enum MaterialShaderType;
-    auto fn = makeItem();
-    writeRaw("vertex ", MaterialVertexOutName, " ", MaterialVertexShaderName);
-    auto paramScope = makeScope(ScopeType::FuncParams);
-    writeItem("CameraInput device const& cameraBuffer [[buffer(",
-              getBindIndex(Vertex, Camera), ")]]");
-    writeItem("Vertex3D device const* vertices [[buffer(",
-              getBindIndex(Vertex, Geometry), ")]]");
-    writeItem("float4x4 device const& transform [[buffer(",
-              getBindIndex(Vertex, Transform), ")]]");
-    writeItem("unsigned vertexID [[vertex_id]]");
-    paramScope.pop();
-    auto fnScope = makeScope(ScopeType::CompoundStmt);
-    writeItem("Vertex3D v = vertices[vertexID]");
-    writeItem("float4 vertexPositionMS = float4(v.position, 1)");
-    writeItem("float4 vertexNormalMS = float4(v.normal, 0)");
-    writeItem("float4 vertexTangentMS = float4(v.tangent, 0)");
-    writeItem("float4 vertexBitangentMS = float4(v.binormal, 0)");
-    writeItem("float4 vertexPositionWS = transform * vertexPositionMS");
-    writeItem([&] {
-        writeRaw("return ");
-        auto scope = makeScope(ScopeType::BraceList);
-        writeItem(".positionCS = cameraBuffer.camera * vertexPositionWS");
-        writeItem(".normalWS = (transform * vertexNormalMS).xyz");
-        writeItem(".tangentWS = (transform * vertexTangentMS).xyz");
-        writeItem(".binormalWS = (transform * vertexBitangentMS).xyz");
-        writeItem(".positionWS = vertexPositionWS.xyz");
-        writeItem(".normalMS = vertexNormalMS.xyz");
-        writeItem(".vertexColor = v.color");
-        writeItem(".textureCoords = v.textureCoordinates[0]");
-    });
-#endif
-}
-
-void MetalCodeGenerator::defineFragmentShaderFunction() {
-#if 0
-    using enum MaterialShadingModel;
-    using enum GlobalMaterialBindingType;
-    using enum MaterialShaderType;
-    auto SM = graph.codegenParameters().shadingModel;
-    GraphRoot materialFunction = [&] {
-        switch (SM) {
-        case DefaultLit:
-            return GraphRoot::LitFragmentFunction;
-        case Unlit:
-            return GraphRoot::UnlitFragmentFunction;
-        }
-    }();
-    auto fn = makeItem();
-
-    /// Parameters
-    writeRaw("fragment ", MaterialFragmentOutName, " ",
-             MaterialFragmentShaderName);
-    auto paramScope = makeScope(ScopeType::FuncParams);
-    writeItem(MaterialVertexOutName, " in [[stage_in]]");
-    writeItem("CameraInput device const& cameraBuffer [[buffer(",
-              getBindIndex(Fragment, Camera), ")]]");
-    writeItem("uint32_t device const& entityID [[buffer(",
-              getBindIndex(Fragment, GeometryIDBuffer), ")]]");
-    if (SM == DefaultLit) {
-        writeItem("LightBufferContents device const& lights [[buffer(",
-                  getBindIndex(Fragment, Lights), ")]]");
-        writeItem("float4x4 device const* lightSpaceTransforms [[buffer(",
-                  getBindIndex(Fragment, LightSpaceTransforms), ")]]");
-        writeItem("texture2d_array<float> shadowMaps [[texture(",
-                  getBindIndex(Fragment, ShadowMaps), ")]]");
-        writeItem("texturecube<float> specularMap [[texture(",
-                  getBindIndex(Fragment, SpecularTexture), ")]]");
-        writeItem("texture2d<float> bdrfMap [[texture(",
-                  getBindIndex(Fragment, BRDFTexture), ")]]");
-    }
-    if (paramBufferType) {
-        writeItem(getName(paramBufferType), " device const& ",
-                  ParameterObjectName, " [[buffer(",
-                  getBindIndex(Fragment, MaterialParameterBuffer), ")]]");
-    }
-    for (auto [tex, index]: textureIndexMap) {
-        writeItem(getName(tex->type()), " ", getName(tex), " [[texture(", index,
-                  ")]]");
-    }
-    paramScope.pop();
-
-    /// Function body
-    auto fnScope = makeScope(ScopeType::CompoundStmt);
-    if (graph.parameters().transparency == MaterialTransparency::Masked) {
-        callMaterialFunction(GraphRoot::TransparencyFunction, "transparency");
-        writeIf("transparency.value < 0.5",
-                [&] { writeItem("discard_fragment()"); });
-    }
-    normalize("in.normalWS.xyz");
-    normalize("in.tangentWS.xyz");
-    normalize("in.binormalWS.xyz");
-    callMaterialFunction(materialFunction, "materialData");
-    switch (SM) {
-    case DefaultLit:
-        writeItem([&] {
-            writeRaw("float3x3 TBN");
-            writeScope(ScopeType::Paran, [&] {
-                writeItem("in.tangentWS.xyz");
-                writeItem("in.binormalWS.xyz");
-                writeItem("in.normalWS.xyz");
-            });
-        });
-        writeItem("materialData.normal = TBN * normalize(materialData.normal)");
-        writeItem([&] {
-            writeRaw("PBRData pbr = ");
-            writeScope(ScopeType::BraceList, [&] {
-                writeItem("materialData.albedo");
-                writeItem("materialData.emissive");
-                writeItem("materialData.roughness");
-                writeItem("materialData.metallic");
-                writeItem("materialData.ao");
-                writeItem("materialData.normal");
-            });
-        });
-        writeItem([&] {
-            writeRaw("float3 color = PBRForwardShader");
-            auto argScope = makeScope(ScopeType::Paran);
-            writeItem("pbr");
-            writeItem("in.positionWS");
-            writeItem("cameraBuffer.position");
-            writeItem("lightSpaceTransforms");
-            writeItem("lights");
-            writeItem("shadowMaps");
-            writeItem("specularMap");
-            writeItem("bdrfMap");
-        });
-        writeItem("return { float4(color, 1), entityID }");
-        break;
-    case Unlit:
-        writeItem("return { float4(materialData.emissive, 1), entityID }");
-        break;
-    }
-    fnScope.pop();
-#endif
 }
 
 void MetalCodeGenerator::codegenImpl(FunctionCall const& value) {
@@ -701,11 +493,11 @@ std::string MetalCodeGenerator::genNameImpl(VectorConstant const& c) {
 }
 
 std::string MetalCodeGenerator::genNameImpl(TextureConstant const&) {
-    assert(false);
+    UNREACHABLE("TextureConstant values should not reach codegen");
 }
 
 std::string MetalCodeGenerator::genNameImpl(RasterizerInput const&) {
-    assert(false);
+    UNREACHABLE("RasterizerInput values should not reach codegen");
 }
 
 std::string MetalCodeGenerator::genNameImpl(BuiltinFunction const& F) {
@@ -724,29 +516,4 @@ std::string MetalCodeGenerator::genNameImpl(ExtractVectorValue const& e) {
 std::string MetalCodeGenerator::genNameImpl(ExtractAggregateValue const& e) {
     auto* type = cast<AggregateType const*>(e.base()->type());
     return utl::strcat(getName(e.base()), ".", type->element(e.index()).name);
-}
-
-void MetalCodeGenerator::writeIf(auto condition, auto body) {
-    auto item = makeItem();
-    writeRaw("if (", condition, ")");
-    auto scope = makeScope(ScopeType::CompoundStmt);
-    body();
-}
-
-void MetalCodeGenerator::clampGreaterZero(Type const* type,
-                                          auto const&... valueName) {
-    writeItem([&] {
-        writeRaw(valueName..., " = max");
-        writeScope(ScopeType::Paran, [&] {
-            writeItem(getName(type), "()");
-            writeItem(valueName...);
-        });
-    });
-}
-
-void MetalCodeGenerator::normalize(auto const&... valueName) {
-    writeItem([&] {
-        writeRaw(valueName..., " = normalize");
-        writeScope(ScopeType::Paran, [&] { writeItem(valueName...); });
-    });
 }

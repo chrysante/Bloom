@@ -13,6 +13,7 @@
 #include "Bloom/Asset/AssetHandle.h"
 #include "Bloom/Core/Debug.h"
 #include "Bloom/Core/EnumCount.h"
+#include "Bloom/MaterialCompiler/Debug.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
 #include "Bloom/MaterialCompiler/Types.h"
 
@@ -75,6 +76,8 @@ public:
 
     void replace(Value* other);
 
+    ValueNodeType nodeType() const { return _nodeType; }
+
 protected:
     Value(ValueNodeType nodeType, std::string name, Type const* type):
         _nodeType(nodeType), _name(std::move(name)), _type(type) {}
@@ -130,7 +133,7 @@ public:
     size_t numOperands() const { return operands().size(); }
 
     Value* operand(size_t index) const {
-        assert(index < _operands.size());
+        VERIFY(index < _operands.size(), "Operand index out of bound");
         return _operands[index];
     }
 

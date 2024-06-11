@@ -1,7 +1,6 @@
 #ifndef BLOOM_MATERIALCOMPILER_FUNCTIONBUILDER_H
 #define BLOOM_MATERIALCOMPILER_FUNCTIONBUILDER_H
 
-#include <cassert>
 #include <concepts>
 #include <span>
 

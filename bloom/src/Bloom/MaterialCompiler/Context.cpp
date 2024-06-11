@@ -8,6 +8,7 @@
 #include "Bloom/Core/EnumCount.h"
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Core/Utils.h"
+#include "Bloom/MaterialCompiler/Debug.h"
 #include "Bloom/MaterialCompiler/Types.h"
 #include "Bloom/MaterialCompiler/Values.h"
 
@@ -137,8 +138,10 @@ IntType const* Context::intType(IntSubType subtype) {
 
 VectorType const* Context::vectorType(int numComponents,
                                       VectorTypeFlags flags) {
-    assert(numComponents >= 1);
-    assert(numComponents <= 4);
+    VERIFY(numComponents >= 1,
+           "numComponents must be at least 1 (have: ", numComponents, ")");
+    VERIFY(numComponents <= 4,
+           "numComponents must be at most 4 (have: ", numComponents, ")");
     return impl->getOrInsert(impl->vectorTypes, { numComponents, flags }, [&] {
         return impl->addType<VectorType>(numComponents, flags);
     });

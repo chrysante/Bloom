@@ -1,13 +1,14 @@
 #ifndef BLOOM_MATERIALCOMPILER_SOURCEEMITTER_H
 #define BLOOM_MATERIALCOMPILER_SOURCEEMITTER_H
 
-#include <cassert>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <tuple>
 
 #include <utl/stack.hpp>
+
+#include "Bloom/MaterialCompiler/Debug.h"
 
 namespace bloom::matc {
 
@@ -28,7 +29,7 @@ struct GuardBase {
     }
 
     void pop() {
-        assert(!_didPop);
+        VERIFY(!_didPop, "Have nothing to pop");
         static_cast<Derived*>(this)->doPop();
         _didPop = true;
     }
@@ -68,13 +69,15 @@ public:
         scopeStack.push(Scope{ baseScope });
     }
 
-    ~SourceEmitter() { assert(isGlobalScope()); }
+    ~SourceEmitter() {
+        VERIFY(isGlobalScope(), "Source emission must end in global scope");
+    }
 
     void writeRaw(auto const&... args) { ((sstr << args), ...); }
 
     void beginItem() {
         using enum ScopeType;
-        assert(!scopeStack.empty());
+        VERIFY(!scopeStack.empty(), "Cannot begin item without scope");
         auto scope = scopeStack.top();
         switch (scope.type) {
         case Paran:
@@ -131,7 +134,7 @@ public:
     }
 
     void writeInclude(IncludeType type, std::string_view path) {
-        assert(isGlobalScope());
+        VERIFY(isGlobalScope(), "Includes must be written in global scope");
         auto symbols = bracketSymbols(type);
         writeRaw("#include ", symbols[0], path, symbols[1]);
         endLine();

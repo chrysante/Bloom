@@ -15,6 +15,7 @@
 #include "Bloom/Graphics/Material/MaterialSourceData.h"
 #include "Bloom/MaterialCompiler/Codegen.h"
 #include "Bloom/MaterialCompiler/Context.h"
+#include "Bloom/MaterialCompiler/Debug.h"
 #include "Bloom/MaterialCompiler/FunctionBuilder.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
 #include "Bloom/MaterialCompiler/Module.h"
@@ -23,8 +24,6 @@
 using namespace bloom;
 using namespace matc;
 using namespace ranges::views;
-
-[[noreturn]] static void unreachable() { __builtin_unreachable(); }
 
 namespace {
 
@@ -71,7 +70,7 @@ struct CloneMap {
 
     Instruction* get(Instruction* inst) const {
         auto itr = map.find(inst);
-        assert(itr != map.end());
+        VERIFY(itr != map.end(), "Cannot find cloned instruction");
         return itr->second;
     }
 
@@ -181,18 +180,17 @@ void Builder::run() {
 
 void Builder::verifyMaterial() {
     auto* shadingValue = G.getRoot(GraphRoot::ShadingFunction);
-    assert(shadingValue && "Graph must have a shading function");
+    VERIFY(shadingValue, "Graph must have a shading function");
     switch (codegenParams.shadingModel) {
         using enum MaterialShadingModel;
     case Unlit: {
-        assert(shadingValue->type() == ctx.float3Type() &&
+        VERIFY(shadingValue->type() == ctx.float3Type(),
                "Unlit shading function must return float3");
         break;
     }
     case DefaultLit:
         auto* type = dyncast<AggregateType const*>(shadingValue->type());
-        assert(type == makeDefaultLitMaterialType(ctx) &&
-               "Invalid return type");
+        VERIFY(type == makeDefaultLitMaterialType(ctx), "Invalid return type");
         break;
     }
     switch (codegenParams.transparency) {
@@ -201,9 +199,9 @@ void Builder::verifyMaterial() {
         break;
     case Masked: {
         auto* transparency = G.getRoot(GraphRoot::TransparencyFunction);
-        assert(transparency &&
+        VERIFY(transparency,
                "Masked material must have a transparency function");
-        assert(transparency->type() == ctx.floatType() &&
+        VERIFY(transparency->type() == ctx.floatType(),
                "Transparency must be a float value");
         break;
     }
@@ -265,7 +263,7 @@ static std::pair<uint32_t, uint32_t> getSizeAndAlign(MaterialDataType type) {
     case Float4:
         return { 16, 16 };
     default:
-        unreachable();
+        UNREACHABLE("Invalid data type for function");
     }
 }
 
@@ -275,7 +273,7 @@ static size_t computeBufferLayout(
     uint32_t offset = 0;
     while (itr < params.end()) {
         auto type = itr->type;
-        assert((int)type < (int)MaterialDataType::Texture2D &&
+        VERIFY((int)type < (int)MaterialDataType::Texture2D,
                "This function must not be used with texture parameters");
         auto [size, align] = getSizeAndAlign(type);
         offset += (offset % align == 0 ? 0 : align - offset % align);
@@ -298,14 +296,16 @@ static MaterialDataType translateType(Type const* type) {
             case TextureSubType::TextureCube:
                 return MaterialDataType::TextureCube;
             case TextureSubType::Texture2DArray:
-                assert(false);
+                UNREACHABLE("Texture2DArray cannot be used by materials");
             }
         },
         [](VectorType const& type) {
             using enum MaterialDataType;
             return (MaterialDataType)((int)Float + type.numComponents() - 1);
         },
-        [](Type const&) -> MaterialDataType { assert(false); },
+        [](Type const& type) -> MaterialDataType {
+            UNREACHABLE("Invalid parameter type: ", type.name());
+        },
     }); // clang-format on
 }
 
@@ -392,7 +392,8 @@ EnumArray<MaterialShaderType, int8_t> Builder::makeTextureBinding(
             continue;
         }
         auto itr = ranges::find(userFunctions | values, F);
-        assert(itr != (userFunctions | values).end());
+        VERIFY(itr != (userFunctions | values).end(),
+               "Used parameter must have a corresponding function");
         auto functionKind = itr.base()->first;
         using enum MaterialShaderType;
         switch (functionKind) {
@@ -501,7 +502,10 @@ static Value* makeUserFunctionParameter(
             metadata.parameters[P] = &matParam;
             return P;
         },
-        [&](Value const&) -> Value* { unreachable(); }
+        [&](Value const& value) -> Value* { 
+            UNREACHABLE("Invalid parameter value: ",
+                        magic_enum::enum_name(value.nodeType()));
+        }
     });
     // clang-format on
 }
@@ -632,7 +636,6 @@ void Builder::defineShadingScenario() {
     if (codegenParams.transparency == MaterialTransparency::Masked) {
         auto* transparencyFunction =
             getUserFunction(GraphRoot::TransparencyFunction);
-        assert(transparencyFunction);
         auto* transparency = callFunction("transparency", builder,
                                           transparencyFunction, scenarioMD,
                                           MaterialShaderType::ShadingFragment);
@@ -641,7 +644,6 @@ void Builder::defineShadingScenario() {
                                         transparency, ctx.floatConstant(0.5));
         builder.insert<DiscardFragment>("discard", condition);
     }
-    assert(shadingFunction);
     Value* materialData = callFunction("material", builder, shadingFunction,
                                        scenarioMD,
                                        MaterialShaderType::ShadingFragment);
@@ -765,7 +767,7 @@ void Builder::analyzeShadingFunction(Function const& F, ScenarioMetadata& MD) {
         return;
     }
     auto* ret = F.getReturn();
-    assert(ret && "Function has no return instruction");
+    VERIFY(ret, "Function has no return instruction");
     if (auto* value = dyncast<AggregateBuilder const*>(ret->returnValue())) {
         auto* normals = value->element((size_t)DefaultLitMaterialValue::Normal);
         if (normals == ctx.float3Constant({ 0, 0, 1 })) {
@@ -957,13 +959,14 @@ void Builder::uniqueNames(Function& F) {
                 value.setName(std::move(name));
                 continue;
             }
-            assert(result.size() >= 1);
+            VERIFY(result.size() >= 1, "Failed to find counter in value name");
             int counter = -1;
             auto [begin, end] = std::pair{ result[0] };
             auto convResult = std::from_chars(std::to_address(begin + 1),
                                               std::to_address(end), counter);
-            assert(convResult.ec == std::errc{});
-            assert(counter >= 0);
+            VERIFY(convResult.ec == std::errc{},
+                   "Failed to parse counter value");
+            VERIFY(counter >= 0, "");
             name.replace(begin + 1, end, std::to_string(counter + 1));
             value.setName(std::move(name));
         }
@@ -1045,7 +1048,7 @@ FunctionCall* Builder::callFunction(std::string valueName,
     auto arguments = callee->parameters() |
                      transform([&](FunctionParameter const& param) {
         auto itr = calleeMD.parameters.find(&param);
-        assert(itr != calleeMD.parameters.end());
+        VERIFY(itr != calleeMD.parameters.end(), "Failed to find parameter");
         return std::visit([&](auto paramMetadata) {
             ArgumentContext args = {
                 .builder = builder,

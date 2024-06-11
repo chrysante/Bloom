@@ -1,7 +1,5 @@
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
 
-#include <cassert>
-
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 #include <utl/hashmap.hpp>

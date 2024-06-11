@@ -1,12 +1,13 @@
 #include "Bloom/MaterialCompiler/Preprocessor.h"
 
-#include <cassert>
 #include <fstream>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
 
 #include <utl/strcat.hpp>
+
+#include "Bloom/MaterialCompiler/Debug.h"
 
 using namespace bloom;
 
@@ -58,10 +59,10 @@ std::string Preprocessor::openFile(std::filesystem::path name) const {
                 return complete;
             }
         }
-        throw std::runtime_error(utl::strcat("Failed to open file ", name));
+        UNREACHABLE("Failed to find file: ", name);
     }();
     std::fstream file(completePath);
-    assert(file);
+    VERIFY(file, "Failed to open file: ", completePath);
     std::stringstream sstr;
     sstr << file.rdbuf();
     std::string contents = std::move(sstr).str();

@@ -128,17 +128,17 @@ static std::unique_ptr<Node> enumMenu(
                     filter);
 }
 
-struct OutputController: MaterialNodeController {
+struct FragmentOutController: MaterialNodeController {
     static constexpr auto Name = "OutputController";
 
     static NodeDesc Make() {
-        return { .name = "Output",
-                 .controller = std::make_unique<OutputController>() };
+        return { .name = "Fragment",
+                 .controller = std::make_unique<FragmentOutController>() };
     }
 
-    OutputController() = default;
+    FragmentOutController() = default;
 
-    explicit OutputController(YAML::Node const&) {}
+    explicit FragmentOutController(YAML::Node const&) {}
 
     YAML::Node serialize() const override {
         YAML::Node node;
@@ -278,9 +278,57 @@ struct OutputController: MaterialNodeController {
     float4 nodeColor() override { return colors.output; }
 };
 
-REGISTER_MATERIAL_NODE(OutputController, {
-    if (ImGui::MenuItem("Output")) {
-        return std::make_unique<Node>(OutputController::Make());
+REGISTER_MATERIAL_NODE(FragmentOutController, {
+    if (ImGui::MenuItem("Fragment Output")) {
+        return std::make_unique<Node>(FragmentOutController::Make());
+    }
+})
+
+struct VertexOutController: MaterialNodeController {
+    static constexpr auto Name = "VertexOutController";
+
+    static NodeDesc Make() {
+        return { .name = "Vertex",
+                 .controller = std::make_unique<VertexOutController>() };
+    }
+
+    VertexOutController() = default;
+
+    explicit VertexOutController(YAML::Node const&) {}
+
+    YAML::Node serialize() const override {
+        YAML::Node node;
+        node["Type"] = Name;
+        return node;
+    }
+
+    std::vector<PinDesc> makeInputDescriptors() override {
+        return {
+            { .name = "World Position Offset",
+              .flags = PinFlags::Optional,
+              .userType = mask(DataType::Float3) },
+        };
+    }
+
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& graph) const override {
+
+        auto* offset = graph.addValue<Alias>("offset", ctx.float3Type());
+        graph.setRoot(GraphRoot::VertexFunction, offset);
+        return { offset };
+    }
+
+    Value* defaultInputValue(Context& ctx, size_t index) const override {
+        BL_ASSERT(index == 0);
+        return ctx.float3Constant({ 0, 0, 0 });
+    }
+
+    float4 nodeColor() override { return colors.output; }
+};
+
+REGISTER_MATERIAL_NODE(VertexOutController, {
+    if (ImGui::MenuItem("Vertex Output")) {
+        return std::make_unique<Node>(VertexOutController::Make());
     }
 })
 

@@ -37,29 +37,49 @@ struct ParameterMetadata:
 };
 
 struct FunctionMetadata {
-    utl::hashset<RasterizerInput*> usedRasterizerInputs;
+    utl::hashset<RasterizerInput*> usedVertexAttributes;
     utl::hashmap<FunctionParameter*, ParameterMetadata> parameters;
     FunctionParameter* primitiveBufferParam = nullptr;
+    /// Only non-null for fragment shaders
     FunctionParameter* rasterizerParam = nullptr;
+    /// Only non-null for vertex shaders
+    EnumArray<RasterizerInputKind, Value*> vertexAttributes{};
     utl::hashmap<TextureConstant*, FunctionParameter*> texParamMap;
 };
 
 enum class ShadingScenario { Shading, Shadow };
 
 struct ScenarioMetadata {
-    utl::hashset<RasterizerInput*> usedRasterizerData;
+    /// Vertex attributes used by the fragment shader. These need to be
+    /// rasterized
+    utl::hashset<RasterizerInput*> rasterizedVertexAttributes;
+    /// Vertex attributes used by the vertex shader. These need to be computed
+    /// but not necessarily rasterized
+    utl::hashset<RasterizerInput*> computedVertexAttributes;
     AggregateType const* rasterizerDataType;
     EnumArray<RasterizerInputKind, int> rasterizerDataIndexMap;
     bool hasCustomNormals = true;
 
-    bool isUsed(RasterizerInput const* input) const {
-        return usedRasterizerData.contains(input);
+    bool isRasterized(RasterizerInput const* input) const {
+        return rasterizedVertexAttributes.contains(input);
     }
-    bool isUsed(RasterizerInputKind kind) const {
-        return ranges::contains(usedRasterizerData, kind,
+    bool isRasterized(RasterizerInputKind kind) const {
+        return ranges::contains(rasterizedVertexAttributes, kind,
                                 &RasterizerInput::kind);
     }
-    void collectFunctionRasterInput(auto&& functionMetadata);
+    bool isComputed(RasterizerInput const* input) const {
+        return computedVertexAttributes.contains(input);
+    }
+    bool isComputed(RasterizerInputKind kind) const {
+        return ranges::contains(computedVertexAttributes, kind,
+                                &RasterizerInput::kind);
+    }
+    void markRasterized(RasterizerInput* input) {
+        rasterizedVertexAttributes.insert(input);
+        computedVertexAttributes.insert(input);
+    }
+    void collectRasterizedVertexAttributes(auto&& functionMetadata);
+    void collectComputedVertexAttributes(auto&& functionMetadata);
     void createRasterizerDataType(Context& ctx, std::string typeName);
 };
 
@@ -347,12 +367,10 @@ void Builder::buildUserFunctions() {
                                    materialParamMap[rootKind]);
         userFunctions[rootKind] = mod.addFunction(std::move(F));
     }
-    // Analyze rasterizer usage
-    auto fragmentFunctions = getUserFunctions(
-        { { GraphRoot::ShadingFunction, GraphRoot::TransparencyFunction } });
-    for (auto* F: fragmentFunctions) {
+    // Analyze vertex attribute usage
+    for (auto [kind, F]: userFunctions) {
         auto& metadata = functionMetadata[F];
-        analyzeRasterizerUsage(*F, metadata.usedRasterizerInputs);
+        analyzeRasterizerUsage(*F, metadata.usedVertexAttributes);
         rewriteRasterizerUsage(*F, metadata);
     }
     // Analyze user parameters
@@ -546,7 +564,7 @@ void Builder::rewriteRasterizerUsage(Function& F, FunctionMetadata& metadata) {
     utl::hashmap<Function const*,
                  EnumArray<RasterizerInputKind, FunctionParameter*>>
         paramMap;
-    for (auto* input: metadata.usedRasterizerInputs) {
+    for (auto* input: metadata.usedVertexAttributes) {
         for (auto* inst: input->users() | Filter<Instruction> | ToSmallVector<>)
         {
             if (inst->function() != &F) {
@@ -586,35 +604,47 @@ static ParameterAttribute getGlobalBindingAttrib(
     }(), index };
 }
 
-void ScenarioMetadata::collectFunctionRasterInput(auto&& functionMetadata) {
+void ScenarioMetadata::collectRasterizedVertexAttributes(
+    auto&& functionMetadata) {
     ranges::copy(functionMetadata |
-                     transform(&FunctionMetadata::usedRasterizerInputs) | join,
-                 std::inserter(usedRasterizerData, usedRasterizerData.begin()));
+                     transform(&FunctionMetadata::usedVertexAttributes) | join,
+                 std::inserter(rasterizedVertexAttributes,
+                               rasterizedVertexAttributes.begin()));
+}
+
+void ScenarioMetadata::collectComputedVertexAttributes(
+    auto&& functionMetadata) {
+    ranges::copy(functionMetadata |
+                     transform(&FunctionMetadata::usedVertexAttributes) | join,
+                 std::inserter(computedVertexAttributes,
+                               computedVertexAttributes.begin()));
 }
 
 void ScenarioMetadata::createRasterizerDataType(Context& ctx,
                                                 std::string typeName) {
-    if (usedRasterizerData.empty()) {
+    if (rasterizedVertexAttributes.empty()) {
         return;
     }
     auto* type =
-        ctx.aggregateType(std::move(typeName),
-                          usedRasterizerData | transform([&](auto* value) {
+        ctx.aggregateType(std::move(typeName), rasterizedVertexAttributes |
+                                                   transform([&](auto* value) {
         return AggregateElement{ value->type(),
                                  std::string(toSpelling(value->kind())),
                                  toAttrib(value->kind()) };
     }) | ranges::to<std::vector>);
     auto map = makeEnumArray<RasterizerInputKind>(-1);
-    for (auto [index, value]: usedRasterizerData | enumerate) {
+    for (auto [index, value]: rasterizedVertexAttributes | enumerate) {
         map[value->kind()] = utl::narrow_cast<int>(index);
     }
     rasterizerDataType = type;
     rasterizerDataIndexMap = map;
 }
 
-static Value* getRasterizerInput(std::string name, FunctionBuilder& builder,
-                                 RasterizerInputKind kind, FunctionMetadata& MD,
-                                 ScenarioMetadata const& scenarioMD) {
+static Value* getRasterizeredVertexAttrib(std::string name,
+                                          FunctionBuilder& builder,
+                                          RasterizerInputKind kind,
+                                          FunctionMetadata& MD,
+                                          ScenarioMetadata const& scenarioMD) {
     return builder
         .insert<ExtractAggregateValue>(std::move(name), MD.rasterizerParam,
                                        scenarioMD.rasterizerDataIndexMap[kind]);
@@ -627,15 +657,15 @@ void Builder::defineShadingScenario() {
     shaderFunctions[MaterialShaderType::ShadingFragment] = &fragShader;
     auto& fragMD = functionMetadata[&fragShader];
     auto& scenarioMD = scenarioMetadata[ShadingScenario::Shading];
-    auto userFunctions = getUserFunctions(
+    auto userFragFunctions = getUserFunctions(
         { { GraphRoot::ShadingFunction, GraphRoot::TransparencyFunction } });
-    scenarioMD.collectFunctionRasterInput(
-        userFunctions |
+    scenarioMD.collectRasterizedVertexAttributes(
+        userFragFunctions |
         transform([&](auto* F) -> auto& { return functionMetadata[F]; }));
-    scenarioMD.usedRasterizerData.insert(
+    scenarioMD.markRasterized(
         ctx.rasterizerInput(RasterizerInputKind::ClipPosition));
     if (codegenParams.shadingModel == MaterialShadingModel::DefaultLit) {
-        scenarioMD.usedRasterizerData.insert(
+        scenarioMD.markRasterized(
             ctx.rasterizerInput(RasterizerInputKind::WorldPosition));
     }
     Function* shadingFunction = getUserFunction(GraphRoot::ShadingFunction);
@@ -646,6 +676,12 @@ void Builder::defineShadingScenario() {
           ParameterAttribute::StageIn });
     utl::hashmap<TextureConstant*, FunctionParameter*> texParamMap;
     auto builder = FunctionBuilder(ctx, fragShader);
+    auto userVertAndFragFunctions = getUserFunctions(
+        { { GraphRoot::VertexFunction, GraphRoot::ShadingFunction,
+            GraphRoot::TransparencyFunction } });
+    scenarioMD.collectComputedVertexAttributes(
+        userVertAndFragFunctions |
+        transform([&](auto* F) -> auto& { return functionMetadata[F]; }));
     if (codegenParams.transparency == MaterialTransparency::Masked) {
         auto* transparencyFunction =
             getUserFunction(GraphRoot::TransparencyFunction);
@@ -720,54 +756,62 @@ void Builder::defineShadingScenario() {
                                                   2);
     };
     auto* vertex = builder.insert<ArrayAccess>("V", vertexBuffer, vertexID);
-    EnumArray<RasterizerInputKind, Value*> rasterizerValues{};
     using enum RasterizerInputKind;
-    rasterizerValues[WorldPosition] =
+    vertMD.vertexAttributes[WorldPosition] =
         toFloat3(transformAttribFloat3(builder, "posWS", transformMatrix,
                                        builder.getElem("vPosition", vertex, 0),
                                        VertexAttribKind::Position));
-    rasterizerValues[ClipPosition] =
-        transformAttribFloat3(builder, "posCS", cameraMatrix,
-                              rasterizerValues[WorldPosition],
-                              VertexAttribKind::Position);
-    if (scenarioMD.isUsed(WorldNormals)) {
-        rasterizerValues[WorldNormals] = toFloat3(
+    if (scenarioMD.isComputed(WorldNormals)) {
+        vertMD.vertexAttributes[WorldNormals] = toFloat3(
             transformAttribFloat3(builder, "normalWS", transformMatrix,
                                   builder.getElem("vNormal", vertex, 1),
                                   VertexAttribKind::Direction));
     }
-    if (scenarioMD.isUsed(WorldTangents)) {
-        rasterizerValues[WorldTangents] = toFloat3(
+    if (scenarioMD.isComputed(WorldTangents)) {
+        vertMD.vertexAttributes[WorldTangents] = toFloat3(
             transformAttribFloat3(builder, "tangentWS", transformMatrix,
                                   builder.getElem("vTangent", vertex, 2),
                                   VertexAttribKind::Direction));
     }
-    if (scenarioMD.isUsed(WorldBinormals)) {
-        rasterizerValues[WorldBinormals] = toFloat3(
+    if (scenarioMD.isComputed(WorldBinormals)) {
+        vertMD.vertexAttributes[WorldBinormals] = toFloat3(
             transformAttribFloat3(builder, "binormalWS", transformMatrix,
                                   builder.getElem("vBinormal", vertex, 3),
                                   VertexAttribKind::Direction));
     }
-    if (scenarioMD.isUsed(VertexColor)) {
-        rasterizerValues[VertexColor] =
+    if (scenarioMD.isComputed(VertexColor)) {
+        vertMD.vertexAttributes[VertexColor] =
             builder.getElem("vertexColor", vertex, 4);
     }
-    if (scenarioMD.isUsed(TextureCoords)) {
+    if (scenarioMD.isComputed(TextureCoords)) {
         auto* array = builder.getElem("tmp", vertex, 5);
-        rasterizerValues[TextureCoords] =
+        vertMD.vertexAttributes[TextureCoords] =
             builder.insert<ArrayAccess>("coords", array,
                                         ctx.intConstant(IntSubType::I32, 0));
     }
-    auto usedRasterData = scenarioMD.usedRasterizerData |
-                          transform([](auto* input) { return input->kind(); }) |
-                          ToSmallVector<>;
-    ranges::sort(usedRasterData, ranges::less{}, [&](auto kind) {
+    if (Function* vertexFunction = getUserFunction(GraphRoot::VertexFunction)) {
+        auto* WPO = callFunction("WPO", builder, vertexFunction, scenarioMD,
+                                 MaterialShaderType::ShadingVertex);
+        vertMD.vertexAttributes[WorldPosition] =
+            builder
+                .insert<ArithmeticInst>("OffsetWorldPos", ArithmeticInst::Add,
+                                        vertMD.vertexAttributes[WorldPosition],
+                                        WPO);
+    }
+    vertMD.vertexAttributes[ClipPosition] =
+        transformAttribFloat3(builder, "posCS", cameraMatrix,
+                              vertMD.vertexAttributes[WorldPosition],
+                              VertexAttribKind::Position);
+    auto rasterizedAttribs =
+        scenarioMD.rasterizedVertexAttributes |
+        transform([](auto* input) { return input->kind(); }) | ToSmallVector<>;
+    ranges::sort(rasterizedAttribs, ranges::less{}, [&](auto kind) {
         return scenarioMD.rasterizerDataIndexMap[kind];
     });
     auto* VSRetval =
         builder.makeAggregate("retval", scenarioMD.rasterizerDataType,
-                              usedRasterData | transform([&](auto kind) {
-        auto* value = rasterizerValues[kind];
+                              rasterizedAttribs | transform([&](auto kind) {
+        auto* value = vertMD.vertexAttributes[kind];
         assert(value);
         return value;
     }) | ranges::to<std::vector>);
@@ -788,10 +832,10 @@ void Builder::analyzeShadingFunction(Function const& F, ScenarioMetadata& MD) {
         }
     }
     using enum RasterizerInputKind;
-    MD.usedRasterizerData.insert(ctx.rasterizerInput(WorldNormals));
+    MD.markRasterized(ctx.rasterizerInput(WorldNormals));
     if (MD.hasCustomNormals) {
-        MD.usedRasterizerData.insert(ctx.rasterizerInput(WorldTangents));
-        MD.usedRasterizerData.insert(ctx.rasterizerInput(WorldBinormals));
+        MD.markRasterized(ctx.rasterizerInput(WorldTangents));
+        MD.markRasterized(ctx.rasterizerInput(WorldBinormals));
     }
 }
 
@@ -859,9 +903,10 @@ Value* Builder::callPBRShader(FunctionBuilder& builder, Value* materialData,
     Function* pbrShader = declarePBRShader(materialData->type());
     Function& shader = *builder.function();
     auto& MD = functionMetadata[&shader];
-    auto* worldPosition = getRasterizerInput("worldPosition", builder,
-                                             RasterizerInputKind::WorldPosition,
-                                             MD, scenarioMD);
+    auto* worldPosition =
+        getRasterizeredVertexAttrib("worldPosition", builder,
+                                    RasterizerInputKind::WorldPosition, MD,
+                                    scenarioMD);
     auto* cameraBuffer = shader.addParameter(
         { .name = "cameraBuffer",
           .type = cameraInputType,
@@ -1189,8 +1234,18 @@ struct ArgumentContext {
 static Value* getFunctionArgument(RasterizerInput* input, ArgumentContext AC) {
     auto kind = input->kind();
     std::string name(magic_enum::enum_name(kind));
-    return getRasterizerInput(std::move(name), AC.builder, kind, AC.callerMD,
-                              AC.scenarioMD);
+    using enum MaterialShaderType;
+    switch (AC.shaderType) {
+    case ShadingVertex:
+        [[fallthrough]];
+    case ShadowVertex:
+        return AC.callerMD.vertexAttributes[input->kind()];
+    case ShadingFragment:
+        [[fallthrough]];
+    case ShadowFragment:
+        return getRasterizeredVertexAttrib(std::move(name), AC.builder, kind,
+                                           AC.callerMD, AC.scenarioMD);
+    }
 }
 
 static Value* getFunctionArgument(TextureConstant* texParam,

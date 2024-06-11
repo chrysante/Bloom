@@ -139,6 +139,11 @@ static void setTextureParameter(RenderEncoder& encoder,
         encoder.setFragmentTexture(
             texView, param.bindingPoint[MaterialShaderType::ShadingFragment]);
     }
+    if (param.hasBinding(MaterialShaderType::ShadingVertex)) {
+        auto texView = tex ? tex->GPUHandle : TextureView();
+        encoder.setVertexTexture(
+            texView, param.bindingPoint[MaterialShaderType::ShadingVertex]);
+    }
 }
 
 void ForwardShadingPass::doExecute(FrameParameters const& params,
@@ -204,6 +209,9 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
             encoder->setFragmentBuffer(paramBuffer,
                                        getBindIndex(ShadingFragment,
                                                     MaterialParameterBuffer));
+            encoder->setVertexBuffer(paramBuffer,
+                                     getBindIndex(ShadingVertex,
+                                                  MaterialParameterBuffer));
             for (auto [index, param]:
                  curMatInst->getTextureParameters() | enumerate)
             {

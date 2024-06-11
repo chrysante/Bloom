@@ -53,24 +53,20 @@ static bool displayParam(MaterialPrimitiveParameter& param) {
     beginProperty(param.name);
     std::string label = makeLabel(param.name);
     using enum MaterialDataType;
+    auto colorEditFlags = ImGuiColorEditFlags_NoLabel |
+                          ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR;
+    fullWidth();
     switch (param.type) {
     case Float:
-        fullWidth();
         return ImGui::DragFloat(label.c_str(), param.value.data(), 0.01);
     case Float2:
-        fullWidth();
         return ImGui::DragFloat2(label.c_str(), param.value.data(), 0.01);
     case Float3:
         return ImGui::ColorEdit3(label.c_str(), param.value.data(),
-                                 ImGuiColorEditFlags_NoInputs |
-                                     ImGuiColorEditFlags_NoLabel |
-                                     ImGuiColorEditFlags_Float |
-                                     ImGuiColorEditFlags_NoAlpha);
+                                 colorEditFlags | ImGuiColorEditFlags_NoAlpha);
     case Float4:
         return ImGui::ColorEdit4(label.c_str(), param.value.data(),
-                                 ImGuiColorEditFlags_NoInputs |
-                                     ImGuiColorEditFlags_NoLabel |
-                                     ImGuiColorEditFlags_Float);
+                                 colorEditFlags);
     default:
         return false;
     }

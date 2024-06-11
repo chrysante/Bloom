@@ -1,5 +1,3 @@
-#include "Bloom/MaterialCompiler/CodeGen.h"
-
 #include <fstream>
 #include <span>
 #include <sstream>
@@ -15,6 +13,7 @@
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/Graphics/Material/MaterialSourceData.h"
+#include "Bloom/MaterialCompiler/Codegen.h"
 #include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/Module.h"
 #include "Bloom/MaterialCompiler/SourceEmitter.h"

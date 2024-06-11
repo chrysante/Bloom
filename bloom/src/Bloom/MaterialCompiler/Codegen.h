@@ -9,6 +9,7 @@
 
 #include "Bloom/Asset/AssetHandle.h"
 #include "Bloom/Core/Base.h"
+#include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
 
 namespace bloom::matc {
@@ -25,6 +26,14 @@ protected:
 
 BLOOM_API std::unique_ptr<CodeGenerator> makeCodeGenerator(Context& ctx,
                                                            Module const& mod);
+
+BLOOM_API Module buildModule(Context& ctx, MaterialGraph const& G,
+                             MaterialSourceData& sourceData,
+                             CodegenParameters codegenParams);
+
+BLOOM_API MaterialSourceData generateSource(Context& ctx,
+                                            MaterialGraph const& G,
+                                            CodegenParameters codegenParams);
 
 } // namespace bloom::matc
 

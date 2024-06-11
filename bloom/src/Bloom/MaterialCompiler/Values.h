@@ -12,6 +12,7 @@
 
 #include "Bloom/Asset/AssetHandle.h"
 #include "Bloom/Core/Debug.h"
+#include "Bloom/Core/EnumCount.h"
 #include "Bloom/MaterialCompiler/Fwd.h"
 #include "Bloom/MaterialCompiler/Types.h"
 
@@ -193,13 +194,22 @@ public:
 
     AssetHandle asset() const { return _asset; }
 
-    int bindingPoint() const { return _bindingPoint; }
+    EnumArray<MaterialShaderType, int8_t> const& bindingPoints() const {
+        return _bindingPoints;
+    }
 
-    void setBindingPoint(int bindingPoint) { _bindingPoint = bindingPoint; }
+    int bindingPoint(MaterialShaderType type) const {
+        return _bindingPoints[type];
+    }
+
+    void setBindingPoints(EnumArray<MaterialShaderType, int8_t> p) {
+        _bindingPoints = p;
+    }
 
 private:
     AssetHandle _asset;
-    int _bindingPoint = -1;
+    EnumArray<MaterialShaderType, int8_t> _bindingPoints =
+        makeEnumArray<MaterialShaderType, int8_t>(-1);
 };
 
 class RasterizerInput: public Constant {

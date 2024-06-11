@@ -39,6 +39,8 @@ enum class MaterialShaderType {
     ShadowFragment
 };
 
+struct MaterialSourceData;
+
 ///
 struct MaterialBindingPoint {
     enum Type { Buffer, Texture };

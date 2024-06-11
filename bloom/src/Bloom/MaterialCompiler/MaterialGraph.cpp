@@ -9,10 +9,7 @@
 #include <utl/strcat.hpp>
 
 #include "Bloom/Core/Ranges.h"
-#include "Bloom/Graphics/Material/Fwd.h"
-#include "Bloom/Graphics/Material/MaterialSourceData.h"
-#include "Bloom/MaterialCompiler/CodeGen.h"
-#include "Bloom/MaterialCompiler/FunctionBuilder.h"
+#include "Bloom/MaterialCompiler/Context.h"
 
 using namespace bloom;
 using namespace matc;

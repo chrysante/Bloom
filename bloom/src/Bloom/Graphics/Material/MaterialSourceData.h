@@ -17,7 +17,7 @@
 
 namespace bloom {
 
-/// Parameter to be set be a material instance
+/// Parameter to be set by a material instance
 struct MaterialPrimitiveParameter {
     MaterialDataType type;
     uint32_t bufferOffset;
@@ -25,7 +25,7 @@ struct MaterialPrimitiveParameter {
     vml::float4 value;
 };
 
-/// Parameter to be set be a material instance
+/// Parameter to be set by a material instance
 struct MaterialTextureParameter {
     static constexpr int UnusedBindingPoint = -1;
 

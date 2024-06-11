@@ -5,11 +5,9 @@
 #include <range/v3/algorithm.hpp>
 
 #include "Bloom/Graphics/Material/MaterialSourceData.h"
-#include "Bloom/MaterialCompiler/BuildModule.h"
-#include "Bloom/MaterialCompiler/CodeGen.h"
+#include "Bloom/MaterialCompiler/Codegen.h"
 #include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
-#include "Bloom/MaterialCompiler/Module.h"
 
 using namespace bloom;
 using namespace matc;
@@ -64,7 +62,7 @@ static void printTexParam(MaterialTextureParameter const& param) {
     std::cout << "BindingPoints: \n";
     for (auto shaderType: magic_enum::enum_values<MaterialShaderType>()) {
         std::cout << "    " << magic_enum::enum_name(shaderType) << ": "
-                  << param.bindingPoint[shaderType] << std::endl;
+                  << +param.bindingPoint[shaderType] << std::endl;
     }
     std::cout << "Default Value: " << param.value.ID() << std::endl;
 }
@@ -80,7 +78,7 @@ static void printPrimParam(MaterialPrimitiveParameter const& param) {
 static void printSourceData(MaterialSourceData const& sourceData) {
     header("Source");
     std::cout << sourceData.source << std::endl;
-    header("Texture Constants Parameters");
+    header("Texture Constants");
     ranges::for_each(sourceData.textureConstants, printTexParam);
     header("Texture Parameters");
     ranges::for_each(sourceData.textureParameters, printTexParam);
@@ -101,9 +99,10 @@ TEST_CASE() {
     };
     MaterialGraph g;
     auto* AOTexture =
-        ctx.textureConstant(TextureSubType::TextureCube, genTexture());
-    auto* normalTexture =
-        ctx.textureConstant(TextureSubType::TextureCube, genTexture());
+        ctx.textureConstant(TextureSubType::Texture2D, genTexture());
+    auto* normalTexture = g.addTextureParameter(ctx, "Normal",
+                                                TextureSubType::Texture2D,
+                                                genTexture());
     auto* albedo = g.addVectorParameter(ctx, "Albedo", 3, float4{ 1, 0, 0, 0 });
     auto* roughness =
         g.addVectorParameter(ctx, "Roughness", 1, float4{ 2, 1, 5, 0 });
@@ -135,24 +134,12 @@ TEST_CASE() {
                                                           emissive, metallic,
                                                           AO, normal2 });
     g.setRoot(GraphRoot::ShadingFunction, material);
-    auto* transparency = g.addValue<ExtractVectorValue>(ctx, "R", AOSample, 1);
+    Value* transparency = g.addValue<ExtractVectorValue>(ctx, "R", AOSample, 1);
+    transparency = g.addValue<ArithmeticInst>(ctx, "R", ArithmeticInst::Mul,
+                                              transparency, roughness);
     g.setRoot(GraphRoot::TransparencyFunction, transparency);
-    MaterialSourceData sourceData;
-    auto mod = buildModule(ctx, g, codegenParams);
-    auto generator = makeCodeGenerator(ctx, mod);
-    sourceData.source = generator->run();
+    auto sourceData = generateSource(ctx, g, codegenParams);
     printSourceData(sourceData);
-}
-
-TEST_CASE() {
-    return;
-    //    Context ctx;
-    //    MaterialGraph g({ .shadingModel = MaterialShadingModel::DefaultLit });
-    //    auto* UV = g.addValue<RasterizerInput>(ctx, "UV",
-    //                                           RasterizerInputKind::TextureCoords);
-    //    g.setRoot(GraphRoot::ShadingFunction, UV);
-    //    auto sourceData = g.generate(ctx);
-    //    printSourceData(sourceData);
 }
 
 TEST_CASE("Builtins") {

@@ -1,5 +1,3 @@
-#include "Bloom/MaterialCompiler/BuildModule.h"
-
 #include <charconv>
 #include <regex>
 
@@ -14,6 +12,8 @@
 #include "Bloom/Core/Ranges.h"
 #include "Bloom/Core/Utils.h"
 #include "Bloom/Graphics/Material/Fwd.h"
+#include "Bloom/Graphics/Material/MaterialSourceData.h"
+#include "Bloom/MaterialCompiler/Codegen.h"
 #include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/FunctionBuilder.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
@@ -60,6 +60,8 @@ struct ScenarioMetadata {
         return ranges::contains(usedRasterizerData, kind,
                                 &RasterizerInput::kind);
     }
+    void collectFunctionRasterInput(auto&& functionMetadata);
+    void createRasterizerDataType(Context& ctx, std::string typeName);
 };
 
 struct CloneMap {
@@ -87,6 +89,7 @@ private:
 struct Builder {
     Context& ctx;
     MaterialGraph const& G;
+    MaterialSourceData& sourceData;
     CodegenParameters codegenParams;
     Module& mod;
 
@@ -102,12 +105,18 @@ struct Builder {
     /// Metadata stored for each shading scenario
     utl::hashmap<ShadingScenario, ScenarioMetadata> scenarioMetadata = {};
 
+    ///
+    utl::hashset<Value*> allUserParametersAndTextureConstants = {};
+
     /// Type of the vector parameter buffer
     AggregateType const* primitiveBufferType = nullptr;
     AggregateType const* cameraInputType = nullptr;
     AggregateType const* vertex3DType = nullptr;
     Type const* entityIDType = nullptr;
     AggregateType const* shadingFragmentOutType = nullptr;
+    static constexpr int ReservedTextureSlots = 8;
+    EnumArray<MaterialShaderType, int8_t> texBindingCounter =
+        makeEnumArray<MaterialShaderType, int8_t>(ReservedTextureSlots);
 
     void run();
     void verifyMaterial();
@@ -120,7 +129,8 @@ struct Builder {
     void rewriteRasterizerUsage(Function& F, FunctionMetadata& metadata);
     void computeParameters(Function& F, utl::hashset<Value*> const& usedParams,
                            std::span<VectorConstant* const> vectorParameters);
-    void defineTextureBindings();
+    EnumArray<MaterialShaderType, int8_t> makeTextureBinding(
+        TextureConstant const& tex);
 
     void defineShadingScenario();
     void analyzeShadingFunction(Function const& F, ScenarioMetadata& MD);
@@ -146,15 +156,17 @@ struct Builder {
     /// `builder.function()` as necessary to access required data
     FunctionCall* callFunction(std::string valueName, FunctionBuilder& builder,
                                Function* callee,
-                               ScenarioMetadata const& scenarioMD);
+                               ScenarioMetadata const& scenarioMD,
+                               MaterialShaderType shaderType);
 };
 
 } // namespace
 
 Module matc::buildModule(Context& ctx, MaterialGraph const& G,
+                         MaterialSourceData& sourceData,
                          CodegenParameters codegenParams) {
     Module mod;
-    Builder B{ ctx, G, codegenParams, mod };
+    Builder B{ ctx, G, sourceData, codegenParams, mod };
     B.run();
     return mod;
 }
@@ -163,7 +175,6 @@ void Builder::run() {
     verifyMaterial();
     declareTypes();
     buildUserFunctions();
-    defineTextureBindings();
     defineShadingScenario();
     ranges::for_each(mod.functions(), [&](auto* F) { uniqueNames(*F); });
 }
@@ -242,6 +253,78 @@ static bool vectorTypeLess(VectorConstant const* a, VectorConstant const* b) {
     return a->type()->numComponents() < b->type()->numComponents();
 }
 
+static std::pair<uint32_t, uint32_t> getSizeAndAlign(MaterialDataType type) {
+    using enum MaterialDataType;
+    switch (type) {
+    case Float:
+        return { 4, 4 };
+    case Float2:
+        return { 8, 8 };
+    case Float3:
+        return { 16, 16 };
+    case Float4:
+        return { 16, 16 };
+    default:
+        unreachable();
+    }
+}
+
+static size_t computeBufferLayout(
+    std::span<MaterialPrimitiveParameter> params) {
+    auto itr = params.begin();
+    uint32_t offset = 0;
+    while (itr < params.end()) {
+        auto type = itr->type;
+        assert((int)type < (int)MaterialDataType::Texture2D &&
+               "This function must not be used with texture parameters");
+        auto [size, align] = getSizeAndAlign(type);
+        offset += (offset % align == 0 ? 0 : align - offset % align);
+        do {
+            itr->bufferOffset = offset;
+            offset += size;
+            ++itr;
+        } while (itr < params.end() && itr->type == type);
+    }
+    return offset;
+}
+
+static MaterialDataType translateType(Type const* type) {
+    // clang-format off
+    return visit(*type, utl::overload {
+        [](matc::TextureType const& type) {
+            switch (type.subtype()) {
+            case TextureSubType::Texture2D:
+                return MaterialDataType::Texture2D;
+            case TextureSubType::TextureCube:
+                return MaterialDataType::TextureCube;
+            case TextureSubType::Texture2DArray:
+                assert(false);
+            }
+        },
+        [](VectorType const& type) {
+            using enum MaterialDataType;
+            return (MaterialDataType)((int)Float + type.numComponents() - 1);
+        },
+        [](Type const&) -> MaterialDataType { assert(false); },
+    }); // clang-format on
+}
+
+static MaterialTextureParameter makeTextureParameter(
+    TextureConstant const* value) {
+    return { .type = translateType(value->type()),
+             .bindingPoint = value->bindingPoints(),
+             .name = value->name(),
+             .value = value->asset() };
+}
+
+static MaterialPrimitiveParameter makeVectorParameter(
+    VectorConstant const* value) {
+    return { .type = translateType(value->type()),
+             .bufferOffset = 0,
+             .name = value->name(),
+             .value = value->get() };
+}
+
 void Builder::buildUserFunctions() {
     utl::hashmap<GraphRoot, utl::hashset<Value*>> materialParamMap;
     // Build functions
@@ -259,10 +342,30 @@ void Builder::buildUserFunctions() {
         analyzeRasterizerUsage(*F, metadata.usedRasterizerInputs);
         rewriteRasterizerUsage(*F, metadata);
     }
-    // Parameters
-    auto vectorParameters = materialParamMap | values | join |
+    // Analyze user parameters
+    auto vectorParameters = allUserParametersAndTextureConstants |
                             Filter<VectorConstant> | ranges::to<std::vector>;
     ranges::sort(vectorParameters, vectorTypeLess);
+    sourceData.primitiveParameters = vectorParameters |
+                                     transform(makeVectorParameter) |
+                                     ranges::to<std::vector>;
+    sourceData.parameterBufferSize =
+        computeBufferLayout(sourceData.primitiveParameters);
+    for (auto* tex:
+         allUserParametersAndTextureConstants | Filter<TextureConstant>)
+    {
+        tex->setBindingPoints(makeTextureBinding(*tex));
+        auto param = makeTextureParameter(tex);
+        if (G.userParameters().contains(tex)) {
+            sourceData.textureParameters.push_back(param);
+        }
+        else {
+            sourceData.textureConstants.push_back(param);
+        }
+    }
+    sourceData.cullMode = codegenParams.twoSided ? TriangleCullMode::None :
+                                                   TriangleCullMode::Back;
+    // Add function parameters for user parameters
     primitiveBufferType = makeParameterBufferType(ctx, vectorParameters);
     for (auto& [functionKind, F]: userFunctions) {
         computeParameters(*F, materialParamMap[functionKind], vectorParameters);
@@ -270,6 +373,43 @@ void Builder::buildUserFunctions() {
         auto* retType = ret.returnValue()->type();
         F->computeType(ctx, retType);
     }
+}
+
+EnumArray<MaterialShaderType, int8_t> Builder::makeTextureBinding(
+    TextureConstant const& tex) {
+    EnumArray<MaterialShaderType, int8_t> result =
+        makeEnumArray<MaterialShaderType, int8_t>(
+            MaterialTextureParameter::UnusedBindingPoint);
+    utl::hashset<MaterialShaderType> hasSet;
+    auto set = [&](MaterialShaderType type) {
+        if (hasSet.insert(type).second) {
+            result[type] = texBindingCounter[type]++;
+        }
+    };
+    for (auto* inst: tex.users() | Filter<Instruction>) {
+        auto* F = inst->function();
+        if (!F) {
+            continue;
+        }
+        auto itr = ranges::find(userFunctions | values, F);
+        assert(itr != (userFunctions | values).end());
+        auto functionKind = itr.base()->first;
+        using enum MaterialShaderType;
+        switch (functionKind) {
+        case GraphRoot::VertexFunction:
+            set(ShadingVertex);
+            set(ShadowVertex);
+            break;
+        case GraphRoot::ShadingFunction:
+            set(ShadingFragment);
+            break;
+        case GraphRoot::TransparencyFunction:
+            set(ShadingFragment);
+            set(ShadowFragment);
+            break;
+        }
+    }
+    return result;
 }
 
 static void traverseTopsort(Value* root,
@@ -309,17 +449,17 @@ DynUniquePtr<Function> Builder::buildUserFunction(
             auto* clone = &body.back();
             map.insert(inst, clone);
         }
+        if (isa<TextureConstant>(value) || G.userParameters().contains(&value))
+        {
+            usedParams.insert(&value);
+            allUserParametersAndTextureConstants.insert(&value);
+        }
     });
     body.push_back(new ReturnInst(ctx, "ret", root));
     for (auto& inst: body) {
         for (auto [index, operand]: inst.operands() | enumerate) {
             if (auto* instOperand = dyncast<Instruction*>(operand)) {
                 inst.setOperand(index, map.get(instOperand));
-            }
-            if (G.userParameters().contains(operand) ||
-                isa<TextureConstant>(operand))
-            {
-                usedParams.insert(operand);
             }
         }
     }
@@ -336,10 +476,10 @@ void Builder::analyzeRasterizerUsage(
     }
 }
 
-static Value* makeParameter(Function& F, Value* param,
-                            AggregateType const* paramBufferType,
-                            std::span<VectorConstant* const> vectorParameters,
-                            FunctionMetadata& metadata) {
+static Value* makeUserFunctionParameter(
+    Function& F, Value* param, AggregateType const* paramBufferType,
+    std::span<VectorConstant* const> vectorParameters,
+    FunctionMetadata& metadata) {
     // clang-format off
     return visit(*param, utl::overload{
         [&](VectorConstant const& matParam) {
@@ -352,13 +492,12 @@ static Value* makeParameter(Function& F, Value* param,
             }
             auto itr = ranges::find(vectorParameters, &matParam);
             int index = utl::narrow_cast<int>(itr - vectorParameters.begin());
-            auto* value = new ExtractAggregateValue(matParam.name(),
-                                                    metadata.primitiveBufferParam, index);
+            auto* value = new ExtractAggregateValue(
+                matParam.name(), metadata.primitiveBufferParam, index);
             return F.push_front(value);
         },
         [&](TextureConstant& matParam) {
-            auto* P = F.addParameter(
-                                     {matParam.name(), matParam.type()});
+            auto* P = F.addParameter({ matParam.name(), matParam.type() });
             metadata.parameters[P] = &matParam;
             return P;
         },
@@ -372,8 +511,9 @@ void Builder::computeParameters(
     std::span<VectorConstant* const> vectorParameters) {
     auto& metadata = functionMetadata[&F];
     for (auto* param: usedParams) {
-        Value* newParam = makeParameter(F, param, primitiveBufferType,
-                                        vectorParameters, metadata);
+        Value* newParam = makeUserFunctionParameter(F, param,
+                                                    primitiveBufferType,
+                                                    vectorParameters, metadata);
         auto paramUsers = param->users() | ToSmallVector<>;
         for (auto* user: paramUsers) {
             if (auto* inst = dyncast<Instruction*>(user);
@@ -406,18 +546,6 @@ void Builder::rewriteRasterizerUsage(Function& F, FunctionMetadata& metadata) {
     }
 }
 
-void Builder::defineTextureBindings() {
-    static constexpr int ReservedTextureSlots = 8;
-    int textureBindingPoint = ReservedTextureSlots;
-    for (auto* tex: ctx.textureConstants()) {
-        if (tex->users().empty()) {
-            continue;
-        }
-        int bindingPoint = textureBindingPoint++;
-        tex->setBindingPoint(bindingPoint);
-    }
-}
-
 static ParameterAttribute toAttrib(RasterizerInputKind kind) {
     using enum RasterizerInputKind;
     switch (kind) {
@@ -441,24 +569,30 @@ static ParameterAttribute getGlobalBindingAttrib(
     }(), index };
 }
 
-static void makeRasterizerMetadata(Context& ctx, std::string typeName,
-                                   ScenarioMetadata& scenarioMD) {
-    if (scenarioMD.usedRasterizerData.empty()) {
+void ScenarioMetadata::collectFunctionRasterInput(auto&& functionMetadata) {
+    ranges::copy(functionMetadata |
+                     transform(&FunctionMetadata::usedRasterizerInputs) | join,
+                 std::inserter(usedRasterizerData, usedRasterizerData.begin()));
+}
+
+void ScenarioMetadata::createRasterizerDataType(Context& ctx,
+                                                std::string typeName) {
+    if (usedRasterizerData.empty()) {
         return;
     }
     auto* type =
-        ctx.aggregateType(std::move(typeName), scenarioMD.usedRasterizerData |
-                                                   transform([&](auto* value) {
+        ctx.aggregateType(std::move(typeName),
+                          usedRasterizerData | transform([&](auto* value) {
         return AggregateElement{ value->type(),
                                  std::string(toSpelling(value->kind())),
                                  toAttrib(value->kind()) };
     }) | ranges::to<std::vector>);
     auto map = makeEnumArray<RasterizerInputKind>(-1);
-    for (auto [index, value]: scenarioMD.usedRasterizerData | enumerate) {
+    for (auto [index, value]: usedRasterizerData | enumerate) {
         map[value->kind()] = utl::narrow_cast<int>(index);
     }
-    scenarioMD.rasterizerDataType = type;
-    scenarioMD.rasterizerDataIndexMap = map;
+    rasterizerDataType = type;
+    rasterizerDataIndexMap = map;
 }
 
 static Value* getRasterizerInput(std::string name, FunctionBuilder& builder,
@@ -478,12 +612,9 @@ void Builder::defineShadingScenario() {
     auto& scenarioMD = scenarioMetadata[ShadingScenario::Shading];
     auto userFunctions = getUserFunctions(
         { { GraphRoot::ShadingFunction, GraphRoot::TransparencyFunction } });
-    ranges::copy(userFunctions | transform([&](auto* F) -> auto& {
-        auto& MD = functionMetadata[F];
-        return MD.usedRasterizerInputs;
-    }) | join,
-                 std::inserter(scenarioMD.usedRasterizerData,
-                               scenarioMD.usedRasterizerData.begin()));
+    scenarioMD.collectFunctionRasterInput(
+        userFunctions |
+        transform([&](auto* F) -> auto& { return functionMetadata[F]; }));
     scenarioMD.usedRasterizerData.insert(
         ctx.rasterizerInput(RasterizerInputKind::ClipPosition));
     if (codegenParams.shadingModel == MaterialShadingModel::DefaultLit) {
@@ -492,7 +623,7 @@ void Builder::defineShadingScenario() {
     }
     Function* shadingFunction = getUserFunction(GraphRoot::ShadingFunction);
     analyzeShadingFunction(*shadingFunction, scenarioMD);
-    makeRasterizerMetadata(ctx, "ShadingRasterizerData", scenarioMD);
+    scenarioMD.createRasterizerDataType(ctx, "ShadingRasterizerData");
     fragMD.rasterizerParam = fragShader.addParameter(
         { "in", scenarioMD.rasterizerDataType, ParameterQualifier::None,
           ParameterAttribute::StageIn });
@@ -503,15 +634,17 @@ void Builder::defineShadingScenario() {
             getUserFunction(GraphRoot::TransparencyFunction);
         assert(transparencyFunction);
         auto* transparency = callFunction("transparency", builder,
-                                          transparencyFunction, scenarioMD);
+                                          transparencyFunction, scenarioMD,
+                                          MaterialShaderType::ShadingFragment);
         auto* condition =
             builder.insert<CompareInst>(ctx, "condition", CompareInst::Less,
                                         transparency, ctx.floatConstant(0.5));
         builder.insert<DiscardFragment>("discard", condition);
     }
     assert(shadingFunction);
-    Value* materialData =
-        callFunction("material", builder, shadingFunction, scenarioMD);
+    Value* materialData = callFunction("material", builder, shadingFunction,
+                                       scenarioMD,
+                                       MaterialShaderType::ShadingFragment);
     materialData = postprocessMaterial(builder, materialData, scenarioMD);
     Value* color3 = [&]() -> Value* {
         switch (codegenParams.shadingModel) {
@@ -880,7 +1013,7 @@ static Value* getFunctionArgument(TextureConstant* texParam,
         return itr->second;
     }
     ParameterAttribute attrib = { ParameterAttribute::Texture,
-                                  texParam->bindingPoint() };
+                                  texParam->bindingPoint(AC.shaderType) };
     auto* caller = AC.builder.function();
     auto* param = caller->addParameter({ texParam->name(), texParam->type(),
                                          ParameterQualifier::None, attrib });
@@ -904,7 +1037,8 @@ static Value* getFunctionArgument(ParameterBufferTag, ArgumentContext AC) {
 
 FunctionCall* Builder::callFunction(std::string valueName,
                                     FunctionBuilder& builder, Function* callee,
-                                    ScenarioMetadata const& scenarioMD) {
+                                    ScenarioMetadata const& scenarioMD,
+                                    MaterialShaderType shaderType) {
     auto* caller = builder.function();
     auto& callerMD = functionMetadata[caller];
     auto& calleeMD = functionMetadata[callee];
@@ -918,7 +1052,7 @@ FunctionCall* Builder::callFunction(std::string valueName,
                 .scenarioMD = scenarioMD,
                 .callerMD = callerMD,
                 .calleeMD = calleeMD,
-                .shaderType = MaterialShaderType::ShadingFragment,
+                .shaderType = shaderType,
                 .primitiveBufferType = primitiveBufferType,
             };
             return getFunctionArgument(paramMetadata, args);

@@ -191,6 +191,8 @@ private:
         return nullptr;
     }
 
+    virtual size_t inputIndexMap(size_t index) const { return index; }
+
     bloom::matc::CodegenParameters params;
 };
 

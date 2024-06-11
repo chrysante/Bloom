@@ -215,7 +215,12 @@ private:
         makeEnumArray<MaterialShaderType, int8_t>(-1);
 };
 
-class RasterizerInput: public Constant {
+class ShaderInput: public Constant {
+public:
+    using Constant::Constant;
+};
+
+class RasterizerInput: public ShaderInput {
 public:
     DECLARE_TYPE(VectorType)
 
@@ -226,6 +231,18 @@ public:
 
 private:
     RasterizerInputKind _kind;
+};
+
+class SceneDataInput: public ShaderInput {
+public:
+    DECLARE_TYPE(VectorType)
+
+    explicit SceneDataInput(Context& ctx, std::string name, SceneDataKind kind);
+
+    SceneDataKind kind() const { return _kind; }
+
+private:
+    SceneDataKind _kind;
 };
 
 class Instruction: public User, public ListNode<Instruction> {

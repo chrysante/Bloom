@@ -27,18 +27,22 @@ using namespace ranges::views;
 
 namespace {
 
-enum class VertexAttribKind { Position, Direction };
+enum class VectorKind { Position, Direction };
 
+enum class SceneDataBufferTag : int;
 enum class ParameterBufferTag : int;
 
 struct ParameterMetadata:
-    std::variant<RasterizerInput*, TextureConstant*, ParameterBufferTag> {
+    std::variant<RasterizerInput*, TextureConstant*, SceneDataBufferTag,
+                 ParameterBufferTag> {
     using variant::variant;
 };
 
 struct FunctionMetadata {
     utl::hashset<RasterizerInput*> usedVertexAttributes;
+    utl::hashset<SceneDataInput*> usedSceneData;
     utl::hashmap<FunctionParameter*, ParameterMetadata> parameters;
+    FunctionParameter* sceneDataBufferParam = nullptr;
     FunctionParameter* primitiveBufferParam = nullptr;
     /// Only non-null for fragment shaders
     FunctionParameter* rasterizerParam = nullptr;
@@ -130,9 +134,8 @@ struct Builder {
     ///
     utl::hashset<std::string> usedValueNames = {};
 
-    /// Type of the vector parameter buffer
+    AggregateType const* sceneDataBufferType = nullptr;
     AggregateType const* primitiveBufferType = nullptr;
-    AggregateType const* cameraInputType = nullptr;
     AggregateType const* vertex3DType = nullptr;
     AggregateType const* PBRDataType = nullptr;
     Type const* entityIDType = nullptr;
@@ -147,9 +150,9 @@ struct Builder {
     void buildUserFunctions();
     DynUniquePtr<Function> buildUserFunction(std::string name, Value* root,
                                              utl::hashset<Value*>& usedParams);
-    void analyzeRasterizerUsage(Function& F,
-                                utl::hashset<RasterizerInput*>& usedInputs);
-    void rewriteRasterizerUsage(Function& F, FunctionMetadata& metadata);
+    void analyzeShaderInputUsage(Function& F, FunctionMetadata& MD);
+    void rewriteRasterizerUsage(Function& F, FunctionMetadata& MD);
+    void rewriteSceneDataUsage(Function& F, FunctionMetadata& MD);
     void computeParameters(Function& F, utl::hashset<Value*> const& usedParams,
                            std::span<VectorConstant* const> vectorParameters);
     EnumArray<MaterialShaderType, int8_t> makeTextureBinding(
@@ -164,7 +167,7 @@ struct Builder {
                          ScenarioMetadata const& scenarioMD);
     Value* transformAttribFloat3(FunctionBuilder& builder, std::string name,
                                  Value* transformMatrix, Value* attrib,
-                                 VertexAttribKind kind);
+                                 VectorKind kind);
     Value* transformAttribFloat4(FunctionBuilder& builder, std::string name,
                                  Value* transformMatrix, Value* attrib);
     void uniqueNames(Function& F);
@@ -180,6 +183,10 @@ struct Builder {
     Function* getUserFunction(GraphRoot kind) const;
     utl::small_vector<Function*> getUserFunctions(
         std::span<GraphRoot const> kinds) const;
+
+    Value* getSceneDataParameter(
+        Function& F,
+        std::optional<MaterialShaderType> shaderType = std::nullopt);
 
     /// Emits a call instruction to \p builder and adds parameters to
     /// `builder.function()` as necessary to access required data
@@ -235,7 +242,7 @@ void Builder::verifyMaterial() {
 
 void Builder::declareTypes() {
     // clang-format off
-    cameraInputType = ctx.aggregateType("SceneRenderData", {
+    sceneDataBufferType = ctx.aggregateType("SceneRenderData", {
         { ctx.matrixType(4, 4), "camera" },
         { ctx.matrixType(4, 4), "inverseCamera" },
         { ctx.float3Type(), "position" },
@@ -371,8 +378,9 @@ void Builder::buildUserFunctions() {
     // Analyze vertex attribute usage
     for (auto [kind, F]: userFunctions) {
         auto& metadata = functionMetadata[F];
-        analyzeRasterizerUsage(*F, metadata.usedVertexAttributes);
+        analyzeShaderInputUsage(*F, metadata);
         rewriteRasterizerUsage(*F, metadata);
+        rewriteSceneDataUsage(*F, metadata);
     }
     // Analyze user parameters
     auto vectorParameters = allUserParametersAndTextureConstants |
@@ -450,15 +458,11 @@ static void traverseTopsort(Value* root,
     utl::hashset<Value*> perm;
     utl::hashset<Value*> tmp;
     auto visit = [&](auto& visit, Value* value) {
-        if (!value) {
-            throw std::runtime_error("Encountered NULL value");
-        }
+        VERIFY(value, "Encountered undefined value");
         if (perm.contains(value)) {
             return;
         }
-        if (tmp.contains(value)) {
-            throw std::runtime_error("Function graph is not a DAG");
-        }
+        VERIFY(!tmp.contains(value), "Function graph is not a DAG");
         tmp.insert(value);
         if (auto* user = dyncast<User const*>(value)) {
             for (auto* operand: user->operands()) {
@@ -500,11 +504,60 @@ DynUniquePtr<Function> Builder::buildUserFunction(
                               List<FunctionParameter>{}, std::move(body));
 }
 
-void Builder::analyzeRasterizerUsage(
-    Function& F, utl::hashset<RasterizerInput*>& usedInputs) {
+void Builder::analyzeShaderInputUsage(Function& F, FunctionMetadata& MD) {
     for (auto& inst: F) {
-        for (auto* input: inst.operands() | Filter<RasterizerInput>) {
-            usedInputs.insert(input);
+        for (auto* input: inst.operands() | Filter<ShaderInput>) {
+            // clang-format off
+            visit(*input, utl::overload {
+                [&](RasterizerInput& input) {
+                    MD.usedVertexAttributes.insert(&input);
+                },
+                [&](SceneDataInput& input) {
+                    MD.usedSceneData.insert(&input);
+                },
+            }); // clang-format on
+        }
+    }
+}
+
+void Builder::rewriteRasterizerUsage(Function& F, FunctionMetadata& MD) {
+    utl::hashmap<Function const*,
+                 EnumArray<RasterizerInputKind, FunctionParameter*>>
+        paramMap;
+    for (auto* input: MD.usedVertexAttributes) {
+        for (auto* inst: input->users() | Filter<Instruction> | ToSmallVector<>)
+        {
+            if (inst->function() != &F) {
+                continue;
+            }
+            auto& param = paramMap[&F][input->kind()];
+            if (!param) {
+                std::string name(magic_enum::enum_name(input->kind()));
+                param = F.addParameter({ std::move(name), input->type() });
+                MD.parameters[param] = input;
+            }
+            inst->replaceOperand(input, param);
+        }
+    }
+}
+
+void Builder::rewriteSceneDataUsage(Function& F, FunctionMetadata& MD) {
+    for (auto* input: MD.usedSceneData) {
+        for (auto* inst: input->users() | Filter<Instruction> | ToSmallVector<>)
+        {
+            if (inst->function() != &F) {
+                continue;
+            }
+            auto* sceneDataBuffer = getSceneDataParameter(F);
+            auto* newValue = [&] {
+                FunctionBuilder builder(ctx, F, F.begin());
+                std::string name(magic_enum::enum_name(input->kind()));
+                switch (input->kind()) {
+                case SceneDataKind::Time:
+                    return builder.getElem(std::move(name), sceneDataBuffer, 5);
+                }
+            }();
+            inst->replaceOperand(input, newValue);
         }
     }
 }
@@ -557,27 +610,6 @@ void Builder::computeParameters(
             {
                 inst->replaceOperand(param, newParam);
             }
-        }
-    }
-}
-
-void Builder::rewriteRasterizerUsage(Function& F, FunctionMetadata& metadata) {
-    utl::hashmap<Function const*,
-                 EnumArray<RasterizerInputKind, FunctionParameter*>>
-        paramMap;
-    for (auto* input: metadata.usedVertexAttributes) {
-        for (auto* inst: input->users() | Filter<Instruction> | ToSmallVector<>)
-        {
-            if (inst->function() != &F) {
-                continue;
-            }
-            auto& param = paramMap[&F][input->kind()];
-            if (!param) {
-                std::string name(magic_enum::enum_name(input->kind()));
-                param = F.addParameter({ std::move(name), input->type() });
-                metadata.parameters[param] = input;
-            }
-            inst->replaceOperand(input, param);
         }
     }
 }
@@ -726,14 +758,9 @@ void Builder::defineShadingScenario() {
         *mod.addFunction("VertexShading", nullptr, ShaderKind::Vertex);
     shaderFunctions[MaterialShaderType::ShadingVertex] = &vertShader;
     auto& vertMD = functionMetadata[&vertShader];
-    auto* cameraBuffer = vertShader.addParameter(
-        { .name = "sceneDataBuffer",
-          .type = cameraInputType,
-          .qualifier = ParameterQualifier::DeviceConstRef,
-          .attribute =
-              getGlobalBindingAttrib(MaterialShaderType::ShadingVertex,
-                                     GlobalMaterialBindingType::SceneData) });
-    auto* cameraMatrix = builder.getElem("camera", cameraBuffer, 0);
+    auto* sceneDataBuffer =
+        getSceneDataParameter(vertShader, MaterialShaderType::ShadingVertex);
+    auto* cameraMatrix = builder.getElem("camera", sceneDataBuffer, 0);
     auto* vertexBuffer = vertShader.addParameter(
         { .name = "vertexBuffer",
           .type = ctx.pointerType(vertex3DType, Mutability::Const),
@@ -761,24 +788,24 @@ void Builder::defineShadingScenario() {
     vertMD.vertexAttributes[WorldPosition] =
         toFloat3(transformAttribFloat3(builder, "posWS", transformMatrix,
                                        builder.getElem("vPosition", vertex, 0),
-                                       VertexAttribKind::Position));
+                                       VectorKind::Position));
     if (scenarioMD.isComputed(WorldNormals)) {
         vertMD.vertexAttributes[WorldNormals] = toFloat3(
             transformAttribFloat3(builder, "normalWS", transformMatrix,
                                   builder.getElem("vNormal", vertex, 1),
-                                  VertexAttribKind::Direction));
+                                  VectorKind::Direction));
     }
     if (scenarioMD.isComputed(WorldTangents)) {
         vertMD.vertexAttributes[WorldTangents] = toFloat3(
             transformAttribFloat3(builder, "tangentWS", transformMatrix,
                                   builder.getElem("vTangent", vertex, 2),
-                                  VertexAttribKind::Direction));
+                                  VectorKind::Direction));
     }
     if (scenarioMD.isComputed(WorldBinormals)) {
         vertMD.vertexAttributes[WorldBinormals] = toFloat3(
             transformAttribFloat3(builder, "binormalWS", transformMatrix,
                                   builder.getElem("vBinormal", vertex, 3),
-                                  VertexAttribKind::Direction));
+                                  VectorKind::Direction));
     }
     if (scenarioMD.isComputed(VertexColor)) {
         vertMD.vertexAttributes[VertexColor] =
@@ -802,7 +829,7 @@ void Builder::defineShadingScenario() {
     vertMD.vertexAttributes[ClipPosition] =
         transformAttribFloat3(builder, "posCS", cameraMatrix,
                               vertMD.vertexAttributes[WorldPosition],
-                              VertexAttribKind::Position);
+                              VectorKind::Position);
     auto rasterizedAttribs =
         scenarioMD.rasterizedVertexAttributes |
         transform([](auto* input) { return input->kind(); }) | ToSmallVector<>;
@@ -908,15 +935,10 @@ Value* Builder::callPBRShader(FunctionBuilder& builder, Value* materialData,
         getRasterizeredVertexAttrib("worldPosition", builder,
                                     RasterizerInputKind::WorldPosition, MD,
                                     scenarioMD);
-    auto* cameraBuffer = shader.addParameter(
-        { .name = "cameraBuffer",
-          .type = cameraInputType,
-          .qualifier = ParameterQualifier::DeviceConstRef,
-          .attribute =
-              getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
-                                     GlobalMaterialBindingType::SceneData) });
+    auto* sceneDataBuffer =
+        getSceneDataParameter(shader, MaterialShaderType::ShadingFragment);
     auto* cameraPosition =
-        builder.insert<ExtractAggregateValue>("cameraPosition", cameraBuffer,
+        builder.insert<ExtractAggregateValue>("cameraPosition", sceneDataBuffer,
                                               2);
     auto* lightBuffer = shader.addParameter(
         { .name = "lights",
@@ -984,13 +1006,9 @@ Function* Builder::declarePBRShader(Type const* materialType) {
 
 Value* Builder::transformAttribFloat3(FunctionBuilder& builder,
                                       std::string name, Value* transformMatrix,
-                                      Value* attrib, VertexAttribKind kind) {
-    auto* vec =
-        builder.appendVector("tmp",
-                             { attrib,
-                               ctx.floatConstant(
-                                   kind == VertexAttribKind::Position ? 1 :
-                                                                        0) });
+                                      Value* attrib, VectorKind kind) {
+    auto* w = ctx.floatConstant(kind == VectorKind::Position ? 1 : 0);
+    auto* vec = builder.appendVector("tmp", { attrib, w });
     return transformAttribFloat4(builder, std::move(name), transformMatrix,
                                  vec);
 }
@@ -1219,6 +1237,26 @@ utl::small_vector<Function*> Builder::getUserFunctions(
     return result;
 }
 
+Value* Builder::getSceneDataParameter(
+    Function& F, std::optional<MaterialShaderType> shaderType) {
+    auto& MD = functionMetadata[&F];
+    if (!MD.sceneDataBufferParam) {
+        ParameterDescriptor desc{ .name = "sceneDataBuffer",
+                                  .type = sceneDataBufferType,
+                                  .qualifier =
+                                      ParameterQualifier::DeviceConstRef };
+        if (shaderType) {
+            desc.attribute =
+                getGlobalBindingAttrib(*shaderType,
+                                       GlobalMaterialBindingType::SceneData);
+        }
+        auto* param = F.addParameter(desc);
+        MD.sceneDataBufferParam = param;
+        MD.parameters[param] = SceneDataBufferTag{};
+    }
+    return MD.sceneDataBufferParam;
+}
+
 namespace {
 
 struct ArgumentContext {
@@ -1228,6 +1266,7 @@ struct ArgumentContext {
     FunctionMetadata& calleeMD;
     MaterialShaderType shaderType;
     Type const* primitiveBufferType;
+    Builder* This;
 };
 
 } // namespace
@@ -1264,6 +1303,11 @@ static Value* getFunctionArgument(TextureConstant* texParam,
     return param;
 }
 
+static Value* getFunctionArgument(SceneDataBufferTag, ArgumentContext AC) {
+    return AC.This->getSceneDataParameter(*AC.builder.function(),
+                                          AC.shaderType);
+}
+
 static Value* getFunctionArgument(ParameterBufferTag, ArgumentContext AC) {
     auto& param = AC.callerMD.primitiveBufferParam;
     if (param) {
@@ -1290,14 +1334,13 @@ FunctionCall* Builder::callFunction(std::string valueName,
         auto itr = calleeMD.parameters.find(&param);
         VERIFY(itr != calleeMD.parameters.end(), "Failed to find parameter");
         return std::visit([&](auto paramMetadata) {
-            ArgumentContext args = {
-                .builder = builder,
-                .scenarioMD = scenarioMD,
-                .callerMD = callerMD,
-                .calleeMD = calleeMD,
-                .shaderType = shaderType,
-                .primitiveBufferType = primitiveBufferType,
-            };
+            ArgumentContext args = { .builder = builder,
+                                     .scenarioMD = scenarioMD,
+                                     .callerMD = callerMD,
+                                     .calleeMD = calleeMD,
+                                     .shaderType = shaderType,
+                                     .primitiveBufferType = primitiveBufferType,
+                                     .This = this };
             return getFunctionArgument(paramMetadata, args);
         }, itr->second);
     }) | ToSmallVector<>;

@@ -114,27 +114,33 @@ TextureConstant::TextureConstant(std::string name, TextureType const* type,
 static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     using enum RasterizerInputKind;
     switch (kind) {
-    case ClipPosition:
-        return ctx.float4Type();
-    case TextureCoords:
-        return ctx.float2Type();
-    case WorldNormals:
-        [[fallthrough]];
-    case WorldTangents:
-        [[fallthrough]];
-    case WorldBinormals:
-        [[fallthrough]];
-    case WorldPosition:
-        return ctx.float3Type();
-    case VertexColor:
-        return ctx.float4Type();
+#define BL_MATGRAPH_VERTEXATTRIB(Name, Type)                                   \
+    case RasterizerInputKind::Name:                                            \
+        return toConcreteType(ctx, SymbolicType::Type);
+#include "Bloom/MaterialCompiler/Lists.def"
     }
 }
 
 RasterizerInput::RasterizerInput(Context& ctx, std::string name,
                                  RasterizerInputKind kind):
-    Constant(ValueNodeType::RasterizerInput, std::move(name),
-             selectType(ctx, kind)),
+    ShaderInput(ValueNodeType::RasterizerInput, std::move(name),
+                selectType(ctx, kind)),
+    _kind(kind) {}
+
+static Type const* selectType(Context& ctx, SceneDataKind kind) {
+    using enum RasterizerInputKind;
+    switch (kind) {
+#define BL_MATGRAPH_SCENEDATA(Name, Type)                                      \
+    case SceneDataKind::Name:                                                  \
+        return toConcreteType(ctx, SymbolicType::Type);
+#include "Bloom/MaterialCompiler/Lists.def"
+    }
+}
+
+SceneDataInput::SceneDataInput(Context& ctx, std::string name,
+                               SceneDataKind kind):
+    ShaderInput(ValueNodeType::SceneDataInput, std::move(name),
+                selectType(ctx, kind)),
     _kind(kind) {}
 
 DynUniquePtr<Instruction> Instruction::clone() const {

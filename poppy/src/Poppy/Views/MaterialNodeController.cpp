@@ -78,7 +78,9 @@ void MaterialNodeController::linkGraphNode(Context& ctx,
             continue;
         }
         for (auto [inputIndex, input]: node()->inputs() | enumerate) {
-            if (inputIndex >= user->numOperands() || user->operand(inputIndex))
+            size_t operandIndex = inputIndexMap(inputIndex);
+            if (operandIndex >= user->numOperands() ||
+                user->operand(operandIndex))
             {
                 continue;
             }
@@ -88,14 +90,14 @@ void MaterialNodeController::linkGraphNode(Context& ctx,
                     return map.get(&o->parent(), o->indexInParent());
                 }
                 if (input->hasFlags(PinFlags::Optional)) {
-                    auto* value = defaultInputValue(ctx, inputIndex);
+                    auto* value = defaultInputValue(ctx, operandIndex);
                     BL_ASSERT(value, "Missing default value");
                     return value;
                 }
                 throw std::runtime_error(
                     utl::strcat("Missing link on node: ", node()->name()));
             }();
-            user->setOperand(inputIndex, operand);
+            user->setOperand(operandIndex, operand);
         }
     }
 }

@@ -28,7 +28,9 @@ BL_MATGRAPH_VALUE(Constant,              User,        Abstract)
 BL_MATGRAPH_VALUE(IntConstant,           Constant,    Concrete)
 BL_MATGRAPH_VALUE(VectorConstant,        Constant,    Concrete)
 BL_MATGRAPH_VALUE(TextureConstant,       Constant,    Concrete)
-BL_MATGRAPH_VALUE(RasterizerInput,       Constant,    Concrete)
+BL_MATGRAPH_VALUE(ShaderInput,           Constant,    Abstract)
+BL_MATGRAPH_VALUE(RasterizerInput,       ShaderInput, Concrete)
+BL_MATGRAPH_VALUE(SceneDataInput,        ShaderInput, Concrete)
 BL_MATGRAPH_VALUE(Callable,              Constant,    Abstract)
 BL_MATGRAPH_VALUE(Function,              Callable,    Concrete)
 BL_MATGRAPH_VALUE(BuiltinFunction,       Callable,    Concrete)
@@ -61,6 +63,28 @@ BL_MATGRAPH_DEFLITVALUE(AmbientOcclusion, Float)
 BL_MATGRAPH_DEFLITVALUE(Normal, Float3)
 
 #undef BL_MATGRAPH_DEFLITVALUE
+
+#ifndef BL_MATGRAPH_VERTEXATTRIB
+#define BL_MATGRAPH_VERTEXATTRIB(Name, Type)
+#endif
+
+BL_MATGRAPH_VERTEXATTRIB(ClipPosition, Float4)
+BL_MATGRAPH_VERTEXATTRIB(TextureCoords, Float2)
+BL_MATGRAPH_VERTEXATTRIB(WorldNormals, Float3)
+BL_MATGRAPH_VERTEXATTRIB(WorldTangents, Float3)
+BL_MATGRAPH_VERTEXATTRIB(WorldBinormals, Float3)
+BL_MATGRAPH_VERTEXATTRIB(WorldPosition, Float3)
+BL_MATGRAPH_VERTEXATTRIB(VertexColor, Float4)
+
+#undef BL_MATGRAPH_VERTEXATTRIB
+
+#ifndef BL_MATGRAPH_SCENEDATA
+#define BL_MATGRAPH_SCENEDATA(Name, Type)
+#endif
+
+BL_MATGRAPH_SCENEDATA(Time, Float)
+
+#undef BL_MATGRAPH_SCENEDATA
 
 #ifndef BL_MATGRAPH_BUILTIN
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, Ret, Args)

@@ -17,9 +17,14 @@ public:
     using iterator = Function::iterator;
     using const_iterator = Function::const_iterator;
 
-    explicit FunctionBuilder(Context& ctx, Function& F): ctx(&ctx), F(&F) {
-        pushInsertPoint(F.end());
+    explicit FunctionBuilder(Context& ctx, Function& F,
+                             const_iterator insertPoint):
+        ctx(&ctx), F(&F) {
+        pushInsertPoint(insertPoint);
     }
+
+    explicit FunctionBuilder(Context& ctx, Function& F):
+        FunctionBuilder(ctx, F, F.end()) {}
 
     Context& context() const { return *ctx; }
 

@@ -67,6 +67,8 @@ public:
 
     RasterizerInput* rasterizerInput(RasterizerInputKind kind);
 
+    SceneDataInput* sceneData(SceneDataKind kind);
+
     BuiltinFunction* builtinFunction(BuiltinFunctionKind kind,
                                      std::span<Type const* const> args);
 

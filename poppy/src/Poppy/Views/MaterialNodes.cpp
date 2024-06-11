@@ -332,19 +332,48 @@ REGISTER_MATERIAL_NODE(VertexOutController, {
     }
 })
 
+enum class InputKind {
+#define BL_MATGRAPH_VERTEXATTRIB(Name, Type) Name,
+#include "Bloom/MaterialCompiler/Lists.def"
+#define BL_MATGRAPH_SCENEDATA(Name, Type) Name,
+#include "Bloom/MaterialCompiler/Lists.def"
+};
+
+static std::optional<RasterizerInputKind> toVertexAttrib(InputKind kind) {
+    if ((int)kind < (int)InputKind::Time) {
+        return (RasterizerInputKind)kind;
+    }
+    return std::nullopt;
+}
+
+static bool isVertexAttrib(InputKind kind) {
+    return toVertexAttrib(kind).has_value();
+}
+
+static std::optional<SceneDataKind> toSceneData(InputKind kind) {
+    if ((int)kind >= (int)InputKind::Time) {
+        return (SceneDataKind)((int)kind - (int)InputKind::Time);
+    }
+    return std::nullopt;
+}
+
+static bool isSceneData(InputKind kind) {
+    return toSceneData(kind).has_value();
+}
+
 /// Any fragment shader input, i.e., rasterizer data
 struct InputController: MaterialNodeController {
     static constexpr auto Name = "InputController";
 
-    static NodeDesc Make(RasterizerInputKind kind) {
+    static NodeDesc Make(InputKind kind) {
         return { .name = std::string(magic_enum::enum_name(kind)),
                  .controller = std::make_unique<InputController>(kind) };
     }
 
-    explicit InputController(RasterizerInputKind kind): kind(kind) {}
+    explicit InputController(InputKind kind): kind(kind) {}
 
     explicit InputController(YAML::Node const& root) {
-        kind = root["Kind"].as<RasterizerInputKind>();
+        kind = root["Kind"].as<InputKind>();
     }
 
     YAML::Node serialize() const override {
@@ -357,7 +386,7 @@ struct InputController: MaterialNodeController {
     std::vector<PinDesc> makeInputDescriptors() override { return {}; }
 
     std::vector<PinDesc> makeOutputDescriptors() override {
-        using enum RasterizerInputKind;
+        using enum InputKind;
         switch (kind) {
         case ClipPosition:
             BL_UNIMPLEMENTED();
@@ -373,12 +402,20 @@ struct InputController: MaterialNodeController {
             return { { .name = "Vector", .userType = mask(DataType::Float3) } };
         case VertexColor:
             return { { .name = "Color", .userType = mask(DataType::Float4) } };
+        case Time:
+            return { { .name = "Value", .userType = mask(DataType::Float) } };
         }
     }
 
     utl::small_vector<Value*> createGraphNodes(Context& ctx,
                                                MaterialGraph&) const override {
-        return { ctx.rasterizerInput(kind) };
+        if (isVertexAttrib(kind)) {
+            return { ctx.rasterizerInput(toVertexAttrib(kind).value()) };
+        }
+        if (isSceneData(kind)) {
+            return { ctx.sceneData(toSceneData(kind).value()) };
+        }
+        BL_UNREACHABLE();
     }
 
     float2 preferredContentSize() const override { return { 70, 0 }; }
@@ -388,11 +425,11 @@ struct InputController: MaterialNodeController {
     bool alwaysDisplayInputNames() const override { return false; }
     bool alwaysDisplayOutputNames() const override { return true; }
 
-    RasterizerInputKind kind;
+    InputKind kind;
 };
 
 REGISTER_MATERIAL_NODE(InputController, {
-    return enumMenu<RasterizerInputKind, InputController>("Inputs");
+    return enumMenu<InputKind, InputController>("Inputs");
 })
 
 struct ConstantController: MaterialNodeController {
@@ -775,6 +812,8 @@ struct BuiltinFunctionController: OverloadableNodeController {
             g.addValue<FunctionCall>(ctx, node()->name(), function, inTypes);
         return { value };
     }
+
+    size_t inputIndexMap(size_t index) const override { return index + 1; }
 
     float4 nodeColor() override { return colors.util; }
     float2 preferredContentSize() const override { return { 70, 0 }; }

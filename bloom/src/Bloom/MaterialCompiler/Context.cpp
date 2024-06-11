@@ -108,6 +108,7 @@ struct Context::Impl {
     utl::hashmap<std::pair<IntSubType, long long>, IntConstant*> intConstants;
     utl::hashmap<std::pair<int, float4>, VectorConstant*> vectorConstants;
     utl::hashmap<RasterizerInputKind, RasterizerInput*> rasterizerInputs;
+    utl::hashmap<SceneDataKind, SceneDataInput*> sceneData;
     utl::hashmap<utl::uuid, TextureConstant*> textureConstants;
     utl::hashmap<BuiltinKey, BuiltinFunction*> builtins;
 };
@@ -259,6 +260,12 @@ TextureConstant* Context::textureConstant(TextureSubType subtype,
 RasterizerInput* Context::rasterizerInput(RasterizerInputKind kind) {
     return impl->getOrInsert(impl->rasterizerInputs, kind, [&] {
         return impl->addValue<RasterizerInput>(*this, "RasterData", kind);
+    });
+}
+
+SceneDataInput* Context::sceneData(SceneDataKind kind) {
+    return impl->getOrInsert(impl->sceneData, kind, [&] {
+        return impl->addValue<SceneDataInput>(*this, "SceneData", kind);
     });
 }
 

@@ -69,10 +69,6 @@ public:
         scopeStack.push(Scope{ baseScope });
     }
 
-    ~SourceEmitter() {
-        VERIFY(isGlobalScope(), "Source emission must end in global scope");
-    }
-
     void writeRaw(auto const&... args) { ((sstr << args), ...); }
 
     void beginItem() {

@@ -44,6 +44,7 @@ static void updateInstances(
 
 void Material::compile(HardwareDevice& device, AssetManager& AM) {
     BL_PROFILE_FUNCTION();
+    Logger::Info("Compiling material: ", name());
     try {
         auto sourceData = model->generateSource();
         auto shaderCompiler = device.createShaderCompiler();

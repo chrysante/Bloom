@@ -235,12 +235,13 @@ void Builder::verifyMaterial() {
 
 void Builder::declareTypes() {
     // clang-format off
-    cameraInputType = ctx.aggregateType("CameraInput", {
+    cameraInputType = ctx.aggregateType("SceneRenderData", {
         { ctx.matrixType(4, 4), "camera" },
         { ctx.matrixType(4, 4), "inverseCamera" },
         { ctx.float3Type(), "position" },
         { ctx.float3Type(), "front" },
         { ctx.float2Type(), "viewportSize" },
+        { ctx.floatType(), "time" },
     }, /* isExtern: */ true);
     using enum VectorTypeFlags;
     vertex3DType = ctx.aggregateType("Vertex3D", {
@@ -711,7 +712,7 @@ void Builder::defineShadingScenario() {
                                           color3, ctx.floatConstant(1) });
     auto entityIDAttrib =
         getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
-                               GlobalMaterialBindingType::GeometryIDBuffer);
+                               GlobalMaterialBindingType::EntityIDBuffer);
     auto* entityID = fragShader.addParameter(
         { "entityID", entityIDType, ParameterQualifier::DeviceConstRef,
           entityIDAttrib });
@@ -726,12 +727,12 @@ void Builder::defineShadingScenario() {
     shaderFunctions[MaterialShaderType::ShadingVertex] = &vertShader;
     auto& vertMD = functionMetadata[&vertShader];
     auto* cameraBuffer = vertShader.addParameter(
-        { .name = "cameraBuffer",
+        { .name = "sceneDataBuffer",
           .type = cameraInputType,
           .qualifier = ParameterQualifier::DeviceConstRef,
           .attribute =
               getGlobalBindingAttrib(MaterialShaderType::ShadingVertex,
-                                     GlobalMaterialBindingType::Camera) });
+                                     GlobalMaterialBindingType::SceneData) });
     auto* cameraMatrix = builder.getElem("camera", cameraBuffer, 0);
     auto* vertexBuffer = vertShader.addParameter(
         { .name = "vertexBuffer",
@@ -913,7 +914,7 @@ Value* Builder::callPBRShader(FunctionBuilder& builder, Value* materialData,
           .qualifier = ParameterQualifier::DeviceConstRef,
           .attribute =
               getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
-                                     GlobalMaterialBindingType::Camera) });
+                                     GlobalMaterialBindingType::SceneData) });
     auto* cameraPosition =
         builder.insert<ExtractAggregateValue>("cameraPosition", cameraBuffer,
                                               2);
@@ -943,8 +944,8 @@ Value* Builder::callPBRShader(FunctionBuilder& builder, Value* materialData,
           .attribute = getGlobalBindingAttrib(
               MaterialShaderType::ShadingFragment,
               GlobalMaterialBindingType::SpecularTexture) });
-    auto* bdrfMap = shader.addParameter(
-        { .name = "bdrfMap",
+    auto* brdfMap = shader.addParameter(
+        { .name = "brdfMap",
           .type = ctx.textureType(TextureSubType::Texture2D),
           .attribute =
               getGlobalBindingAttrib(MaterialShaderType::ShadingFragment,
@@ -952,7 +953,7 @@ Value* Builder::callPBRShader(FunctionBuilder& builder, Value* materialData,
     return builder.callFunction("color", pbrShader,
                                 { { materialData, worldPosition, cameraPosition,
                                     lightSpaceTransforms, lightBuffer,
-                                    shadowMaps, specularMap, bdrfMap } });
+                                    shadowMaps, specularMap, brdfMap } });
 }
 
 static DynUniquePtr<Function> makeForwardDecl(

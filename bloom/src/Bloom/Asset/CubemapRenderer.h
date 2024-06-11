@@ -16,7 +16,7 @@ void renderCubemap(HardwareDevice& device, CommandBuffer& commandBuffer,
 void renderSpecularIBL(HardwareDevice& device, CommandBuffer& commandBuffer,
                        TextureHandle dest, TextureHandle source);
 
-void computeBDRF(HardwareDevice& device, CommandBuffer& commandBuffer,
+void computeBRDF(HardwareDevice& device, CommandBuffer& commandBuffer,
                  TextureHandle dest);
 
 std::array<vml::float3, 9> genLightingCoefficients(vml::float4 const* imageData,

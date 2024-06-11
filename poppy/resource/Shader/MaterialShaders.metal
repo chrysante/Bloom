@@ -25,7 +25,7 @@ struct MainPassFragmentData {
 // NOTE: The buffer and texture bindings in this file are hard coded. The
 // binding points are defined in "Material/Fwd.h"
 
-vertex MainPassData rgMainPassVS(CameraInput device const& cameraBuffer
+vertex MainPassData rgMainPassVS(SceneRenderData device const& sceneData
                                  [[buffer(0)]],
                                  Vertex3D device const* vertices [[buffer(2)]],
                                  float4x4 device const& transform [[buffer(1)]],
@@ -37,7 +37,7 @@ vertex MainPassData rgMainPassVS(CameraInput device const& cameraBuffer
     float4 vertexTangentMS = float4(v.tangent, 0);
     float4 vertexBitangentMS = float4(v.binormal, 0);
     float4 vertexPositionWS = transform * vertexPositionMS;
-    return { .positionCS = cameraBuffer.camera * vertexPositionWS,
+    return { .positionCS = sceneData.camera * vertexPositionWS,
              .normalWS = (transform * vertexNormalMS).xyz,
              .tangentWS = (transform * vertexTangentMS).xyz,
              .binormalWS = (transform * vertexBitangentMS).xyz,

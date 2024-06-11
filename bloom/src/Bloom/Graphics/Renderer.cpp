@@ -28,9 +28,9 @@ BEGIN_RENDERGRAPH_SINK_DECL(Renderer) {
         nullptr
     },
     BufferInterface{
-        "Camera",
+        "Scene Data",
         nullptr,
-        { .size = sizeof(CameraInput) }
+        { .size = sizeof(SceneRenderData) }
     },
     BufferInterface{
         "Light Space Transforms",
@@ -57,7 +57,7 @@ BEGIN_RENDERGRAPH_SINK_DECL(Renderer) {
         }
     },
     TextureInterface{
-        "BDRF Texture",
+        "BRDF Texture",
         nullptr,
         {
             .size = { 512, 512, 1 },
@@ -89,7 +89,7 @@ Renderer::Renderer(RenderGraph* renderGraph, CommandQueue& commandQueue):
     BL_ASSERT(renderGraph);
     geometry = getResource<GeometryResource>(*renderGraph, 0);
     lights = getResource<LightsResource>(*renderGraph, 1);
-    cameraBuffer = getResource<BufferResource>(*renderGraph, 2);
+    sceneDataBuffer = getResource<BufferResource>(*renderGraph, 2);
     lightSpaceTransformBuffer = getResource<BufferResource>(*renderGraph, 3);
     bloomParams = getResource<BufferResource>(*renderGraph, 4);
     postProcessParams = getResource<BufferResource>(*renderGraph, 5);
@@ -103,18 +103,15 @@ Renderer::Renderer(RenderGraph* renderGraph, CommandQueue& commandQueue):
         .usage = TextureUsage::ShaderWrite | TextureUsage::ShaderRead,
     });
     auto commandBuffer = commandQueue.createCommandBuffer();
-    computeBDRF(device, *commandBuffer, BRDF);
+    computeBRDF(device, *commandBuffer, BRDF);
     commandBuffer->commit();
     commandBuffer->waitForCompletion();
 }
 
-void Renderer::begin(FrameParameters const& frameParams, Camera const& camera,
-                     BloomSettings bloomSettings,
-                     PostProcessSettings postProcessSettings) {
+void Renderer::begin(FrameParameters const& frameParams,
+                     SceneParameters const& sceneParams) {
     this->frameParams = frameParams;
-    this->camera = camera;
-    this->bloomSettings = bloomSettings;
-    this->postProcessSettings = postProcessSettings;
+    this->sceneParams = sceneParams;
     if (geometry) {
         geometry->clear();
     }
@@ -212,7 +209,8 @@ void Renderer::submit(Scene const& scene) {
             float distance = light.shadowDistance;
             for (int i = 0; i < light.numCascades; ++i) {
                 auto lightSpaceTransform =
-                    makeDirectionalLightSpaceTransform(camera, distance,
+                    makeDirectionalLightSpaceTransform(sceneParams.camera,
+                                                       distance,
                                                        light.shadowDistanceZ,
                                                        light.direction);
                 lightSpaceTransforms.push_back(
@@ -228,13 +226,15 @@ void Renderer::submit(Scene const& scene) {
     }
 }
 
-static CameraInput makeCameraInput(Camera const& camera) {
+static SceneRenderData makeSceneRenderData(SceneParameters const& params) {
+    auto& camera = params.camera;
     auto viewProj = vml::transpose(camera.viewProjection());
     return { .camera = viewProj,
              .inverseCamera = vml::inverse(viewProj),
              .position = camera.position(),
              .front = camera.front(),
-             .viewportSize = camera.viewportSize() };
+             .viewportSize = camera.viewportSize(),
+             .time = params.time };
 }
 
 static BloomParameters makeBloomParams(BloomSettings const& settings) {
@@ -264,9 +264,10 @@ void Renderer::draw(CommandBuffer& commandBuffer) {
     if (lights) {
         lights->prepare(device);
     }
-    if (cameraBuffer && cameraBuffer->handle()) {
-        auto value = makeCameraInput(camera);
-        device.fillManagedBuffer(cameraBuffer->handle(), &value, sizeof value);
+    if (sceneDataBuffer && sceneDataBuffer->handle()) {
+        auto value = makeSceneRenderData(sceneParams);
+        device.fillManagedBuffer(sceneDataBuffer->handle(), &value,
+                                 sizeof value);
     }
     if (lightSpaceTransformBuffer) {
         size_t byteSize = std::max(size_t{ 1 }, lightSpaceTransforms.size()) *
@@ -281,11 +282,11 @@ void Renderer::draw(CommandBuffer& commandBuffer) {
         }
     }
     if (bloomParams && bloomParams->handle()) {
-        BloomParameters values = makeBloomParams(bloomSettings);
+        BloomParameters values = makeBloomParams(sceneParams.bloomSettings);
         device.fillManagedBuffer(bloomParams->handle(), &values, sizeof values);
     }
     if (postProcessParams && postProcessParams->handle()) {
-        auto value = makePostProcessParams(postProcessSettings);
+        auto value = makePostProcessParams(sceneParams.postProcessSettings);
         device.fillManagedBuffer(postProcessParams->handle(), &value,
                                  sizeof value);
     }

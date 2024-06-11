@@ -6,14 +6,15 @@
 using namespace metal;
 using namespace bloom;
 
-vertex float4 rgSelectionPassVS(CameraInput device const& camera [[buffer(0)]],
+vertex float4 rgSelectionPassVS(SceneRenderData device const& sceneData
+                                [[buffer(0)]],
                                 Vertex3D device const* vertices [[buffer(1)]],
                                 float4x4 device const& transform [[buffer(2)]],
                                 uint vertexID [[vertex_id]])
 {
     float4 vertexPositionMS = float4(vertices[vertexID].position, 1);
     float4 vertexPositionWS = transform * vertexPositionMS;
-    return camera.camera * vertexPositionWS;
+    return sceneData.camera * vertexPositionWS;
 }
 
 fragment float rgSelectionPassFS() { return 1; }
@@ -148,12 +149,13 @@ static constant float GridSize = 2000;
 static constant float GridLineWidth = 2.5;
 static constant float NumLines = 20;
 
-vertex GridVertex rgGridPassVS(CameraInput device const& camera [[buffer(0)]],
+vertex GridVertex rgGridPassVS(SceneRenderData device const& sceneData
+                               [[buffer(0)]],
                                uint const vertexID [[vertex_id]])
 {
     float4 vertexPositionWS =
         float4(GridSize * (GridUVs[vertexID] - 0.5f), 0, 1);
-    return { .position = camera.camera * vertexPositionWS,
+    return { .position = sceneData.camera * vertexPositionWS,
              .UV = GridUVs[vertexID] };
 }
 

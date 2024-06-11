@@ -50,14 +50,14 @@ struct MaterialBindingPoint {
 
 /// Global buffer and texture content types
 enum class GlobalMaterialBindingType {
-    Camera,
+    SceneData,
     Transform,
     Geometry,
     Lights,
     LightSpaceTransforms,
     ShadowMaps,
     MaterialParameterBuffer,
-    GeometryIDBuffer,
+    EntityIDBuffer,
     SpecularTexture,
     BRDFTexture,
     LAST = BRDFTexture
@@ -75,7 +75,7 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
         [[fallthrough]];
     case MaterialShaderType::ShadowVertex:
         switch (bindingType) {
-        case Camera:
+        case SceneData:
             return { Buffer, 0 };
         case Transform:
             return { Buffer, 1 };
@@ -90,7 +90,7 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
         [[fallthrough]];
     case MaterialShaderType::ShadowFragment:
         switch (bindingType) {
-        case Camera:
+        case SceneData:
             return { Buffer, 0 };
         case Transform:
             assert(false);
@@ -104,7 +104,7 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
             return { Texture, 0 };
         case MaterialParameterBuffer:
             return { Buffer, 4 };
-        case GeometryIDBuffer:
+        case EntityIDBuffer:
             return { Buffer, 5 };
         case SpecularTexture:
             return { Texture, 4 };

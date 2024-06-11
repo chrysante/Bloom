@@ -176,8 +176,8 @@ void IBLGenTool::display() {
             ImGui::SetClipboardText(sstr.str().c_str());
         }
     }
-    ImGui::SeparatorText("BDRF Texture");
-    if (ImGui::Button("Generate BDRF Texture")) {
+    ImGui::SeparatorText("BRDF Texture");
+    if (ImGui::Button("Generate BRDF Texture")) {
         generateBRDF();
     }
     if (BRDF) {
@@ -263,7 +263,7 @@ void IBLGenTool::generateBRDF() {
         .usage = TextureUsage::ShaderWrite | TextureUsage::ShaderRead,
     });
     auto commandBuffer = editor().commandQueue().createCommandBuffer();
-    computeBDRF(device, *commandBuffer, BRDF);
+    computeBRDF(device, *commandBuffer, BRDF);
     commandBuffer->commit();
     commandBuffer->waitForCompletion();
 }

@@ -459,7 +459,7 @@ void bloom::renderSpecularIBL(HardwareDevice& device,
     }
 }
 
-void bloom::computeBDRF(HardwareDevice& device, CommandBuffer& commandBuffer,
+void bloom::computeBRDF(HardwareDevice& device, CommandBuffer& commandBuffer,
                         TextureHandle dest) {
     auto compiler = device.createShaderCompiler();
     auto library = compiler->compileFile("Shader/CubemapRenderer.metal");

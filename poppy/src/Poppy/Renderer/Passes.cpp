@@ -27,7 +27,7 @@ struct SelectionPass: PassImpl<SelectionPass> {
 
     // Sinks
     GeometryResource* geometry;
-    BufferHandle cameraBuffer;
+    BufferHandle sceneDataBuffer;
 
     // Sources
     TextureHandle selectionMap;
@@ -48,8 +48,8 @@ BEGIN_SINK_DECL(SelectionPass) {
         &SelectionPass::geometry
     },
     BufferInterface {
-        "Camera",
-        &SelectionPass::cameraBuffer,
+        "Scene Data",
+        &SelectionPass::sceneDataBuffer,
         {}
     }
 }
@@ -92,7 +92,7 @@ void SelectionPass::doExecute(FrameParameters const&,
                                   .clearColor = { 0, 0, 0, 1 },
                                   .loadAction = LoadAction::Clear } },
           .depthAttachment = { .texture = selectionDepth } });
-    encoder->setVertexBuffer(cameraBuffer, 0);
+    encoder->setVertexBuffer(sceneDataBuffer, 0);
     encoder->setVertexBuffer(geometry->transformBuffer(), 2);
     encoder->setPipeline(pipeline);
     encoder->setTriangleCullMode(TriangleCullMode::Back);
@@ -242,7 +242,7 @@ struct OverlayPass: PassImpl<OverlayPass> {
     Renderer2D renderer;
 
     // Sinks
-    BufferHandle cameraBuffer;
+    BufferHandle sceneDataBuffer;
     TextureHandle colorIn;
     TextureHandle depth;
     Geometry2DResource* geometry;
@@ -267,8 +267,8 @@ BEGIN_SINK_DECL(OverlayPass) {
         {}
     },
     BufferInterface {
-        "Camera",
-        &OverlayPass::cameraBuffer,
+        "Scene Data",
+        &OverlayPass::sceneDataBuffer,
         {}
     },
     Geometry2DInterface {
@@ -342,6 +342,6 @@ void OverlayPass::doExecute(FrameParameters const&,
             .texture = depth, .loadAction = LoadAction::DontCare
         }
     }; // clang-format on
-    renderer.drawInWorldCoords(scene, device(), commandBuffer, cameraBuffer,
+    renderer.drawInWorldCoords(scene, device(), commandBuffer, sceneDataBuffer,
                                desc);
 }

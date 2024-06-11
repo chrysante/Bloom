@@ -31,7 +31,7 @@ struct ForwardShadingPass: PassImpl<ForwardShadingPass> {
     // Sinks
     GeometryResource* geometry;
     LightsResource* lights;
-    BufferHandle cameraBuffer;
+    BufferHandle sceneDataBuffer;
     BufferHandle lightSpaceTransforms;
     TextureHandle shadowMaps;
     TextureHandle specularTexture;
@@ -57,9 +57,9 @@ BEGIN_SINK_DECL(ForwardShadingPass) {
         &ForwardShadingPass::lights
     },
     BufferInterface{
-        "Camera",
-        &ForwardShadingPass::cameraBuffer,
-        { .size = sizeof(CameraInput) }
+        "Scene Data",
+        &ForwardShadingPass::sceneDataBuffer,
+        {}
     },
     BufferInterface{
         "Light Space Transforms",
@@ -166,17 +166,18 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
     using enum GlobalMaterialBindingType;
     using enum MaterialShaderType;
     size_t transformBufferIndex = getBindIndex(ShadingVertex, Transform);
-    encoder->setVertexBuffer(cameraBuffer, getBindIndex(ShadingVertex, Camera));
+    encoder->setVertexBuffer(sceneDataBuffer,
+                             getBindIndex(ShadingVertex, SceneData));
     encoder->setVertexBuffer(geometry->transformBuffer(), transformBufferIndex);
-    encoder->setFragmentBuffer(cameraBuffer,
-                               getBindIndex(ShadingFragment, Camera));
+    encoder->setFragmentBuffer(sceneDataBuffer,
+                               getBindIndex(ShadingFragment, SceneData));
     encoder->setFragmentBuffer(lights->lightBuffer(),
                                getBindIndex(ShadingFragment, Lights));
     encoder->setFragmentBuffer(lightSpaceTransforms,
                                getBindIndex(ShadingFragment,
                                             LightSpaceTransforms));
     encoder->setFragmentBuffer(geometry->IDBuffer(),
-                               getBindIndex(ShadingFragment, GeometryIDBuffer));
+                               getBindIndex(ShadingFragment, EntityIDBuffer));
     encoder->setFragmentTexture(shadowMaps,
                                 getBindIndex(ShadingFragment, ShadowMaps));
     encoder->setFragmentTexture(specularTexture,
@@ -229,7 +230,7 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
                                        index * sizeof(float4x4));
         // Entity ID
         encoder->setFragmentBufferOffset(getBindIndex(ShadingFragment,
-                                                      GeometryIDBuffer),
+                                                      EntityIDBuffer),
                                          index * sizeof(uint32_t));
         BufferView indexBuffer = object.mesh->indexBuffer();
         DrawDescription desc{};

@@ -7,12 +7,13 @@
 namespace bloom {
 
 ///
-struct CameraInput {
+struct SceneRenderData {
     vml::float4x4 camera;
     vml::float4x4 inverseCamera;
     vml::float3 position;
     vml::float3 front;
     vml::float2 viewportSize;
+    float time;
 };
 
 BLOOM_SHADER_CONSTANT int NumMaxShadowCasters = 32;

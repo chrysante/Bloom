@@ -11,16 +11,16 @@ struct Vertex2DCS {
     float4 color;
 };
 
-vertex Vertex2DCS Renderer2DWorldVS(CameraInput device const& cameraIn
+vertex Vertex2DCS Renderer2DWorldVS(SceneRenderData device const& sceneData
                                     [[buffer(0)]],
                                     LineVertex2D device const* vertices
                                     [[buffer(1)]],
                                     uint vertexID [[vertex_id]])
 {
-    float aspect = cameraIn.viewportSize.x / cameraIn.viewportSize.y;
+    float aspect = sceneData.viewportSize.x / sceneData.viewportSize.y;
     auto v = vertices[vertexID];
-    float4 posProj = cameraIn.camera * float4(v.position, 1);
-    float4 nextPosProj = cameraIn.camera * float4(v.nextPosition, 1);
+    float4 posProj = sceneData.camera * float4(v.position, 1);
+    float4 nextPosProj = sceneData.camera * float4(v.nextPosition, 1);
     float2 posScreen = float2(aspect, 1) * posProj.xy / posProj.w;
     float2 nextPosScreen = float2(aspect, 1) * nextPosProj.xy / nextPosProj.w;
     float2 dirScreen = normalize(nextPosScreen - posScreen);
@@ -31,7 +31,7 @@ vertex Vertex2DCS Renderer2DWorldVS(CameraInput device const& cameraIn
         // Screen coords
         // Transform width back into projected coordinates so we end up with the
         // same width regardless of camera position
-        float2 widthProj = width * 2 * posProj.w / cameraIn.viewportSize.y;
+        float2 widthProj = width * 2 * posProj.w / sceneData.viewportSize.y;
         posProj.xy += N * widthProj * v.orientation;
     }
     else {

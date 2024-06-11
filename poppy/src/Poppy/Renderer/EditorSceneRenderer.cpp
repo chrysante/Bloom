@@ -61,7 +61,7 @@ EditorSceneRenderer::EditorSceneRenderer(
         GeometryInterface{ "Selected Geometry", nullptr });
     auto* overlays = mRenderGraph->declareSink(
         Geometry2DInterface{ "Debug Overlays", nullptr });
-    auto* camera = mRenderGraph->findInputSource("Camera");
+    auto* camera = mRenderGraph->findInputSource("Scene Data");
     auto* compositeColor = mRenderGraph->declareSource(
         TextureInterface{ "Composite Color", nullptr, {} });
     auto* idMapSource = mRenderGraph->findSource("ID Map");
@@ -69,13 +69,13 @@ EditorSceneRenderer::EditorSceneRenderer(
     // Link selection pass
     mRenderGraph->addLink(selGeo->internalSource(),
                           selPass->findSink("Selected Geometry"));
-    mRenderGraph->addLink(camera, selPass->findSink("Camera"));
+    mRenderGraph->addLink(camera, selPass->findSink("Scene Data"));
     // Link overlays pass
     mRenderGraph->addLink(sceneRenderGraph->findSource("Depth"),
                           overlaysPass->findSink("Depth"));
     mRenderGraph->addLink(sceneRenderGraph->findSource("Color"),
                           overlaysPass->findSink("Color"));
-    mRenderGraph->addLink(camera, overlaysPass->findSink("Camera"));
+    mRenderGraph->addLink(camera, overlaysPass->findSink("Scene Data"));
     mRenderGraph->addLink(overlays->internalSource(),
                           overlaysPass->findSink("Geometry"));
     // Link composition pass
@@ -103,13 +103,11 @@ EditorSceneRenderer::EditorSceneRenderer(
 }
 
 void EditorSceneRenderer::begin(bloom::FrameParameters const& frameParams,
-                                bloom::Camera const& camera,
-                                BloomSettings bloomSettings,
-                                PostProcessSettings postProcessSettings) {
+                                SceneParameters const& sceneParams) {
     if (!mRenderer) {
         return;
     }
-    mRenderer->begin(frameParams, camera, bloomSettings, postProcessSettings);
+    mRenderer->begin(frameParams, sceneParams);
     if (selectedGeometry) {
         selectedGeometry->clear();
     }

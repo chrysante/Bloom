@@ -39,6 +39,13 @@ struct PostProcessSettings {
     ToneMappingFunction toneMappingFunction;
 };
 
+struct SceneParameters {
+    float time;
+    Camera camera;
+    BloomSettings bloomSettings;
+    PostProcessSettings postProcessSettings;
+};
+
 /// Wrapper around a render graph that provides a simple scene submission
 /// interface
 class BLOOM_API Renderer {
@@ -54,9 +61,8 @@ public:
 
     /// Resets the internal scene state and reallocates textures and other
     /// resource as necessary if \p frameParams changed since last frame
-    void begin(FrameParameters const& frameParams, Camera const& camera,
-               BloomSettings bloomSettings,
-               PostProcessSettings postProcessSettings);
+    void begin(FrameParameters const& frameParams,
+               SceneParameters const& sceneParams);
 
     /// Submits geometry and lights in \p scene to the corresponding resources
     void submit(Scene const& scene);
@@ -68,15 +74,12 @@ public:
     FrameParameters const& getFrameParams() const { return frameParams; }
 
     ///
-    Camera const& getCamera() const { return camera; }
-
-    ///
     RenderGraph* renderGraph() const { return mRenderGraph; }
 
 private:
     RenderGraph* mRenderGraph = nullptr;
     GeometryResource* geometry = nullptr;
-    BufferResource* cameraBuffer = nullptr;
+    BufferResource* sceneDataBuffer = nullptr;
     TextureResource* specularTexture = nullptr;
     TextureResource* brdfTexture = nullptr;
     TextureHandle BRDF;
@@ -86,9 +89,7 @@ private:
     BufferResource* bloomParams = nullptr;
     BufferResource* postProcessParams = nullptr;
     FrameParameters frameParams;
-    Camera camera;
-    BloomSettings bloomSettings;
-    PostProcessSettings postProcessSettings;
+    SceneParameters sceneParams;
 };
 
 } // namespace bloom

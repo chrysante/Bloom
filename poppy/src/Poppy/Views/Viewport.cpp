@@ -340,9 +340,10 @@ void Viewport::drawScene(Scene& scene, vml::rectangle<float> sceneRect) {
         renderGraphDirty = false;
     }
     cameraController.applyProjection(sceneRect.size());
-    renderer->begin(frameParams, cameraController.camera(),
-                    rendererSettings.bloomSettings,
-                    rendererSettings.postProcessSettings);
+    renderer->begin(frameParams,
+                    { (float)editor().time().absolute,
+                      cameraController.camera(), rendererSettings.bloomSettings,
+                      rendererSettings.postProcessSettings });
     scene.applyTransformHierarchy();
     renderer->submit(scene);
     if (!editor().isSimulating()) {

@@ -1,3 +1,4 @@
+#include <range/v3/view.hpp>
 #include <vml/vml.hpp>
 
 #include "Bloom/GPU/CommandBuffer.h"
@@ -15,6 +16,7 @@
 
 using namespace bloom;
 using namespace vml;
+using namespace ranges::views;
 
 namespace {
 
@@ -129,6 +131,16 @@ static int getBindIndex(MaterialShaderType shaderType,
     return getGlobalMaterialBindingPoint(shaderType, bindingType).index;
 }
 
+static void setTextureParameter(RenderEncoder& encoder,
+                                MaterialTextureParameter const& param,
+                                Texture2D* tex) {
+    if (param.hasBinding(MaterialShaderType::ShadingFragment)) {
+        auto texView = tex ? tex->GPUHandle : TextureView();
+        encoder.setFragmentTexture(
+            texView, param.bindingPoint[MaterialShaderType::ShadingFragment]);
+    }
+}
+
 void ForwardShadingPass::doExecute(FrameParameters const& params,
                                    CommandBuffer& commandBuffer) {
     auto encoder = commandBuffer.makeRenderEncoder({
@@ -148,21 +160,24 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
     });
     using enum GlobalMaterialBindingType;
     using enum MaterialShaderType;
-    size_t transformBufferIndex = getBindIndex(Vertex, Transform);
-    encoder->setVertexBuffer(cameraBuffer, getBindIndex(Vertex, Camera));
+    size_t transformBufferIndex = getBindIndex(ShadingVertex, Transform);
+    encoder->setVertexBuffer(cameraBuffer, getBindIndex(ShadingVertex, Camera));
     encoder->setVertexBuffer(geometry->transformBuffer(), transformBufferIndex);
-    encoder->setFragmentBuffer(cameraBuffer, getBindIndex(Fragment, Camera));
+    encoder->setFragmentBuffer(cameraBuffer,
+                               getBindIndex(ShadingFragment, Camera));
     encoder->setFragmentBuffer(lights->lightBuffer(),
-                               getBindIndex(Fragment, Lights));
+                               getBindIndex(ShadingFragment, Lights));
     encoder->setFragmentBuffer(lightSpaceTransforms,
-                               getBindIndex(Fragment, LightSpaceTransforms));
+                               getBindIndex(ShadingFragment,
+                                            LightSpaceTransforms));
     encoder->setFragmentBuffer(geometry->IDBuffer(),
-                               getBindIndex(Fragment, GeometryIDBuffer));
-    encoder->setFragmentTexture(shadowMaps, getBindIndex(Fragment, ShadowMaps));
+                               getBindIndex(ShadingFragment, GeometryIDBuffer));
+    encoder->setFragmentTexture(shadowMaps,
+                                getBindIndex(ShadingFragment, ShadowMaps));
     encoder->setFragmentTexture(specularTexture,
-                                getBindIndex(Fragment, SpecularTexture));
+                                getBindIndex(ShadingFragment, SpecularTexture));
     encoder->setFragmentTexture(brdfTexture,
-                                getBindIndex(Fragment, BRDFTexture));
+                                getBindIndex(ShadingFragment, BRDFTexture));
     if (params.drawWireframe) {
         encoder->setTriangleFillMode(TriangleFillMode::Lines);
     }
@@ -175,10 +190,11 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
             encoder->setPipeline(curMat->rgMainPass);
             encoder->setTriangleCullMode(curMat->cullMode);
             encoder->setDepthStencil(curMat->depthStencil);
-            for (auto& [index, texture]: curMat->constantFragmentTextures) {
-                if (texture) {
-                    encoder->setFragmentTexture(texture->GPUHandle, index);
-                }
+            for (auto [index, param]:
+                 curMat->constantTextureParameters | enumerate)
+            {
+                setTextureParameter(*encoder, param,
+                                    curMat->constantTextures[index].get());
             }
         }
         if (object.materialInstance.get() != curMatInst) {
@@ -186,31 +202,25 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
             curMatInst->uploadData(device());
             auto paramBuffer = curMatInst->buffer();
             encoder->setFragmentBuffer(paramBuffer,
-                                       getBindIndex(Fragment,
+                                       getBindIndex(ShadingFragment,
                                                     MaterialParameterBuffer));
-            for (auto& [key, tex]: curMatInst->getTextures()) {
-                auto [vertBinding, fragBinding] = key;
-                auto texView = tex ? tex->GPUHandle : TextureView();
-                if (vertBinding > MaterialTextureParameter::UnusedBindingPoint)
-                {
-                    encoder->setVertexTexture(texView, vertBinding);
-                }
-                if (fragBinding > MaterialTextureParameter::UnusedBindingPoint)
-                {
-                    encoder->setFragmentTexture(texView, fragBinding);
-                }
+            for (auto [index, param]:
+                 curMatInst->getTextureParameters() | enumerate)
+            {
+                setTextureParameter(*encoder, param,
+                                    curMatInst->getTexture(index).get());
             }
         }
         if (object.mesh.get() != curMesh) {
             encoder->setVertexBuffer(object.mesh->vertexBuffer(),
-                                     getBindIndex(Vertex, Geometry));
+                                     getBindIndex(ShadingVertex, Geometry));
             curMesh = object.mesh.get();
         }
         // Object transform
         encoder->setVertexBufferOffset(transformBufferIndex,
                                        index * sizeof(float4x4));
         // Entity ID
-        encoder->setFragmentBufferOffset(getBindIndex(Fragment,
+        encoder->setFragmentBufferOffset(getBindIndex(ShadingFragment,
                                                       GeometryIDBuffer),
                                          index * sizeof(uint32_t));
         BufferView indexBuffer = object.mesh->indexBuffer();

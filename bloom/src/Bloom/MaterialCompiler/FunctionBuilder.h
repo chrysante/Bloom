@@ -69,6 +69,12 @@ public:
     Value* clampMin(std::string name, Value* a, vml::float4 b);
 
     ///
+    Value* clampMax(std::string name, Value* a, Value* b);
+
+    /// \overload
+    Value* clampMax(std::string name, Value* a, vml::float4 b);
+
+    ///
     Value* callBuiltin(std::string name, BuiltinFunctionKind function,
                        std::span<Value* const> arguments);
 

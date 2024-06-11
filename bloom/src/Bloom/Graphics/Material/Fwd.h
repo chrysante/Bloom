@@ -114,11 +114,6 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
     }
 }
 
-inline constexpr std::string_view MaterialVertexShaderName =
-    "materialVertexShader";
-inline constexpr std::string_view MaterialFragmentShaderName =
-    "materialFragmentShader";
-
 } // namespace bloom
 
 #endif // BLOOM_GRAPHICS_MATERIAL_FWD_H

@@ -46,28 +46,28 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
     BL_PROFILE_FUNCTION();
     try {
         auto sourceData = model->generateSource();
-        std::vector<std::string> functionNames = {
-            std::string(MaterialVertexShaderName),
-            std::string(MaterialFragmentShaderName)
-        };
         auto shaderCompiler = device.createShaderCompiler();
         auto library = shaderCompiler->compileSource(sourceData.source);
         if (!library) {
             throw std::runtime_error("Failed to compile shaders");
         }
         shaderLibrary = library;
-        auto vertexFunction =
-            library->createFunction(std::string(MaterialVertexShaderName));
-        auto fragmentFunction =
-            library->createFunction(std::string(MaterialFragmentShaderName));
+        auto vertexFunction = library->createFunction(
+            sourceData.functionNames[MaterialShaderType::ShadingVertex]);
+        auto fragmentFunction = library->createFunction(
+            sourceData.functionNames[MaterialShaderType::ShadingFragment]);
         {
             BL_PROFILE_FUNCTION("Create pipeline state");
             rgMainPass =
                 createPipeline(device, vertexFunction, fragmentFunction);
         }
-        for (auto [index, assetHandle]: sourceData.constantFragmentTextures) {
-            constantFragmentTextures[index] =
-                as<Texture2D>(AM.get(assetHandle, AssetRepresentation::GPU));
+        constantTextureParameters.clear();
+        constantTextures.clear();
+        for (auto& param: sourceData.textureConstants) {
+            constantTextureParameters.push_back(param);
+            auto tex =
+                as<Texture2D>(AM.get(param.value, AssetRepresentation::GPU));
+            constantTextures.push_back(tex);
         }
         primitiveParameters = std::move(sourceData.primitiveParameters);
         paramBufferSize = sourceData.parameterBufferSize;

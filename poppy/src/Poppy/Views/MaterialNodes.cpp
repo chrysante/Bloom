@@ -128,37 +128,6 @@ static std::unique_ptr<Node> enumMenu(
                     filter);
 }
 
-static AggregateType const* makeDefaultLitOutputType(Context& ctx) {
-    auto* materialDataType =
-        ctx.aggregateType("LitFragmentData",
-                          {
-                              { ctx.float3Type(), "albedo" },
-                              { ctx.float3Type(), "emissive" },
-                              { ctx.floatType(), "roughness" },
-                              { ctx.floatType(), "metallic" },
-                              { ctx.floatType(), "ao" },
-                              { ctx.float3Type(), "normal" },
-                          });
-    return materialDataType;
-}
-
-static AggregateType const* makeUnlitOutputType(Context& ctx) {
-    auto* materialDataType =
-        ctx.aggregateType("UnlitFragmentData",
-                          {
-                              { ctx.float3Type(), "emissive" },
-                          });
-    return materialDataType;
-}
-
-static AggregateType const* makeTransparencyOutputType(Context& ctx) {
-    auto* materialDataType =
-        ctx.aggregateType("TransparencyData", {
-                                                  { ctx.floatType(), "value" },
-                                              });
-    return materialDataType;
-}
-
 struct OutputController: MaterialNodeController {
     static constexpr auto Name = "OutputController";
 
@@ -223,28 +192,25 @@ struct OutputController: MaterialNodeController {
 
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& graph) const override {
-        auto [materialRoot, materialDataType] = [&] {
-            using enum MaterialShadingModel;
-            using enum GraphRoot;
+        auto* materialDataType =
+            makeShadingFunctionReturnType(ctx, parameters().shadingModel);
+        auto* materialData = [&]() -> Value* {
             switch (parameters().shadingModel) {
-            case DefaultLit:
-                return std::pair{ LitFragmentFunction,
-                                  makeDefaultLitOutputType(ctx) };
-            case Unlit:
-                return std::pair{ UnlitFragmentFunction,
-                                  makeUnlitOutputType(ctx) };
+            case MaterialShadingModel::Unlit:
+                return graph.addValue<Alias>("material", materialDataType);
+            case MaterialShadingModel::DefaultLit:
+                auto* type = cast<AggregateType const*>(materialDataType);
+                return graph.addValue<AggregateBuilder>("material", type);
             }
         }();
-        auto* materialData = graph.addValue<AggregateBuilder>(materialDataType);
+        graph.setRoot(GraphRoot::ShadingFunction, materialData);
         utl::small_vector<Value*> values = { materialData };
-        graph.setRoot(materialRoot, materialData);
         switch (parameters().transparency) {
         case MaterialTransparency::Opaque:
             break;
         case MaterialTransparency::Masked: {
-            auto* transparencyDataType = makeTransparencyOutputType(ctx);
             auto* transparencyData =
-                graph.addValue<AggregateBuilder>(transparencyDataType);
+                graph.addValue<Alias>("transparency", ctx.floatType());
             values.push_back(transparencyData);
             graph.setRoot(GraphRoot::TransparencyFunction, transparencyData);
             break;
@@ -262,10 +228,10 @@ struct OutputController: MaterialNodeController {
             }
             return defaultInputValue(ctx, position);
         };
-        auto* materialValue = cast<AggregateBuilder*>(values[0]);
         using enum MaterialShadingModel;
         switch (parameters().shadingModel) {
-        case DefaultLit:
+        case DefaultLit: {
+            auto* materialValue = cast<AggregateBuilder*>(values[0]);
             materialValue->setOperand(BaseColor, getValue(BaseColor));
             materialValue->setOperand(Emissive, getValue(Emissive));
             materialValue->setOperand(Roughness, getValue(Roughness));
@@ -274,20 +240,17 @@ struct OutputController: MaterialNodeController {
                                       getValue(AmbientOcclusion));
             materialValue->setOperand(Normal, getValue(Normal));
             break;
+        }
         case Unlit:
-            materialValue->setOperand(0, getValue(Emissive));
+            cast<Alias*>(values[0])->setAliased(getValue(Emissive));
             break;
         }
         switch (parameters().transparency) {
         case MaterialTransparency::Opaque:
-
             break;
-        case MaterialTransparency::Masked: {
-            auto* transparencyValue = cast<AggregateBuilder*>(values[1]);
-            transparencyValue->setOperand(0, getValue(Transparency));
-
+        case MaterialTransparency::Masked:
+            cast<Alias*>(values[1])->setAliased(getValue(Transparency));
             break;
-        }
         }
     }
 
@@ -348,6 +311,8 @@ struct InputController: MaterialNodeController {
     std::vector<PinDesc> makeOutputDescriptors() override {
         using enum RasterizerInputKind;
         switch (kind) {
+        case ClipPosition:
+            BL_UNIMPLEMENTED();
         case TextureCoords:
             return { { .name = "Coords", .userType = mask(DataType::Float2) } };
         case WorldNormals:
@@ -357,8 +322,6 @@ struct InputController: MaterialNodeController {
         case WorldBinormals:
             [[fallthrough]];
         case WorldPosition:
-            [[fallthrough]];
-        case ModelNormals:
             return { { .name = "Vector", .userType = mask(DataType::Float3) } };
         case VertexColor:
             return { { .name = "Color", .userType = mask(DataType::Float4) } };
@@ -490,10 +453,9 @@ struct ConstantController: MaterialNodeController {
             [[fallthrough]];
         case DataType::Float4: {
             if (isParameter) {
-                auto* param =
-                    graph.addValue<VectorParameter>(ctx,
-                                                    numComponents(dataType),
-                                                    value, node()->name());
+                auto* param = graph.addVectorParameter(ctx, node()->name(),
+                                                       numComponents(dataType),
+                                                       value);
                 return { param };
             }
             else {
@@ -502,10 +464,8 @@ struct ConstantController: MaterialNodeController {
         }
         case Texture:
             if (isParameter) {
-                auto* param =
-                    graph.addValue<TextureParameter>(ctx.textureType(textype),
-                                                     textureHandle,
-                                                     parameterName);
+                auto* param = graph.addTextureParameter(ctx, parameterName,
+                                                        textype, textureHandle);
                 return { param };
             }
             else {
@@ -672,62 +632,64 @@ static DataTypeMask deduceBuiltinRetType(
     return definedRet;
 }
 
-static DataTypeMask getBuiltinRetType(BuiltinFunction function) {
+static DataTypeMask getBuiltinRetType(BuiltinFunctionKind function) {
     using enum DataType;
     switch (function) {
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, Ret, ...)                          \
-    case BuiltinFunction::Name:                                                \
+    case BuiltinFunctionKind::Name:                                            \
         return Ret;
 #include "Bloom/MaterialCompiler/Lists.def"
     }
 }
 
 static utl::small_vector<DataTypeMask> getBuiltinArgTypes(
-    BuiltinFunction function) {
+    BuiltinFunctionKind function) {
     using enum DataType;
     switch (function) {
 #define UNPACK(...) __VA_ARGS__
 #define BL_MATGRAPH_BUILTIN(Name, Spelling, Ret, Args)                         \
-    case BuiltinFunction::Name:                                                \
+    case BuiltinFunctionKind::Name:                                            \
         return { UNPACK Args };
 #include "Bloom/MaterialCompiler/Lists.def"
 #undef UNPACK
     }
 }
 
-static auto getFunctionsImpl(BuiltinFunction first, BuiltinFunction last) {
-    using enum BuiltinFunction;
-    return iota(0, (int)last - (int)first + 1) |
-           transform([=](int n) { return BuiltinFunction{ (int)first + n }; });
+static auto getFunctionsImpl(BuiltinFunctionKind first,
+                             BuiltinFunctionKind last) {
+    using enum BuiltinFunctionKind;
+    return iota(0, (int)last - (int)first + 1) | transform([=](int n) {
+        return BuiltinFunctionKind{ (int)first + n };
+    });
 }
 
 static auto getGeometricFunctions() {
-    using enum BuiltinFunction;
+    using enum BuiltinFunctionKind;
     return getFunctionsImpl(Cross, Reflect);
 }
 
 static auto getMathFunctions() {
-    using enum BuiltinFunction;
+    using enum BuiltinFunctionKind;
     return getFunctionsImpl(Acos, Trunc);
 }
 
 struct BuiltinFunctionController: OverloadableNodeController {
     static constexpr auto Name = "BuiltinFunction";
 
-    static NodeDesc Make(BuiltinFunction function) {
+    static NodeDesc Make(BuiltinFunctionKind function) {
         return { .name = std::string(magic_enum::enum_name(function)),
                  .controller =
                      std::make_unique<BuiltinFunctionController>(function) };
     }
 
-    explicit BuiltinFunctionController(BuiltinFunction function):
+    explicit BuiltinFunctionController(BuiltinFunctionKind function):
         OverloadableNodeController(getBuiltinArgTypes(function) |
                                    ranges::to<std::vector>),
         function(function) {}
 
     explicit BuiltinFunctionController(YAML::Node const& root):
         OverloadableNodeController(root) {
-        function = root["FunctionType"].as<BuiltinFunction>();
+        function = root["FunctionType"].as<BuiltinFunctionKind>();
     }
 
     YAML::Node serialize() const override {
@@ -761,7 +723,8 @@ struct BuiltinFunctionController: OverloadableNodeController {
         auto inTypes = inputTypes() | transform([&](DataTypeMask m) {
             return translateType(ctx, m.getSingle().value());
         }) | ranges::to<std::vector>;
-        auto* value = g.addValue<FunctionCall>(ctx, function, inTypes);
+        auto* value =
+            g.addValue<FunctionCall>(ctx, node()->name(), function, inTypes);
         return { value };
     }
 
@@ -770,7 +733,7 @@ struct BuiltinFunctionController: OverloadableNodeController {
     bool alwaysDisplayInputNames() const override { return false; }
     bool alwaysDisplayOutputNames() const override { return true; }
 
-    BuiltinFunction function;
+    BuiltinFunctionKind function;
 };
 
 REGISTER_MATERIAL_NODE(BuiltinFunctionController, {
@@ -822,7 +785,8 @@ struct AppendController: MaterialNodeController {
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& graph) const override {
         return { graph.addValue(
-            allocate<VectorBuilder>(ctx.vectorType(numComponents),
+            allocate<VectorBuilder>(node()->name(),
+                                    ctx.vectorType(numComponents),
                                     numComponents)) };
     }
 
@@ -883,9 +847,9 @@ struct SplitController: MaterialNodeController {
 
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& graph) const override {
-        return iota(0, numComponents) | transform([&](int i) {
+        return iota(0, numComponents) | transform([&](int i) -> Value* {
             return graph.addValue(
-                allocate<ExtractVectorValue>(ctx, i, nullptr));
+                allocate<ExtractVectorValue>(ctx, node()->name(), nullptr, i));
         }) | ToSmallVector<>;
     }
 
@@ -913,17 +877,17 @@ REGISTER_MATERIAL_NODE(SplitController, {
 struct ArithmeticController: OverloadableNodeController {
     static constexpr auto Name = "ArithmeticController";
 
-    static NodeDesc Make(ArithmeticOperation::Kind op) {
+    static NodeDesc Make(ArithmeticInst::Operation op) {
         return { .name = std::string(magic_enum::enum_name(op)),
                  .controller = std::make_unique<ArithmeticController>(op) };
     }
 
-    ArithmeticController(ArithmeticOperation::Kind op):
+    ArithmeticController(ArithmeticInst::Operation op):
         OverloadableNodeController(2, DataTypeMask::FloatN), operation(op) {}
 
     explicit ArithmeticController(YAML::Node const& root):
         OverloadableNodeController(root) {
-        operation = root["Operation"].as<ArithmeticOperation::Kind>();
+        operation = root["Operation"].as<ArithmeticInst::Operation>();
     }
 
     YAML::Node serialize() const override {
@@ -960,8 +924,9 @@ struct ArithmeticController: OverloadableNodeController {
         if (isAnyInputUntyped()) {
             return {};
         }
-        auto* value = graph.addValue<ArithmeticOperation>(
-            operation, translateType(ctx, inputType(0).getSingle().value()),
+        auto* value = graph.addValue<ArithmeticInst>(
+            ctx, node()->name(), operation,
+            translateType(ctx, inputType(0).getSingle().value()),
             translateType(ctx, inputType(1).getSingle().value()));
         return { value };
     }
@@ -971,11 +936,11 @@ struct ArithmeticController: OverloadableNodeController {
     bool alwaysDisplayInputNames() const override { return true; }
     bool alwaysDisplayOutputNames() const override { return false; }
 
-    ArithmeticOperation::Kind operation;
+    ArithmeticInst::Operation operation;
 };
 
 REGISTER_MATERIAL_NODE(ArithmeticController, {
-    return enumMenu<ArithmeticOperation::Kind, ArithmeticController>(
+    return enumMenu<ArithmeticInst::Operation, ArithmeticController>(
         "Arithmetic");
 })
 
@@ -1031,6 +996,8 @@ struct TextureSamplerController: MaterialNodeController {
             return Float2;
         case TextureSubType::TextureCube:
             return Float3;
+        case TextureSubType::Texture2DArray:
+            BL_UNREACHABLE();
         }
     }
 
@@ -1052,14 +1019,25 @@ struct TextureSamplerController: MaterialNodeController {
 
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& graph) const override {
-        auto* sample = graph.addValue(
-            allocate<TextureSampler>(ctx, nullptr, nullptr, mode));
-        auto* r = graph.addValue(allocate<ExtractVectorValue>(ctx, 0, sample));
-        auto* g = graph.addValue(allocate<ExtractVectorValue>(ctx, 1, sample));
-        auto* b = graph.addValue(allocate<ExtractVectorValue>(ctx, 2, sample));
-        auto* a = graph.addValue(allocate<ExtractVectorValue>(ctx, 3, sample));
+        auto* sample =
+            graph.addValue(allocate<TextureSampler>(ctx, node()->name(),
+                                                    nullptr, nullptr, mode));
+        auto* r = graph.addValue(
+            allocate<ExtractVectorValue>(ctx, utl::strcat(node()->name(), "_r"),
+                                         sample, 0));
+        auto* g = graph.addValue(
+            allocate<ExtractVectorValue>(ctx, utl::strcat(node()->name(), "_g"),
+                                         sample, 1));
+        auto* b = graph.addValue(
+            allocate<ExtractVectorValue>(ctx, utl::strcat(node()->name(), "_b"),
+                                         sample, 2));
+        auto* a = graph.addValue(
+            allocate<ExtractVectorValue>(ctx, utl::strcat(node()->name(), "_a"),
+                                         sample, 3));
         auto* rgb = graph.addValue(
-            allocate<VectorBuilder>(ctx, std::vector<Value*>{ r, g, b }));
+            allocate<ExtractVectorValue>(ctx,
+                                         utl::strcat(node()->name(), "_rgb"),
+                                         sample, 0, 1, 2));
         return {
             rgb,   r, g, b, a,
             sample // This is hacky but we put sample here so it will be linked,

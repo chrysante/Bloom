@@ -10,7 +10,7 @@
 #include "Bloom/Core/Yaml.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Texture.h"
-#include "Bloom/MaterialCompiler/CodeGen.h"
+#include "Bloom/MaterialCompiler/Codegen.h"
 #include "Bloom/MaterialCompiler/Context.h"
 #include "Bloom/MaterialCompiler/MaterialGraph.h"
 #include "Poppy/Editor/Editor.h"
@@ -65,7 +65,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
 
     MaterialSourceData generateSource() const override {
         Context ctx;
-        MaterialGraph graph(params);
+        MaterialGraph graph;
         MaterialNodeController::ValueMap map;
         for (auto* node: editorGraph.nodes()) {
             auto* controller = getController(node);
@@ -78,8 +78,7 @@ struct MaterialModelImpl: bloom::MaterialModel {
         for (auto* node: editorGraph.nodes()) {
             getController(node)->linkGraphNode(ctx, map);
         }
-        auto codegen = makeCodeGenerator(ctx, graph, {});
-        return codegen->run();
+        return matc::generateSource(ctx, graph, params);
     }
 
     CodegenParameters const& parameters() const { return params; }

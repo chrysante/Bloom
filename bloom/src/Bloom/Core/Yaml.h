@@ -12,6 +12,8 @@
 #include <vml/vml.hpp>
 #include <yaml-cpp/yaml.h>
 
+#include "Bloom/Core/EnumCount.h"
+
 template <typename T>
 struct YAML::convert<vml::complex<T>> {
     static Node encode(vml::complex<T> const& z) {
@@ -120,6 +122,25 @@ struct YAML::convert<E> {
         if (auto value = magic_enum::enum_cast<E>(node.as<std::string>())) {
             e = *value;
             return true;
+        }
+        return false;
+    }
+};
+
+template <typename E, typename T>
+struct YAML::convert<bloom::EnumArray<E, T>> {
+    static Node encode(bloom::EnumArray<E, T> const& array) {
+        Node node;
+        for (auto value: magic_enum::enum_values<E>()) {
+            node[magic_enum::enum_name(value)] = array[value];
+        }
+        return node;
+    }
+
+    static bool decode(Node const& node, bloom::EnumArray<E, T>& array) {
+        for (auto value: magic_enum::enum_values<E>()) {
+            array[value] =
+                node[magic_enum::enum_name(value)].template as<T>(T{});
         }
         return false;
     }

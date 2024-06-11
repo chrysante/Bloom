@@ -81,6 +81,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
         UNREACHABLE("No codegen function for instruction: ",
                     magic_enum::enum_name(inst.nodeType()));
     }
+    void codegenImpl(Alias const&) {}
     void codegenImpl(FunctionCall const& value);
     void codegenImpl(ArithmeticInst const& value);
     void codegenImpl(CompareInst const& value);
@@ -103,6 +104,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     std::string genNameImpl(TextureConstant const&);
     std::string genNameImpl(RasterizerInput const&);
     std::string genNameImpl(BuiltinFunction const&);
+    std::string genNameImpl(Alias const&);
     std::string genNameImpl(ExtractVectorValue const&);
     std::string genNameImpl(ExtractAggregateValue const&);
 
@@ -464,6 +466,9 @@ void MetalCodeGenerator::codegenImpl(ReturnInst const& ret) {
 }
 
 void MetalCodeGenerator::genName(Value const& value) {
+    if (valueNameMap.contains(&value)) {
+        return;
+    }
     visit(value, [this](auto& value) {
         if constexpr (requires { genNameImpl(value); }) {
             valueNameMap.setName(&value, genNameImpl(value));
@@ -502,6 +507,11 @@ std::string MetalCodeGenerator::genNameImpl(RasterizerInput const&) {
 
 std::string MetalCodeGenerator::genNameImpl(BuiltinFunction const& F) {
     return std::string(toSpelling(F.kind()));
+}
+
+std::string MetalCodeGenerator::genNameImpl(Alias const& alias) {
+    genName(*alias.aliased());
+    return getName(alias.aliased());
 }
 
 std::string MetalCodeGenerator::genNameImpl(ExtractVectorValue const& e) {

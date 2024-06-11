@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <range/v3/view.hpp>
 #include <utl/strcat.hpp>
 
 #include "Bloom/Asset/AssetManager.h"
@@ -13,6 +14,7 @@
 
 using namespace bloom;
 using namespace poppy;
+using namespace ranges::views;
 
 namespace {
 
@@ -75,18 +77,16 @@ static bool displayParam(MaterialPrimitiveParameter& param) {
 }
 
 static void displayParam(MaterialInstance& inst,
-                         MaterialTextureParameter& param) {
+                         MaterialTextureParameter& param, size_t index) {
     using namespace propertiesView;
     beginProperty(param.name);
-    auto tex =
-        inst.getTexture(param.vertexBindingPoint, param.fragmentBindingPoint);
+    auto tex = inst.getTexture(index);
     using enum AssetRepresentation;
     if (assetButton(makeLabel(param.name).c_str(), tex,
                     { .style = AssetButtonStyle::Thumbnail, .repr = GPU }))
     {
         param.value = tex ? tex->handle() : AssetHandle{};
-        inst.setTexture(param.vertexBindingPoint, param.fragmentBindingPoint,
-                        std::move(tex));
+        inst.setTexture(index, std::move(tex));
     }
 }
 
@@ -108,8 +108,8 @@ void MaterialInstanceEditor::display() {
         }
         endSection();
     }
-    auto primParams = inst->getPrimitiveParameterDescriptors();
-    auto texParams = inst->getTextureParameterDescriptors();
+    auto primParams = inst->getPrimitiveParameters();
+    auto texParams = inst->getTextureParameters();
     if (primParams.empty() && texParams.empty()) {
         ImGui::EndChild();
         return;
@@ -124,8 +124,8 @@ void MaterialInstanceEditor::display() {
                                layoutSize(param.type));
         }
     }
-    for (auto& param: texParams) {
-        displayParam(*inst, param);
+    for (auto [index, param]: texParams | enumerate) {
+        displayParam(*inst, param, index);
     }
     endSection();
     ImGui::EndChild();

@@ -41,14 +41,21 @@ Type const* matc::getType(Context& ctx, DefaultLitMaterialValue value) {
     }
 }
 
-AggregateType const* matc::makeDefaultLitMaterialType(Context& ctx) {
-    auto elements = magic_enum::enum_values<DefaultLitMaterialValue>() |
-                    transform([&](auto value) {
-        return AggregateElement{ .name =
-                                     std::string(magic_enum::enum_name(value)),
-                                 .type = getType(ctx, value) };
-    }) | ranges::to<std::vector>;
-    return ctx.aggregateType("DefaultLitMaterial", std::move(elements));
+Type const* matc::makeShadingFunctionReturnType(Context& ctx,
+                                                MaterialShadingModel model) {
+    using enum MaterialShadingModel;
+    switch (model) {
+    case Unlit:
+        return ctx.float3Type();
+    case DefaultLit:
+        auto elements = magic_enum::enum_values<DefaultLitMaterialValue>() |
+                        transform([&](auto value) {
+            return AggregateElement{ .name = std::string(
+                                         magic_enum::enum_name(value)),
+                                     .type = getType(ctx, value) };
+        }) | ranges::to<std::vector>;
+        return ctx.aggregateType("DefaultLitMaterial", std::move(elements));
+    }
 }
 
 std::string_view matc::toSpelling(RasterizerInputKind kind) {
@@ -64,8 +71,6 @@ std::string_view matc::toSpelling(RasterizerInputKind kind) {
         return "tangentWS";
     case WorldBinormals:
         return "binormalWS";
-    case ModelNormals:
-        return "normalMS";
     case WorldPosition:
         return "positionWS";
     case VertexColor:

@@ -55,13 +55,17 @@ User::User(ValueNodeType nodeType, std::string name, Type const* type,
            std::vector<Value*> operands):
     Value(nodeType, std::move(name), type), _operands(std::move(operands)) {
     for (auto* value: _operands) {
-        value->addUser(this);
+        if (value) {
+            value->addUser(this);
+        }
     }
 }
 
 User::User(User const& rhs): Value(rhs), _operands(rhs._operands) {
     for (auto* value: _operands) {
-        value->addUser(this);
+        if (value) {
+            value->addUser(this);
+        }
     }
 }
 
@@ -70,7 +74,9 @@ void User::setOperand(size_t index, Value* value) {
     if (auto* old = _operands[index]) {
         old->removeUser(this);
     }
-    value->addUser(this);
+    if (value) {
+        value->addUser(this);
+    }
     _operands[index] = value;
 }
 
@@ -119,8 +125,6 @@ static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
     case WorldBinormals:
         [[fallthrough]];
     case WorldPosition:
-        [[fallthrough]];
-    case ModelNormals:
         return ctx.float3Type();
     case VertexColor:
         return ctx.float4Type();
@@ -359,15 +363,11 @@ FunctionCall::FunctionCall(Context& ctx, std::string name,
                            std::span<Type const* const> argumentTypes):
     FunctionCall(PrivArgs::make(ctx, std::move(name), kind, argumentTypes)) {}
 
-static void throwArithmeticTypeError() {
-    throw std::runtime_error("Invalid operand types for arithmetic operation");
-}
-
 Type const* ArithmeticInst::commonType(Context& ctx, Type const* lhs,
                                        Type const* rhs) {
-    if (!lhs || !rhs) {
-        throwArithmeticTypeError();
-    }
+    static constexpr auto TypeErrMsg =
+        "Invalid operand types for arithmetic operation";
+    VERIFY(lhs && rhs, TypeErrMsg);
     // clang-format off
     return visit<Type const*>(*lhs, *rhs, utl::overload{
         [&](VectorType const& LHS, VectorType const& RHS) {
@@ -377,31 +377,23 @@ Type const* ArithmeticInst::commonType(Context& ctx, Type const* lhs,
             if (RHS.numComponents() == 1) {
                 return &LHS;
             }
-            if (LHS.numComponents() != RHS.numComponents()) {
-                throwArithmeticTypeError();
-            }
+            VERIFY(LHS.numComponents() == RHS.numComponents(), TypeErrMsg);
             return &LHS;
         },
         [&](MatrixType const& LHS, MatrixType const& RHS) {
-            if (LHS.columns() != RHS.rows()) {
-                throwArithmeticTypeError();
-            }
+            VERIFY(LHS.columns() == RHS.rows(), TypeErrMsg);
             return ctx.matrixType(LHS.rows(), RHS.columns());
         },
         [&](MatrixType const& LHS, VectorType const& RHS) {
-            if (LHS.columns() != RHS.numComponents()) {
-                throwArithmeticTypeError();
-            }
+            VERIFY(LHS.columns() == RHS.numComponents(), TypeErrMsg);
             return ctx.vectorType(LHS.rows());
         },
         [&](VectorType const& LHS, MatrixType const& RHS) {
-            if (LHS.numComponents() != RHS.columns()) {
-                throwArithmeticTypeError();
-            }
+            VERIFY(LHS.numComponents() == RHS.columns(), TypeErrMsg);
             return ctx.vectorType(RHS.columns());
         },
         [&](Type const&, Type const&) {
-            throwArithmeticTypeError();
+            UNREACHABLE(TypeErrMsg);
         }
     }); // clang-format on
 }

@@ -74,7 +74,8 @@ enum class DefaultLitMaterialValue {
 Type const* getType(Context& ctx, DefaultLitMaterialValue value);
 
 ///
-AggregateType const* makeDefaultLitMaterialType(Context& ctx);
+Type const* makeShadingFunctionReturnType(Context& ctx,
+                                          MaterialShadingModel model);
 
 struct CodegenParameters {
     MaterialShadingModel shadingModel = {};
@@ -132,7 +133,6 @@ enum class RasterizerInputKind {
     WorldNormals,
     WorldTangents,
     WorldBinormals,
-    ModelNormals,
     WorldPosition,
     VertexColor,
 };

@@ -71,6 +71,16 @@ Value* FunctionBuilder::clampMin(std::string name, Value* a, vml::float4 b) {
                     ctx->vectorConstant(type->numComponents(), b));
 }
 
+Value* FunctionBuilder::clampMax(std::string name, Value* a, Value* b) {
+    return callBuiltin(std::move(name), BuiltinFunctionKind::Max, { a, b });
+}
+
+Value* FunctionBuilder::clampMax(std::string name, Value* a, vml::float4 b) {
+    auto* type = cast<VectorType const*>(a->type());
+    return clampMax(std::move(name), a,
+                    ctx->vectorConstant(type->numComponents(), b));
+}
+
 Value* FunctionBuilder::callBuiltin(std::string name,
                                     BuiltinFunctionKind function,
                                     std::span<Value* const> arguments) {

@@ -189,8 +189,10 @@ void poppy::editComponents(
              ImGui::IsItemDeactivatedAfterEdit())
     {
         auto* TA = new EditEntityComponent{
-            entities | transform(&EntityHandle::strongHandle), backups,
-            components | transform(dereference) | ToSmallVector<>
+            entities | transform([](auto entity) -> WeakHandle {
+            return entity.strongHandle();
+        }) | ToSmallVector<>,
+            backups, components | transform(dereference) | ToSmallVector<>
         };
         transactionManager.commit(TA);
     }

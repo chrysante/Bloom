@@ -173,6 +173,22 @@ struct ToAddressFn {
 template <typename T = void>
 inline constexpr ToAddressFn<T> ToAddress{};
 
+template <typename T>
+struct AddressOfFn {
+    constexpr auto operator()(auto& obj) const {
+        if constexpr (std::is_same_v<T, void>) {
+            return std::addressof(obj);
+        }
+        else {
+            return [&]() -> T* { return std::addressof(obj); }();
+        }
+    }
+};
+
+/// Function object wrapper around `std::addressof`
+template <typename T = void>
+inline constexpr AddressOfFn<T> AddressOf{};
+
 /// # Range Utils
 
 template <size_t N, typename T>

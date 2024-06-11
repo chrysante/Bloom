@@ -333,6 +333,18 @@ private:
     BuiltinFunctionKind _kind;
 };
 
+class Alias: public Instruction {
+public:
+    explicit Alias(std::string name, Value* aliased):
+        Instruction(ValueNodeType::Alias, std::move(name), aliased->type(),
+                    { aliased }) {}
+
+    explicit Alias(std::string name, Type const* type):
+        Instruction(ValueNodeType::Alias, std::move(name), type, { nullptr }) {}
+
+    DECLARE_OPERAND(Value, aliased, Aliased, 0)
+};
+
 class FunctionCall: public Instruction {
 public:
     FunctionCall(std::string name, Callable* function,

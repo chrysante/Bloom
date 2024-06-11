@@ -107,10 +107,14 @@ struct Builder {
     ///
     utl::hashset<Value*> allUserParametersAndTextureConstants = {};
 
+    ///
+    utl::hashset<std::string> usedValueNames = {};
+
     /// Type of the vector parameter buffer
     AggregateType const* primitiveBufferType = nullptr;
     AggregateType const* cameraInputType = nullptr;
     AggregateType const* vertex3DType = nullptr;
+    AggregateType const* PBRDataType = nullptr;
     Type const* entityIDType = nullptr;
     AggregateType const* shadingFragmentOutType = nullptr;
     static constexpr int ReservedTextureSlots = 8;
@@ -144,6 +148,12 @@ struct Builder {
     Value* transformAttribFloat4(FunctionBuilder& builder, std::string name,
                                  Value* transformMatrix, Value* attrib);
     void uniqueNames(Function& F);
+    void uniqueNames(std::span<Value* const> values,
+                     utl::hashset<Value*>& visited,
+                     utl::hashset<std::string>& instNames);
+    void uniqueName(Value& value, utl::hashset<std::string>& instNames);
+    void validateTypeNames();
+    std::string validateName(std::string name) const;
 
     /// # Utils
 
@@ -175,24 +185,19 @@ void Builder::run() {
     declareTypes();
     buildUserFunctions();
     defineShadingScenario();
+    validateTypeNames();
     ranges::for_each(mod.functions(), [&](auto* F) { uniqueNames(*F); });
+    for (auto& [kind, function]: shaderFunctions) {
+        sourceData.functionNames[kind] = function->name();
+    }
 }
 
 void Builder::verifyMaterial() {
     auto* shadingValue = G.getRoot(GraphRoot::ShadingFunction);
     VERIFY(shadingValue, "Graph must have a shading function");
-    switch (codegenParams.shadingModel) {
-        using enum MaterialShadingModel;
-    case Unlit: {
-        VERIFY(shadingValue->type() == ctx.float3Type(),
-               "Unlit shading function must return float3");
-        break;
-    }
-    case DefaultLit:
-        auto* type = dyncast<AggregateType const*>(shadingValue->type());
-        VERIFY(type == makeDefaultLitMaterialType(ctx), "Invalid return type");
-        break;
-    }
+    VERIFY(shadingValue->type() ==
+               makeShadingFunctionReturnType(ctx, codegenParams.shadingModel),
+           "Invalid return type");
     switch (codegenParams.transparency) {
         using enum MaterialTransparency;
     case Opaque:
@@ -227,6 +232,14 @@ void Builder::declareTypes() {
         { ctx.arrayType(ctx.float2Type(), 
                         ctx.intConstant(IntSubType::I32, 4)),
           "textureCoordinates" },
+    }, /* isExtern: */ true);
+    PBRDataType = ctx.aggregateType("PBRData", {
+        { ctx.float3Type(), "albedo" },
+        { ctx.float3Type(), "emissive" },
+        { ctx.floatType(), "roughness" },
+        { ctx.floatType(), "metallic" },
+        { ctx.floatType(), "ao" },
+        { ctx.float3Type(), "normal" },
     }, /* isExtern: */ true);
     entityIDType = ctx.intType(IntSubType::U32);
     shadingFragmentOutType = ctx.aggregateType("ShadingFragmentOut", {
@@ -702,21 +715,21 @@ void Builder::defineShadingScenario() {
                                   .type = ctx.intType(IntSubType::U32),
                                   .attribute = ParameterAttribute::VertexID });
     builder = FunctionBuilder(ctx, vertShader);
-    auto* vertex =
-        builder.insert<ArrayAccess>("vertex", vertexBuffer, vertexID);
-    EnumArray<RasterizerInputKind, Value*> rasterizerValues{};
-    using enum RasterizerInputKind;
-    rasterizerValues[WorldPosition] =
-        transformAttribFloat3(builder, "posWS", transformMatrix,
-                              builder.getElem("vPosition", vertex, 0),
-                              VertexAttribKind::Position);
-    rasterizerValues[ClipPosition] =
-        transformAttribFloat4(builder, "posCS", cameraMatrix,
-                              rasterizerValues[WorldPosition]);
     auto toFloat3 = [&](Value* value) {
         return builder.insert<ExtractVectorValue>(value->name(), value, 0, 1,
                                                   2);
     };
+    auto* vertex = builder.insert<ArrayAccess>("V", vertexBuffer, vertexID);
+    EnumArray<RasterizerInputKind, Value*> rasterizerValues{};
+    using enum RasterizerInputKind;
+    rasterizerValues[WorldPosition] =
+        toFloat3(transformAttribFloat3(builder, "posWS", transformMatrix,
+                                       builder.getElem("vPosition", vertex, 0),
+                                       VertexAttribKind::Position));
+    rasterizerValues[ClipPosition] =
+        transformAttribFloat3(builder, "posCS", cameraMatrix,
+                              rasterizerValues[WorldPosition],
+                              VertexAttribKind::Position);
     if (scenarioMD.isUsed(WorldNormals)) {
         rasterizerValues[WorldNormals] = toFloat3(
             transformAttribFloat3(builder, "normalWS", transformMatrix,
@@ -795,7 +808,7 @@ Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
                                     ScenarioMetadata const& MD) {
     switch (codegenParams.shadingModel) {
     case MaterialShadingModel::Unlit:
-        return builder.clampMin("emissive", value, { 0, 0, 0, 0 });
+        return builder.clampMax("emissive", value, { 0, 0, 0, 0 });
     case MaterialShadingModel::DefaultLit: {
         using enum DefaultLitMaterialValue;
         EnumArray<DefaultLitMaterialValue, Value*> values{};
@@ -804,9 +817,9 @@ Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
                 builder.getElem(std::string(magic_enum::enum_name(kind)), value,
                                 (int)kind);
         }
-        values[Albedo] = builder.clampMin(values[Albedo]->name(),
+        values[Albedo] = builder.clampMax(values[Albedo]->name(),
                                           values[Albedo], { 0, 0, 0, 0 });
-        values[Emissive] = builder.clampMin(values[Emissive]->name(),
+        values[Emissive] = builder.clampMax(values[Emissive]->name(),
                                             values[Emissive], { 0, 0, 0, 0 });
         auto getVertexAttrib = [&,
                                 &fnMD = functionMetadata[builder.function()]](
@@ -835,8 +848,7 @@ Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
             values[Normal] = getVertexAttrib(WorldNormals);
         }
         values[Normal] = normalize("MaterialNormals", values[Normal]);
-        return builder.makeAggregate("postprocessed",
-                                     cast<AggregateType const*>(value->type()),
+        return builder.makeAggregate("postprocessed", PBRDataType,
                                      values | ranges::to<std::vector>);
     }
     }
@@ -945,32 +957,204 @@ Value* Builder::transformAttribFloat4(FunctionBuilder& builder,
 }
 
 void Builder::uniqueNames(Function& F) {
-    auto values =
-        concat(F.parameters(),
-               F | transform([](auto& value) -> Value& { return value; }));
-    utl::hashset<std::string> set;
+    auto values = concat(F.parameters() | transform(AddressOf<Value>),
+                         F | transform(AddressOf<Value>)) |
+                  ToSmallVector<>;
+    utl::hashset<std::string> instNames = usedValueNames;
+    utl::hashset<Value*> visited;
+    uniqueNames(values, visited, instNames);
+}
+
+void Builder::uniqueNames(std::span<Value* const> values,
+                          utl::hashset<Value*>& visited,
+                          utl::hashset<std::string>& instNames) {
+    for (auto* value: values) {
+        if (!visited.insert(value).second) {
+            continue;
+        }
+        if (auto* user = dyncast<User*>(value)) {
+            uniqueNames(user->operands(), visited, instNames);
+        }
+        uniqueName(*value, instNames);
+    }
+}
+
+void Builder::uniqueName(Value& value, utl::hashset<std::string>& instNames) {
     static std::regex const R("_\\d+$");
-    for (auto& value: values) {
-        while (!set.insert(value.name()).second) {
-            auto name = value.name();
-            std::smatch result;
-            if (!std::regex_search(name, result, R)) {
-                name += "_0";
-                value.setName(std::move(name));
-                continue;
+    value.setName(validateName(value.name()));
+    while (true) {
+        bool isValid = !usedValueNames.contains(value.name());
+        if (isa<Instruction>(value)) {
+            isValid &= !instNames.contains(value.name());
+        }
+        if (isValid) {
+            usedValueNames.insert(value.name());
+            if (isa<Instruction>(value)) {
+                instNames.insert(value.name());
             }
-            VERIFY(result.size() >= 1, "Failed to find counter in value name");
-            int counter = -1;
-            auto [begin, end] = std::pair{ result[0] };
-            auto convResult = std::from_chars(std::to_address(begin + 1),
-                                              std::to_address(end), counter);
-            VERIFY(convResult.ec == std::errc{},
-                   "Failed to parse counter value");
-            VERIFY(counter >= 0, "");
-            name.replace(begin + 1, end, std::to_string(counter + 1));
+            break;
+        }
+        auto name = value.name();
+        std::smatch result;
+        if (!std::regex_search(name, result, R)) {
+            name += "_0";
             value.setName(std::move(name));
+            continue;
+        }
+        VERIFY(result.size() >= 1, "Failed to find counter in value name");
+        int counter = -1;
+        auto [begin, end] = std::pair{ result[0] };
+        auto convResult = std::from_chars(std::to_address(begin + 1),
+                                          std::to_address(end), counter);
+        VERIFY(convResult.ec == std::errc{}, "Failed to parse counter value");
+        VERIFY(counter >= 0, "");
+        name.replace(begin + 1, end, std::to_string(counter + 1));
+        value.setName(std::move(name));
+    }
+}
+
+void Builder::validateTypeNames() {
+    auto allTypes = ctx.types();
+    for (auto* type: allTypes | Filter<AggregateType>) {
+        auto* mutType = const_cast<AggregateType*>(type);
+        mutType->setName(validateName(type->name()));
+        for (auto [index, elem]: type->elements() | enumerate) {
+            mutType->setElementName(index, validateName(elem.name));
         }
     }
+}
+
+std::string Builder::validateName(std::string name) const {
+    static utl::hashset<std::string> const keywords{
+        "alignas",
+        "alignof",
+        "and",
+        "and_eq",
+        "asm",
+        "atomic_cancel",
+        "atomic_commit",
+        "atomic_noexcept",
+        "auto",
+        "bitand",
+        "bitor",
+        "bool",
+        "break",
+        "case",
+        "catch",
+        "char",
+        "char8_t",
+        "char16_t",
+        "char32_t",
+        "class",
+        "compl",
+        "concept",
+        "const",
+        "consteval",
+        "constexpr",
+        "constinit",
+        "const_cast",
+        "continue",
+        "co_await",
+        "co_return",
+        "co_yield",
+        "decltype",
+        "default",
+        "delete",
+        "do",
+        "double",
+        "dynamic_cast",
+        "else",
+        "enum",
+        "explicit",
+        "export",
+        "extern",
+        "false",
+        "float",
+        "for",
+        "friend",
+        "goto",
+        "if",
+        "inline",
+        "int",
+        "long",
+        "mutable",
+        "namespace",
+        "new",
+        "noexcept",
+        "not",
+        "not_eq",
+        "nullptr",
+        "operator",
+        "or",
+        "or_eq",
+        "private",
+        "protected",
+        "public",
+        "reflexpr",
+        "register",
+        "reinterpret_cast",
+        "requires",
+        "return",
+        "short",
+        "signed",
+        "sizeof",
+        "static",
+        "static_assert",
+        "static_cast",
+        "struct",
+        "switch",
+        "synchronized",
+        "template",
+        "this",
+        "thread_local",
+        "throw",
+        "true",
+        "try",
+        "typedef",
+        "typeid",
+        "typename",
+        "union",
+        "unsigned",
+        "using",
+        "virtual",
+        "void",
+        "volatile",
+        "wchar_t",
+        "while",
+        "xor",
+        "xor_eq",
+        "device",
+        "vertex",
+        "fragment",
+        "kernel",
+        "float1",
+        "float2",
+        "float3",
+        "float4",
+        "float1x1",
+        "float2x1",
+        "float3x1",
+        "float4x1",
+        "float1x2",
+        "float2x2",
+        "float3x2",
+        "float4x2",
+        "float1x3",
+        "float2x3",
+        "float3x3",
+        "float4x3",
+        "float1x4",
+        "float2x4",
+        "float3x4",
+        "float4x4",
+    };
+    if (keywords.contains(name)) {
+        name += '_';
+    }
+    ranges::replace_if(name, [](char value) {
+        return !std::isalnum(value) && value != '_';
+    }, '_');
+    return name;
 }
 
 Function* Builder::getUserFunction(GraphRoot kind) const {

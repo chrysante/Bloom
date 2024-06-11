@@ -42,7 +42,8 @@ public:
     RenderPipelineHandle rgMainPass;
     TriangleCullMode cullMode = TriangleCullMode::Back;
     DepthStencilHandle depthStencil;
-    utl::hashmap<int, Reference<Texture2D>> constantFragmentTextures;
+    std::vector<MaterialTextureParameter> constantTextureParameters;
+    std::vector<Reference<Texture2D>> constantTextures;
     std::vector<MaterialPrimitiveParameter> primitiveParameters;
     size_t paramBufferSize = 0;
     std::vector<MaterialTextureParameter> textureParameters;

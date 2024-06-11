@@ -15,6 +15,8 @@ class Type {
 public:
     std::string const& name() const { return _name; }
 
+    void setName(std::string name) { _name = std::move(name); }
+
 protected:
     explicit Type(TypeCategory rtti, std::string name):
         _rtti(rtti), _name(std::move(name)) {}
@@ -88,6 +90,10 @@ public:
     std::span<AggregateElement const> elements() const { return _elements; }
 
     AggregateElement element(size_t index) const { return _elements[index]; }
+
+    void setElementName(size_t index, std::string name) {
+        _elements[index].name = std::move(name);
+    }
 
     bool isExtern() const { return _isExtern; }
 

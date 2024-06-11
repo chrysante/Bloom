@@ -45,6 +45,7 @@ struct MaterialTextureParameter {
 struct MaterialSourceData {
     /// Shader source to be passed to the renderering APIs shader compiler
     std::string source;
+    EnumArray<MaterialShaderType, std::string> functionNames;
     std::vector<MaterialTextureParameter> textureConstants;
     std::vector<MaterialPrimitiveParameter> primitiveParameters;
     std::vector<MaterialTextureParameter> textureParameters;
@@ -59,9 +60,8 @@ struct MaterialSourceData {
 BLOOM_MAKE_TEXT_SERIALIZER(bloom::MaterialPrimitiveParameter, type,
                            bufferOffset, name, value);
 
-BLOOM_MAKE_TEXT_SERIALIZER(bloom::MaterialTextureParameter, type,
-                           fragmentBindingPoint, vertexBindingPoint, name,
-                           value);
+BLOOM_MAKE_TEXT_SERIALIZER(bloom::MaterialTextureParameter, type, bindingPoint,
+                           name, value);
 
 #endif // BLOOM_NO_SERIALIZATION
 

@@ -17,7 +17,7 @@ using namespace ranges::views;
 template <typename ParamType>
 static void amendParameters(std::vector<ParamType>& existingParams,
                             std::vector<ParamType> const& newParams,
-                            std::invocable<ParamType const&> auto setter) {
+                            auto setter) {
     using ValueType = std::remove_cvref_t<decltype(existingParams[0].value)>;
     using Map =
         utl::hashmap<std::pair<MaterialDataType, std::string>, ValueType>;
@@ -25,12 +25,12 @@ static void amendParameters(std::vector<ParamType>& existingParams,
         return std::pair{ std::pair{ param.type, param.name }, param.value };
     }) | ranges::to<Map>;
     existingParams = newParams;
-    for (auto& param: existingParams) {
+    for (auto [index, param]: existingParams | enumerate) {
         auto itr = backup.find({ param.type, param.name });
         if (itr != backup.end()) {
             param.value = itr->second;
         }
-        std::invoke(setter, param);
+        std::invoke(setter, param, index);
     }
 }
 
@@ -38,15 +38,16 @@ void MaterialInstance::setMaterial(Reference<Material> material) {
     if (material) {
         cpuBuffer.resize(material->paramBufferSize);
         amendParameters(primitiveParameters, material->primitiveParameters,
-                        [&](MaterialPrimitiveParameter const& param) {
+                        [&](MaterialPrimitiveParameter const& param, size_t) {
             setParameter(param.value.data(), param.bufferOffset,
                          layoutSize(param.type));
         });
+        textures.resize(material->textureParameters.size());
         amendParameters(textureParameters, material->textureParameters,
-                        [&](MaterialTextureParameter const& param) {
+                        [&](MaterialTextureParameter const& param,
+                            size_t index) {
             using enum AssetRepresentation;
-            setTexture(param.vertexBindingPoint, param.fragmentBindingPoint,
-                       getAsset<Texture2D>(param.value, GPU));
+            setTexture(index, getAsset<Texture2D>(param.value, GPU));
         });
         material->instances.insert(weak_from_this());
     }
@@ -60,15 +61,12 @@ void MaterialInstance::setParameter(void const* data, size_t offset,
     mDirty = true;
 }
 
-void MaterialInstance::setTexture(int vertBinding, int fragBinding,
-                                  Reference<Texture2D> texture) {
-    textures[{ vertBinding, fragBinding }] = std::move(texture);
+void MaterialInstance::setTexture(size_t index, Reference<Texture2D> texture) {
+    textures[index] = std::move(texture);
 }
 
-Reference<Texture2D> MaterialInstance::getTexture(int vertBinding,
-                                                  int fragBinding) const {
-    auto itr = textures.find({ vertBinding, fragBinding });
-    return itr != textures.end() ? itr->second : nullptr;
+Reference<Texture2D> MaterialInstance::getTexture(size_t index) const {
+    return textures[index];
 }
 
 void MaterialInstance::uploadData(HardwareDevice& device) {

@@ -339,9 +339,9 @@ enum class InputKind {
 #include "Bloom/MaterialCompiler/Lists.def"
 };
 
-static std::optional<RasterizerInputKind> toVertexAttrib(InputKind kind) {
+static std::optional<VertexAttributeKind> toVertexAttrib(InputKind kind) {
     if ((int)kind < (int)InputKind::Time) {
-        return (RasterizerInputKind)kind;
+        return (VertexAttributeKind)kind;
     }
     return std::nullopt;
 }
@@ -410,7 +410,7 @@ struct InputController: MaterialNodeController {
     utl::small_vector<Value*> createGraphNodes(Context& ctx,
                                                MaterialGraph&) const override {
         if (isVertexAttrib(kind)) {
-            return { ctx.rasterizerInput(toVertexAttrib(kind).value()) };
+            return { ctx.vertexAttribute(toVertexAttrib(kind).value()) };
         }
         if (isSceneData(kind)) {
             return { ctx.sceneData(toSceneData(kind).value()) };
@@ -1198,7 +1198,7 @@ struct TextureSamplerController: MaterialNodeController {
     Value* defaultInputValue(Context& ctx, size_t index) const override {
         switch (index) {
         case 1: // UVs
-            return ctx.rasterizerInput(RasterizerInputKind::TextureCoords);
+            return ctx.vertexAttribute(VertexAttributeKind::TextureCoords);
         default:
             BL_UNREACHABLE();
         }

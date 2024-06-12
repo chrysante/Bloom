@@ -102,7 +102,7 @@ struct MetalCodeGenerator: CodeGenerator, SourceEmitter {
     std::string genNameImpl(IntConstant const& c);
     std::string genNameImpl(VectorConstant const& c);
     std::string genNameImpl(TextureConstant const&);
-    std::string genNameImpl(ShaderInput const&);
+    std::string genNameImpl(MaterialInput const&);
     std::string genNameImpl(BuiltinFunction const&);
     std::string genNameImpl(Alias const&);
     std::string genNameImpl(ExtractVectorValue const&);
@@ -501,8 +501,8 @@ std::string MetalCodeGenerator::genNameImpl(TextureConstant const&) {
     UNREACHABLE("TextureConstant values should not reach codegen");
 }
 
-std::string MetalCodeGenerator::genNameImpl(ShaderInput const&) {
-    UNREACHABLE("ShaderInput values should not reach codegen");
+std::string MetalCodeGenerator::genNameImpl(MaterialInput const&) {
+    UNREACHABLE("MaterialInput values should not reach codegen");
 }
 
 std::string MetalCodeGenerator::genNameImpl(BuiltinFunction const& F) {

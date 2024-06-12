@@ -107,7 +107,7 @@ struct Context::Impl {
     std::vector<DynUniquePtr<Value>> valueOwners;
     utl::hashmap<std::pair<IntSubType, long long>, IntConstant*> intConstants;
     utl::hashmap<std::pair<int, float4>, VectorConstant*> vectorConstants;
-    utl::hashmap<RasterizerInputKind, RasterizerInput*> rasterizerInputs;
+    utl::hashmap<VertexAttributeKind, VertexAttribute*> vertexAttribs;
     utl::hashmap<SceneDataKind, SceneDataInput*> sceneData;
     utl::hashmap<utl::uuid, TextureConstant*> textureConstants;
     utl::hashmap<BuiltinKey, BuiltinFunction*> builtins;
@@ -257,15 +257,21 @@ TextureConstant* Context::textureConstant(TextureSubType subtype,
     });
 }
 
-RasterizerInput* Context::rasterizerInput(RasterizerInputKind kind) {
-    return impl->getOrInsert(impl->rasterizerInputs, kind, [&] {
-        return impl->addValue<RasterizerInput>(*this, "RasterData", kind);
+VertexAttribute* Context::vertexAttribute(VertexAttributeKind kind) {
+    return impl->getOrInsert(impl->vertexAttribs, kind, [&] {
+        return impl->addValue<VertexAttribute>(*this,
+                                               std::string(
+                                                   magic_enum::enum_name(kind)),
+                                               kind);
     });
 }
 
 SceneDataInput* Context::sceneData(SceneDataKind kind) {
     return impl->getOrInsert(impl->sceneData, kind, [&] {
-        return impl->addValue<SceneDataInput>(*this, "SceneData", kind);
+        return impl->addValue<SceneDataInput>(*this,
+                                              std::string(
+                                                  magic_enum::enum_name(kind)),
+                                              kind);
     });
 }
 

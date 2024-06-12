@@ -127,12 +127,12 @@ enum class GraphRoot {
 
 enum class TextureSubType { Texture2D, TextureCube, Texture2DArray };
 
-enum class RasterizerInputKind {
+enum class VertexAttributeKind {
 #define BL_MATGRAPH_VERTEXATTRIB(Name, Type) Name,
 #include "Bloom/MaterialCompiler/Lists.def"
 };
 
-std::string_view toSpelling(RasterizerInputKind kind);
+std::string_view toSpelling(VertexAttributeKind kind);
 
 enum class SceneDataKind {
 #define BL_MATGRAPH_SCENEDATA(Name, Type) Name,

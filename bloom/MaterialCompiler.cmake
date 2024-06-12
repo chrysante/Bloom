@@ -33,6 +33,8 @@ set(matc_sources
   src/Bloom/MaterialCompiler/Lists.def
   src/Bloom/MaterialCompiler/MaterialGraph.cpp
   src/Bloom/MaterialCompiler/MaterialGraph.h
+  src/Bloom/MaterialCompiler/Metadata.cpp
+  src/Bloom/MaterialCompiler/Metadata.h
   src/Bloom/MaterialCompiler/Module.cpp
   src/Bloom/MaterialCompiler/Module.h
   src/Bloom/MaterialCompiler/Preprocessor.cpp

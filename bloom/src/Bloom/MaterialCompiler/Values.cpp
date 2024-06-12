@@ -111,24 +111,24 @@ TextureConstant::TextureConstant(std::string name, TextureType const* type,
     Constant(ValueNodeType::TextureConstant, std::move(name), type),
     _asset(asset) {}
 
-static Type const* selectType(Context& ctx, RasterizerInputKind kind) {
-    using enum RasterizerInputKind;
+static Type const* selectType(Context& ctx, VertexAttributeKind kind) {
+    using enum VertexAttributeKind;
     switch (kind) {
 #define BL_MATGRAPH_VERTEXATTRIB(Name, Type)                                   \
-    case RasterizerInputKind::Name:                                            \
+    case VertexAttributeKind::Name:                                            \
         return toConcreteType(ctx, SymbolicType::Type);
 #include "Bloom/MaterialCompiler/Lists.def"
     }
 }
 
-RasterizerInput::RasterizerInput(Context& ctx, std::string name,
-                                 RasterizerInputKind kind):
-    ShaderInput(ValueNodeType::RasterizerInput, std::move(name),
-                selectType(ctx, kind)),
+VertexAttribute::VertexAttribute(Context& ctx, std::string name,
+                                 VertexAttributeKind kind):
+    MaterialInput(ValueNodeType::VertexAttribute, std::move(name),
+                  selectType(ctx, kind)),
     _kind(kind) {}
 
 static Type const* selectType(Context& ctx, SceneDataKind kind) {
-    using enum RasterizerInputKind;
+    using enum VertexAttributeKind;
     switch (kind) {
 #define BL_MATGRAPH_SCENEDATA(Name, Type)                                      \
     case SceneDataKind::Name:                                                  \
@@ -139,8 +139,8 @@ static Type const* selectType(Context& ctx, SceneDataKind kind) {
 
 SceneDataInput::SceneDataInput(Context& ctx, std::string name,
                                SceneDataKind kind):
-    ShaderInput(ValueNodeType::SceneDataInput, std::move(name),
-                selectType(ctx, kind)),
+    MaterialInput(ValueNodeType::SceneDataInput, std::move(name),
+                  selectType(ctx, kind)),
     _kind(kind) {}
 
 DynUniquePtr<Instruction> Instruction::clone() const {

@@ -33,52 +33,65 @@ enum class SceneDataBufferTag : int;
 enum class ParameterBufferTag : int;
 
 struct ParameterMetadata:
-    std::variant<RasterizerInput*, TextureConstant*, SceneDataBufferTag,
+    std::variant<VertexAttribute*, TextureConstant*, SceneDataBufferTag,
                  ParameterBufferTag> {
     using variant::variant;
 };
 
 struct FunctionMetadata {
-    utl::hashset<RasterizerInput*> usedVertexAttributes;
+    utl::hashset<VertexAttribute*> usedVertexAttributes;
     utl::hashset<SceneDataInput*> usedSceneData;
     utl::hashmap<FunctionParameter*, ParameterMetadata> parameters;
+    ///
     FunctionParameter* sceneDataBufferParam = nullptr;
+    ///
     FunctionParameter* primitiveBufferParam = nullptr;
-    /// Only non-null for fragment shaders
+    /// The `[[stage_in]]` parameter. Only non-null for fragment shaders
     FunctionParameter* rasterizerParam = nullptr;
-    /// Only non-null for vertex shaders
-    EnumArray<RasterizerInputKind, Value*> vertexAttributes{};
+    /// Maps vertex attribute IDs to instructions (or values) in the function.
+    /// Only valid for vertex shaders
+    EnumArray<VertexAttributeKind, Value*> vertexAttributes{};
     utl::hashmap<TextureConstant*, FunctionParameter*> texParamMap;
 };
 
-enum class ShadingScenario { Shading, Shadow };
-
 struct ScenarioMetadata {
+    ScenarioMetadata(Context& ctx): ctx(ctx) {}
+
+    Context& ctx;
+
     /// Vertex attributes used by the fragment shader. These need to be
     /// rasterized
-    utl::hashset<RasterizerInput*> rasterizedVertexAttributes;
+    utl::hashset<VertexAttribute*> rasterizedVertexAttributes;
+
     /// Vertex attributes used by the vertex shader. These need to be computed
     /// but not necessarily rasterized
-    utl::hashset<RasterizerInput*> computedVertexAttributes;
+    utl::hashset<VertexAttribute*> computedVertexAttributes;
+
+    /// The output type of the vertex shader and type of the fragment shaders
+    /// `[[stage_in]]` parameter
     AggregateType const* rasterizerDataType;
-    EnumArray<RasterizerInputKind, int> rasterizerDataIndexMap;
+
+    /// Maps vertex attributes to their position in `rasterizerDataType`
+    EnumArray<VertexAttributeKind, int> vertexAttribIndexMap;
+
+    /// `true` if we must rasterize the tangent space basis
     bool hasCustomNormals = true;
 
-    bool isRasterized(RasterizerInput const* input) const {
+    bool isRasterized(VertexAttribute const* input) const {
         return rasterizedVertexAttributes.contains(input);
     }
-    bool isRasterized(RasterizerInputKind kind) const {
+    bool isRasterized(VertexAttributeKind kind) const {
         return ranges::contains(rasterizedVertexAttributes, kind,
-                                &RasterizerInput::kind);
+                                &VertexAttribute::kind);
     }
-    bool isComputed(RasterizerInput const* input) const {
+    bool isComputed(VertexAttribute const* input) const {
         return computedVertexAttributes.contains(input);
     }
-    bool isComputed(RasterizerInputKind kind) const {
+    bool isComputed(VertexAttributeKind kind) const {
         return ranges::contains(computedVertexAttributes, kind,
-                                &RasterizerInput::kind);
+                                &VertexAttribute::kind);
     }
-    void markRasterized(RasterizerInput* input) {
+    void markRasterized(VertexAttribute* input) {
         rasterizedVertexAttributes.insert(input);
         computedVertexAttributes.insert(input);
     }
@@ -126,7 +139,8 @@ struct Builder {
     utl::hashmap<Function*, FunctionMetadata> functionMetadata = {};
 
     /// Metadata stored for each shading scenario
-    utl::hashmap<ShadingScenario, ScenarioMetadata> scenarioMetadata = {};
+    ScenarioMetadata shadingMD{ ctx };
+    ScenarioMetadata shadowMD{ ctx };
 
     ///
     utl::hashset<Value*> allUserParametersAndTextureConstants = {};
@@ -150,8 +164,8 @@ struct Builder {
     void buildUserFunctions();
     DynUniquePtr<Function> buildUserFunction(std::string name, Value* root,
                                              utl::hashset<Value*>& usedParams);
-    void analyzeShaderInputUsage(Function& F, FunctionMetadata& MD);
-    void rewriteRasterizerUsage(Function& F, FunctionMetadata& MD);
+    void analyzeMaterialInputUsage(Function& F, FunctionMetadata& MD);
+    void rewriteVertexAttributeUsage(Function& F, FunctionMetadata& MD);
     void rewriteSceneDataUsage(Function& F, FunctionMetadata& MD);
     void computeParameters(Function& F, utl::hashset<Value*> const& usedParams,
                            std::span<VectorConstant* const> vectorParameters);
@@ -378,8 +392,8 @@ void Builder::buildUserFunctions() {
     // Analyze vertex attribute usage
     for (auto [kind, F]: userFunctions) {
         auto& metadata = functionMetadata[F];
-        analyzeShaderInputUsage(*F, metadata);
-        rewriteRasterizerUsage(*F, metadata);
+        analyzeMaterialInputUsage(*F, metadata);
+        rewriteVertexAttributeUsage(*F, metadata);
         rewriteSceneDataUsage(*F, metadata);
     }
     // Analyze user parameters
@@ -504,12 +518,12 @@ DynUniquePtr<Function> Builder::buildUserFunction(
                               List<FunctionParameter>{}, std::move(body));
 }
 
-void Builder::analyzeShaderInputUsage(Function& F, FunctionMetadata& MD) {
+void Builder::analyzeMaterialInputUsage(Function& F, FunctionMetadata& MD) {
     for (auto& inst: F) {
-        for (auto* input: inst.operands() | Filter<ShaderInput>) {
+        for (auto* input: inst.operands() | Filter<MaterialInput>) {
             // clang-format off
             visit(*input, utl::overload {
-                [&](RasterizerInput& input) {
+                [&](VertexAttribute& input) {
                     MD.usedVertexAttributes.insert(&input);
                 },
                 [&](SceneDataInput& input) {
@@ -520,9 +534,9 @@ void Builder::analyzeShaderInputUsage(Function& F, FunctionMetadata& MD) {
     }
 }
 
-void Builder::rewriteRasterizerUsage(Function& F, FunctionMetadata& MD) {
+void Builder::rewriteVertexAttributeUsage(Function& F, FunctionMetadata& MD) {
     utl::hashmap<Function const*,
-                 EnumArray<RasterizerInputKind, FunctionParameter*>>
+                 EnumArray<VertexAttributeKind, FunctionParameter*>>
         paramMap;
     for (auto* input: MD.usedVertexAttributes) {
         for (auto* inst: input->users() | Filter<Instruction> | ToSmallVector<>)
@@ -614,8 +628,8 @@ void Builder::computeParameters(
     }
 }
 
-static ParameterAttribute toAttrib(RasterizerInputKind kind) {
-    using enum RasterizerInputKind;
+static ParameterAttribute toAttrib(VertexAttributeKind kind) {
+    using enum VertexAttributeKind;
     switch (kind) {
     case ClipPosition:
         return { ParameterAttribute::Position };
@@ -665,22 +679,22 @@ void ScenarioMetadata::createRasterizerDataType(Context& ctx,
                                  std::string(toSpelling(value->kind())),
                                  toAttrib(value->kind()) };
     }) | ranges::to<std::vector>);
-    auto map = makeEnumArray<RasterizerInputKind>(-1);
+    auto map = makeEnumArray<VertexAttributeKind>(-1);
     for (auto [index, value]: rasterizedVertexAttributes | enumerate) {
         map[value->kind()] = utl::narrow_cast<int>(index);
     }
     rasterizerDataType = type;
-    rasterizerDataIndexMap = map;
+    vertexAttribIndexMap = map;
 }
 
 static Value* getRasterizeredVertexAttrib(std::string name,
                                           FunctionBuilder& builder,
-                                          RasterizerInputKind kind,
+                                          VertexAttributeKind kind,
                                           FunctionMetadata& MD,
                                           ScenarioMetadata const& scenarioMD) {
     return builder
         .insert<ExtractAggregateValue>(std::move(name), MD.rasterizerParam,
-                                       scenarioMD.rasterizerDataIndexMap[kind]);
+                                       scenarioMD.vertexAttribIndexMap[kind]);
 }
 
 void Builder::defineShadingScenario() {
@@ -689,37 +703,36 @@ void Builder::defineShadingScenario() {
         *mod.addFunction("FragmentShading", nullptr, ShaderKind::Fragment);
     shaderFunctions[MaterialShaderType::ShadingFragment] = &fragShader;
     auto& fragMD = functionMetadata[&fragShader];
-    auto& scenarioMD = scenarioMetadata[ShadingScenario::Shading];
     auto userFragFunctions = getUserFunctions(
         { { GraphRoot::ShadingFunction, GraphRoot::TransparencyFunction } });
-    scenarioMD.collectRasterizedVertexAttributes(
+    shadingMD.collectRasterizedVertexAttributes(
         userFragFunctions |
         transform([&](auto* F) -> auto& { return functionMetadata[F]; }));
-    scenarioMD.markRasterized(
-        ctx.rasterizerInput(RasterizerInputKind::ClipPosition));
+    shadingMD.markRasterized(
+        ctx.vertexAttribute(VertexAttributeKind::ClipPosition));
     if (codegenParams.shadingModel == MaterialShadingModel::DefaultLit) {
-        scenarioMD.markRasterized(
-            ctx.rasterizerInput(RasterizerInputKind::WorldPosition));
+        shadingMD.markRasterized(
+            ctx.vertexAttribute(VertexAttributeKind::WorldPosition));
     }
     Function* shadingFunction = getUserFunction(GraphRoot::ShadingFunction);
-    analyzeShadingFunction(*shadingFunction, scenarioMD);
-    scenarioMD.createRasterizerDataType(ctx, "ShadingRasterizerData");
+    analyzeShadingFunction(*shadingFunction, shadingMD);
+    shadingMD.createRasterizerDataType(ctx, "ShadingRasterizerData");
     fragMD.rasterizerParam = fragShader.addParameter(
-        { "in", scenarioMD.rasterizerDataType, ParameterQualifier::None,
+        { "in", shadingMD.rasterizerDataType, ParameterQualifier::None,
           ParameterAttribute::StageIn });
     utl::hashmap<TextureConstant*, FunctionParameter*> texParamMap;
     auto builder = FunctionBuilder(ctx, fragShader);
     auto userVertAndFragFunctions = getUserFunctions(
         { { GraphRoot::VertexFunction, GraphRoot::ShadingFunction,
             GraphRoot::TransparencyFunction } });
-    scenarioMD.collectComputedVertexAttributes(
+    shadingMD.collectComputedVertexAttributes(
         userVertAndFragFunctions |
         transform([&](auto* F) -> auto& { return functionMetadata[F]; }));
     if (codegenParams.transparency == MaterialTransparency::Masked) {
         auto* transparencyFunction =
             getUserFunction(GraphRoot::TransparencyFunction);
         auto* transparency = callFunction("transparency", builder,
-                                          transparencyFunction, scenarioMD,
+                                          transparencyFunction, shadingMD,
                                           MaterialShaderType::ShadingFragment);
         auto* condition =
             builder.insert<CompareInst>(ctx, "condition", CompareInst::Less,
@@ -727,13 +740,13 @@ void Builder::defineShadingScenario() {
         builder.insert<DiscardFragment>("discard", condition);
     }
     Value* materialData = callFunction("material", builder, shadingFunction,
-                                       scenarioMD,
+                                       shadingMD,
                                        MaterialShaderType::ShadingFragment);
-    materialData = postprocessMaterial(builder, materialData, scenarioMD);
+    materialData = postprocessMaterial(builder, materialData, shadingMD);
     Value* color3 = [&]() -> Value* {
         switch (codegenParams.shadingModel) {
         case MaterialShadingModel::DefaultLit:
-            return callPBRShader(builder, materialData, scenarioMD);
+            return callPBRShader(builder, materialData, shadingMD);
         case MaterialShadingModel::Unlit:
             return materialData;
         }
@@ -784,41 +797,41 @@ void Builder::defineShadingScenario() {
                                                   2);
     };
     auto* vertex = builder.insert<ArrayAccess>("V", vertexBuffer, vertexID);
-    using enum RasterizerInputKind;
+    using enum VertexAttributeKind;
     vertMD.vertexAttributes[WorldPosition] =
         toFloat3(transformAttribFloat3(builder, "posWS", transformMatrix,
                                        builder.getElem("vPosition", vertex, 0),
                                        VectorKind::Position));
-    if (scenarioMD.isComputed(WorldNormals)) {
+    if (shadingMD.isComputed(WorldNormals)) {
         vertMD.vertexAttributes[WorldNormals] = toFloat3(
             transformAttribFloat3(builder, "normalWS", transformMatrix,
                                   builder.getElem("vNormal", vertex, 1),
                                   VectorKind::Direction));
     }
-    if (scenarioMD.isComputed(WorldTangents)) {
+    if (shadingMD.isComputed(WorldTangents)) {
         vertMD.vertexAttributes[WorldTangents] = toFloat3(
             transformAttribFloat3(builder, "tangentWS", transformMatrix,
                                   builder.getElem("vTangent", vertex, 2),
                                   VectorKind::Direction));
     }
-    if (scenarioMD.isComputed(WorldBinormals)) {
+    if (shadingMD.isComputed(WorldBinormals)) {
         vertMD.vertexAttributes[WorldBinormals] = toFloat3(
             transformAttribFloat3(builder, "binormalWS", transformMatrix,
                                   builder.getElem("vBinormal", vertex, 3),
                                   VectorKind::Direction));
     }
-    if (scenarioMD.isComputed(VertexColor)) {
+    if (shadingMD.isComputed(VertexColor)) {
         vertMD.vertexAttributes[VertexColor] =
             builder.getElem("vertexColor", vertex, 4);
     }
-    if (scenarioMD.isComputed(TextureCoords)) {
+    if (shadingMD.isComputed(TextureCoords)) {
         auto* array = builder.getElem("tmp", vertex, 5);
         vertMD.vertexAttributes[TextureCoords] =
             builder.insert<ArrayAccess>("coords", array,
                                         ctx.intConstant(IntSubType::I32, 0));
     }
     if (Function* vertexFunction = getUserFunction(GraphRoot::VertexFunction)) {
-        auto* WPO = callFunction("WPO", builder, vertexFunction, scenarioMD,
+        auto* WPO = callFunction("WPO", builder, vertexFunction, shadingMD,
                                  MaterialShaderType::ShadingVertex);
         vertMD.vertexAttributes[WorldPosition] =
             builder
@@ -831,20 +844,20 @@ void Builder::defineShadingScenario() {
                               vertMD.vertexAttributes[WorldPosition],
                               VectorKind::Position);
     auto rasterizedAttribs =
-        scenarioMD.rasterizedVertexAttributes |
+        shadingMD.rasterizedVertexAttributes |
         transform([](auto* input) { return input->kind(); }) | ToSmallVector<>;
     ranges::sort(rasterizedAttribs, ranges::less{}, [&](auto kind) {
-        return scenarioMD.rasterizerDataIndexMap[kind];
+        return shadingMD.vertexAttribIndexMap[kind];
     });
     auto* VSRetval =
-        builder.makeAggregate("retval", scenarioMD.rasterizerDataType,
+        builder.makeAggregate("retval", shadingMD.rasterizerDataType,
                               rasterizedAttribs | transform([&](auto kind) {
         auto* value = vertMD.vertexAttributes[kind];
         assert(value);
         return value;
     }) | ranges::to<std::vector>);
     builder.insert<ReturnInst>("ret", VSRetval);
-    vertShader.computeType(ctx, scenarioMD.rasterizerDataType);
+    vertShader.computeType(ctx, shadingMD.rasterizerDataType);
 }
 
 void Builder::analyzeShadingFunction(Function const& F, ScenarioMetadata& MD) {
@@ -859,21 +872,21 @@ void Builder::analyzeShadingFunction(Function const& F, ScenarioMetadata& MD) {
             MD.hasCustomNormals = false;
         }
     }
-    using enum RasterizerInputKind;
-    MD.markRasterized(ctx.rasterizerInput(WorldNormals));
+    using enum VertexAttributeKind;
+    MD.markRasterized(ctx.vertexAttribute(WorldNormals));
     if (MD.hasCustomNormals) {
-        MD.markRasterized(ctx.rasterizerInput(WorldTangents));
-        MD.markRasterized(ctx.rasterizerInput(WorldBinormals));
+        MD.markRasterized(ctx.vertexAttribute(WorldTangents));
+        MD.markRasterized(ctx.vertexAttribute(WorldBinormals));
     }
 }
 
 static Value* getRasterizerData(FunctionBuilder& builder,
-                                RasterizerInputKind kind,
+                                VertexAttributeKind kind,
                                 FunctionMetadata const& functionMD,
                                 ScenarioMetadata const& scenarioMD) {
     return builder.getElem(std::string(magic_enum::enum_name(kind)),
                            functionMD.rasterizerParam,
-                           scenarioMD.rasterizerDataIndexMap[kind]);
+                           scenarioMD.vertexAttribIndexMap[kind]);
 }
 
 Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
@@ -895,7 +908,7 @@ Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
                                             values[Emissive], { 0, 0, 0, 0 });
         auto getVertexAttrib = [&,
                                 &fnMD = functionMetadata[builder.function()]](
-                                   RasterizerInputKind kind) {
+                                   VertexAttributeKind kind) {
             return getRasterizerData(builder, kind, fnMD, MD);
         };
         auto normalize = [&](std::string name, Value* value) {
@@ -904,7 +917,7 @@ Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
                                        { value });
         };
         if (MD.hasCustomNormals) {
-            using enum RasterizerInputKind;
+            using enum VertexAttributeKind;
             // clang-format off
             auto* TBN = builder.buildMatrix( "TBN", {
                 normalize("VertexTangents", getVertexAttrib(WorldTangents)),
@@ -916,7 +929,7 @@ Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
                                                TBN, values[Normal]);
         }
         else {
-            using enum RasterizerInputKind;
+            using enum VertexAttributeKind;
             values[Normal] = getVertexAttrib(WorldNormals);
         }
         values[Normal] = normalize("MaterialNormals", values[Normal]);
@@ -933,7 +946,7 @@ Value* Builder::callPBRShader(FunctionBuilder& builder, Value* materialData,
     auto& MD = functionMetadata[&shader];
     auto* worldPosition =
         getRasterizeredVertexAttrib("worldPosition", builder,
-                                    RasterizerInputKind::WorldPosition, MD,
+                                    VertexAttributeKind::WorldPosition, MD,
                                     scenarioMD);
     auto* sceneDataBuffer =
         getSceneDataParameter(shader, MaterialShaderType::ShadingFragment);
@@ -1271,7 +1284,7 @@ struct ArgumentContext {
 
 } // namespace
 
-static Value* getFunctionArgument(RasterizerInput* input, ArgumentContext AC) {
+static Value* getFunctionArgument(VertexAttribute* input, ArgumentContext AC) {
     auto kind = input->kind();
     std::string name(magic_enum::enum_name(kind));
     using enum MaterialShaderType;

@@ -115,7 +115,7 @@ TEST_CASE() {
                                   });
     auto* metallic =
         g.addVectorParameter(ctx, "Metallic", 1, float4{ 2, 1, 5, 0 });
-    auto* coords = ctx.rasterizerInput(RasterizerInputKind::TextureCoords);
+    auto* coords = ctx.vertexAttribute(VertexAttributeKind::TextureCoords);
     auto* AOSample = g.addValue<TextureSampler>(ctx, "AOSample", AOTexture,
                                                 coords, SampleMode::Color);
     auto* AO = g.addValue<ExtractVectorValue>(ctx, "AO", AOSample, 0);

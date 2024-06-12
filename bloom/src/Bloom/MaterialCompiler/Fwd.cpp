@@ -58,8 +58,8 @@ Type const* matc::makeShadingFunctionReturnType(Context& ctx,
     }
 }
 
-std::string_view matc::toSpelling(RasterizerInputKind kind) {
-    using enum RasterizerInputKind;
+std::string_view matc::toSpelling(VertexAttributeKind kind) {
+    using enum VertexAttributeKind;
     switch (kind) {
     case ClipPosition:
         return "positionCS";

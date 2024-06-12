@@ -65,7 +65,7 @@ public:
 
     TextureConstant* textureConstant(TextureSubType subtype, AssetHandle asset);
 
-    RasterizerInput* rasterizerInput(RasterizerInputKind kind);
+    VertexAttribute* vertexAttribute(VertexAttributeKind kind);
 
     SceneDataInput* sceneData(SceneDataKind kind);
 

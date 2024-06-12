@@ -1031,6 +1031,69 @@ REGISTER_MATERIAL_NODE(ArithmeticController, {
         "Arithmetic");
 })
 
+struct OneMinusController: OverloadableNodeController {
+    static constexpr auto Name = "OneMinusController";
+
+    static NodeDesc Make() {
+        return { .name = "One Minus",
+                 .controller = std::make_unique<OneMinusController>() };
+    }
+
+    OneMinusController(): OverloadableNodeController(1, DataTypeMask::FloatN) {}
+
+    explicit OneMinusController(YAML::Node const& root):
+        OverloadableNodeController(root) {}
+
+    YAML::Node serialize() const override {
+        YAML::Node root = OverloadableNodeController::serialize();
+        root["Type"] = Name;
+        return root;
+    }
+
+    std::vector<PinDesc> makeInputDescriptors() override {
+        return { { .name = "", .userType = DataTypeMask::FloatN } };
+    }
+
+    std::vector<PinDesc> makeOutputDescriptors() override {
+        return { { .name = "Result", .userType = inputType(0) } };
+    }
+
+    utl::small_vector<Value*> createGraphNodes(
+        Context& ctx, MaterialGraph& graph) const override {
+        if (isAnyInputUntyped()) {
+            return {};
+        }
+        auto* type = translateType(ctx, inputType(0).getSingle().value());
+        auto* value = graph.addValue<ArithmeticInst>(ctx, node()->name(),
+                                                     ArithmeticInst::Sub,
+                                                     ctx.floatType(), type);
+        value->setOperand(0, ctx.floatConstant(1));
+        return { value };
+    }
+
+    size_t inputIndexMap(size_t index) const override {
+        BL_ASSERT(index == 0);
+        return 1;
+    }
+
+    float4 nodeColor() override { return colors.util; }
+    float2 preferredContentSize() const override { return { 40, 0 }; }
+    bool alwaysDisplayInputNames() const override { return true; }
+    bool alwaysDisplayOutputNames() const override { return false; }
+};
+
+REGISTER_MATERIAL_NODE(OneMinusController, {
+    if (!ImGui::BeginMenu("Arithmetic")) {
+        return nullptr;
+    }
+    std::unique_ptr<Node> result;
+    if (ImGui::MenuItem("One Minus")) {
+        result = std::make_unique<Node>(OneMinusController::Make());
+    }
+    ImGui::EndMenu();
+    return result;
+})
+
 struct TextureSamplerController: MaterialNodeController {
     static constexpr auto Name = "TextureSamplerController";
 

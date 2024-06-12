@@ -95,9 +95,7 @@ struct ScenarioMetadata {
         rasterizedVertexAttributes.insert(input);
         computedVertexAttributes.insert(input);
     }
-    void collectRasterizedVertexAttributes(auto&& functionMetadata);
-    void collectComputedVertexAttributes(auto&& functionMetadata);
-    void createRasterizerDataType(Context& ctx, std::string typeName);
+    void createRasterizerDataType(std::string typeName);
 };
 
 struct CloneMap {
@@ -176,6 +174,8 @@ struct Builder {
     void analyzeShadingFunction(Function const& F, ScenarioMetadata& MD);
     Value* postprocessMaterial(FunctionBuilder& builder, Value* value,
                                ScenarioMetadata const& MD);
+    void collectScenarioVertexAttributes(
+        ScenarioMetadata& MD, std::span<GraphRoot const> userFunctions);
     Function* declarePBRShader(Type const* materialType);
     Value* callPBRShader(FunctionBuilder& builder, Value* materialData,
                          ScenarioMetadata const& scenarioMD);
@@ -651,34 +651,16 @@ static ParameterAttribute getGlobalBindingAttrib(
     }(), index };
 }
 
-void ScenarioMetadata::collectRasterizedVertexAttributes(
-    auto&& functionMetadata) {
-    ranges::copy(functionMetadata |
-                     transform(&FunctionMetadata::usedVertexAttributes) | join,
-                 std::inserter(rasterizedVertexAttributes,
-                               rasterizedVertexAttributes.begin()));
-}
-
-void ScenarioMetadata::collectComputedVertexAttributes(
-    auto&& functionMetadata) {
-    ranges::copy(functionMetadata |
-                     transform(&FunctionMetadata::usedVertexAttributes) | join,
-                 std::inserter(computedVertexAttributes,
-                               computedVertexAttributes.begin()));
-}
-
-void ScenarioMetadata::createRasterizerDataType(Context& ctx,
-                                                std::string typeName) {
+void ScenarioMetadata::createRasterizerDataType(std::string typeName) {
     if (rasterizedVertexAttributes.empty()) {
         return;
     }
-    auto* type =
-        ctx.aggregateType(std::move(typeName), rasterizedVertexAttributes |
-                                                   transform([&](auto* value) {
+    auto elements = rasterizedVertexAttributes | transform([&](auto* value) {
         return AggregateElement{ value->type(),
                                  std::string(toSpelling(value->kind())),
                                  toAttrib(value->kind()) };
-    }) | ranges::to<std::vector>);
+    }) | ranges::to<std::vector>;
+    auto* type = ctx.aggregateType(std::move(typeName), std::move(elements));
     auto map = makeEnumArray<VertexAttributeKind>(-1);
     for (auto [index, value]: rasterizedVertexAttributes | enumerate) {
         map[value->kind()] = utl::narrow_cast<int>(index);
@@ -698,16 +680,15 @@ static Value* getRasterizeredVertexAttrib(std::string name,
 }
 
 void Builder::defineShadingScenario() {
+    collectScenarioVertexAttributes(shadingMD,
+                                    { { GraphRoot::VertexFunction,
+                                        GraphRoot::ShadingFunction,
+                                        GraphRoot::TransparencyFunction } });
     // Fragment Shader
     auto& fragShader =
         *mod.addFunction("FragmentShading", nullptr, ShaderKind::Fragment);
     shaderFunctions[MaterialShaderType::ShadingFragment] = &fragShader;
     auto& fragMD = functionMetadata[&fragShader];
-    auto userFragFunctions = getUserFunctions(
-        { { GraphRoot::ShadingFunction, GraphRoot::TransparencyFunction } });
-    shadingMD.collectRasterizedVertexAttributes(
-        userFragFunctions |
-        transform([&](auto* F) -> auto& { return functionMetadata[F]; }));
     shadingMD.markRasterized(
         ctx.vertexAttribute(VertexAttributeKind::ClipPosition));
     if (codegenParams.shadingModel == MaterialShadingModel::DefaultLit) {
@@ -716,18 +697,12 @@ void Builder::defineShadingScenario() {
     }
     Function* shadingFunction = getUserFunction(GraphRoot::ShadingFunction);
     analyzeShadingFunction(*shadingFunction, shadingMD);
-    shadingMD.createRasterizerDataType(ctx, "ShadingRasterizerData");
+    shadingMD.createRasterizerDataType("ShadingRasterizerData");
     fragMD.rasterizerParam = fragShader.addParameter(
         { "in", shadingMD.rasterizerDataType, ParameterQualifier::None,
           ParameterAttribute::StageIn });
     utl::hashmap<TextureConstant*, FunctionParameter*> texParamMap;
     auto builder = FunctionBuilder(ctx, fragShader);
-    auto userVertAndFragFunctions = getUserFunctions(
-        { { GraphRoot::VertexFunction, GraphRoot::ShadingFunction,
-            GraphRoot::TransparencyFunction } });
-    shadingMD.collectComputedVertexAttributes(
-        userVertAndFragFunctions |
-        transform([&](auto* F) -> auto& { return functionMetadata[F]; }));
     if (codegenParams.transparency == MaterialTransparency::Masked) {
         auto* transparencyFunction =
             getUserFunction(GraphRoot::TransparencyFunction);
@@ -892,8 +867,6 @@ static Value* getRasterizerData(FunctionBuilder& builder,
 Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
                                     ScenarioMetadata const& MD) {
     switch (codegenParams.shadingModel) {
-    case MaterialShadingModel::Unlit:
-        return builder.clampMax("emissive", value, { 0, 0, 0, 0 });
     case MaterialShadingModel::DefaultLit: {
         using enum DefaultLitMaterialValue;
         EnumArray<DefaultLitMaterialValue, Value*> values{};
@@ -936,6 +909,26 @@ Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
         return builder.makeAggregate("postprocessed", PBRDataType,
                                      values | ranges::to<std::vector>);
     }
+    case MaterialShadingModel::Unlit:
+        return builder.clampMax("emissive", value, { 0, 0, 0, 0 });
+    }
+}
+
+void Builder::collectScenarioVertexAttributes(
+    ScenarioMetadata& MD, std::span<GraphRoot const> userFunctions) {
+    for (auto kind: userFunctions) {
+        auto* F = getUserFunction(kind);
+        if (!F) {
+            continue;
+        }
+        auto& fnMD = functionMetadata[F];
+        MD.computedVertexAttributes.insert(fnMD.usedVertexAttributes.begin(),
+                                           fnMD.usedVertexAttributes.end());
+        if (kind != GraphRoot::VertexFunction) {
+            MD.rasterizedVertexAttributes
+                .insert(fnMD.usedVertexAttributes.begin(),
+                        fnMD.usedVertexAttributes.end());
+        }
     }
 }
 

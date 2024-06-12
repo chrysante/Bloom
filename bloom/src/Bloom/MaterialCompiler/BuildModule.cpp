@@ -51,6 +51,15 @@ struct FunctionMetadata {
     /// Metadata for each parameter
     utl::hashmap<FunctionParameter*, ParameterMetadata> parameterMD;
 
+    /// Only valid for vertex shaders
+    FunctionParameter* vertexBufferParam = nullptr;
+
+    /// Only valid for vertex shaders
+    FunctionParameter* vertexIDParam = nullptr;
+
+    /// Only valid for vertex shaders
+    FunctionParameter* transformParam = nullptr;
+
     /// The scene data buffer parameter
     FunctionParameter* sceneDataBufferParam = nullptr;
 
@@ -200,10 +209,13 @@ struct Builder {
 
     void defineShadingScenario();
     void defineShadingScenarioFragment();
-    void defineShadingScenarioVertex();
     void analyzeShadingFunction(Function const& F, ScenarioMetadata& MD);
     Value* postprocessMaterial(FunctionBuilder& builder, Value* value,
                                ScenarioMetadata const& MD);
+    void defineShadingScenarioVertex();
+    void computeVertexAttributes(ScenarioMetadata& scenario,
+                                 FunctionBuilder& builder, Value* vertex,
+                                 Value* transformMatrix, Value* cameraMatrix);
     void collectScenarioVertexAttributes(
         ScenarioMetadata& MD, std::span<GraphRoot const> userFunctions);
     Function* declarePBRShader(Type const* materialType);
@@ -228,9 +240,17 @@ struct Builder {
     utl::small_vector<Function*> getUserFunctions(
         std::span<GraphRoot const> kinds) const;
 
-    Value* getSceneDataParameter(
-        Function& F,
-        std::optional<MaterialShaderType> shaderType = std::nullopt);
+    using OptShaderType = std::optional<MaterialShaderType>;
+    FunctionParameter* getSceneDataParameter(Function& F,
+                                             OptShaderType shaderType = {});
+    FunctionParameter* getVertexBufferParameter(Function& F,
+                                                MaterialShaderType shaderType);
+    FunctionParameter* getVertexIDParameter(Function& F);
+    FunctionParameter* getTransformBufferParameter(
+        Function& F, MaterialShaderType shaderType);
+    FunctionParameter* getBufferParameterImpl(
+        Function& F, FunctionParameter*(FunctionMetadata::*MDField),
+        utl::function_view<ParameterDescriptor()> desc);
 
     FunctionCall* callUserFunction(std::string valueName,
                                    FunctionBuilder& callerBuilder,
@@ -862,6 +882,63 @@ Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
     }
 }
 
+void Builder::computeVertexAttributes(ScenarioMetadata& scenario,
+                                      FunctionBuilder& builder, Value* vertex,
+                                      Value* transformMatrix,
+                                      Value* cameraMatrix) {
+    auto toFloat3 = [&](Value* value) {
+        return builder.insert<ExtractVectorValue>(value->name(), value, 0, 1,
+                                                  2);
+    };
+    auto& fnMD = getMetadata(builder.function());
+    using enum VertexAttributeKind;
+    fnMD.vertexAttributes[WorldPosition] =
+        toFloat3(transformAttribFloat3(builder, "posWS", transformMatrix,
+                                       builder.getElem("vPosition", vertex, 0),
+                                       VectorKind::Position));
+    if (scenario.isComputed(WorldNormals)) {
+        fnMD.vertexAttributes[WorldNormals] = toFloat3(
+            transformAttribFloat3(builder, "normalWS", transformMatrix,
+                                  builder.getElem("vNormal", vertex, 1),
+                                  VectorKind::Direction));
+    }
+    if (scenario.isComputed(WorldTangents)) {
+        fnMD.vertexAttributes[WorldTangents] = toFloat3(
+            transformAttribFloat3(builder, "tangentWS", transformMatrix,
+                                  builder.getElem("vTangent", vertex, 2),
+                                  VectorKind::Direction));
+    }
+    if (scenario.isComputed(WorldBinormals)) {
+        fnMD.vertexAttributes[WorldBinormals] = toFloat3(
+            transformAttribFloat3(builder, "binormalWS", transformMatrix,
+                                  builder.getElem("vBinormal", vertex, 3),
+                                  VectorKind::Direction));
+    }
+    if (scenario.isComputed(VertexColor)) {
+        fnMD.vertexAttributes[VertexColor] =
+            builder.getElem("vertexColor", vertex, 4);
+    }
+    if (scenario.isComputed(TextureCoords)) {
+        auto* array = builder.getElem("tmp", vertex, 5);
+        fnMD.vertexAttributes[TextureCoords] =
+            builder.insert<ArrayAccess>("coords", array,
+                                        ctx.intConstant(IntSubType::I32, 0));
+    }
+    if (Function* vertexFunction = getUserFunction(GraphRoot::VertexFunction)) {
+        auto* WPO = callUserFunction("WPO", builder, vertexFunction, scenario,
+                                     MaterialShaderType::ShadingVertex);
+        fnMD.vertexAttributes[WorldPosition] =
+            builder.insert<ArithmeticInst>("OffsetWorldPos",
+                                           ArithmeticInst::Add,
+                                           fnMD.vertexAttributes[WorldPosition],
+                                           WPO);
+    }
+    fnMD.vertexAttributes[ClipPosition] =
+        transformAttribFloat3(builder, "posCS", cameraMatrix,
+                              fnMD.vertexAttributes[WorldPosition],
+                              VectorKind::Position);
+}
+
 void Builder::defineShadingScenarioVertex() {
     auto& vertShader =
         *mod.addFunction("VertexShading", nullptr, ShaderKind::Vertex);
@@ -871,74 +948,15 @@ void Builder::defineShadingScenarioVertex() {
     auto* sceneDataBuffer =
         getSceneDataParameter(vertShader, MaterialShaderType::ShadingVertex);
     auto* cameraMatrix = builder.getElem("camera", sceneDataBuffer, 0);
-    auto* vertexBuffer = vertShader.addParameter(
-        { .name = "vertexBuffer",
-          .type = ctx.pointerType(vertex3DType, Mutability::Const),
-          .attribute =
-              getGlobalBindingAttrib(MaterialShaderType::ShadingVertex,
-                                     GlobalMaterialBindingType::Geometry) });
-    auto* transformMatrix = vertShader.addParameter(
-        { .name = "transform",
-          .type = ctx.matrixType(4, 4),
-          .qualifier = ParameterQualifier::DeviceConstRef,
-          .attribute =
-              getGlobalBindingAttrib(MaterialShaderType::ShadingVertex,
-                                     GlobalMaterialBindingType::Transform) });
-    auto* vertexID =
-        vertShader.addParameter({ .name = "vertexID",
-                                  .type = ctx.intType(IntSubType::U32),
-                                  .attribute = ParameterAttribute::VertexID });
-    auto toFloat3 = [&](Value* value) {
-        return builder.insert<ExtractVectorValue>(value->name(), value, 0, 1,
-                                                  2);
-    };
+    auto* vertexBuffer =
+        getVertexBufferParameter(vertShader, MaterialShaderType::ShadingVertex);
+    auto* transformMatrix =
+        getTransformBufferParameter(vertShader,
+                                    MaterialShaderType::ShadingVertex);
+    auto* vertexID = getVertexIDParameter(vertShader);
     auto* vertex = builder.insert<ArrayAccess>("V", vertexBuffer, vertexID);
-    using enum VertexAttributeKind;
-    vertMD.vertexAttributes[WorldPosition] =
-        toFloat3(transformAttribFloat3(builder, "posWS", transformMatrix,
-                                       builder.getElem("vPosition", vertex, 0),
-                                       VectorKind::Position));
-    if (shadingMD.isComputed(WorldNormals)) {
-        vertMD.vertexAttributes[WorldNormals] = toFloat3(
-            transformAttribFloat3(builder, "normalWS", transformMatrix,
-                                  builder.getElem("vNormal", vertex, 1),
-                                  VectorKind::Direction));
-    }
-    if (shadingMD.isComputed(WorldTangents)) {
-        vertMD.vertexAttributes[WorldTangents] = toFloat3(
-            transformAttribFloat3(builder, "tangentWS", transformMatrix,
-                                  builder.getElem("vTangent", vertex, 2),
-                                  VectorKind::Direction));
-    }
-    if (shadingMD.isComputed(WorldBinormals)) {
-        vertMD.vertexAttributes[WorldBinormals] = toFloat3(
-            transformAttribFloat3(builder, "binormalWS", transformMatrix,
-                                  builder.getElem("vBinormal", vertex, 3),
-                                  VectorKind::Direction));
-    }
-    if (shadingMD.isComputed(VertexColor)) {
-        vertMD.vertexAttributes[VertexColor] =
-            builder.getElem("vertexColor", vertex, 4);
-    }
-    if (shadingMD.isComputed(TextureCoords)) {
-        auto* array = builder.getElem("tmp", vertex, 5);
-        vertMD.vertexAttributes[TextureCoords] =
-            builder.insert<ArrayAccess>("coords", array,
-                                        ctx.intConstant(IntSubType::I32, 0));
-    }
-    if (Function* vertexFunction = getUserFunction(GraphRoot::VertexFunction)) {
-        auto* WPO = callUserFunction("WPO", builder, vertexFunction, shadingMD,
-                                     MaterialShaderType::ShadingVertex);
-        vertMD.vertexAttributes[WorldPosition] =
-            builder
-                .insert<ArithmeticInst>("OffsetWorldPos", ArithmeticInst::Add,
-                                        vertMD.vertexAttributes[WorldPosition],
-                                        WPO);
-    }
-    vertMD.vertexAttributes[ClipPosition] =
-        transformAttribFloat3(builder, "posCS", cameraMatrix,
-                              vertMD.vertexAttributes[WorldPosition],
-                              VectorKind::Position);
+    computeVertexAttributes(shadingMD, builder, vertex, transformMatrix,
+                            cameraMatrix);
     auto rasterizedAttribs = shadingMD.rasterizedVertexAttributes |
                              ToSmallVector<>;
     ranges::sort(rasterizedAttribs, ranges::less{}, [&](auto kind) {
@@ -1164,24 +1182,72 @@ utl::small_vector<Function*> Builder::getUserFunctions(
     return result;
 }
 
-Value* Builder::getSceneDataParameter(
-    Function& F, std::optional<MaterialShaderType> shaderType) {
+FunctionParameter* Builder::getVertexBufferParameter(
+    Function& F, MaterialShaderType shaderType) {
+    return getBufferParameterImpl(F, &FunctionMetadata::vertexBufferParam, [&] {
+        return ParameterDescriptor{
+            .name = "vertexBuffer",
+            .type = ctx.pointerType(vertex3DType, Mutability::Const),
+            .attribute =
+                getGlobalBindingAttrib(shaderType,
+                                       GlobalMaterialBindingType::Geometry)
+        };
+    });
+}
+
+FunctionParameter* Builder::getVertexIDParameter(Function& F) {
+    return getBufferParameterImpl(F, &FunctionMetadata::vertexIDParam, [&] {
+        return ParameterDescriptor{ .name = "vertexID",
+                                    .type = ctx.intType(IntSubType::U32),
+                                    .attribute = ParameterAttribute::VertexID };
+    });
+}
+
+FunctionParameter* Builder::getTransformBufferParameter(
+    Function& F, MaterialShaderType shaderType) {
+    return getBufferParameterImpl(F, &FunctionMetadata::transformParam, [&] {
+        return ParameterDescriptor{
+            .name = "transform",
+            .type = ctx.matrixType(4, 4),
+            .qualifier = ParameterQualifier::DeviceConstRef,
+            .attribute =
+                getGlobalBindingAttrib(shaderType,
+                                       GlobalMaterialBindingType::Transform)
+        };
+    });
+}
+
+FunctionParameter* Builder::getSceneDataParameter(Function& F,
+                                                  OptShaderType shaderType) {
+    auto* param =
+        getBufferParameterImpl(F, &FunctionMetadata::sceneDataBufferParam, [&] {
+        auto attrib = [&]() -> ParameterAttribute {
+            if (!shaderType) {
+                return {};
+            }
+            return getGlobalBindingAttrib(*shaderType,
+                                          GlobalMaterialBindingType::SceneData);
+        }();
+        return ParameterDescriptor{ .name = "sceneDataBuffer",
+                                    .type = sceneDataBufferType,
+                                    .qualifier =
+                                        ParameterQualifier::DeviceConstRef,
+                                    .attribute = attrib };
+    });
     auto& MD = getMetadata(&F);
-    if (!MD.sceneDataBufferParam) {
-        ParameterDescriptor desc{ .name = "sceneDataBuffer",
-                                  .type = sceneDataBufferType,
-                                  .qualifier =
-                                      ParameterQualifier::DeviceConstRef };
-        if (shaderType) {
-            desc.attribute =
-                getGlobalBindingAttrib(*shaderType,
-                                       GlobalMaterialBindingType::SceneData);
-        }
-        auto* param = F.addParameter(desc);
-        MD.sceneDataBufferParam = param;
-        MD.parameterMD[param] = SceneDataBufferTag{};
+    MD.parameterMD[param] = SceneDataBufferTag{};
+    return param;
+}
+
+FunctionParameter* Builder::getBufferParameterImpl(
+    Function& F, FunctionParameter*(FunctionMetadata::*MDField),
+    utl::function_view<ParameterDescriptor()> desc) {
+    auto& MD = getMetadata(&F);
+    auto& field = MD.*MDField;
+    if (!field) {
+        field = F.addParameter(desc());
     }
-    return MD.sceneDataBufferParam;
+    return field;
 }
 
 FunctionCall* Builder::callUserFunction(std::string name,

@@ -48,6 +48,9 @@ EditorSceneRenderer::EditorSceneRenderer(
     std::unique_ptr<RenderGraph> sceneRenderGraphOwner,
     CommandQueue& commandQueue) {
     auto* sceneRenderGraph = sceneRenderGraphOwner.get();
+    if (!sceneRenderGraph->isCompiled()) {
+        return;
+    }
     mRenderGraph = std::make_unique<RenderGraph>(AssetHandle(),
                                                  "Editor Render Graph",
                                                  sceneRenderGraph->device());

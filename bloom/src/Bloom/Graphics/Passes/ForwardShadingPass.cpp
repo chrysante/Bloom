@@ -7,6 +7,7 @@
 #include "Bloom/Graphics/Material/Fwd.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Bloom/Graphics/Passes/ShadingPassUtils.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
@@ -20,13 +21,17 @@ using namespace ranges::views;
 
 namespace {
 
-struct ForwardShadingPass: PassImpl<ForwardShadingPass> {
+struct ForwardShadingPass: PassImpl<ForwardShadingPass>, ShadingPassHelper {
     using PassImpl::PassImpl;
 
     explicit ForwardShadingPass(std::string name);
 
     void doExecute(FrameParameters const& params,
                    CommandBuffer& commandBuffer) override;
+
+    void bindMaterial(Material& mat);
+    void bindMaterialInstance(MaterialInstance& curMatInst);
+    void bindMesh(StaticMeshRenderer& mesh);
 
     // Sinks
     GeometryResource* geometry;
@@ -41,6 +46,11 @@ struct ForwardShadingPass: PassImpl<ForwardShadingPass> {
     TextureHandle rawColor;
     TextureHandle depth;
     TextureHandle idMap;
+
+    //
+    Material* curMat = nullptr;
+    MaterialInstance* curMatInst = nullptr;
+    StaticMeshRenderer* curMesh = nullptr;
 };
 
 } // namespace
@@ -131,21 +141,6 @@ static int getBindIndex(MaterialShaderType shaderType,
     return getGlobalMaterialBindingPoint(shaderType, bindingType).index;
 }
 
-static void setTextureParameter(RenderEncoder& encoder,
-                                MaterialTextureParameter const& param,
-                                Texture2D* tex) {
-    if (param.hasBinding(MaterialShaderType::ShadingFragment)) {
-        auto texView = tex ? tex->GPUHandle : TextureView();
-        encoder.setFragmentTexture(
-            texView, param.bindingPoint[MaterialShaderType::ShadingFragment]);
-    }
-    if (param.hasBinding(MaterialShaderType::ShadingVertex)) {
-        auto texView = tex ? tex->GPUHandle : TextureView();
-        encoder.setVertexTexture(
-            texView, param.bindingPoint[MaterialShaderType::ShadingVertex]);
-    }
-}
-
 void ForwardShadingPass::doExecute(FrameParameters const& params,
                                    CommandBuffer& commandBuffer) {
     auto encoder = commandBuffer.makeRenderEncoder({
@@ -163,68 +158,27 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
         },
         .depthAttachment = { .texture = depth }
     });
+    setEncoder(*encoder);
     using enum GlobalMaterialBindingType;
     using enum MaterialShaderType;
-    size_t transformBufferIndex = getBindIndex(ShadingVertex, Transform);
-    encoder->setVertexBuffer(sceneDataBuffer,
-                             getBindIndex(ShadingVertex, SceneData));
+    size_t transformBufferIndex =
+        getGlobalMaterialBindingPoint(ShadingVertex, Transform).index;
     encoder->setVertexBuffer(geometry->transformBuffer(), transformBufferIndex);
-    encoder->setFragmentBuffer(sceneDataBuffer,
-                               getBindIndex(ShadingFragment, SceneData));
-    encoder->setFragmentBuffer(lights->lightBuffer(),
-                               getBindIndex(ShadingFragment, Lights));
-    encoder->setFragmentBuffer(lightSpaceTransforms,
-                               getBindIndex(ShadingFragment,
-                                            LightSpaceTransforms));
-    encoder->setFragmentBuffer(geometry->IDBuffer(),
-                               getBindIndex(ShadingFragment, EntityIDBuffer));
-    encoder->setFragmentTexture(shadowMaps,
-                                getBindIndex(ShadingFragment, ShadowMaps));
-    encoder->setFragmentTexture(specularTexture,
-                                getBindIndex(ShadingFragment, SpecularTexture));
-    encoder->setFragmentTexture(brdfTexture,
-                                getBindIndex(ShadingFragment, BRDFTexture));
+    bindBuffer(sceneDataBuffer, SceneData, ShadingVertex);
+    bindBuffer(sceneDataBuffer, SceneData, ShadingFragment);
+    bindBuffer(lights->lightBuffer(), Lights, ShadingFragment);
+    bindBuffer(lightSpaceTransforms, LightSpaceTransforms, ShadingFragment);
+    bindBuffer(geometry->IDBuffer(), EntityIDBuffer, ShadingFragment);
+    bindTexture(shadowMaps, ShadowMaps, ShadingFragment);
+    bindTexture(specularTexture, SpecularTexture, ShadingFragment);
+    bindTexture(brdfTexture, BRDFTexture, ShadingFragment);
     if (params.drawWireframe) {
         encoder->setTriangleFillMode(TriangleFillMode::Lines);
     }
-    Material* curMat = nullptr;
-    MaterialInstance* curMatInst = nullptr;
-    StaticMeshRenderer* curMesh = nullptr;
     for (size_t index = 0; auto object: geometry->getObjects()) {
-        if (object.materialInstance->material() != curMat) {
-            curMat = object.materialInstance->material();
-            encoder->setPipeline(curMat->rgMainPass);
-            encoder->setTriangleCullMode(curMat->cullMode);
-            encoder->setDepthStencil(curMat->depthStencil);
-            for (auto [index, param]:
-                 curMat->constantTextureParameters | enumerate)
-            {
-                setTextureParameter(*encoder, param,
-                                    curMat->constantTextures[index].get());
-            }
-        }
-        if (object.materialInstance.get() != curMatInst) {
-            curMatInst = object.materialInstance.get();
-            curMatInst->uploadData(device());
-            auto paramBuffer = curMatInst->buffer();
-            encoder->setFragmentBuffer(paramBuffer,
-                                       getBindIndex(ShadingFragment,
-                                                    MaterialParameterBuffer));
-            encoder->setVertexBuffer(paramBuffer,
-                                     getBindIndex(ShadingVertex,
-                                                  MaterialParameterBuffer));
-            for (auto [index, param]:
-                 curMatInst->getTextureParameters() | enumerate)
-            {
-                setTextureParameter(*encoder, param,
-                                    curMatInst->getTexture(index).get());
-            }
-        }
-        if (object.mesh.get() != curMesh) {
-            encoder->setVertexBuffer(object.mesh->vertexBuffer(),
-                                     getBindIndex(ShadingVertex, Geometry));
-            curMesh = object.mesh.get();
-        }
+        bindMaterial(*object.materialInstance->material());
+        bindMaterialInstance(*object.materialInstance);
+        bindMesh(*object.mesh);
         // Object transform
         encoder->setVertexBufferOffset(transformBufferIndex,
                                        index * sizeof(float4x4));
@@ -241,4 +195,49 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
         ++index;
     }
     encoder->end();
+    curMat = nullptr;
+    curMatInst = nullptr;
+    curMesh = nullptr;
+}
+
+void ForwardShadingPass::bindMaterial(Material& mat) {
+    if (curMat == &mat) {
+        return;
+    }
+    curMat = &mat;
+    encoder().setPipeline(mat.rgMainPass);
+    encoder().setTriangleCullMode(mat.cullMode);
+    encoder().setDepthStencil(mat.depthStencil);
+    for (auto [index, param]: mat.constantTextureParameters | enumerate) {
+        using enum GlobalMaterialBindingType;
+        using enum MaterialShaderType;
+        setTextureParameter(param, mat.constantTextures[index].get(),
+                            ShadingVertex, ShadingFragment);
+    }
+}
+
+void ForwardShadingPass::bindMaterialInstance(MaterialInstance& inst) {
+    if (curMatInst == &inst) {
+        return;
+    }
+    curMatInst = &inst;
+    inst.uploadData(device());
+    auto paramBuffer = inst.buffer();
+    using enum GlobalMaterialBindingType;
+    using enum MaterialShaderType;
+    bindBuffer(paramBuffer, MaterialParameterBuffer, ShadingVertex);
+    bindBuffer(paramBuffer, MaterialParameterBuffer, ShadingFragment);
+    for (auto [index, param]: inst.getTextureParameters() | enumerate) {
+        setTextureParameter(param, inst.getTexture(index).get(), ShadingVertex,
+                            ShadingFragment);
+    }
+}
+
+void ForwardShadingPass::bindMesh(StaticMeshRenderer& mesh) {
+    if (&mesh == curMesh) {
+        return;
+    }
+    curMesh = &mesh;
+    bindBuffer(curMesh->vertexBuffer(), GlobalMaterialBindingType::Geometry,
+               MaterialShaderType::ShadingVertex);
 }

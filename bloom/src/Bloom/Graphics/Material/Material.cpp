@@ -17,15 +17,31 @@ Material::Material(AssetHandle handle, std::string name):
     model = makeMaterialModel();
 }
 
-static RenderPipelineHandle createPipeline(
+static RenderPipelineHandle createShadingPipeline(
     HardwareDevice& device, ShaderFunctionHandle vertexFunction,
     ShaderFunctionHandle fragmentFunction) {
-    return device.createRenderPipeline(
-        { .colorAttachments = { { .pixelFormat = PixelFormat::RGBA32Float },
-                                { .pixelFormat = PixelFormat::R32Uint } },
-          .depthAttachmentPixelFormat = PixelFormat::Depth32Float,
-          .vertexFunction = vertexFunction,
-          .fragmentFunction = fragmentFunction });
+    // clang-format off
+    return device.createRenderPipeline({
+        .colorAttachments = {
+            { .pixelFormat = PixelFormat::RGBA32Float },
+            { .pixelFormat = PixelFormat::R32Uint }
+        },
+        .depthAttachmentPixelFormat = PixelFormat::Depth32Float,
+        .vertexFunction = vertexFunction,
+        .fragmentFunction = fragmentFunction
+    }); // clang-format on
+}
+
+static RenderPipelineHandle createShadowPipeline(
+    HardwareDevice& device, ShaderFunctionHandle vertexFunction,
+    ShaderFunctionHandle fragmentFunction) {
+    // clang-format off
+    return device.createRenderPipeline({
+        .depthAttachmentPixelFormat = PixelFormat::Depth32Float,
+        .inputPrimitiveTopology = PrimitiveTopologyClass::Triangle,
+        .vertexFunction = vertexFunction,
+        .fragmentFunction = fragmentFunction
+    }); // clang-format on
 }
 
 static void updateInstances(
@@ -53,14 +69,18 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
             throw std::runtime_error("Failed to compile shaders");
         }
         shaderLibrary = library;
-        auto vertexFunction = library->createFunction(
-            sourceData.functionNames[MaterialShaderType::ShadingVertex]);
-        auto fragmentFunction = library->createFunction(
-            sourceData.functionNames[MaterialShaderType::ShadingFragment]);
-        {
-            BL_PROFILE_FUNCTION("Create pipeline state");
-            rgMainPass =
-                createPipeline(device, vertexFunction, fragmentFunction);
+        using enum MaterialShaderType;
+        auto& names = sourceData.functionNames;
+        auto shadingVS = library->createFunction(names[ShadingVertex]);
+        auto shadingFS = library->createFunction(names[ShadingFragment]);
+        rgMainPass = createShadingPipeline(device, shadingVS, shadingFS);
+        if (!sourceData.functionNames[ShadowVertex].empty()) {
+            auto shadowVS = library->createFunction(names[ShadowVertex]);
+            auto shadowFS = library->createFunction(names[ShadowFragment]);
+            shadowPipeline = createShadowPipeline(device, shadowVS, shadowFS);
+        }
+        else {
+            shadowPipeline = {};
         }
         constantTextureParameters.clear();
         constantTextures.clear();
@@ -79,9 +99,9 @@ void Material::compile(HardwareDevice& device, AssetManager& AM) {
     catch (std::exception const& e) {
         Logger::Error("Failed to compile material: ", e.what());
         Logger::Trace("Resorting to default material");
-        rgMainPass = createPipeline(device,
-                                    device.createFunction("rgMainPassVS"),
-                                    device.createFunction("rgMainPassFS"));
+        rgMainPass =
+            createShadingPipeline(device, device.createFunction("rgMainPassVS"),
+                                  device.createFunction("rgMainPassFS"));
         primitiveParameters = {};
         paramBufferSize = 0;
         textureParameters = {};

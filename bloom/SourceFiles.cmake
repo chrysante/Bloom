@@ -96,6 +96,8 @@ set(bloom_sources
   src/Bloom/Graphics/Passes/ForwardShadingPass.cpp
   src/Bloom/Graphics/Passes/PostProcessPass.cpp
   src/Bloom/Graphics/Passes/ShadowPass.cpp
+  src/Bloom/Graphics/Passes/ShadingPassUtils.cpp
+  src/Bloom/Graphics/Passes/ShadingPassUtils.h
 
   src/Bloom/Graphics/Renderer.cpp
   src/Bloom/Graphics/Renderer.h

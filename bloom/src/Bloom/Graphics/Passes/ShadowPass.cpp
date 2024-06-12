@@ -3,6 +3,7 @@
 #include "Bloom/GPU/HardwarePrimitives.h"
 #include "Bloom/Graphics/Material/Material.h"
 #include "Bloom/Graphics/Material/MaterialInstance.h"
+#include "Bloom/Graphics/Passes/ShadingPassUtils.h"
 #include "Bloom/Graphics/RenderGraph/Pass.h"
 #include "Bloom/Graphics/RenderGraph/PassRegistry.h"
 #include "Bloom/Graphics/RenderGraph/Resource.h"
@@ -10,27 +11,40 @@
 
 using namespace bloom;
 using namespace vml::short_types;
+using namespace ranges::views;
 
 namespace {
 
-struct ShadowPass: PassImpl<ShadowPass> {
+struct ShadowPass: PassImpl<ShadowPass>, ShadingPassHelper {
     using PassImpl::PassImpl;
 
     ShadowPass(std::string name);
 
     void doExecute(FrameParameters const& params,
                    CommandBuffer& commandBuffer) override;
+
     void doAllocateResources(FrameParameters const& params,
                              HardwareDevice& device) override;
 
+    void bindMaterial(Material& mat);
+    void bindMaterialInstance(MaterialInstance& curMatInst);
+    void bindMesh(StaticMeshRenderer& mesh);
+
     // Sinks
     GeometryResource* geometry;
-    BufferHandle lightSpaceTransforms; // Buffer of light space "cameras"
+    BufferHandle lightSpaceTransforms;
+    BufferHandle sceneDataBuffer;
 
     // Sources
     TextureHandle shadowMaps; // Texture array, one element for each cascade
 
-    RenderPipelineHandle pipeline;
+    //
+    Material* curMat = nullptr;
+    MaterialInstance* curMatInst = nullptr;
+    StaticMeshRenderer* curMesh = nullptr;
+    TriangleCullMode currentCullMode = TriangleCullMode::Front;
+
+    RenderPipelineHandle defaultPipeline;
     DepthStencilHandle depthStencil;
 };
 
@@ -46,7 +60,12 @@ BEGIN_SINK_DECL(ShadowPass) {
     BufferInterface{
         "Light Space Transforms",
         &ShadowPass::lightSpaceTransforms,
-        {} // TODO: What to do with size? Do sinks actually need to declare size?
+        {}
+    },
+    BufferInterface{
+        "Scene Data",
+        &ShadowPass::sceneDataBuffer,
+        {}
     }
 }
 END_DECL()
@@ -96,26 +115,25 @@ void ShadowPass::doExecute(FrameParameters const& frameParams,
         { .depthAttachment = { .texture = shadowMaps },
           .renderTargetArrayLength = numCascades,
           .renderTargetSize = shadowMaps.size().xy });
-    encoder->setPipeline(pipeline);
-    TriangleCullMode currentCullMode = TriangleCullMode::Front;
+    setEncoder(*encoder);
+    encoder->setPipeline(defaultPipeline);
+    currentCullMode = TriangleCullMode::Front;
     encoder->setTriangleCullMode(currentCullMode);
     encoder->setDepthStencil(depthStencil);
-    encoder->setVertexBuffer(lightSpaceTransforms, 1);
-    encoder->setVertexBuffer(geometry->transformBuffer(), 2);
-    StaticMeshRenderer* currentMesh = nullptr;
+    using enum GlobalMaterialBindingType;
+    using enum MaterialShaderType;
+    size_t transformBufferIndex =
+        getGlobalMaterialBindingPoint(ShadowVertex, Transform).index;
+    encoder->setVertexBuffer(geometry->transformBuffer(), transformBufferIndex);
+    bindBuffer(lightSpaceTransforms, LightSpaceTransforms, ShadowVertex);
+    bindBuffer(sceneDataBuffer, SceneData, ShadowVertex);
+    bindBuffer(sceneDataBuffer, SceneData, ShadowFragment);
     for (size_t index = 0; auto&& object: geometry->getObjects()) {
-        auto* material = object.materialInstance->material();
-        /// We set the cull mode here to honor two-sided materials
-        auto cullMode = transformCullMode(material->cullMode);
-        if (cullMode != currentCullMode) {
-            encoder->setTriangleCullMode(cullMode);
-            currentCullMode = cullMode;
-        }
-        if (object.mesh.get() != currentMesh) {
-            currentMesh = object.mesh.get();
-            encoder->setVertexBuffer(currentMesh->vertexBuffer(), 0);
-        }
-        encoder->setVertexBufferOffset(2, index * sizeof(float4x4));
+        bindMaterial(*object.materialInstance->material());
+        bindMaterialInstance(*object.materialInstance);
+        bindMesh(*object.mesh);
+        encoder->setVertexBufferOffset(transformBufferIndex,
+                                       index * sizeof(float4x4));
         BufferView indexBuffer = object.mesh->indexBuffer();
         DrawDescription desc{};
         desc.indexCount = indexBuffer.size() / 4;
@@ -128,15 +146,72 @@ void ShadowPass::doExecute(FrameParameters const& frameParams,
     encoder->end();
 }
 
+void ShadowPass::bindMaterial(Material& mat) {
+    auto* ref = mat.shadowPipeline ? &mat : nullptr;
+    if (curMat == ref) {
+        return;
+    }
+    curMat = ref;
+    /// We set the cull mode here to honor two-sided materials
+    auto cullMode = transformCullMode(mat.cullMode);
+    if (cullMode != currentCullMode) {
+        encoder().setTriangleCullMode(cullMode);
+        currentCullMode = cullMode;
+    }
+    if (ref) {
+        encoder().setPipeline(mat.shadowPipeline);
+        for (auto [index, param]: mat.constantTextureParameters | enumerate) {
+            using enum GlobalMaterialBindingType;
+            using enum MaterialShaderType;
+            setTextureParameter(param, mat.constantTextures[index].get(),
+                                ShadowVertex, ShadowFragment);
+        }
+    }
+    else {
+        encoder().setPipeline(defaultPipeline);
+    }
+}
+
+void ShadowPass::bindMaterialInstance(MaterialInstance& inst) {
+    auto* ref = inst.material()->shadowPipeline ? &inst : nullptr;
+    if (curMatInst == ref) {
+        return;
+    }
+    curMatInst = ref;
+    // FIXME: We are uploading the data twice, once here and once in the shading
+    // pass
+    inst.uploadData(device());
+    auto paramBuffer = inst.buffer();
+    using enum GlobalMaterialBindingType;
+    using enum MaterialShaderType;
+    bindBuffer(paramBuffer, MaterialParameterBuffer, ShadowVertex);
+    bindBuffer(paramBuffer, MaterialParameterBuffer, ShadowFragment);
+    for (auto [index, param]: inst.getTextureParameters() | enumerate) {
+        setTextureParameter(param, inst.getTexture(index).get(), ShadingVertex,
+                            ShadowFragment);
+    }
+}
+
+void ShadowPass::bindMesh(StaticMeshRenderer& mesh) {
+    if (&mesh == curMesh) {
+        return;
+    }
+    curMesh = &mesh;
+    bindBuffer(curMesh->vertexBuffer(), GlobalMaterialBindingType::Geometry,
+               MaterialShaderType::ShadowVertex);
+}
+
 void ShadowPass::doAllocateResources(FrameParameters const&,
                                      HardwareDevice& device) {
-    pipeline = device.createRenderPipeline(
-        { .depthAttachmentPixelFormat = PixelFormat::Depth32Float,
-          .vertexFunction = device.createFunction("rgShadowVertexShader"),
-          .rasterSampleCount = 1,
-          .inputPrimitiveTopology = PrimitiveTopologyClass::Triangle });
+    // clang-format off
+    defaultPipeline = device.createRenderPipeline({
+        .depthAttachmentPixelFormat = PixelFormat::Depth32Float,
+        .vertexFunction = device.createFunction("rgShadowVertexShader"),
+        .inputPrimitiveTopology = PrimitiveTopologyClass::Triangle
+    });
     depthStencil = device.createDepthStencil({
         .depthWrite = true,
         .depthCompareFunction = CompareFunction::LessEqual,
     });
+    // clang-format on
 }

@@ -40,6 +40,7 @@ public:
 
     Reference<ShaderLibrary> shaderLibrary;
     RenderPipelineHandle rgMainPass;
+    RenderPipelineHandle shadowPipeline;
     TriangleCullMode cullMode = TriangleCullMode::Back;
     DepthStencilHandle depthStencil;
     std::vector<MaterialTextureParameter> constantTextureParameters;

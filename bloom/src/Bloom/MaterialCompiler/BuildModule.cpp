@@ -58,7 +58,13 @@ struct FunctionMetadata {
     FunctionParameter* vertexIDParam = nullptr;
 
     /// Only valid for vertex shaders
+    FunctionParameter* instanceIDParam = nullptr;
+
+    /// Only valid for vertex shaders
     FunctionParameter* transformParam = nullptr;
+
+    ///
+    FunctionParameter* lightSpaceTransformBufferParam = nullptr;
 
     /// The scene data buffer parameter
     FunctionParameter* sceneDataBufferParam = nullptr;
@@ -118,7 +124,9 @@ struct ScenarioMetadata {
     }
 
     /// Creates the rasterizer data type and populates the index map
-    void createRasterizerDataType(std::string typeName);
+    void createRasterizerDataType(
+        std::string typeName,
+        std::span<AggregateElement const> additionalFields = {});
 };
 
 struct CloneMap {
@@ -207,17 +215,31 @@ struct Builder {
     EnumArray<MaterialShaderType, int8_t> makeTextureBinding(
         TextureConstant const& tex);
 
+    /// Shading scenario
     void defineShadingScenario();
     void defineShadingScenarioFragment();
     void analyzeShadingFunction(Function const& F, ScenarioMetadata& MD);
     Value* postprocessMaterial(FunctionBuilder& builder, Value* value,
                                ScenarioMetadata const& MD);
+
     void defineShadingScenarioVertex();
+
+    /// Shadow scenario
+    void defineShadowScenario();
+    void defineShadowScenarioFragment();
+    void defineShadowScenarioVertex();
+
     void computeVertexAttributes(ScenarioMetadata& scenario,
+                                 MaterialShaderType shaderType,
                                  FunctionBuilder& builder, Value* vertex,
                                  Value* transformMatrix, Value* cameraMatrix);
+    std::vector<Value*> makeSortedRasterizerValues(ScenarioMetadata& scenario,
+                                                   FunctionMetadata& vertMD);
     void collectScenarioVertexAttributes(
         ScenarioMetadata& MD, std::span<GraphRoot const> userFunctions);
+    void callTransparencyFunction(ScenarioMetadata& scenario,
+                                  FunctionBuilder& builder,
+                                  MaterialShaderType shaderType);
     Function* declarePBRShader(Type const* materialType);
     Value* callPBRShader(FunctionBuilder& builder, Value* materialData,
                          ScenarioMetadata const& scenarioMD);
@@ -246,7 +268,10 @@ struct Builder {
     FunctionParameter* getVertexBufferParameter(Function& F,
                                                 MaterialShaderType shaderType);
     FunctionParameter* getVertexIDParameter(Function& F);
+    FunctionParameter* getInstanceIDParameter(Function& F);
     FunctionParameter* getTransformBufferParameter(
+        Function& F, MaterialShaderType shaderType);
+    FunctionParameter* getLightSpaceTransformBufferParameter(
         Function& F, MaterialShaderType shaderType);
     FunctionParameter* getBufferParameterImpl(
         Function& F, FunctionParameter*(FunctionMetadata::*MDField),
@@ -285,6 +310,11 @@ void Builder::run() {
     declareTypes();
     buildUserFunctions();
     defineShadingScenario();
+    if (codegenParams.transparency == MaterialTransparency::Masked ||
+        getUserFunction(GraphRoot::VertexFunction))
+    {
+        defineShadowScenario();
+    }
     validateTypeNames();
     ranges::for_each(mod.functions(), [&](auto* F) { uniqueNames(*F); });
     for (auto& [kind, function]: shaderFunctions) {
@@ -712,20 +742,23 @@ static ParameterAttribute getGlobalBindingAttrib(
     }(), index };
 }
 
-void ScenarioMetadata::createRasterizerDataType(std::string typeName) {
+void ScenarioMetadata::createRasterizerDataType(
+    std::string typeName, std::span<AggregateElement const> additionalFields) {
     if (rasterizedVertexAttributes.empty()) {
         return;
     }
     auto attribs = rasterizedVertexAttributes | ToSmallVector<>;
-    auto elements = attribs | transform([&](auto kind) {
+    auto rasterElements = attribs | transform([&](auto kind) {
         auto* value = ctx.vertexAttribute(kind);
         return AggregateElement{ value->type(), std::string(toSpelling(kind)),
                                  toAttrib(kind) };
-    }) | ranges::to<std::vector>;
+    });
+    auto elements = concat(additionalFields, rasterElements) |
+                    ranges::to<std::vector>;
     rasterizerDataType =
         ctx.aggregateType(std::move(typeName), std::move(elements));
     vertexAttribIndexMap = makeEnumArray<VertexAttributeKind>(-1);
-    for (auto [index, kind]: attribs | enumerate) {
+    for (auto [index, kind]: zip((iota(additionalFields.size())), attribs)) {
         vertexAttribIndexMap[kind] = utl::narrow_cast<int>(index);
     }
 }
@@ -766,15 +799,8 @@ void Builder::defineShadingScenarioFragment() {
           ParameterAttribute::StageIn });
     auto builder = FunctionBuilder(ctx, fragShader);
     if (codegenParams.transparency == MaterialTransparency::Masked) {
-        auto* transparencyFunction =
-            getUserFunction(GraphRoot::TransparencyFunction);
-        auto* transparency =
-            callUserFunction("transparency", builder, transparencyFunction,
-                             shadingMD, MaterialShaderType::ShadingFragment);
-        auto* condition =
-            builder.insert<CompareInst>(ctx, "condition", CompareInst::Less,
-                                        transparency, ctx.floatConstant(0.5));
-        builder.insert<DiscardFragment>("discard", condition);
+        callTransparencyFunction(shadingMD, builder,
+                                 MaterialShaderType::ShadingFragment);
     }
     Value* materialData = callUserFunction("material", builder, shadingFunction,
                                            shadingMD,
@@ -882,7 +908,96 @@ Value* Builder::postprocessMaterial(FunctionBuilder& builder, Value* value,
     }
 }
 
+void Builder::defineShadingScenarioVertex() {
+    auto& vertShader =
+        *mod.addFunction("VertexShading", nullptr, ShaderKind::Vertex);
+    shaderFunctions[MaterialShaderType::ShadingVertex] = &vertShader;
+    FunctionBuilder builder(ctx, vertShader);
+    auto& vertMD = getMetadata(&vertShader);
+    auto* sceneDataBuffer =
+        getSceneDataParameter(vertShader, MaterialShaderType::ShadingVertex);
+    auto* cameraMatrix = builder.getElem("camera", sceneDataBuffer, 0);
+    auto* vertexBuffer =
+        getVertexBufferParameter(vertShader, MaterialShaderType::ShadingVertex);
+    auto* transformMatrix =
+        getTransformBufferParameter(vertShader,
+                                    MaterialShaderType::ShadingVertex);
+    auto* vertexID = getVertexIDParameter(vertShader);
+    auto* vertex = builder.insert<ArrayAccess>("V", vertexBuffer, vertexID);
+    computeVertexAttributes(shadingMD, MaterialShaderType::ShadingVertex,
+                            builder, vertex, transformMatrix, cameraMatrix);
+    std::vector<Value*> sortedAttribValues =
+        makeSortedRasterizerValues(shadingMD, vertMD);
+    auto* VSRetval = builder.makeAggregate("retval",
+                                           shadingMD.rasterizerDataType,
+                                           std::move(sortedAttribValues));
+    builder.insert<ReturnInst>("ret", VSRetval);
+    vertShader.computeType(ctx, shadingMD.rasterizerDataType);
+}
+
+void Builder::defineShadowScenario() {
+    collectScenarioVertexAttributes(shadowMD,
+                                    { { GraphRoot::VertexFunction,
+                                        GraphRoot::TransparencyFunction } });
+    defineShadowScenarioFragment();
+    defineShadowScenarioVertex();
+}
+
+void Builder::defineShadowScenarioFragment() {
+    if (codegenParams.transparency != MaterialTransparency::Masked) {
+        return;
+    }
+    auto& fragShader =
+        *mod.addFunction("FragmentShadow", nullptr, ShaderKind::Fragment);
+    shaderFunctions[MaterialShaderType::ShadowFragment] = &fragShader;
+    auto& fragMD = getMetadata(&fragShader);
+    shadowMD.markRasterized(VertexAttributeKind::ClipPosition);
+    shadowMD.createRasterizerDataType(
+        "ShadowRasterizerData",
+        { { { ctx.intType(IntSubType::U32), "layer",
+              ParameterAttribute::RenderTargetArrayIndex } } });
+    fragMD.rasterizerParam = fragShader.addParameter(
+        { "in", shadowMD.rasterizerDataType, ParameterQualifier::None,
+          ParameterAttribute::StageIn });
+    FunctionBuilder builder(ctx, fragShader);
+    callTransparencyFunction(shadowMD, builder,
+                             MaterialShaderType::ShadowFragment);
+    fragShader.computeType(ctx, ctx.voidType());
+}
+
+void Builder::defineShadowScenarioVertex() {
+    auto& vertShader =
+        *mod.addFunction("VertexShadow", nullptr, ShaderKind::Vertex);
+    shaderFunctions[MaterialShaderType::ShadowVertex] = &vertShader;
+    FunctionBuilder builder(ctx, vertShader);
+    auto& vertMD = getMetadata(&vertShader);
+    auto* lightSpaceTransforms =
+        getLightSpaceTransformBufferParameter(vertShader,
+                                              MaterialShaderType::ShadowVertex);
+    auto* instanceID = getInstanceIDParameter(vertShader);
+    auto* cameraMatrix =
+        builder.insert<ArrayAccess>("camera", lightSpaceTransforms, instanceID);
+    auto* vertexBuffer =
+        getVertexBufferParameter(vertShader, MaterialShaderType::ShadowVertex);
+    auto* transformMatrix =
+        getTransformBufferParameter(vertShader,
+                                    MaterialShaderType::ShadowVertex);
+    auto* vertexID = getVertexIDParameter(vertShader);
+    auto* vertex = builder.insert<ArrayAccess>("V", vertexBuffer, vertexID);
+    computeVertexAttributes(shadowMD, MaterialShaderType::ShadowVertex, builder,
+                            vertex, transformMatrix, cameraMatrix);
+    std::vector<Value*> sortedAttribValues =
+        makeSortedRasterizerValues(shadowMD, vertMD);
+    sortedAttribValues.insert(sortedAttribValues.begin(), instanceID);
+    auto* VSRetval = builder.makeAggregate("retval",
+                                           shadowMD.rasterizerDataType,
+                                           std::move(sortedAttribValues));
+    builder.insert<ReturnInst>("ret", VSRetval);
+    vertShader.computeType(ctx, shadowMD.rasterizerDataType);
+}
+
 void Builder::computeVertexAttributes(ScenarioMetadata& scenario,
+                                      MaterialShaderType shaderType,
                                       FunctionBuilder& builder, Value* vertex,
                                       Value* transformMatrix,
                                       Value* cameraMatrix) {
@@ -926,7 +1041,7 @@ void Builder::computeVertexAttributes(ScenarioMetadata& scenario,
     }
     if (Function* vertexFunction = getUserFunction(GraphRoot::VertexFunction)) {
         auto* WPO = callUserFunction("WPO", builder, vertexFunction, scenario,
-                                     MaterialShaderType::ShadingVertex);
+                                     shaderType);
         fnMD.vertexAttributes[WorldPosition] =
             builder.insert<ArithmeticInst>("OffsetWorldPos",
                                            ArithmeticInst::Add,
@@ -939,38 +1054,18 @@ void Builder::computeVertexAttributes(ScenarioMetadata& scenario,
                               VectorKind::Position);
 }
 
-void Builder::defineShadingScenarioVertex() {
-    auto& vertShader =
-        *mod.addFunction("VertexShading", nullptr, ShaderKind::Vertex);
-    shaderFunctions[MaterialShaderType::ShadingVertex] = &vertShader;
-    FunctionBuilder builder(ctx, vertShader);
-    auto& vertMD = getMetadata(&vertShader);
-    auto* sceneDataBuffer =
-        getSceneDataParameter(vertShader, MaterialShaderType::ShadingVertex);
-    auto* cameraMatrix = builder.getElem("camera", sceneDataBuffer, 0);
-    auto* vertexBuffer =
-        getVertexBufferParameter(vertShader, MaterialShaderType::ShadingVertex);
-    auto* transformMatrix =
-        getTransformBufferParameter(vertShader,
-                                    MaterialShaderType::ShadingVertex);
-    auto* vertexID = getVertexIDParameter(vertShader);
-    auto* vertex = builder.insert<ArrayAccess>("V", vertexBuffer, vertexID);
-    computeVertexAttributes(shadingMD, builder, vertex, transformMatrix,
-                            cameraMatrix);
-    auto rasterizedAttribs = shadingMD.rasterizedVertexAttributes |
+std::vector<Value*> Builder::makeSortedRasterizerValues(
+    ScenarioMetadata& scenario, FunctionMetadata& vertMD) {
+    auto rasterizedAttribs = scenario.rasterizedVertexAttributes |
                              ToSmallVector<>;
     ranges::sort(rasterizedAttribs, ranges::less{}, [&](auto kind) {
-        return shadingMD.vertexAttribIndexMap[kind];
+        return scenario.vertexAttribIndexMap[kind];
     });
-    auto* VSRetval =
-        builder.makeAggregate("retval", shadingMD.rasterizerDataType,
-                              rasterizedAttribs | transform([&](auto kind) {
+    return rasterizedAttribs | transform([&](auto kind) {
         auto* value = vertMD.vertexAttributes[kind];
         assert(value);
         return value;
-    }) | ranges::to<std::vector>);
-    builder.insert<ReturnInst>("ret", VSRetval);
-    vertShader.computeType(ctx, shadingMD.rasterizerDataType);
+    }) | ranges::to<std::vector>;
 }
 
 void Builder::collectScenarioVertexAttributes(
@@ -989,6 +1084,46 @@ void Builder::collectScenarioVertexAttributes(
                         fnMD.usedVertexAttributes.end());
         }
     }
+}
+
+void Builder::callTransparencyFunction(ScenarioMetadata& scenario,
+                                       FunctionBuilder& builder,
+                                       MaterialShaderType shaderType) {
+    auto* transparencyFunction =
+        getUserFunction(GraphRoot::TransparencyFunction);
+    auto* transparency = callUserFunction("transparency", builder,
+                                          transparencyFunction, scenario,
+                                          shaderType);
+    auto* condition =
+        builder.insert<CompareInst>(ctx, "condition", CompareInst::Less,
+                                    transparency, ctx.floatConstant(0.5));
+    builder.insert<DiscardFragment>("discard", condition);
+}
+
+static DynUniquePtr<Function> makeForwardDecl(
+    Context& ctx, std::string name, ShaderKind kind, Type const* returnType,
+    std::span<ParameterDescriptor const> params) {
+    auto F = allocate<Function>(std::move(name), nullptr, kind,
+                                allocateParameters(params));
+    F->computeType(ctx, returnType);
+    return F;
+}
+
+Function* Builder::declarePBRShader(Type const* materialType) {
+    std::array<ParameterDescriptor, 8> params = { {
+        { .type = materialType },
+        { .type = ctx.float3Type() },
+        { .type = ctx.float3Type() },
+        { .type = ctx.pointerType(ctx.matrixType(4, 4), Mutability::Const) },
+        { .type = ctx.aggregateType("LightBufferContents", {},
+                                    /* isExtern: */ true) },
+        { .type = ctx.textureType(TextureSubType::Texture2DArray) },
+        { .type = ctx.textureType(TextureSubType::TextureCube) },
+        { .type = ctx.textureType(TextureSubType::Texture2D) },
+    } };
+    auto decl = makeForwardDecl(ctx, "PBRForwardShader", ShaderKind::Extern,
+                                ctx.float3Type(), params);
+    return mod.addFunction(std::move(decl));
 }
 
 Value* Builder::callPBRShader(FunctionBuilder& builder, Value* materialData,
@@ -1041,32 +1176,6 @@ Value* Builder::callPBRShader(FunctionBuilder& builder, Value* materialData,
                                 { { materialData, worldPosition, cameraPosition,
                                     lightSpaceTransforms, lightBuffer,
                                     shadowMaps, specularMap, brdfMap } });
-}
-
-static DynUniquePtr<Function> makeForwardDecl(
-    Context& ctx, std::string name, ShaderKind kind, Type const* returnType,
-    std::span<ParameterDescriptor const> params) {
-    auto F = allocate<Function>(std::move(name), nullptr, kind,
-                                allocateParameters(params));
-    F->computeType(ctx, returnType);
-    return F;
-}
-
-Function* Builder::declarePBRShader(Type const* materialType) {
-    std::array<ParameterDescriptor, 8> params = { {
-        { .type = materialType },
-        { .type = ctx.float3Type() },
-        { .type = ctx.float3Type() },
-        { .type = ctx.pointerType(ctx.matrixType(4, 4), Mutability::Const) },
-        { .type = ctx.aggregateType("LightBufferContents", {},
-                                    /* isExtern: */ true) },
-        { .type = ctx.textureType(TextureSubType::Texture2DArray) },
-        { .type = ctx.textureType(TextureSubType::TextureCube) },
-        { .type = ctx.textureType(TextureSubType::Texture2D) },
-    } };
-    auto decl = makeForwardDecl(ctx, "PBRForwardShader", ShaderKind::Extern,
-                                ctx.float3Type(), params);
-    return mod.addFunction(std::move(decl));
 }
 
 Value* Builder::transformAttribFloat3(FunctionBuilder& builder,
@@ -1203,6 +1312,15 @@ FunctionParameter* Builder::getVertexIDParameter(Function& F) {
     });
 }
 
+FunctionParameter* Builder::getInstanceIDParameter(Function& F) {
+    return getBufferParameterImpl(F, &FunctionMetadata::instanceIDParam, [&] {
+        return ParameterDescriptor{ .name = "instanceID",
+                                    .type = ctx.intType(IntSubType::U32),
+                                    .attribute =
+                                        ParameterAttribute::InstanceID };
+    });
+}
+
 FunctionParameter* Builder::getTransformBufferParameter(
     Function& F, MaterialShaderType shaderType) {
     return getBufferParameterImpl(F, &FunctionMetadata::transformParam, [&] {
@@ -1237,6 +1355,19 @@ FunctionParameter* Builder::getSceneDataParameter(Function& F,
     auto& MD = getMetadata(&F);
     MD.parameterMD[param] = SceneDataBufferTag{};
     return param;
+}
+
+FunctionParameter* Builder::getLightSpaceTransformBufferParameter(
+    Function& F, MaterialShaderType shaderType) {
+    return getBufferParameterImpl(
+        F, &FunctionMetadata::lightSpaceTransformBufferParam, [&] {
+        return ParameterDescriptor{
+            .name = "lightSpaceTransforms",
+            .type = ctx.pointerType(ctx.matrixType(4, 4), Mutability::Const),
+            .attribute = getGlobalBindingAttrib(
+                shaderType, GlobalMaterialBindingType::LightSpaceTransforms)
+        };
+    });
 }
 
 FunctionParameter* Builder::getBufferParameterImpl(

@@ -218,6 +218,8 @@ static std::string toSpelling(ParameterAttribute attrib) {
         return "[[vertex_id]]";
     case InstanceID:
         return "[[instance_id]]";
+    case RenderTargetArrayIndex:
+        return "[[render_target_array_index]]";
     case Position:
         return "[[position]]";
     case StageIn:

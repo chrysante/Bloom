@@ -94,6 +94,7 @@ struct ParameterAttribute {
         None,
         VertexID,
         InstanceID,
+        RenderTargetArrayIndex,
         Position,
         StageIn,
         Color,

@@ -83,6 +83,8 @@ inline MaterialBindingPoint getGlobalMaterialBindingPoint(
             return { Buffer, 2 };
         case MaterialParameterBuffer:
             return { Buffer, 4 };
+        case LightSpaceTransforms:
+            return { Buffer, 5 };
         default:
             assert(false);
         }

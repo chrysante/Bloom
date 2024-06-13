@@ -277,13 +277,9 @@ void Toolbar::displayBlock(Block const& block) {
     float y = ImGui::GetCursorPos().y;
     for (size_t i = block.itemBeginIndex; i < block.itemEndIndex; ++i) {
         bool enabled = activeItems[i]->isEnabled();
-        if (!enabled) {
-            ImGui::BeginDisabled();
-        }
+        ImGui::BeginDisabled(!enabled);
         activeItems[i]->display(style);
-        if (!enabled) {
-            ImGui::EndDisabled();
-        }
+        ImGui::EndDisabled();
         ImGui::SameLine();
         ImGui::SetCursorPosY(y);
     }

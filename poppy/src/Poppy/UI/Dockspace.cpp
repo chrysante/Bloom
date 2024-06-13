@@ -111,14 +111,11 @@ void Dockspace::mainWindow() {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, { 0, 0 });
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                         float2(1, 1) * (float2)style.FramePadding);
-    mainImGuiWindow = withFont(FontDesc::UIDefault(), [&] {
-        ImGui::Begin(MainWindowID, nullptr, windowFlags);
-        withWindowSizeConstraints(minWindowSize,
-                                  [&] { mainDockID = submitDockspace(); });
-        auto* window = ImGui::GetCurrentWindowRead();
-        ImGui::End();
-        return window;
-    });
+    ImGui::Begin(MainWindowID, nullptr, windowFlags);
+    withWindowSizeConstraints(minWindowSize,
+                              [&] { mainDockID = submitDockspace(); });
+    mainImGuiWindow = ImGui::GetCurrentWindowRead();
+    ImGui::End();
     ImGui::PopStyleVar(6);
 }
 
@@ -132,12 +129,12 @@ static float2 getPosition(Window const& window) {
 
 /// Calls `ImGui::Begin` with every possible interaction and decoration disabled
 [[nodiscard]] static bool beginToolbarWindow(char const* ID, float2 position,
-                                             float2 size) {
+                                             float2 size,
+                                             ImGuiWindowFlags flags = 0) {
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(position);
     ImGui::SetNextWindowSize(size);
     ImGui::SetNextWindowViewport(viewport->ID);
-    ImGuiWindowFlags flags = 0;
     flags |= ImGuiWindowFlags_NoDocking;
     flags |= ImGuiWindowFlags_NoTitleBar;
     flags |= ImGuiWindowFlags_NoResize;
@@ -156,8 +153,9 @@ static float2 getPosition(Window const& window) {
 /// Draws a window in the toolbar area that renders the background color
 static void toolbarBGWindow(float2 position, float2 size) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    bool open =
-        beginToolbarWindow("Main_Toolbar_BG", position, size + float2(0, 1));
+    bool open = beginToolbarWindow("Main_Toolbar_BG", position,
+                                   size + float2(0, 1),
+                                   ImGuiWindowFlags_NoInputs);
     ImGui::PopStyleVar();
     if (!open) {
         return;

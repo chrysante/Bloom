@@ -147,17 +147,16 @@ void ShadowPass::doExecute(FrameParameters const& frameParams,
 }
 
 void ShadowPass::bindMaterial(Material& mat) {
-    auto* ref = mat.shadowPipeline ? &mat : nullptr;
-    if (curMat == ref) {
-        return;
-    }
-    curMat = ref;
-    /// We set the cull mode here to honor two-sided materials
     auto cullMode = transformCullMode(mat.cullMode);
     if (cullMode != currentCullMode) {
         encoder().setTriangleCullMode(cullMode);
         currentCullMode = cullMode;
     }
+    auto* ref = mat.shadowPipeline ? &mat : nullptr;
+    if (curMat == ref) {
+        return;
+    }
+    curMat = ref;
     if (ref) {
         encoder().setPipeline(mat.shadowPipeline);
         for (auto [index, param]: mat.constantTextureParameters | enumerate) {

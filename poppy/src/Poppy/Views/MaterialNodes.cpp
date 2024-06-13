@@ -312,7 +312,6 @@ struct VertexOutController: MaterialNodeController {
 
     utl::small_vector<Value*> createGraphNodes(
         Context& ctx, MaterialGraph& graph) const override {
-
         auto* offset = graph.addValue<Alias>("offset", ctx.float3Type());
         graph.setRoot(GraphRoot::VertexFunction, offset);
         return { offset };

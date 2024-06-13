@@ -65,8 +65,8 @@ struct DebugDrawOptions {
 
 struct RendererSettings {
     uint2 shadowMapResolution = { 512, 512 };
-    BloomSettings bloomSettings;
-    PostProcessSettings postProcessSettings;
+    BloomSettings bloomSettings{};
+    PostProcessSettings postProcessSettings{};
 };
 
 static std::string toString(DebugDrawOptions::Mode mode) {
@@ -143,6 +143,7 @@ struct Viewport: View, BasicSceneInspector {
     bool showRenderGraphDebugger = false;
     bool showSceneDebugger = false;
     bool gameView = false;
+    bool liveMaterials = false;
     bool renderGraphDirty = true;
 };
 
@@ -154,6 +155,8 @@ Viewport::Viewport(): BasicSceneInspector(this) {
     cameraController.setFieldOfView(60);
     auto& cmd = commandPaletteWrite();
     cmd.add("Game View", { Key::G }, [this] { gameView ^= true; });
+    cmd.add("Live Materials", { Key::M, ModFlags::Shift | ModFlags::Control },
+            [this] { liveMaterials ^= true; });
     cmd.add("Cycle Gizmo", { Key::Tab }, [this] { gizmo.cycleSpace(); });
     cmd.add("Translate", { Key::Num1 },
             [this] { gizmo.setOperation(GizmoOperation::Translate); });
@@ -221,16 +224,16 @@ void Viewport::display() {
                                     (float2)ImGui::GetWindowPos() +
                                         (float2)ImGui::GetWindowSize());
     auto* scene = selectDisplayScene(editor().sceneSystem());
-    if (!scene) {
-        if (renderGraphDirty) {
-            renderer = nullptr;
-            renderGraphDirty = false;
-        }
-        displayEmptyWithReason("No Active Scene");
-        displayToolbarWithBackground();
-        return;
+    if (scene) {
+        displayScene();
     }
-    displayScene();
+    else {
+        displayEmptyWithReason("No Active Scene");
+    }
+    if (renderGraphDirty) {
+        renderer = nullptr;
+        renderGraphDirty = false;
+    }
     displayToolbarWithBackground();
     if (scene) {
         ImGui::PushStyleColor(ImGuiCol_ChildBg, 0);
@@ -244,9 +247,8 @@ void Viewport::display() {
             displayColorPicker(sceneRect);
         }
         ImGui::EndChild();
+        drawScene(*scene, sceneRect);
     }
-    ///
-    drawScene(*scene, sceneRect);
     acceptDragDrop();
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
         ImGui::IsMouseReleased(ImGuiMouseButton_Right) ||
@@ -260,6 +262,9 @@ void Viewport::display() {
     }
     if (showSceneDebugger && scene) {
         displaySceneDebugger(*scene, &showSceneDebugger);
+    }
+    if (liveMaterials && !isSimulating()) {
+        editor().invalidateUI();
     }
 }
 
@@ -340,10 +345,11 @@ void Viewport::drawScene(Scene& scene, vml::rectangle<float> sceneRect) {
         renderGraphDirty = false;
     }
     cameraController.applyProjection(sceneRect.size());
-    renderer->begin(frameParams,
-                    { (float)editor().time().absolute,
-                      cameraController.camera(), rendererSettings.bloomSettings,
-                      rendererSettings.postProcessSettings });
+    bool isLive = isSimulating() || liveMaterials;
+    float time = isLive ? editor().time().absolute : 0.0;
+    renderer->begin(frameParams, { time, cameraController.camera(),
+                                   rendererSettings.bloomSettings,
+                                   rendererSettings.postProcessSettings });
     scene.applyTransformHierarchy();
     renderer->submit(scene);
     if (!editor().isSimulating()) {
@@ -733,7 +739,9 @@ void Viewport::displaySceneSettings(Scene& scene) {
 void Viewport::displayViewportSettings() {
     using namespace propertiesView;
     beginProperty("Game View");
-    ImGui::Checkbox("###game-view", &gameView);
+    ImGui::Checkbox("###Game View", &gameView);
+    beginProperty("Live Materials");
+    ImGui::Checkbox("###Live Materials", &liveMaterials);
     beginProperty("Field Of View");
     fullWidth();
     if (float fov = cameraController.fieldOfView();

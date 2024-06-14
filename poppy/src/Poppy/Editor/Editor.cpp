@@ -416,9 +416,6 @@ void Editor::saveConfigToDisk() {
 void Editor::restoreConfigFromDisk() {
     BL_PROFILE_FUNCTION();
     YAML::Node root = getStoredConfig();
-    Logger::Warn("Resetting style colors on startup");
-    ImGui::StyleColorsDark();
-    impl->viewManager.deserialize(root["Views"]);
     auto activeProject = root["Active Project"].as<std::filesystem::path>("");
     if (!activeProject.empty()) {
         assetManager().openProject(activeProject);
@@ -428,6 +425,7 @@ void Editor::restoreConfigFromDisk() {
         auto scene = getAsset<Scene>(activeScene, AssetRepresentation::CPU);
         sceneSystem().loadScene(scene);
     }
+    impl->viewManager.deserialize(root["Views"]);
 }
 
 WindowDescription Editor::loadWindowConfig() {

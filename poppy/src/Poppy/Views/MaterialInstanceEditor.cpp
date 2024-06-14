@@ -11,6 +11,7 @@
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetDragDrop.h"
+#include "Poppy/Views/AssetEditorView.h"
 
 using namespace bloom;
 using namespace poppy;
@@ -18,14 +19,14 @@ using namespace ranges::views;
 
 namespace {
 
-struct MaterialInstanceEditor: public View {
+struct MaterialInstanceEditor: public AssetEditorView<MaterialInstance> {
     MaterialInstanceEditor();
 
     void display() override;
 
-    void receiveData(std::any data) override;
+    void openAsset(MaterialInstance& inst) override;
 
-    bloom::Reference<bloom::MaterialInstance> inst;
+    MaterialInstance* matInst() { return asset(); }
 };
 
 } // namespace
@@ -37,7 +38,7 @@ MaterialInstanceEditor::MaterialInstanceEditor() {
     setToolbar({
         ToolbarSpacer(),
         ToolbarTextItem()
-            .text([this] { return inst ? inst->name().c_str() : ""; })
+            .text([this] { return matInst() ? matInst()->name().c_str() : ""; })
             .font(FontDesc::UIDefault().setWeight(FontWeight::Semibold)),
         ToolbarSpacer(),
     }); // clang-format on
@@ -87,7 +88,7 @@ static void displayParam(MaterialInstance& inst,
 }
 
 void MaterialInstanceEditor::display() {
-    if (!inst) {
+    if (!matInst()) {
         displayEmptyWithReason("No Material Instance Open");
         return;
     }
@@ -95,17 +96,17 @@ void MaterialInstanceEditor::display() {
     using namespace propertiesView;
     if (beginSection()) {
         beginProperty("Material");
-        auto material = inst->materialRef();
+        auto material = matInst()->materialRef();
         fullWidth();
         if (assetButton("###Material", material,
                         { .repr = AssetRepresentation::GPU }))
         {
-            inst->setMaterial(std::move(material));
+            matInst()->setMaterial(std::move(material));
         }
         endSection();
     }
-    auto primParams = inst->getPrimitiveParameters();
-    auto texParams = inst->getTextureParameters();
+    auto primParams = matInst()->getPrimitiveParameters();
+    auto texParams = matInst()->getTextureParameters();
     if (primParams.empty() && texParams.empty()) {
         ImGui::EndChild();
         return;
@@ -116,22 +117,19 @@ void MaterialInstanceEditor::display() {
     }
     for (auto& param: primParams) {
         if (displayParam(param)) {
-            inst->setParameter(param.value.data(), param.bufferOffset,
-                               layoutSize(param.type));
+            matInst()->setParameter(param.value.data(), param.bufferOffset,
+                                    layoutSize(param.type));
         }
     }
     for (auto [index, param]: texParams | enumerate) {
-        displayParam(*inst, param, index);
+        displayParam(*matInst(), param, index);
     }
     endSection();
     ImGui::EndChild();
 }
 
-void MaterialInstanceEditor::receiveData(std::any data) {
-    if (receiveAsset(inst, data)) {
-        return;
-    }
-    auto& AM = editor().assetManager();
+void MaterialInstanceEditor::openAsset(MaterialInstance& inst) {
     using enum AssetRepresentation;
-    AM.makeAvailable(inst->handle(), CPU | GPU);
+    auto& AM = editor().assetManager();
+    AM.makeAvailable(inst.handle(), CPU | GPU);
 }

@@ -19,6 +19,7 @@
 #include "Poppy/UI/Toolbar.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
+#include "Poppy/Views/AssetEditorView.h"
 #include "Poppy/Views/BasicSceneInspector.h"
 #include "Poppy/Views/NodeEditor.h"
 
@@ -117,7 +118,7 @@ std::unique_ptr<RenderGraphModel> bloom::makeRenderGraphModel() {
 
 namespace {
 
-struct RenderGraphEditor: View {
+struct RenderGraphEditor: AssetEditorView<RenderGraph> {
     struct Delegate: NodeEditorDelegate {
         Delegate(RenderGraphEditor* view): view(view) {}
 
@@ -158,19 +159,17 @@ struct RenderGraphEditor: View {
 
     void deserialize(YAML::Node node) override;
 
-    void receiveData(std::any data) override {
-        if (auto* rg = std::any_cast<Reference<RenderGraph>>(&data)) {
-            renderGraph = *rg;
-            model = &getModel(renderGraph->model());
-            nodeEditor.setModel(&model->editorGraph);
-        }
+    void openAsset(RenderGraph& rg) override {
+        model = &getModel(rg.model());
+        nodeEditor.setModel(&model->editorGraph);
     }
 
     void compile();
 
     Node* createNodePopupMenu();
 
-    Reference<RenderGraph> renderGraph = nullptr;
+    RenderGraph* renderGraph() const { return asset(); }
+
     RGModel* model = nullptr;
     NodeEditor nodeEditor;
     CompilationStatus compilationStatus = CompilationStatus::None;
@@ -395,13 +394,15 @@ static char const* compStatusMessage(CompilationStatus status) {
     }
 }
 
-RenderGraphEditor::RenderGraphEditor(): nodeEditor(commandPaletteWrite()) {
+RenderGraphEditor::RenderGraphEditor():
+    AssetEditorView({ .defaultSize = { 1000, 800 } }),
+    nodeEditor(commandPaletteWrite()) {
     nodeEditor.setDelegate(std::make_unique<Delegate>(this));
     auto& cmd = commandPaletteWrite();
     auto* compileCmd =
         cmd.add("Compile", { Key::B, ModFlags::Control }, [this] {
         dispatch(DispatchToken::NextFrame, [this] { compile(); });
-    }, [this] { return renderGraph != nullptr; });
+    }, [this] { return renderGraph() != nullptr; });
     // clang-format off
     setToolbar({
         ToolbarIconButton(compileCmd, "ok"),
@@ -421,7 +422,7 @@ void RenderGraphEditor::onInput(InputEvent& event) {
 void RenderGraphEditor::display() { nodeEditor.display(); }
 
 YAML::Node RenderGraphEditor::serialize() const {
-    YAML::Node root;
+    YAML::Node root = AssetEditorView::serialize();
     root["NodeEditor"] = nodeEditor.serialize();
     return root;
 }
@@ -430,16 +431,16 @@ void RenderGraphEditor::deserialize(YAML::Node root) {
     if (!root) {
         return;
     }
+    AssetEditorView::deserialize(root);
     nodeEditor.deserialize(root["NodeEditor"]);
 }
 
 void RenderGraphEditor::compile() {
-    BL_ASSERT(renderGraph);
-    model->construct(*renderGraph);
-    if (renderGraph->compile()) {
+    BL_ASSERT(renderGraph());
+    model->construct(*renderGraph());
+    if (renderGraph()->compile()) {
         compilationStatus = CompilationStatus::Success;
-        dispatch(DispatchToken::Now,
-                 DidRecompileRenderGraph{ renderGraph.get() });
+        dispatch(DispatchToken::Now, DidRecompileRenderGraph{ renderGraph() });
     }
     else {
         compilationStatus = CompilationStatus::Error;

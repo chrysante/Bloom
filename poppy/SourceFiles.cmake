@@ -66,6 +66,8 @@ set(poppy_sources
   src/Poppy/Views/AssetBrowser.cpp
   src/Poppy/Views/AssetDragDrop.cpp
   src/Poppy/Views/AssetDragDrop.h
+  src/Poppy/Views/AssetEditorView.cpp
+  src/Poppy/Views/AssetEditorView.h
   src/Poppy/Views/BasicSceneInspector.cpp
   src/Poppy/Views/BasicSceneInspector.h
   src/Poppy/Views/ConsoleView.cpp

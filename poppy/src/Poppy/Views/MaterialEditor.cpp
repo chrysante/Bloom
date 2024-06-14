@@ -19,6 +19,7 @@
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
 #include "Poppy/Views/AssetDragDrop.h"
+#include "Poppy/Views/AssetEditorView.h"
 #include "Poppy/Views/MaterialNodeController.h"
 #include "Poppy/Views/NodeEditor.h"
 
@@ -116,7 +117,7 @@ std::unique_ptr<bloom::MaterialModel> bloom::makeMaterialModel() {
 
 namespace {
 
-struct MaterialEditor: View {
+struct MaterialEditor: AssetEditorView<Material> {
     MaterialEditor();
 
     void display() override;
@@ -124,19 +125,13 @@ struct MaterialEditor: View {
     void onInput(InputEvent& event) override;
     YAML::Node serialize() const override;
     void deserialize(YAML::Node node) override;
-    void receiveData(std::any data) override {
-        if (auto* mat = std::any_cast<Reference<Material>>(&data)) {
-            material = *mat;
-            auto* model = getModel(material.get());
-            nodeEditor.setModel(model->getEditorGraph());
-        }
-    }
+    void openAsset(Material& mat) override;
     void compile();
+    Material* material() const { return asset(); }
 
-    Reference<Material> material;
     NodeEditor nodeEditor;
     SplitView splitView;
-    bool showOptions = false;
+    bool sidebarVisible = true;
 };
 
 struct Delegate: NodeEditorDelegate {
@@ -170,7 +165,7 @@ struct Delegate: NodeEditorDelegate {
         return deserializeMaterialNodeController(node);
     }
 
-    MaterialModelImpl* getModel() { return ::getModel(editor.material.get()); }
+    MaterialModelImpl* getModel() { return ::getModel(editor.material()); }
 
     MaterialEditor& editor;
     bool displayColorEditor = false;
@@ -181,17 +176,18 @@ struct Delegate: NodeEditorDelegate {
 POPPY_REGISTER_VIEW(MaterialEditor, "Material Editor");
 
 MaterialEditor::MaterialEditor():
-    View({ .defaultSize = { 1000, 800 } }), nodeEditor(commandPaletteWrite()) {
+    AssetEditorView({ .defaultSize = { 1000, 800 } }),
+    nodeEditor(commandPaletteWrite()) {
     auto& cmd = commandPaletteWrite();
     auto* compileCmd = cmd.add("Compile", { Key::B, ModFlags::Control },
                                [this] { compile(); },
-                               [this]() -> bool { return material.get(); });
+                               [this]() -> bool { return material(); });
     // clang-format off
     setToolbar({
         ToolbarIconButton(compileCmd, "ok"),
         ToolbarSpacer(),
         ToolbarTextItem()
-            .text([this] { return material ? material->name().c_str() : ""; })
+            .text([this] { return material() ? material()->name().c_str() : ""; })
             .font(FontDesc::UIDefault().setWeight(FontWeight::Bold)),
         ToolbarSpacer(),
         ToolbarDropdownMenu()
@@ -203,28 +199,25 @@ MaterialEditor::MaterialEditor():
             })
             .enabled([this] { return nodeEditor.getDelegate(); }),
         ToolbarIconButton("cog-alt")
-            .onClick([this] { showOptions ^= true; })
-            .enabled([this] { return material != nullptr; })
+            .onClick([this] { sidebarVisible ^= true; })
+            .enabled([this] { return material() != nullptr; })
     }); // clang-format on
     setPadding({ 0, 0 });
     nodeEditor.setDelegate(std::make_unique<Delegate>(*this));
 }
 
 void MaterialEditor::display() {
-    if (!material) {
+    if (!material()) {
         displayEmptyWithReason("No Material Open");
         return;
     }
-    if (showOptions) {
-        // clang-format off
-        splitView.display({
-            [this] { nodeEditor.display(); },
-            [this] { displayOptions(); }
-        }, SplitView::NoPadding); // clang-format on
+    splitView.submit([&] { nodeEditor.display(); });
+    if (sidebarVisible) {
+        splitView.submit({ .width = 200,
+                           .flags = ImGuiTableColumnFlags_WidthFixed },
+                         [&] { displayOptions(); });
     }
-    else {
-        nodeEditor.display();
-    }
+    splitView.display(SplitView::NoPadding);
     if (auto* del = dynamic_cast<Delegate*>(nodeEditor.getDelegate());
         del && del->displayColorEditor)
     {
@@ -236,7 +229,7 @@ void MaterialEditor::displayOptions() {
     ImGui::BeginChild("PropertiesPanel", {},
                       ImGuiChildFlags_AlwaysUseWindowPadding);
     using namespace propertiesView;
-    auto* model = getModel(material.get());
+    auto* model = getModel(material());
     BL_ASSERT(model);
     beginSection("Properties");
     beginProperty("Shading Model");
@@ -266,20 +259,28 @@ void MaterialEditor::displayOptions() {
 void MaterialEditor::onInput(InputEvent& event) { nodeEditor.onInput(event); }
 
 YAML::Node MaterialEditor::serialize() const {
-    YAML::Node root;
+    YAML::Node root = AssetEditorView::serialize();
     root["NodeEditor"] = nodeEditor.serialize();
+    root["SidebarVisible"] = sidebarVisible;
     return root;
 }
 
 void MaterialEditor::deserialize(YAML::Node node) {
+    AssetEditorView::deserialize(node);
     nodeEditor.deserialize(node["NodeEditor"]);
+    sidebarVisible = node["SidebarVisible"].as<bool>(true);
+}
+
+void MaterialEditor::openAsset(Material& mat) {
+    auto* model = getModel(&mat);
+    nodeEditor.setModel(model->getEditorGraph());
 }
 
 void MaterialEditor::compile() {
-    BL_ASSERT(material.get());
+    BL_ASSERT(material());
     dispatch(DispatchToken::NextFrame, [this] {
         auto& AM = editor().assetManager();
-        AM.makeAvailable(material->handle(), AssetRepresentation::GPU,
+        AM.makeAvailable(material()->handle(), AssetRepresentation::GPU,
                          /* forceReload: */ true);
     });
 }

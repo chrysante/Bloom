@@ -11,6 +11,7 @@
 #include "Poppy/UI/PropertiesView.h"
 #include "Poppy/UI/View.h"
 #include "Poppy/UI/ViewRegistry.h"
+#include "Poppy/Views/AssetEditorView.h"
 #include "Poppy/Views/TextureViewer.h"
 
 using namespace poppy;
@@ -19,10 +20,10 @@ using namespace vml::short_types;
 
 namespace {
 
-struct TextureViewerWrapper: View {
+struct TextureViewerWrapper: AssetEditorView<Texture2D> {
     TextureViewerWrapper();
     void display() override;
-    void receiveData(std::any data) override;
+    void openAsset(Texture2D& tex) override;
 
     TextureViewer impl;
 };
@@ -38,6 +39,8 @@ struct TextureViewer::Data {
     TextureView getTextureView();
 
     void displayOverlay();
+
+    void displayInfo();
 
     Reference<Texture2D> texture;
     TextureHandle viewHandle;
@@ -126,23 +129,29 @@ static void displayTexture(TextureView texture, float2 availSize,
     }
 }
 
-static void displayInfo(Texture2D const& texture) {
+void TextureViewer::Data::displayInfo() {
     using namespace propertiesView;
     if (beginSection("Info")) {
         beginProperty("Type");
-        auto typeName = magic_enum::enum_name(texture.type);
+        auto typeName = magic_enum::enum_name(texture->type);
         ImGui::TextEx(std::to_address(typeName.begin()),
                       std::to_address(typeName.end()));
         beginProperty("Pixel Format");
-        auto pixelFmt = magic_enum::enum_name(texture.pixelFormat);
+        auto pixelFmt = magic_enum::enum_name(texture->pixelFormat);
         ImGui::TextEx(std::to_address(pixelFmt.begin()),
                       std::to_address(pixelFmt.end()));
         beginProperty("Width");
-        ImGui::Text("%d", (int)texture.size.x);
+        ImGui::Text("%d", (int)texture->size.x);
         beginProperty("Height");
-        ImGui::Text("%d", (int)texture.size.y);
+        ImGui::Text("%d", (int)texture->size.y);
         beginProperty("Byte Size");
-        ImGui::Text("%d", (int)texture.getPixelDataByteSize());
+        ImGui::Text("%d", (int)texture->getPixelDataByteSize());
+        endSection();
+    }
+    if (options.editMode && beginSection("Properties")) {
+        beginProperty("Mipmapped");
+        bool value = false;
+        ImGui::Checkbox("###Mipmapped", &value);
         endSection();
     }
 }
@@ -171,7 +180,6 @@ TextureView TextureViewer::Data::getTextureView() {
 }
 
 void TextureViewer::Data::displayOverlay() {
-    float2 stashedCursorPos = ImGui::GetCursorPos();
     ImGui::SetCursorPos({});
     if (texture->type == TextureType::CubeTexture) {
         char const* names[6] = { "1", "2", "3", "4", "5", "6" };
@@ -180,7 +188,6 @@ void TextureViewer::Data::displayOverlay() {
             viewHandle = {};
         }
     }
-    ImGui::SetCursorPos(stashedCursorPos);
 }
 
 void TextureViewer::display() {
@@ -191,23 +198,32 @@ void TextureViewer::display() {
     TextureView texview = data->getTextureView();
     switch (data->options.displayMode) {
     case DisplayMode::Expanded:
-        // clang-format off
-        data->splitView.display({
-            [&] {
-                displayTexture(texview, ImGui::GetContentRegionAvail(), 
-                               data->options.rounding);
-                data->displayOverlay();
-            },
-            [&] { displayInfo(*data->texture); },
-        }); // clang-format on
+        data->splitView.submit([&] {
+            displayTexture(texview, ImGui::GetContentRegionAvail(),
+                           data->options.rounding);
+            data->displayOverlay();
+        });
+        data->splitView.submit({ .width = 200,
+                                 .flags = ImGuiTableColumnFlags_WidthFixed },
+                               [&] {
+            ImGui::BeginChild("Info");
+            data->displayInfo();
+            ImGui::EndChild();
+        });
+        data->splitView.display();
         break;
     case DisplayMode::Compact:
-        float2 size = ImGui::GetContentRegionAvail();
-        displayTexture(texview, float2(size.fold(utl::min)),
-                       data->options.rounding);
+        float size = ImGui::GetContentRegionAvail().x;
+        auto* window = ImGui::GetCurrentWindowRead();
+        if (!window->ScrollbarY) {
+            size -= ImGui::GetStyle().ScrollbarSize;
+        }
+        displayTexture(texview, float2(size), data->options.rounding);
+        float2 stashedCursorPos = ImGui::GetCursorPos();
         data->displayOverlay();
+        ImGui::SetCursorPos(stashedCursorPos);
         ImGui::Separator();
-        displayInfo(*data->texture);
+        data->displayInfo();
         break;
     }
 }
@@ -229,14 +245,10 @@ TextureViewerWrapper::TextureViewerWrapper() {
 
 void TextureViewerWrapper::display() { impl.display(); }
 
-void TextureViewerWrapper::receiveData(std::any data) {
-    auto* texptr = std::any_cast<Reference<Texture2D>>(&data);
-    if (!texptr) {
-        return;
-    }
-    Reference<Texture2D> texture = *texptr;
+void TextureViewerWrapper::openAsset(Texture2D& tex) {
     auto& AM = editor().assetManager();
-    AM.makeAvailable(texture->handle(), AssetRepresentation::GPU);
-    impl = TextureViewer(texture, { .displayMode =
-                                        TextureViewer::DisplayMode::Expanded });
+    AM.makeAvailable(tex.handle(), AssetRepresentation::GPU);
+    impl = TextureViewer(assetRef(),
+                         { .displayMode = TextureViewer::DisplayMode::Expanded,
+                           .editMode = true });
 }

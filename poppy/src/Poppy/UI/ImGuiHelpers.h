@@ -147,20 +147,30 @@ void displayEmptyWithError(std::string_view reason, vml::float2 size = {});
 /// Displays a resizable split view
 class SplitView {
 public:
+    struct ElemDesc {
+        float width = -1;
+        ImGuiTableFlags flags = ImGuiTableColumnFlags_WidthStretch;
+    };
+
     enum Flags { None = 0, NoPadding = 1 << 0 };
 
     explicit SplitView(std::string ID = "SplitView"): ID(ID) {}
 
-    void display(std::span<std::function<void()> const> contents,
-                 Flags flags = None);
+    void submit(std::function<void()> contents) {
+        submit({}, std::move(contents));
+    }
 
-    void display(std::initializer_list<std::function<void()>> contents,
-                 Flags flags = None);
+    void submit(ElemDesc desc, std::function<void()> contents);
+
+    void display(Flags flags = None);
 
 private:
+    struct Element {
+        ElemDesc desc;
+        std::function<void()> contents;
+    };
     std::string ID;
-    float totalWidth = 0;
-    std::vector<float> widths;
+    std::vector<Element> elems;
 };
 
 /// Extends the lifetime of \p object until the current frame has been rendered

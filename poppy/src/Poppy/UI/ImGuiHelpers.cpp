@@ -258,71 +258,36 @@ void poppy::displayEmptyWithError(std::string_view reason, float2 size) {
     displayEmptyImpl(reason, size, emptyPlaceholderFont(), { 1, 0, .2, 1 });
 }
 
-void SplitView::display(std::span<std::function<void()> const> contents,
-                        Flags flags) {
-    ImGuiID imguiID = ImGui::GetID(ID.data(), ID.data() + ID.size());
-    float2 contentSize = ImGui::GetContentRegionAvail();
-    float newWidth = contentSize.x;
-    if (widths.size() != contents.size()) {
-        widths.resize(contents.size());
-    }
-    ranges::for_each(widths, [&](float& width) {
-        if (width <= 0) {
-            width = contentSize.x / contents.size();
-        }
-    });
-    float sum = ranges::accumulate(widths, 0.0f);
-    ranges::for_each(widths,
-                     [&](float& width) { width = width * newWidth / sum; });
-    if (totalWidth > 0 && totalWidth != newWidth) {
-        float factor = newWidth / totalWidth;
-        for (auto& width: widths) {
-            width *= factor;
-        }
-        totalWidth = newWidth;
-    }
-    ImGui::PushID(imguiID);
-    float2 cursorPos = ImGui::GetCursorScreenPos();
-    auto* window = ImGui::GetCurrentWindow();
-    float acc = 0;
-    float height = ImGui::GetContentRegionAvail().y;
-    float2 padding = ImGui::GetStyle().WindowPadding;
-    for (auto [index, width, content]: zip(iota(0), widths, contents)) {
-        float widthCopy = width;
-        float2 pos = cursorPos + float2(acc, 0);
-        float halfSplitterWidth = 1;
-        if (index > 0) {
-            ImGui::SplitterBehavior(ImRect(pos - float2(halfSplitterWidth, 0),
-                                           pos + float2(halfSplitterWidth,
-                                                        height)),
-                                    window->GetID(-index), ImGuiAxis_X,
-                                    &widths[index - 1], &widths[index],
-                                    /* minsize1: */ 10,
-                                    /* minsize2: */ 10,
-                                    /* hover_extend: */ 4.0f,
-                                    /* hover_visibility_delay */ 0.04f);
-            pos.x += halfSplitterWidth;
-        }
-        if (index < (int)contents.size() - 1) {
-            widthCopy -= 2 * halfSplitterWidth;
-        }
-        ImRect windowBB(pos, pos + float2(widthCopy, contentSize.y));
-        if ((flags & NoPadding) == 0) {
-            windowBB.Expand(-padding);
-        }
-        ImGui::SetNextWindowPos(windowBB.Min);
-        if (ImGui::BeginChild(window->GetID(index), windowBB.GetSize())) {
-            content();
-        }
-        ImGui::EndChild();
-        acc += width;
-    }
-    ImGui::PopID();
+void SplitView::submit(ElemDesc desc, std::function<void()> contents) {
+    elems.push_back({ desc, std::move(contents) });
 }
 
-void SplitView::display(std::initializer_list<std::function<void()>> contents,
-                        Flags flags) {
-    display(std::span(contents), flags);
+void SplitView::display(Flags flags) {
+    ImGuiTableFlags tableFlags = ImGuiTableFlags_Resizable |
+                                 ImGuiTableFlags_SizingStretchSame |
+                                 ImGuiTableFlags_PadOuterX;
+    int numColumns = (int)elems.size();
+    int numStyleVars = 0;
+    if (flags & NoPadding) {
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, { 0, 0 });
+        numStyleVars += 1;
+    }
+    bool open = ImGui::BeginTable(ID.c_str(), numColumns, tableFlags);
+    ImGui::PopStyleVar(numStyleVars);
+    if (!open) {
+        return;
+    }
+    // Setup
+    for (auto& [desc, f]: elems) {
+        ImGui::TableSetupColumn(nullptr, desc.flags, desc.width);
+    }
+    // Display
+    for (auto& [desc, f]: elems) {
+        ImGui::TableNextColumn();
+        f();
+    }
+    ImGui::EndTable();
+    elems.clear();
 }
 
 void poppy::markObjectRenderHazard(std::any obj) {

@@ -18,6 +18,7 @@ public:
 
     struct Options {
         DisplayMode displayMode = DisplayMode::Expanded;
+        bool editMode = false;
         float rounding = 0;
     };
 

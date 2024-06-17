@@ -1278,6 +1278,14 @@ void Impl::uploadTextureToGPU(Texture2D& texture, RegistryEntry const& entry) {
             BL_UNIMPLEMENTED();
         }
     }
+    if (texture.numMipMaps > 1 && !texture.storesMipMaps) {
+        auto commandBuffer = assetManager->commandQueue().createCommandBuffer();
+        auto encoder = commandBuffer->makeBlitEncoder();
+        encoder->generateMipmaps(handle);
+        encoder->end();
+        commandBuffer->commit();
+        commandBuffer->waitForCompletion();
+    }
     texture.GPUHandle = handle;
     if (!hasMemoryRepr) {
         texture.pixelData = nullptr;

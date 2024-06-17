@@ -25,7 +25,7 @@ using namespace ranges::views;
 namespace {
 
 struct IBLGenTool: View {
-    void generateMipmapsFor(Texture2D& tex, size_t expectedMipapCount = 0);
+    void generateMipmapsFor(Texture2D& tex, size_t expectedMipmapCount = 0);
 
     void display();
     void displayFaceFillTool();
@@ -97,27 +97,28 @@ void IBLGenTool::imgDragDropButton(char const* ID, Reference<Texture2D>& tex,
     }
 }
 
-void IBLGenTool::generateMipmapsFor(Texture2D& tex, size_t expectedMipapCount) {
+void IBLGenTool::generateMipmapsFor(Texture2D& tex,
+                                    size_t expectedMipmapCount) {
     if (!tex.GPUHandle) {
         Logger::Error("Cannot generate mips: No GPU data");
         return;
     }
     usize2 size = tex.size;
-    if (expectedMipapCount == 0) {
-        expectedMipapCount = vml::ceil(vml::log2((float2)size)).fold(utl::max);
+    if (expectedMipmapCount == 0) {
+        expectedMipmapCount = vml::ceil(vml::log2((float2)size)).fold(utl::max);
     }
     auto& device = editor().device();
     auto& commandQueue = editor().commandQueue();
     auto commandBuffer = commandQueue.createCommandBuffer();
     auto encoder = commandBuffer->makeBlitEncoder();
-    if (tex.GPUHandle.description().mipmapLevelCount != expectedMipapCount) {
+    if (tex.GPUHandle.description().mipmapLevelCount != expectedMipmapCount) {
         auto desc = tex.GPUHandle.description();
-        desc.mipmapLevelCount = expectedMipapCount;
+        desc.mipmapLevelCount = expectedMipmapCount;
         auto newHandle = device.createTexture(desc);
         encoder->copyTexture(tex.GPUHandle, newHandle);
         tex.GPUHandle = newHandle;
     }
-    tex.numMipMaps = expectedMipapCount;
+    tex.numMipMaps = expectedMipmapCount;
     encoder->generateMipmaps(tex.GPUHandle);
     encoder->end();
     commandBuffer->commit();

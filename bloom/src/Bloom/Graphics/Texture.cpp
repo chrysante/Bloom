@@ -2,9 +2,15 @@
 
 #include <range/v3/numeric.hpp>
 #include <range/v3/view.hpp>
+#include <utl/functional.hpp>
 
 using namespace bloom;
 using namespace ranges::views;
+using namespace vml::short_types;
+
+int bloom::calcDesiredMipMapCount(vml::usize2 size) {
+    return vml::ceil(vml::log2((float2)size)).fold(utl::max);
+}
 
 static size_t numSlices(TextureType type) {
     switch (type) {

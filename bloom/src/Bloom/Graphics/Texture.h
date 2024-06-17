@@ -11,6 +11,10 @@
 
 namespace bloom {
 
+/// Computes the number of mipmaps required for a complete mipmap chain for a
+/// texture of size \p textureSize
+int calcDesiredMipMapCount(vml::usize2 textureSize);
+
 class Texture2D: public Asset {
 public:
     BL_DEFINE_ASSET_CTOR(Texture2D, Asset)

@@ -402,6 +402,7 @@ void MetalCodeGenerator::codegenImpl(TextureSampler const& sample) {
         writeScope(ScopeType::Paran, [&] {
             writeItem("min_filter::linear");
             writeItem("mag_filter::linear");
+            writeItem("mip_filter::linear");
         });
     });
     writeItem([&] {

@@ -150,8 +150,15 @@ void TextureViewer::Data::displayInfo() {
     }
     if (options.editMode && beginSection("Properties")) {
         beginProperty("Mipmapped");
-        bool value = false;
-        ImGui::Checkbox("###Mipmapped", &value);
+        bool hasMipmaps = texture->numMipMaps > 1;
+        if (ImGui::Checkbox("###Mipmapped", &hasMipmaps)) {
+            texture->numMipMaps =
+                hasMipmaps ? calcDesiredMipMapCount(texture->size) : 1;
+            auto& AM = Application::StaticInstance().assetManager();
+            AM.saveToDisk(texture->handle());
+            using enum AssetRepresentation;
+            AM.makeAvailable(texture->handle(), CPU | GPU, true);
+        }
         endSection();
     }
 }

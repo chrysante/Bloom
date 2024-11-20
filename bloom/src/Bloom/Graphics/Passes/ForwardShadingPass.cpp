@@ -33,6 +33,8 @@ struct ForwardShadingPass: PassImpl<ForwardShadingPass>, ShadingPassHelper {
     void bindMaterialInstance(MaterialInstance& curMatInst);
     void bindMesh(StaticMeshRenderer& mesh);
 
+    void resetLastSeen();
+
     // Sinks
     GeometryResource* geometry;
     LightsResource* lights;
@@ -195,9 +197,7 @@ void ForwardShadingPass::doExecute(FrameParameters const& params,
         ++index;
     }
     encoder->end();
-    curMat = nullptr;
-    curMatInst = nullptr;
-    curMesh = nullptr;
+    resetLastSeen();
 }
 
 void ForwardShadingPass::bindMaterial(Material& mat) {
@@ -240,4 +240,10 @@ void ForwardShadingPass::bindMesh(StaticMeshRenderer& mesh) {
     curMesh = &mesh;
     bindBuffer(curMesh->vertexBuffer(), GlobalMaterialBindingType::Geometry,
                MaterialShaderType::ShadingVertex);
+}
+
+void ForwardShadingPass::resetLastSeen() {
+    curMat = nullptr;
+    curMatInst = nullptr;
+    curMesh = nullptr;
 }

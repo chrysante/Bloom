@@ -29,9 +29,9 @@ struct BLOOM_API ScriptPreservedData {
     std::string classname;
 };
 
-struct BLOOM_API ScriptsWillCompileEvent {};
+struct BLOOM_API ScriptsWillCompileEvent{};
 
-struct BLOOM_API ScriptsDidCompileEvent {};
+struct BLOOM_API ScriptsDidCompileEvent{};
 
 void BLOOM_API assignType(ScriptComponent& component,
                           scatha::sema::StructType const* type);

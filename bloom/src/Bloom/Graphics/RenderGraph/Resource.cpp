@@ -94,8 +94,8 @@ void GeometryResource::add(Reference<StaticMeshRenderer> mesh,
 
 void GeometryResource::clear() { objects.clear(); }
 
-static constexpr auto RenderGeometryOrder = [](Geometry::reference a,
-                                               Geometry::reference b) {
+static constexpr auto RenderGeometryOrder = [](Geometry::const_reference a,
+                                               Geometry::const_reference b) {
     auto& aMatInst = *a.materialInstance;
     auto* aMat = aMatInst.material();
     auto& bMatInst = *b.materialInstance;

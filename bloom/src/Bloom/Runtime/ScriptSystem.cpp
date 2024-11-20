@@ -70,17 +70,17 @@ static sema::Function const* selectConstructor(sema::StructType const* type) {
             continue;
         }
         auto* firstArg =
-            dyncast<sema::ReferenceType const*>(ctor->argumentType(0));
+            scatha::dyncast<sema::ReferenceType const*>(ctor->argumentType(0));
         if (!firstArg || firstArg->base().get() != type) {
             continue;
         }
         auto* secondArg =
-            dyncast<sema::StructType const*>(ctor->argumentType(1));
+            scatha::dyncast<sema::StructType const*>(ctor->argumentType(1));
         if (!secondArg || (secondArg->name() != "Entity")) {
             continue;
         }
         auto* library =
-            dyncast<sema::NativeLibrary const*>(secondArg->parent());
+            scatha::dyncast<sema::NativeLibrary const*>(secondArg->parent());
         if (!library || library->name() != "Bloom") {
             continue;
         }
@@ -140,7 +140,7 @@ void ScriptSystem::deserializeScript(ScriptComponent& component,
         component = ScriptComponent{};
         return;
     }
-    auto* type = dyncast<scatha::sema::StructType const*>(types.front());
+    auto* type = scatha::dyncast<sema::StructType const*>(types.front());
     assignType(component, type);
 }
 

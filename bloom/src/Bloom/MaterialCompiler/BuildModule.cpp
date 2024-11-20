@@ -98,10 +98,10 @@ struct ScenarioMetadata {
 
     /// The output type of the vertex shader and type of the fragment shaders
     /// `[[stage_in]]` parameter
-    AggregateType const* rasterizerDataType;
+    AggregateType const* rasterizerDataType = nullptr;
 
     /// Maps vertex attributes to their position in `rasterizerDataType`
-    EnumArray<VertexAttributeKind, int> vertexAttribIndexMap;
+    EnumArray<VertexAttributeKind, int> vertexAttribIndexMap{};
 
     /// `true` if we must rasterize the tangent space basis
     bool hasCustomNormals = true;
@@ -274,7 +274,7 @@ struct Builder {
     FunctionParameter* getLightSpaceTransformBufferParameter(
         Function& F, MaterialShaderType shaderType);
     FunctionParameter* getBufferParameterImpl(
-        Function& F, FunctionParameter*(FunctionMetadata::*MDField),
+        Function& F, FunctionParameter*(FunctionMetadata::* MDField),
         utl::function_view<ParameterDescriptor()> desc);
 
     FunctionCall* callUserFunction(std::string valueName,
@@ -944,6 +944,11 @@ void Builder::defineShadowScenario() {
 }
 
 void Builder::defineShadowScenarioFragment() {
+    shadowMD.markRasterized(VertexAttributeKind::ClipPosition);
+    shadowMD.createRasterizerDataType(
+        "ShadowRasterizerData",
+        { { { ctx.intType(IntSubType::U32), "layer",
+              ParameterAttribute::RenderTargetArrayIndex } } });
     if (codegenParams.transparency != MaterialTransparency::Masked) {
         return;
     }
@@ -951,11 +956,6 @@ void Builder::defineShadowScenarioFragment() {
         *mod.addFunction("FragmentShadow", nullptr, ShaderKind::Fragment);
     shaderFunctions[MaterialShaderType::ShadowFragment] = &fragShader;
     auto& fragMD = getMetadata(&fragShader);
-    shadowMD.markRasterized(VertexAttributeKind::ClipPosition);
-    shadowMD.createRasterizerDataType(
-        "ShadowRasterizerData",
-        { { { ctx.intType(IntSubType::U32), "layer",
-              ParameterAttribute::RenderTargetArrayIndex } } });
     fragMD.rasterizerParam = fragShader.addParameter(
         { "in", shadowMD.rasterizerDataType, ParameterQualifier::None,
           ParameterAttribute::StageIn });
@@ -1371,7 +1371,7 @@ FunctionParameter* Builder::getLightSpaceTransformBufferParameter(
 }
 
 FunctionParameter* Builder::getBufferParameterImpl(
-    Function& F, FunctionParameter*(FunctionMetadata::*MDField),
+    Function& F, FunctionParameter*(FunctionMetadata::* MDField),
     utl::function_view<ParameterDescriptor()> desc) {
     auto& MD = getMetadata(&F);
     auto& field = MD.*MDField;

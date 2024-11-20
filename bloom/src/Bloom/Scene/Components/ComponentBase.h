@@ -128,12 +128,12 @@ decltype(auto) visitComponentType(ComponentKind dynamicKind, auto&& fn) {
 
 /// Visit a subset of components
 template <typename First, typename... Rest>
-decltype(auto) visitComponentType(ComponentKind dynamicKind, auto&& fn) {
+decltype(auto) visitComponentTypeImpl(ComponentKind dynamicKind, auto&& fn) {
     if (DynamicType<First> == dynamicKind) {
         return std::invoke(fn, utl::tag<First>{});
     }
     else if constexpr (sizeof...(Rest) != 0) {
-        return visitComponentType<Rest...>(dynamicKind, fn);
+        return visitComponentTypeImpl<Rest...>(dynamicKind, fn);
     }
     else {
         BL_UNREACHABLE();
@@ -144,7 +144,7 @@ decltype(auto) visitComponentType(ComponentKind dynamicKind, auto&& fn) {
 template <ComponentList Types>
 decltype(auto) visitComponentType(ComponentKind dynamicKind, auto&& fn) {
     return [&]<typename... T>(TypeList<T...>) {
-        return visitComponentType<T...>(dynamicKind, fn);
+        return visitComponentTypeImpl<T...>(dynamicKind, fn);
     }(Types{});
 }
 

@@ -30,6 +30,8 @@ struct ShadowPass: PassImpl<ShadowPass>, ShadingPassHelper {
     void bindMaterialInstance(MaterialInstance& curMatInst);
     void bindMesh(StaticMeshRenderer& mesh);
 
+    void resetLastSeen();
+
     // Sinks
     GeometryResource* geometry;
     BufferHandle lightSpaceTransforms;
@@ -144,6 +146,7 @@ void ShadowPass::doExecute(FrameParameters const& frameParams,
         ++index;
     }
     encoder->end();
+    resetLastSeen();
 }
 
 void ShadowPass::bindMaterial(Material& mat) {
@@ -198,6 +201,13 @@ void ShadowPass::bindMesh(StaticMeshRenderer& mesh) {
     curMesh = &mesh;
     bindBuffer(curMesh->vertexBuffer(), GlobalMaterialBindingType::Geometry,
                MaterialShaderType::ShadowVertex);
+}
+
+void ShadowPass::resetLastSeen() {
+    curMat = nullptr;
+    curMatInst = nullptr;
+    curMesh = nullptr;
+    currentCullMode = TriangleCullMode::Front;
 }
 
 void ShadowPass::doAllocateResources(FrameParameters const&,
